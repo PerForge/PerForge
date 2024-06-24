@@ -1,0 +1,90 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} InfluxDB {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                </div>
+                <div class="center-section">
+                    <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
+                        <div class="card-header">
+                            <div class="justify-content-between align-items-center">
+                                <h4 class="mb-0">Influxdb integration
+                                    <a href="https://perforge.app/docs/configuration/integrations#influxdb" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                                    </a>
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="/influxdb">
+                                {{ form.hidden_tag() }}
+                                <div class="center-section">
+                                    {% if influxdb_config %}
+                                        <input type="hidden" name="id" id="config_id" value="{{ influxdb_config }}">
+                                    {% else %}
+                                        <input type="hidden" name="id" id="config_id">
+                                    {% endif %}
+                                    <label for="name">Name:</label>
+                                    {{ form.name(class="form-control") }}
+                                    <label for="url" class="mt-2">Url:</label>
+                                    {{ form.url(class="form-control") }}
+                                    <label for="org_id" class="mt-2">Org:</label>
+                                    {{ form.org_id(class="form-control") }}
+                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;."></span>
+                                    <label for="token" class="input-label mt-2">Token:</label>
+                                    {{ form.token(class="form-control") }}
+                                    <label for="timeout" class="mt-2">Timeout:</label>
+                                    {{ form.timeout(class="form-control") }}
+                                    <label for="bucket" class="mt-2">Bucket:</label>
+                                    {{ form.bucket(class="form-control") }}
+                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="Please be aware that the default listener for JMeter is the first one, while the second one is a custom listener provided by mderevyandoaqa."></span>
+                                    <label for="listener" class="input-label mt-2">Backend listener:</label>
+                                    {{ form.listener(class="form-control") }}
+                                    <label for="is_default" class="mt-2">Is Default:</label>
+                                    {{ form.is_default(class="form-control") }}
+                                    <button class="btn btn-primary mt-5" type="submit">Save</button>
+                                    {% if influxdb_config %}
+                                        <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
+                                    {% endif %}
+                                </div>
+                            </form>
+                            <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                              <div class="modal-dialog">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                  </div>
+                                  <div class="modal-body">
+                                    Are you sure you want to delete this configuration?
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <a class="btn btn-danger" href="/delete/influxdb?influxdb_config={{ influxdb_config }}">Confirm Delete</a>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% with msgs = get_flashed_messages() %}
+                        {% include 'includes/flashed-msg.html' %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+    </script>
+{% endblock content %}

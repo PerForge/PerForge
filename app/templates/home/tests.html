@@ -1,0 +1,265 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} PerForge {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/nfrs.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                </div>
+                <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
+                    <div class="card-header">
+                      <div class="justify-content-between align-items-center">
+                        <h4 class="mb-0">Test log
+                            <a href="https://perforge.app/docs/tutorial-extras/reporting-ui" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                            </a>
+                        </h4>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="table-id">
+                            <div class="d-flex align-items-center justify-content-end mb-3">
+                                <div class="d-flex" id="bulk-select-actions">
+                                    <div>
+                                        <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
+                                            <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" />
+                                            <span class="fas fa-search search-box-icon"></span>
+                                        </div>
+                                    </div>
+                                    <select class="form-select ms-2" id="influxdbId">
+                                        {% for influxdb in influxdb_configs %}
+                                            <option value="{{ influxdb.id }}">{{ influxdb.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select class="form-select ms-2" id="selectedAction">
+                                        <option value='{"type": "none"}' selected="selected">Choose output</option>
+                                        {% for output in output_configs %}
+                                            <option value='{{ output | tojson | safe }}'>{{ output.name }}</option>
+                                        {% endfor %}
+                                        <option value='{"type": "pdf_report"}'>PDF report</option>
+                                        <option value='{"type": "delete"}'>Delete</option>
+                                    </select>
+                                    <select class="form-select ms-2" id="templateGroupName">
+                                        <option value='' selected="selected">Template group</option>
+                                        {% for template_group in template_groups %}
+                                            <option value="{{ template_group.id }}">{{ template_group.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-secondary ms-2" id="show-api" style="min-width: 110px;">
+                                        <div>Show API</div>
+                                    </button>
+                                    <button class="btn btn-primary ms-2" data-selected-rows="data-selected-rows" style="min-width: 86px;">
+                                        <span id="spinner-apply" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                                        <div id="spinner-apply-text">Apply</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table fs--1 mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <div class="form-check mb-0 fs-0">
+                                                    <input class="form-check-input" id="bulk-select-example" type="checkbox" data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}'/>
+                                                </div>
+                                            </th>
+                                            <th class="sort" data-sort="runId">Test title</th>
+                                            <th>Template</th>
+                                            <th class="sort" data-sort="testName">Application</th>
+                                            <th class="sort" data-sort="duration">Duration (sec)</th>
+                                            <th class="sort" data-sort="maxThreads">Users</th>
+                                            <th class="sort" data-sort="startTime">Start time</th>
+                                            <th class="sort" data-sort="endTime">End time</th>
+                                            <th>Compare</th>
+                                            <!-- <th class="sort" data-sort="actions">Actions</th> -->
+                                        </tr>
+                                    </thead>
+                                    <tbody class="list" id="bulk-select-body">
+                                        <tr>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <th></th>
+                                            <!-- <th></th> -->
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-between mt-3 fs--1">
+                                <span data-list-info="data-list-info"></span>
+                                <div class="d-flex">
+                                    <button class="page-link" data-list-pagination="prev">
+                                        <span class="fas fa-chevron-left"></span>
+                                    </button>
+                                    <ul class="mb-0 pagination"></ul>
+                                    <button class="page-link pe-0" data-list-pagination="next">
+                                        <span class="fas fa-chevron-right"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="center-section" id="spinner">
+                                <div class="spinner-border text-info" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% with msgs = get_flashed_messages() %}
+                    {% include 'includes/flashed-msg.html' %}
+                {% endwith %}
+            </div>
+        </div>
+        <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $(document).ready(function(){
+                
+                const influxdb_select = document.getElementById("influxdbId");
+                influxdb_select.addEventListener("change", loadData);
+
+                const templates = JSON.parse('{{ templates | tojson }}');
+                if (!templates){
+                    templates = []
+                }
+
+                loadData();
+
+                function loadData(){
+                    var influxdb = $("#influxdbId").val();
+                    $("#spinner").show()
+                    perforge.utils
+                        .sendGetRequest('/load_tests?influxdb=' + influxdb)
+                        .then((data) => {
+                            if(data.status === 'success'){
+                                updateTable(data.tests);
+                            }else{
+                                const badmsg = document.getElementById("bad-msg");
+                                badmsg.style.display = "flex";
+                                const msg = badmsg.querySelector("#msg");
+                                msg.textContent = data.message;
+                            }
+                            $("#spinner").hide();
+                        })
+                        .catch((error) => {
+                            const badmsg = document.getElementById("bad-msg");
+                            badmsg.style.display = "flex";
+                            const msg = badmsg.querySelector("#msg");
+                            msg.textContent = error;
+                            $("#spinner").hide();
+                        });
+                }
+
+                function updateTable(tests) {
+                    $("#table-id").attr('data-list', '{"valueNames":["runId", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 7, "pagination": true}');
+
+                    var tableBody = document.getElementById("bulk-select-body");
+                    tableBody.innerHTML = ''; // Clear the table body
+
+                    tests.forEach(function(test) {
+                        const row = tableBody.insertRow();
+
+                        // Insert the checkbox column
+                        const checkboxCell = row.insertCell();
+                        const checkboxDiv = document.createElement("div");
+                        checkboxDiv.className = "form-check fs-0";
+                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"runId":"${test.runId}","testName":"${test.testName}","duration":"${test.duration}","maxThreads":"${test.maxThreads}","startTime":"${test.startTime}","endTime":"${test.endTime}","template_id":"no data"}' />`;
+                        checkboxCell.appendChild(checkboxDiv);
+
+                        // Insert cells for each column based on your data structure
+                        const runIdCell = row.insertCell();
+                        runIdCell.textContent = test.runId;
+
+                        // Create and insert the Test ID dropdown
+                        const templateIdCell = row.insertCell();
+                        const selectTemplate = document.createElement("select");
+                        selectTemplate.className = "form-select";
+
+                        // Create a default "Choose for comparison" option
+                        const defaultTemplateOption = document.createElement("option");
+                        defaultTemplateOption.value = "no data"; // Set an empty value for the default option
+                        defaultTemplateOption.textContent = "For report generation";
+                        selectTemplate.appendChild(defaultTemplateOption);
+                        selectTemplate.setAttribute("template-test-id", test.runId)
+                        templates.forEach(tmp => {
+                            const option = document.createElement("option");
+                            option.value = tmp.id;
+                            option.textContent = tmp.name;
+                            selectTemplate.appendChild(option);
+                        });
+                        templateIdCell.appendChild(selectTemplate);
+
+                        selectTemplate.addEventListener('change', (event) => {
+                            const value = event.target.value;
+                            const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
+                            let checkboxData = JSON.parse(checkbox.getAttribute('data-bulk-select-row'));
+                            checkboxData['template_id'] = value;
+                            checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
+                        });
+
+                        // Insert Test Name (modify as needed)
+                        const testNameCell = row.insertCell();
+                        testNameCell.textContent = test.testName;
+
+                        // Insert Duration (modify as needed)
+                        const durationCell = row.insertCell();
+                        durationCell.textContent = test.duration;
+
+                        // Insert Max Threads (modify as needed)
+                        const maxThreadsCell = row.insertCell();
+                        maxThreadsCell.textContent = test.maxThreads;
+
+                        // Insert Start Time (modify as needed)
+                        const startTimeCell = row.insertCell();
+                        startTimeCell.textContent = test.startTime;
+
+                        // Insert End Time (modify as needed)
+                        const endTimeCell = row.insertCell();
+                        endTimeCell.textContent = test.endTime;
+
+                        // Create and insert the Test ID dropdown
+                        const testIdCell = row.insertCell();
+                        const select = document.createElement("select");
+                        select.className = "form-select";
+
+                        // Create a default "Choose for comparison" option
+                        const defaultOption = document.createElement("option");
+                        defaultOption.value = "no data"; // Set an empty value for the default option
+                        defaultOption.textContent = "For comparison";
+                        select.appendChild(defaultOption);
+                        select.setAttribute("data-test-id", test.runId)
+                        tests.forEach(test => {
+                            const option = document.createElement("option");
+                            option.value = test.runId;
+                            option.textContent = test.runId;
+                            select.appendChild(option);
+                        });
+                        testIdCell.appendChild(select);
+
+                        select.addEventListener('change', (event) => {
+                            const value = event.target.value;
+                            const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
+                            let checkboxData = JSON.parse(checkbox.getAttribute('data-bulk-select-row'));
+                            checkboxData['baseline_run_id'] = value;
+                            checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
+                        });
+
+                        // Add the Actions column (e.g., Grafana link)
+                        // const actionsCell = row.insertCell();
+                        // actionsCell.innerHTML = `<a class="btn btn-danger" href="/grafana-result-dashboard?startTimestamp=${test.startTimestamp}&endTimestamp=${test.endTimestamp}&testTitle=${test.runId}">Grafana dashboard</a>`;
+                    });
+
+                    perforge.utils.listInit();
+                }
+            });
+        </script>
+    </main>
+{% endblock content %}

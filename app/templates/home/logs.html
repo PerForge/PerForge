@@ -1,0 +1,24 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Home {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+   <main>
+      <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+               <div class="main-body-header">
+               </div>
+               <div class="start-section ms-4 mt-3">
+                  <h2 class="mb-2 lh-sm">PerForge logs</h2>
+               </div>
+               <pre class="ms-4">{{ logs }}</pre>
+            </div>
+        </div>
+        <script>
+        </script>
+    </main>
+{% endblock content %}

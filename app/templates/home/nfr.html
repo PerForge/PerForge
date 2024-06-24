@@ -1,0 +1,203 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} PerForge {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/nfrs.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                </div> 
+                <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
+                    <div class="card-header">
+                      <div class="justify-content-between align-items-center">
+                        <h4 class="mb-0">NFR
+                            <a href="https://perforge.app/docs/configuration/nfrs" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                            </a>
+                        </h4>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                        <form class="needs-validation" novalidate="">
+                            <div class="flex-direction-column" id="nfrs-container">
+                                <div class="full-screen-section">
+                                    <div class="marging-10">
+                                        <label class="col-form-nfr-label">Name:</label>
+                                    </div>
+                                    <div class="marging-10">
+                                        <input name="test_name" id="test_name" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="full-screen-section">
+                                    <div class="nfr-col-l padding-10">
+                                        <label class="col-form-nfr-label">Scope:</label>
+                                        <label class="col-form-nfr-description">You can define the scope to which the NFRs check will be applied.
+                                                each: calculates metrics for each request.
+                                                Also you can specify request/transaction name.
+                                        </label>
+                                    </div>
+                                    <div class="nfr-col-m padding-10">
+                                        <label class="col-form-nfr-label">Metric:</label>
+                                        <label class="col-form-nfr-description">What metric should be calculated for the specified scope.</label>
+                                    </div>
+                                    <div class="nfr-col-s padding-10">
+                                        <label class="col-form-nfr-label">Operation:</label>
+                                        <label class="col-form-nfr-description">What comparison operation will be used to compare metric value with treshold.</label>
+                                    </div>
+                                    <div class="nfr-col-m padding-10">
+                                        <label class="col-form-nfr-label">Threshold:</label>
+                                        <label class="col-form-nfr-description">Only number should be specified(ms).</label>
+                                    </div>
+                                    <div class="nfr-col-l padding-10">
+                                        <label class="col-form-nfr-label">Weight (optional):</label>
+                                        <label class="col-form-nfr-description">You can specify which weight belongs to each NFR. This is an optional field. If not specified, all NFS will have the same weight.
+                                            Only number should be specified.
+                                            The sum of the total weight in one set should not exceed 100</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="full-screen-section">
+                                <div id="nfrs-panel">
+                                    <button onclick="addNfrRow()" type="button" class="btn btn-primary ms-2">New row</button>
+                                    <button type="submit" id="submitBtn" class="btn btn-primary">Save NFR</button>
+                                </div>
+                            </div>
+                        </form>
+                        {% with msgs = get_flashed_messages() %}
+                            {% include 'includes/flashed-msg.html' %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            const rowTemplate = `
+              <div class="full-screen-section nfr-row">
+                <div class="nfr-col-l padding-10">
+                  <input name="scope" class="form-control scope-nfr-field" required>
+                  <div class="valid-feedback">Looks good!</div>
+                  <div class="invalid-feedback">Please provide a valid data.</div>
+                </div>
+                <div class="nfr-col-s padding-10">
+                  <select class="form-select metric-nfr-field" required>
+                    <option value="avg" selected>avg</option>
+                    <option value="min">min</option>
+                    <option value="max">max</option>
+                    <option value="pct50">50%-tile</option>
+                    <option value="pct75">75%-tile</option>
+                    <option value="pct90">90%-tile</option>
+                    <option value="count">count</option>
+                    <option value="rpm">rpm</option>
+                  </select>
+                  <div class="valid-feedback">Looks good!</div>
+                  <div class="invalid-feedback">Please provide a valid data.</div>
+                </div>
+                <div class="nfr-col-s padding-10">
+                  <select class="form-select operation-nfr-field" required>
+                    <option value=">" selected>></option>
+                    <option value="<"><</option>
+                    <option value="==">==</option>
+                    <option value="!=">!=</option>
+                    <option value=">=">>=</option>
+                    <option value="<="><=</option>
+                  </select>
+                  <div class="valid-feedback">Looks good!</div>
+                  <div class="invalid-feedback">Please provide a valid data.</div>
+                </div>
+                <div class="nfr-col-m padding-10">
+                  <input name="threshold" class="form-control threshold-nfr-field" step="0.001" type="number" required>
+                  <div class="valid-feedback">Looks good!</div>
+                  <div class="invalid-feedback">Please provide a valid data.</div>
+                </div>
+                <div class="nfr-col-l padding-10">
+                  <input name="weight" class="form-control weight-nfr-field" max="100" step="0.001" type="number">
+                  <div class="valid-feedback">Looks good!</div>
+                  <div class="invalid-feedback">Please provide a valid data.</div>
+                </div>
+                <div class="padding-10" style="display: flex;width: 5%;">
+                  <button onclick="deleteNfrRow(this)" class="btn btn-danger delete-button" type="button" style="align-self: flex-start;">Delete</button>
+                </div>
+              </div>
+            `;
+          
+            function addNfrRow() {
+              const container = document.getElementById("nfrs-container");
+              container.insertAdjacentHTML("beforeend", rowTemplate);
+            }
+          
+            function deleteNfrRow(elem) {
+              elem.parentNode.parentNode.remove();
+            }
+          
+            function getNFRs() {
+              const formData = {};
+              formData.id = '{{ nfr_config }}' ? '{{ nfr_config }}' : '';
+              formData.name = document.querySelector('[name="test_name"]').value;
+              const nfrs = document.querySelectorAll('.nfr-row');
+              const data = Array.from(nfrs).map(element => ({
+                scope: element.querySelector('.scope-nfr-field').value,
+                metric: element.querySelector('.metric-nfr-field').value,
+                operation: element.querySelector('.operation-nfr-field').value,
+                threshold: parseInt(element.querySelector('.threshold-nfr-field').value),
+                weight: element.querySelector('.weight-nfr-field').value
+              }));
+          
+              formData.rows = data;
+              return JSON.stringify(formData);
+            }
+          
+            const nfrsPanel = document.getElementById("nfrs-panel");
+            const name = document.getElementById("test_name");
+            const nfrsJson = JSON.parse('{{ nfr_data | tojson }}');
+
+            if (nfrsJson && nfrsJson.name != null) {
+                name.value = nfrsJson.name;
+                for (const row of nfrsJson.rows) {
+                    addNfrRow();
+                    const newRow = document.querySelector('.nfr-row:last-child');
+                    newRow.querySelector('.scope-nfr-field').value = row.scope;
+                    newRow.querySelector('.metric-nfr-field').value = row.metric;
+                    newRow.querySelector('.operation-nfr-field').value = row.operation;
+                    newRow.querySelector('.threshold-nfr-field').value = row.threshold;
+                    newRow.querySelector('.weight-nfr-field').value = row.weight;
+                }
+            }
+          
+            const container = document.getElementById("nfrs-container");
+            const nfRows = container.getElementsByClassName("nfr-row");
+            if (nfRows.length === 0) {
+              addNfrRow();
+            }
+
+            (() => {
+                "use strict";
+                const forms = document.querySelectorAll(".needs-validation");
+                Array.from(forms).forEach((form) => {
+                    form.addEventListener(
+                        "submit",
+                        (event) => {
+                            perforge.utils.validateForm(form, event, (result) => {
+                            if (result) {
+                                perforge.utils
+                                .sendPostRequest("/nfr", getNFRs())
+                                .then((redirectUrl) => {
+                                    window.location.replace(redirectUrl);
+                                })
+                                .catch((error) => {
+                                    console.error("Request failed:", error);
+                                });
+                            }
+                        });
+                    },
+                    false
+                    );
+                });
+                })();
+          </script>
+    </main>
+{% endblock content %}

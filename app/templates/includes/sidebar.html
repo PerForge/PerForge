@@ -1,0 +1,172 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <img src="/static/assets/img/logo.png" height="25" alt="PerForge">
+        <a type="button" href="/">PerForge</a>
+    </div>
+    <a class="nav-link" type="button" href="/">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fas fa-home"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Home</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/tests">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fas fa-tachometer-alt"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Tests</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/reporting">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fa-solid fa-diagram-project"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Templates</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/graphs">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fas fa-chart-area"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Graphs</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/nfrs">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="far fa-check-circle"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">NFRs</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/prompts">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fa-solid fa-list"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Prompts</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/integrations">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fas fa-link"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Integrations</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link" type="button" href="/secrets">
+        <div class="d-flex align-items-center">
+            <span class="nav-link-icon">
+                <span class="fa-solid fa-key"></span>
+            </span>
+            <span class="nav-link-text-wrapper">
+                <span class="nav-link-text">Secrets</span>
+            </span>
+        </div>
+    </a>
+    <a class="nav-link dropdown-indicator" href="#profile" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="profile">
+        <div class="d-flex align-items-center">
+            <div class="dropdown-indicator-icon">
+                <span class="fas fa-caret-right"></span>
+            </div>
+            <span class="nav-link-icon">
+                <span class="far fa-sun"></span>
+            </span>
+            <span class="nav-link-text">Settings</span>
+        </div>
+    </a>
+    <div class="parent-wrapper">
+        <ul class="nav collapse parent" id="profile">
+            <li class="nav-item">
+              <a class="nav-link" href="/register" data-bs-toggle="" aria-expanded="false">
+                  <div class="d-flex align-items-center">
+                      <span class="nav-link-text">Add user</span>
+                  </div>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/view-logs" data-bs-toggle="" aria-expanded="false">
+                  <div class="d-flex align-items-center">
+                      <span class="nav-link-text">View logs</span>
+                  </div>
+              </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/logout" data-bs-toggle="" aria-expanded="false">
+                    <div class="d-flex align-items-center">
+                        <span class="nav-link-text">Sign out</span>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="fixed-bottom">
+        <a id = "projects-dropdown" data-bs-toggle="dropdown"></a>
+        <div id="projects-list" class="dropdown-menu">
+            <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+        </div>
+    </div>
+</div>
+{% include 'includes/project-modal.html' %}
+<script>
+    $(document).ready(function() {
+        var wrapper = document.getElementById('projects-list');
+
+        function getCookie(cookieName) {
+            let cookie = {};
+            document.cookie.split(';').forEach(function(el) {
+                let [key,value] = el.split('=');
+                cookie[key.trim()] = value;
+            })
+            return cookie[cookieName];
+        }
+        function setCookie(cname, cvalue) {
+            document.cookie = cname + "=" + cvalue;
+        }
+
+        var projectIdFromCookie = getCookie("project");
+        if (projectIdFromCookie === undefined) {
+            window.location.href = 'login.html';
+        } else {
+            $.get('/get-projects')
+            .done(function(response) {
+                var arrayLength = response['projects'].length;
+                for (var i = 0; i < arrayLength; i++) {
+                    const projectName = response['projects'][i]['name'];
+                    const projectId = response['projects'][i]['id'];
+                    const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="/set-project?project='+projectId+'">'+projectName+'</a>'
+                    wrapper.insertAdjacentHTML("afterbegin", projectElement);
+                    
+                    if (projectIdFromCookie === projectId) {
+                        var currentProject = document.getElementById('projects-dropdown');
+                        currentProject.textContent += projectName;
+                    }
+                }
+            }).fail(function() {
+                const projectElement = '<a class="dropdown-item rounded-top rounded-bottom">Could not contact server.</a>'
+                wrapper.insertAdjacentHTML("afterbegin", projectElement);
+            });
+        }
+    });
+</script>

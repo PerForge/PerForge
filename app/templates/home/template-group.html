@@ -1,0 +1,191 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Template page {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<!-- <link type="text/css" href="/static/assets/css/pixel.css" rel="stylesheet"> -->
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/report.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        {% include 'includes/preloader2.html' %}
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                </div>
+                <div class="full-screen-section margin-all-10">
+                    {% raw %}
+                    <div id="app" style="width: 100%;">
+                        <form class="needs-validation" novalidate="">
+                            <div class="row flex-between-end pl-5 pr-5">
+                                <div class="col-auto">
+                                    <h2 class="mb-2">Template group page
+                                        <a href="https://perforge.app/docs/configuration/template_groups" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more"></a>
+                                    </h2>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-primary mb-2 mb-sm-0" @click="checkForm">Save</button>
+                                </div>
+                            </div>
+                            <div class="row g-5">
+                            <div class="col-12 col-xl-8 pr-5">
+                                <h4 class="mb-3">Report title</h4>
+                                <input v-model="title" id="template-title" class="form-control mb-5" type="text" placeholder="Write title here..." required>
+                                <h4 class="mb-3">Report template group</h4>
+                                <draggable v-model="template" :element="'div'">
+                                    <div v-for="element in template" :key="element.id">
+                                        <div v-if="element.type === 'text'" class="template-group">
+                                            <textarea v-model="element.content" required></textarea>
+                                            <button class='btn-close-id btn-close ms-2' @click="removeElement(element)" type="button"></button>
+                                        </div>
+                                        <div v-else-if="element.type === 'template'" class="template-group">
+                                            <span class="badge badge-primary">TEMPLATE</span>
+                                            <div class="template-el-label">Name: {{ element.content }}</div>
+                                            <div class="flex-end">
+                                                <button class='btn-close-id btn-close' @click="removeElement(element)" type="button"></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </draggable>
+                                <button class="btn btn-primary mt-3" @click="addTextElement" type="button">Add Text</button>
+                                <div class="d-flex mt-3">
+                                    <div class="form-check form-switch min-h-auto mb-0">
+                                        <input v-model="ai_summary" class="form-check-input" id="ai_summary" type="checkbox" checked="">
+                                    </div>
+                                    <label class="form-check-label" for="ai_summary">AI summary</label>
+                                </div>
+                                <div v-if="ai_summary" class="mt-3">
+                                    <textarea v-model="prompt" id="ai_prompt_input" class="form-control mb-5" placeholder="Prompt..."></textarea>
+                                </div>
+                            </div>
+                            <div class="col-12 col-xl-4">
+                                <div class="row g-2">
+                                    <div class="col-12 col-xl-12">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <div class="margin-all-10">
+                                                    <label for="template">Template group name</label>
+                                                    <input v-model="name" id="template-name" class="form-control" type="text" required>              
+                                                </div>
+                                                <div class="margin-all-10">
+                                                    <label>Add template</label>
+                                                    <v-select class="vue-select-imput" :options="templates" label="name" @input="addTemplateElement" required></v-select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div>
+                                                    <label>Why we need it?</label>
+                                                    <div>
+                                                        <label class="var-description">A template group is useful when you need to generate reports for multiple tests simultaneously. It enables you to establish the order of test IDs for which reports will be created, and additionally, you can create a template summary for all the reports.</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    {% endraw %}
+                </div>
+                {% with msgs = get_flashed_messages() %}
+                    {% include 'includes/flashed-msg.html' %}
+                {% endwith %}
+            </div>
+        </div>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/vue/2.5.2/vue.min.js"></script>
+        <!-- CDNJS :: Sortable (https://cdnjs.com/) -->
+        <script src="//cdn.jsdelivr.net/npm/sortablejs@1.8.4/Sortable.min.js"></script>
+        <!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
+        <script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.20.0/vuedraggable.umd.min.js"></script>
+        <script src="https://unpkg.com/vue-select@latest"></script>
+        <link rel="stylesheet" href="https://unpkg.com/vue-select@latest/dist/vue-select.css">
+
+        <script>
+            Vue.component('v-select', {
+            extends: VueSelect.VueSelect,
+            props: ['attrs'],
+            });
+
+            const app = new Vue({
+                el: '#app',
+                data() {
+                    return {
+                        templates: [],
+                        name: "",
+                        title: "",
+                        template: [],
+                        ai_summary: false,
+                        prompt: ""
+                    };
+                },
+                methods: {
+                    addTextElement() {
+                        this.template.push({ id: "", type: 'text', content: '' });
+                    },
+                    addTemplateElement(element) {
+                        if (element !== null) {
+                            this.template.push({ id: element.id, type: 'template', content: element.name });
+                        }
+                    },
+                    removeElement(element) {
+                        const index = this.template.indexOf(element);
+                        if (index !== -1) {
+                            this.template.splice(index, 1);
+                        }
+                    },
+                    checkForm() {
+                        const form = document.querySelector(".needs-validation");
+                        perforge.utils.validateForm(form, event, (result) => {
+                            if (result) {
+                                let plainTemplate = JSON.parse(JSON.stringify(this.template));
+                                for (const item of plainTemplate) {
+                                    if (item.type === 'text') {
+                                        item.content = item.content.replace(/"/g, '\\\"');
+                                    }
+                                }
+                                const results = {
+                                    "id": '{{ "" if template_group_config is none else template_group_config }}',
+                                    "name": this.name,
+                                    "title": this.title,
+                                    "data": plainTemplate,
+                                    "prompt": this.prompt,
+                                    "ai_summary": this.ai_summary
+                                }
+                                perforge.utils
+                                .sendPostRequest("/template-group", JSON.stringify(results))
+                                .then((redirectUrl) => {
+                                    window.location.replace(redirectUrl);
+                                })
+                                .catch((error) => {
+                                    console.error("Request failed:", error);
+                                });
+                            }
+                        });
+                    },
+                },
+                created() {
+                    this.templates = JSON.parse('{{ templates | tojson }}');
+                    this.default_prompt = JSON.parse('{{ default_prompt | tojson | safe }}'.replace(/\n/g, "\\n"));
+
+                    this.template_group_data = JSON.parse('{{ template_group_data | tojson }}'.replace(/\n/g, "\\n"));
+                    if (this.template_group_data && this.template_group_data.name != null) {
+                        this.title      = this.template_group_data.title;
+                        this.name       = this.template_group_data.name;
+                        this.template   = this.template_group_data.data;
+                        this.ai_summary = this.template_group_data.ai_summary;
+                        this.prompt     = this.template_group_data && this.template_group_data.prompt ? this.template_group_data.prompt : this.default_prompt.prompt;
+                    } else {
+                        this.prompt = this.default_prompt.prompt
+                    }
+                },
+            });
+        </script>
+    </main>
+{% endblock content %}

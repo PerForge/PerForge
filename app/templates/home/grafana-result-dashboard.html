@@ -1,0 +1,22 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Azure {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<!-- <link type="text/css" href="/static/assets/css/pixel.css" rel="stylesheet"> -->
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        {% include 'includes/preloader2.html' %}
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+              <div style="position: relative; height: 1200px; overflow: hidden;">
+                <iframe src="{{ grafana_config_values.server }}{{ grafana_config_values.dashboards[0] }}?orgId={{ grafana_config_values.org_id }}&from={{ startTimestamp }}&to={{ endTimestamp }}&var-runId={{ testTitle }}"
+                        style="position: absolute; top: 0%; left: 0; width: 100%; height: 100%; border: 1px solid black;"></iframe>
+              </div>
+            </div>
+        </div>
+    </main>
+{% endblock content %}

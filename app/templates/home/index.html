@@ -1,0 +1,137 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Home {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+   <main>
+      <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+               <div class="main-body-header">
+               </div>
+               <div class="start-section ms-4 mt-3">
+                  <h2 class="mb-2 lh-sm">Getting started</h2>
+               </div>
+               <div class="start-section ms-4 mt-3">
+                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                      <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.templates }} <span class="fs-0 text-900 lh-lg">templates</span></p>
+                            <div class="flex-end">
+                              <a class="badge badge-success" href="{{ url_for('get_reporting') }}">add new</a>
+                            </div>
+                        </div>
+                      </div>
+                  </div>
+                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                     <div class="card">
+                        <div class="card-body">
+                           <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.graphs }} <span class="fs-0 text-900 lh-lg">graphs</span></p>
+                           <div class="flex-end">
+                              <a class="badge badge-success" href="{{ url_for('get_graphs') }}">add new</a>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                     <div class="card">
+                        <div class="card-body">
+                           <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.nfrs }} <span class="fs-0 text-900 lh-lg">nfrs</span></p>
+                           <div class="flex-end">
+                              <a class="badge badge-success" href="{{ url_for('get_nfrs') }}">add new</a>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                      <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.integrations }} <span class="fs-0 text-900 lh-lg">integrations</span></p>
+                            <div class="flex-end">
+                              <a class="badge badge-success" href="{{ url_for('integrations') }}">add new</a>
+                            </div>
+                        </div>
+                      </div>
+                  </div>
+                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                      <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.secrets }} <span class="fs-0 text-900 lh-lg">secrets</span></p>
+                            <div class="flex-end">
+                              <a class="badge badge-success" href="{{ url_for('get_secrets') }}">add new</a>
+                            </div>
+                        </div>
+                      </div>
+                  </div>
+               </div>
+               <div class="start-section ms-4 mt-3">
+                  <h2 class="mb-2 lh-sm">Projects</h2>
+               </div>
+               <div class="start-section ms-4">
+                  {% for project in projects %}
+                      <div class="card card-project center-section">
+                          <a class="mt-3-5" href="/set-project?project={{ project.id }}">{{ project.name }}</a>
+                          <button class="badge badge-primary mt-2 fs--2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}">remove</button>
+                      </div>
+                      <div class="modal fade" id="deleteProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel-{{ project.id }}" aria-hidden="true">
+                          <div class="modal-dialog">
+                              <div class="modal-content">
+                                  <div class="modal-header">
+                                      <h5 class="modal-title" id="deleteProjectModalLabel-{{ project.id }}">Confirm Delete</h5>
+                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                  </div>
+                                  <div class="modal-body">
+                                      Are you sure you want to delete the project "{{ project.name }}"?
+                                  </div>
+                                  <div class="modal-footer">
+                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                      <a class="btn btn-danger" href="/delete-project?project={{ project.id }}">Confirm Delete</a>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  {% endfor %}
+                  <div class="card card-project center-section">
+                     <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+                  </div>
+               </div>
+               <div class="start-section ms-4 mt-3">
+                  <h2 class="mb-2 lh-sm">Docs</h2>
+               </div>
+               <div class="start-section ms-4 mb-9">
+                  <div class="card card-docs">
+                     <div class="border-bottom-sm mt-3 ms-4 me-4">
+                        <ul class="useful-links">
+                            <li class="mt-1">
+                                <a href="https://perforge.app/docs/category/configuration" target="_blank">📄 Documentation</a>
+                            </li>
+                            <li class="mt-1">
+                                <a href="https://www.youtube.com/@PerForge" target="_blank">🎥 Youtube channel</a>
+                            </li>
+                            <li class="mt-1">
+                                <a href="https://github.com/PerForge/PerForge/discussions" target="_blank">🌠 Feature requests</a>
+                            </li>
+                            <li class="mt-1">
+                                <a href="https://github.com/PerForge/PerForge/issues" target="_blank">🐛 Report a bug</a>
+                            </li>
+                        </ul>
+                     </div>
+                     <div class="center-section">
+                        <p>version:<p class="text-primary fw-bold ms-2">1.0</p></p>
+                     </div>
+                  </div>
+               </div>
+               <div class="center-section">
+                  {% with msgs = get_flashed_messages() %}
+                  {% include 'includes/flashed-msg.html' %}
+                  {% endwith %}
+              </div>
+            </div>
+        </div>
+        <script>
+        </script>
+    </main>
+{% endblock content %}

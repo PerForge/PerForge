@@ -1,0 +1,47 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Sign IN {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background flex-center-center">
+            <div class="signin-inner">
+                <h1>PerForge</h1>
+                <br />
+                <h2>Login</h2>
+                <br />
+                <form method="post">
+                    {{ form.hidden_tag() }}
+                    <h4>Username</h4>
+                    <div class="input-group">
+                        <span class="input-group-text" id="basic-addon1">
+                            <span class="fas fa-user"></span>
+                        </span>
+                        {{ form.username(class="form-control") }}
+                    </div>
+                    <br />
+                    <h4>Password</h4>
+                    <div class="input-group">
+                        <span class="input-group-text" id="basic-addon2">
+                            <span class="fas fa-unlock-alt"></span>
+                        </span>
+                        {{ form.password(class="form-control", type="password") }}
+                    </div>
+                    <br />
+                    <div class="d-grid">
+                        <button type="submit" name="login" class="btn btn-primary">Sign in</button>
+                    </div>
+                    <br />
+                </form>
+                <br />
+                <h4>&copy; 2024 <strong>PerForge</strong>. All rights reserved.</h4>
+                {% with msgs = get_flashed_messages() %}
+                    {% include 'includes/flashed-msg.html' %}
+                {% endwith %}
+            </div>
+        </div>
+    </main>
+{% endblock content %}

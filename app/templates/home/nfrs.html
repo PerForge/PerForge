@@ -1,0 +1,104 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Azure {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+              <div class="main-body-header">
+              </div> 
+              <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
+                <div class="card-header">
+                  <div class="justify-content-between align-items-center">
+                    <h4 class="mb-0">NFRS
+                        <a href="https://perforge.app/docs/configuration/nfrs" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                        </a>
+                    </h4>
+                  </div>
+                </div>
+                <div class="card-body">
+                    <div id="table-id" data-list='{"valueNames":["name", "nfrs"], "page": 10, "pagination": true}'>
+                        <div class="d-flex align-items-center justify-content-end mb-3">
+                            <div class="d-flex">
+                                <div>
+                                    <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
+                                        <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" />
+                                        <span class="fas fa-search search-box-icon"></span>
+                                    </div>
+                                </div>
+                                <a class="btn btn-primary ms-2" href="/nfr">New NFR</a>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table fs--1 mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="sort" data-sort="name">Name</th>
+                                        <th class="sort" data-sort="nfrs">NFRS</th>
+                                        <th class="sort" data-sort="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list">
+                                    {% for nfrs_item in nfrs_list %}
+                                    <tr>
+                                        <td class="name">{{ nfrs_item.name }}</td>
+                                        <td class="nfrs">
+                                            {% for nfr in nfrs_item.rows %}
+                                                <div>
+                                                    {{ nfr.aggregation }} {{ nfr.metric }} {{ nfr.operation }} {{ nfr.threshold }} for {{ nfr.scope }}
+                                                </div>
+                                            {% endfor %}
+                                        </td>
+                                        <td class="actions" style="width: 20%;">
+                                            <a class="btn btn-secondary" href="/nfr?nfr_config={{ nfrs_item.id }}">Edit</a>
+                                            <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ nfrs_item.id }}">Delete</a>
+                                        </td>
+                                    </tr>
+                                    <div class="modal fade" id="deleteModal{{ nfrs_item.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                      <div class="modal-dialog">
+                                        <div class="modal-content">
+                                          <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                          </div>
+                                          <div class="modal-body">
+                                            Are you sure you want to delete the "{{ nfrs_item.name }}" nfr?
+                                          </div>
+                                          <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <a class="btn btn-danger" href="/delete/nfr?nfr_config={{ nfrs_item.id }}">Confirm Delete</a>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between mt-3 fs--1">
+                            <span data-list-info="data-list-info"></span>
+                            <div class="d-flex">
+                                <button class="page-link" data-list-pagination="prev">
+                                    <span class="fas fa-chevron-left"></span>
+                                </button>
+                                <ul class="mb-0 pagination"></ul>
+                                <button class="page-link pe-0" data-list-pagination="next">
+                                    <span class="fas fa-chevron-right"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              </div>
+              {% with msgs = get_flashed_messages() %}
+                  {% include 'includes/flashed-msg.html' %}
+              {% endwith %}
+            </div>
+        </div>
+    </main>
+{% endblock content %}

@@ -1,0 +1,34 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Home {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+{% endblock stylesheets %}
+{% block content %}
+   <main>
+      <div class="main-background">
+         <div class="min-vh-100 flex-center-center flex-direction-column">
+            <div class="center-section">
+               <h2 class="mb-2 lh-sm">Choose your project</h2>
+            </div>
+            <div class="center-section">
+               {% for project in projects %}
+                  <div class="card card-project center-section">
+                     <a href="/set-project?project={{ project.id }}">{{ project.name }}</a>
+                  </div>
+               {% endfor %}
+               <div class="card card-project center-section">
+                  <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+               </div>
+            </div>
+         </div>
+         <div class="center-section">
+            {% with msgs = get_flashed_messages() %}
+            {% include 'includes/flashed-msg.html' %}
+            {% endwith %}
+         </div>
+         {% include 'includes/project-modal.html' %}
+    </main>
+{% endblock content %}

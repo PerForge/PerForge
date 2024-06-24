@@ -1,0 +1,123 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} AI Support {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                </div>
+                <div class="center-section">
+                    <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
+                        <div class="card-header">
+                            <div class="justify-content-between align-items-center">
+                                <h4 class="mb-0">AI support integration
+                                    <a href="https://perforge.app/docs/configuration/integrations#ai-support" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                                    </a>
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="/ai-support">
+                                {{ form.hidden_tag() }}
+                                <div class="center-section">
+                                    {% if ai_support_config %}
+                                        <input type="hidden" name="id" id="config_id" value="{{ ai_support_config }}">
+                                    {% else %}
+                                        <input type="hidden" name="id" id="config_id">
+                                    {% endif %}
+                                    <label for="name">Name:</label>
+                                    {{ form.name(class="form-control") }}
+                                    <label for="ai_provider" class="mt-2">AI Provider:</label>
+                                    {{ form.ai_provider(class="form-control") }}
+                                    <div id="div_azure_url" style="display: none; width: 100%;">
+                                      <label for="azure_url" class="mt-2" style="display: block; text-align: center;">Azure URL:</label>
+                                      {{ form.azure_url(class="form-control", id="azure_url") }}
+                                    </div>
+                                    <div id="div_api_version" style="display: none; width: 100%;">
+                                        <label for="api_version" class="mt-2" style="display: block; text-align: center;">Api version:</label>
+                                        {{ form.api_version(class="form-control", id="api_version") }}
+                                      </div>
+                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="Please note that for Gemini, the 'gemini-pro' model has been tested, and for ChatGPT, the 'gpt-4-turbo' & 'gpt-4o' model has been tested."></span>
+                                    <label for="ai_text_model" class="input-label mt-2">AI Text model:</label>
+                                    {{ form.ai_text_model(class="form-control") }}
+                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="Please note that for Gemini, the 'gemini-pro-vision' model has been tested, and for ChatGPT, the 'gpt-4-turbo' & 'gpt-4o' model has been tested."></span>
+                                    <label for="ai_image_model" class="input-label mt-2">AI Image model:</label>
+                                    {{ form.ai_image_model(class="form-control") }}
+                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;."></span>
+                                    <label for="token" class="input-label mt-2">Token:</label>
+                                    {{ form.token(class="form-control") }}
+                                    <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
+                                    {{ form.temperature(class="form-control") }}
+                                    <label for="is_default" class="mt-2">Is Default:</label>
+                                    {{ form.is_default(class="form-control") }}
+                                    <button class="btn btn-primary mt-5" type="submit">Save</button>
+                                    {% if ai_support_config %}
+                                        <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
+                                    {% endif %}
+                                </div>
+                            </form>
+                            <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                              <div class="modal-dialog">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                  </div>
+                                  <div class="modal-body">
+                                    Are you sure you want to delete this configuration?
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <a class="btn btn-danger" href="/delete/ai-support?ai_support_config={{ ai_support_config }}">Confirm Delete</a>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% with msgs = get_flashed_messages() %}
+                        {% include 'includes/flashed-msg.html' %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        window.onload = function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+
+            var aiProviderInput = document.getElementById('ai_provider');
+            var azureUrlDiv = document.getElementById('div_azure_url');
+            var azureUrlInput = document.getElementById('azure_url');
+            var azureApiDiv = document.getElementById('div_api_version');
+            var azureApiInput = document.getElementById('api_version');
+
+            aiProviderInput.addEventListener('change', function() {
+                if (this.value === 'azure_openai') {
+                    azureUrlDiv.style.display = 'block';
+                    azureApiDiv.style.display = 'block';
+                } else {
+                    azureUrlDiv.style.display = 'none';
+                    azureUrlInput.value = '';
+                    azureApiDiv.style.display = 'none';
+                    azureApiInput.value = '';
+                }
+            });
+
+            // Check the initial value of 'ai_provider'
+            if (aiProviderInput.value === 'azure_openai') {
+                azureUrlDiv.style.display = 'block';
+                azureApiDiv.style.display = 'block';
+            }
+        }
+    </script>
+{% endblock content %}

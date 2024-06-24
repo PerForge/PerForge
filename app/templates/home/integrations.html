@@ -1,0 +1,222 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Integrations {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<!-- <link type="text/css" href="/static/assets/css/integrations.css" rel="stylesheet"> -->
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                </div>
+                <div class="center-section">
+                    <ul class="nav nav-underline" id="tabs-text" role="tablist">
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link active" id="influxdb" data-bs-toggle="tab"
+                                href="#tabs-text-1" role="tab" aria-controls="tabs-text-1"
+                                aria-selected="true">InfluxDB
+                            </a>
+                        </li>
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link" id="grafana" data-bs-toggle="tab"
+                                href="#tabs-text-2" role="tab" aria-controls="tabs-text-2"
+                                aria-selected="false">Grafana
+                            </a>
+                        </li>
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link" id="smtp-mail" data-bs-toggle="tab"
+                                href="#tabs-text-6" role="tab" aria-controls="tabs-text-6"
+                                aria-selected="false">SMTP Mail
+                            </a>
+                        </li>
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link" id="confluence" data-bs-toggle="tab"
+                                href="#tabs-text-4" role="tab" aria-controls="tabs-text-4"
+                                aria-selected="false">Confluence
+                            </a>
+                        </li>
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link" id="jira" data-bs-toggle="tab"
+                                href="#tabs-text-5" role="tab" aria-controls="tabs-text-5"
+                                aria-selected="false">Jira
+                            </a>
+                        </li>
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link" id="azure" data-bs-toggle="tab"
+                                href="#tabs-text-3" role="tab" aria-controls="tabs-text-3"
+                                aria-selected="false">Azure
+                            </a>
+                        </li>
+                        <li class="nav-item nav-integrations">
+                            <a class="nav-link" id="ai-support" data-bs-toggle="tab"
+                                href="#tabs-text-7" role="tab" aria-controls="tabs-text-7"
+                                aria-selected="false">AI Support
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="center-section tab-content">
+                    <div class="tab-pane active" id="tabs-text-1" role="tabpanel" aria-labelledby="influxdb">
+                        <div class="center-section">
+                            {% for influxdb_config in influxdb_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/influxdb.svg" class="card-img-top"
+                                    alt="InfluxDB" height="200">
+                                <p style="margin-top: 10px;">{{ influxdb_config.name }}</p>
+                                <a href="/influxdb?influxdb_config={{ influxdb_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/influxdb" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabs-text-2" role="tabpanel"
+                        aria-labelledby="grafana">
+                        <div class="center-section">
+                            {% for grafana_config in grafana_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/grafana.svg" class="card-img-top"
+                                    alt="Grafana" height="200">
+                                <p style="margin-top: 10px;">{{ grafana_config.name }}</p>
+                                <a href="/grafana?grafana_config={{ grafana_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/grafana" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabs-text-3" role="tabpanel"
+                        aria-labelledby="azure">
+                        <div class="center-section">
+                            {% for azure_config in azure_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/azure.svg" class="card-img-top"
+                                    alt="Azure" height="200">
+                                <p style="margin-top: 10px;">{{ azure_config.name }}</p>
+                                <a href="/azure?azure_config={{ azure_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/azure" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabs-text-4" role="tabpanel"
+                        aria-labelledby="confluence">
+                        <div class="center-section">
+                            {% for atlassian_confluence_config in atlassian_confluence_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/confluence.svg" class="card-img-top"
+                                    alt="confl" height="200">
+                                <p style="margin-top: 10px;">{{ atlassian_confluence_config.name }}</p>
+                                <a href="/atlassian-confluence?atlassian_confluence_config={{ atlassian_confluence_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/atlassian-confluence" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabs-text-5" role="tabpanel"
+                        aria-labelledby="jira">
+                        <div class="center-section">
+                            {% for atlassian_jira_config in atlassian_jira_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/jira.svg" class="card-img-top"
+                                    alt="confljira" height="200">
+                                <p style="margin-top: 10px;">{{ atlassian_jira_config.name }}</p>
+                                <a href="/atlassian-jira?atlassian_jira_config={{ atlassian_jira_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/atlassian-jira" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabs-text-6" role="tabpanel"
+                        aria-labelledby="smtp-mail">
+                        <div class="center-section">
+                            {% for smtp_mail_config in smtp_mail_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/mail.svg" class="card-img-top"
+                                    alt="smtpmail" height="200">
+                                <p style="margin-top: 10px;">{{ smtp_mail_config.name }}</p>
+                                <a href="/smtp-mail?smtp_mail_config={{ smtp_mail_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/smtp-mail" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="tabs-text-7" role="tabpanel"
+                        aria-labelledby="ai-support">
+                        <div class="center-section">
+                            {% for ai_support_config in ai_support_configs %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/ai_support.svg" class="card-img-top"
+                                    alt="aisupport" height="200">
+                                <p style="margin-top: 10px;">{{ ai_support_config.name }}</p>
+                                <a href="/ai-support?ai_support_config={{ ai_support_config.id }}" class="btn btn-primary">Configure</a>
+                            </div>
+                            {% endfor %}
+                            <div class="card card-integrations">
+                                <img src="/static/assets/img/blog/new_one.svg" class="card-img-top"
+                                    alt="New" height="245">
+                                <a href="/ai-support" class="btn btn-primary">Add new config</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% with msgs = get_flashed_messages() %}
+                    {% include 'includes/flashed-msg.html' %}
+                {% endwith %}
+            </div>
+        </div>
+    </main>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          function updateUrl(tab) {
+              const url = new URL(window.location);
+              url.searchParams.set('tab', tab);
+              window.history.pushState({path: url.href}, '', url.href);
+          }
+
+          // Получаем все вкладки
+          const tabs = document.querySelectorAll('.nav-link');
+
+          tabs.forEach(tab => {
+              tab.addEventListener('click', function() {
+                  updateUrl(this.id);
+              });
+          });
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const activeTabId = urlParams.get('tab');
+          if (activeTabId) {
+              const activeTab = document.getElementById(activeTabId);
+              if (activeTab) {
+                  activeTab.click();
+              }
+          }
+      });
+      </script>
+{% endblock content %}

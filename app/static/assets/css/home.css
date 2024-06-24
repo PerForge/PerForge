@@ -1,0 +1,232 @@
+:root {
+   --bgColor: #1c2329;
+   --gradient-lighter: linear-gradient( 141deg, rgb(154, 12, 255) 10%, rgb(0, 145, 255) 60%, rgb(13, 186, 199) 100% );
+}
+
+#infographic .circle {
+    width: 320px;
+    height: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    position: absolute;
+    left: 50%;
+}
+
+.tool-name {
+    background: var(--gradient-lighter);
+    font-weight: 700;
+    font-size: 70px;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.typed-title {
+    background: var(--gradient-lighter);
+    font-weight: 700;
+    font-size: 40px;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-top:50px;
+}
+
+#infographic :not(:nth-child(even)) .circle {
+   transform: translateX(-100%);
+}
+#infographic .circle i {
+   font-size: 5em;
+   margin-bottom: 20px;
+   color: currentColor;
+}
+#infographic article {
+   max-width: 410px;
+   margin-bottom: 20px;
+   cursor: pointer;
+   left: 50%;
+   position: relative;
+}
+#infographic article header {
+   border-top-right-radius: 30px;
+   border-bottom-right-radius: 30px;
+}
+#infographic article header i {
+   display: flex;
+   font-size: 2em;
+   border-radius: 50%;
+   background-clip: padding-box;
+   padding: 14px;
+   transition: transform 0.4s;
+   text-align: center;
+   flex-direction: column;
+   justify-content: center;
+   color: #fff;
+   width: 100px;
+   height: 100px;
+   border: 16px solid rgb(33, 32, 35);
+   margin: -16px 0 -16px -20px;
+}
+#infographic article header h6 {
+   text-transform: uppercase;
+   margin: 0 30px;
+   padding: 5px;
+   font-size: 16px;
+}
+#infographic article .dr-body {
+   padding: 0 20px;
+   border-bottom-right-radius: 30px;
+   border-bottom-left-radius: 30px;
+   max-height: 0;
+   transition: max-height 0.5s, padding 0.5s;
+   overflow: hidden;
+}
+#infographic article .dr-body .infographic-btn {
+   padding: 3px 10px;
+   text-transform: uppercase;
+}
+#infographic :nth-child(even) article {
+   text-align: right;
+   transform: translateX(-100%);
+}
+#infographic :nth-child(even) article header {
+   flex-flow: row-reverse;
+   border-top-left-radius: 30px;
+   border-bottom-left-radius: 30px;
+}
+#infographic :nth-child(even) article header i {
+   margin: -16px -20px -16px 0;
+}
+#infographic article[data-step="1"] {
+   margin-left: 20px;
+}
+#infographic article[data-step="2"] {
+   margin-left: 50px;
+}
+#infographic article[data-step="3"] {
+   margin-left: 46px;
+}
+#infographic article[data-step="4"] {
+   margin-left: 0;
+}
+#infographic article[data-step="5"] {
+   margin-left: -50px;
+}
+#infographic article[data-step="6"] {
+   margin-left: -40px;
+}
+#infographic article[data-step="7"] {
+   margin-left: -70px;
+}
+#infographic article[data-step="8"] {
+   margin-left: -60px;
+}
+#infographic article[data-step="9"] {
+   margin-left: 0;
+}
+#infographic article[data-step="10"] {
+   margin-left: 70px;
+}
+
+#infographic .one article header {
+    background: var(--gradient-lighter);
+}
+#infographic .one article header i {
+   background: var(--gradient-lighter);
+}
+
+#infographic article:hover header i {
+   transform: scale(1.2);
+}
+#infographic article.active header {
+   border-bottom-right-radius: 0;
+}
+#infographic article.active header i {
+   --opacity: 0.4;
+   transform: scale(1) !important;
+}
+#infographic article.active .dr-body {
+   padding: 20px;
+   max-height: 300px;
+   border: 1px solid rgb(0, 145, 255);
+}
+
+.infographic-btn {
+    color: rgb(0, 145, 255);
+    position: relative;
+    transition: all 0.2s ease;
+    border-radius: 1rem;
+    display: inline-block;
+    font-weight: 600;
+    line-height: 1.5;
+    text-align: center;
+    vertical-align: middle;
+    border: 3px solid rgb(0, 145, 255);
+}
+
+.wiki {
+    display: flex;
+    margin: 50px;
+    border-radius: 20px;
+    background-color: rgb(47, 46, 46);
+  }
+
+.wiki-nav {
+padding: 20px;
+background-color: var(--bs-background);
+width: 300px;
+border-radius: 20px;
+}
+
+.wiki-nav .wiki-ul {
+list-style: none;
+margin: 0;
+padding: 0;
+display: flex;
+flex-direction: column;
+}
+
+.wiki-nav a {
+text-decoration: none;
+display: block;
+padding: 5px;
+}
+
+.sub-menu {
+padding-left: 20px;
+display: flex;
+flex-direction: column;
+list-style: none;
+}
+
+.wiki-content {
+width: 100%;
+}
+
+.content {
+display: none;
+padding: 20px 20px 20px 50px;
+}
+
+.content.active {
+display: block;
+}
+
+.typed-title-block {
+height: 200px; 
+flex-direction: row;
+}
+
+.wiki-step {
+position: relative;
+}
+
+.infographic-step {
+    display: flex;
+    align-items: center;
+}
+
+.infographic-btn-block {
+    margin-top: 16px;
+    justify-content: space-between;
+    display: flex;
+}

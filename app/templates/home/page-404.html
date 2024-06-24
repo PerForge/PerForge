@@ -1,0 +1,30 @@
+{% extends "layouts/base-fullscreen.html" %}
+
+{% block title %} Error 404 {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+
+{% block content %}
+
+<main>
+    <div class="main-background">
+        <div class="row min-vh-100 flex-center">
+            <div class="col-12 col-xl-10 col-xxl-8">
+                <div class="row justify-content-center align-items-center g-5">
+                    <div class="col-12 col-lg-6 text-center text-lg-start">
+                        <img src="/static/assets/img/errors/404.png" alt="" width="450">
+                        <h2 class="mt-5">Page Missing!</h2>
+                        <a class="btn btn-primary mt-3" href="/">Go Home</a>
+                    </div>
+                    <div class="col-12 col-lg-6 text-center order-lg-1">
+                        <img src="/static/assets/img/errors/404-illustration.png" alt="" width="540">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock content %}
