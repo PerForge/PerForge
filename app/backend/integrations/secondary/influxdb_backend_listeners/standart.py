@@ -206,9 +206,13 @@ stats2 = from(bucket: "'''+bucket+'''")
   |> toInt()
   |> group()
   |> pivot(rowKey: ["transaction"], columnKey: ["_field"], valueColumn: "_value")
-  |> rename(columns: {"pct50.0": "pct50"})
-  |> rename(columns: {"pct75.0": "pct75"})
-  |> rename(columns: {"pct90.0": "pct90"})
+  |> map(fn: (r) => ({
+      r with
+      pct50: if exists r["pct50.0"] then r["pct50.0"] else 0,
+      pct75: if exists r["pct75.0"] then r["pct75.0"] else 0,
+      pct90: if exists r["pct90.0"] then r["pct90.0"] else 0,
+  }))
+  |> drop(columns: ["pct50.0", "pct75.0", "pct90.0"])
 
 stats3 = join.full(
     left: stats1,
