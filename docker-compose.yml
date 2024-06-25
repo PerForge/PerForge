@@ -19,21 +19,28 @@ services:
     restart: always
 
   grafana:
-    image: perforge/perforge-grafana:10.0.2
+    image: grafana/grafana:10.0.2
     container_name: grafana
-    user: "472"
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=adminpass
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
     volumes:
       - grafana-home:/var/lib/grafana/
       - grafana-conf:/etc/grafana/
     restart: always
 
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    ports:
+      - 8081
+    restart: always
+
   perforge:
-    image: perforge/perforge-app:1.0
+    image: perforge/perforge-app:latest
     container_name: perforge
     ports:
       - "7878:7878"
