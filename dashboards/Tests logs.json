@@ -78,7 +78,7 @@
       "columns": [],
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "editable": true,
       "error": false,
@@ -159,7 +159,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "import \"strings\"\r\n\r\ndata = from(bucket: v.bucket)\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n\r\nmaxThreads = data\r\n  |> keep(columns: [\"_value\", \"testTitle\", \"application\"])\r\n  |> max()\r\n  |> group(columns: [\"_value\", \"testTitle\", \"application\"])\r\n  |> rename(columns: {_value: \"maxThreads\"})\r\n\r\nendTime = data\r\n  |> max(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\", \"application\"])\r\n  |> group(columns: [\"_time\", \"testTitle\", \"application\"])\r\n  |> rename(columns: {_time: \"endTime\"})\r\n\r\nstartTime = data\r\n  |> min(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\", \"application\"])\r\n  |> group(columns: [\"_time\", \"testTitle\", \"application\"])\r\n  |> rename(columns: {_time: \"startTime\"})\r\n\r\njoin1 = join(tables: {d1: maxThreads, d2: startTime}, on: [\"testTitle\", \"application\"])\r\n  |> keep(columns: [\"startTime\",\"testTitle\", \"application\",  \"maxThreads\"])\r\n  |> group(columns: [\"testTitle\", \"application\"])\r\n\r\njoin(tables: {d1: join1, d2: endTime}, on: [\"testTitle\", \"application\"])\r\n  |> map(fn: (r) => ({ r with duration: (int(v: r.endTime) - int(v: r.startTime))}))\r\n  |> map(fn: (r) => ({ r with actions: \r\n    strings.joinStr(arr: \r\n    [\r\n      \"<a class=\\\"btn-primary btn-small\\\" href=\\\"d/jmeter-test-results-standard-listener/jmeter-test-results-standard-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-app=\",string(v: r.application),\"&var-testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Dashboard</a>\"\r\n    ], \r\n    v: \"\") \r\n    + \r\n    strings.joinStr(arr: \r\n\t  [\r\n      \"<a class=\\\"btn-primary btn-small offset-md-1\\\" \r\n      href=\\\"d/jmeter-test-comparison-standard-listener/jmeter-tests-comparison-standard-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-app=\",string(v: r.application),\"&var-current_testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Compare</a>\"\r\n    ], \r\n    v: \"\")\r\n  }))\r\n  |> keep(columns: [\"application\", \"testTitle\", \"maxThreads\", \"duration\", \"actions\"])\r\n  |> group()",
           "refId": "A"
@@ -208,7 +208,7 @@
       "columns": [],
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "editable": true,
       "error": false,
@@ -289,7 +289,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "import \"strings\"\r\n\r\ndata = from(bucket: v.bucket)\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxActiveThreads\")\r\n  |> keep(columns: [\"_time\", \"_value\", \"runId\", \"testName\"])\r\n  |> group(columns: [\"runId\", \"testName\"])\r\n\r\nmaxThreads = data\r\n  |> keep(columns: [\"_value\", \"runId\", \"testName\"])\r\n  |> max()\r\n  |> group(columns: [\"_value\", \"runId\", \"testName\"])\r\n  |> rename(columns: {_value: \"maxThreads\"})\r\n\r\nendTime = data\r\n  |> max(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"runId\", \"testName\"])\r\n  |> group(columns: [\"_time\", \"runId\", \"testName\"])\r\n  |> rename(columns: {_time: \"endTime\"})\r\n\r\nstartTime = data\r\n  |> min(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"runId\", \"testName\"])\r\n  |> group(columns: [\"_time\", \"runId\", \"testName\"])\r\n  |> rename(columns: {_time: \"startTime\"})\r\n\r\njoin1 = join(tables: {d1: maxThreads, d2: startTime}, on: [\"runId\", \"testName\"])\r\n  |> keep(columns: [\"startTime\",\"runId\", \"testName\",  \"maxThreads\"])\r\n  |> group(columns: [\"runId\", \"testName\"])\r\n\r\njoin(tables: {d1: join1, d2: endTime}, on: [\"runId\", \"testName\"])\r\n  |> map(fn: (r) => ({ r with duration: (int(v: r.endTime) - int(v: r.startTime))}))\r\n  |> map(fn: (r) => ({ r with actions: \r\n    strings.joinStr(arr: \r\n    [\r\n      \"<a class=\\\"btn-primary btn-small\\\" href=\\\"d/jmeter-test-results-custom-listener/jmeter-test-results-custom-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-app=\",string(v: r.testName),\"&var-testTitle=\",\r\n      string(v: r.runId),\"\\\">Dashboard</a>\"\r\n    ], \r\n    v: \"\") \r\n    + \r\n    strings.joinStr(arr: \r\n\t  [\r\n      \"<a class=\\\"btn-primary btn-small offset-md-1\\\" \r\n      href=\\\"d/jmeter-tests-comparison-custom-listener/jmeter-tests-comparison-custom-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-app=\",string(v: r.testName),\"&var-current_testTitle=\",\r\n      string(v: r.runId),\"\\\">Compare</a>\"\r\n    ], \r\n    v: \"\")\r\n  }))\r\n  |> keep(columns: [\"testName\", \"runId\", \"maxThreads\", \"duration\", \"actions\"])\r\n  |> group()",
           "refId": "A"

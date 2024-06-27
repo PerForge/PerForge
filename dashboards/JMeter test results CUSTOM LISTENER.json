@@ -121,7 +121,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -272,7 +272,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"Median\")",
               "refId": "A"
@@ -280,7 +280,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> quantile(q: 0.75)\r\n  |> set(key: \"_field\", value: \"pct75\")",
@@ -289,7 +289,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> quantile(q: 0.90)\r\n  |> set(key: \"_field\", value: \"pct90\")",
@@ -298,7 +298,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: count, createEmpty: false)   \r\n  |> toFloat() \r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value /float(v: ${aggregation}))}))\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"RPS\")",
@@ -307,7 +307,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> sum() \r\n  |> set(key: \"_field\", value: \"Total requests\")",
@@ -316,7 +316,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"testName\", \"result\"])\r\n  |> sum()\r\n  |> toFloat()\r\n  |> pivot(rowKey: [\"testName\"], columnKey: [\"result\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with all: if exists r.fail then (r.fail + r.pass) else r.pass }))\r\n  |> map(fn: (r) => ({ r with errors: if exists r.fail then (r.fail/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"errors\"])",
@@ -330,7 +330,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -411,7 +411,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> filter(fn: (r) => r[\"result\"] == \"fail\")\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> set(key: \"_field\", value: \"Errors Per Second\")",
               "refId": "A"
@@ -423,7 +423,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -515,7 +515,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"receivedBytes\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> set(key: \"_field\", value: \"Received\")",
               "refId": "A"
@@ -523,7 +523,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"sentBytes\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> set(key: \"_field\", value: \"Sent\")",
@@ -536,7 +536,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -633,7 +633,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxActiveThreads\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: last, createEmpty: false)\r\n  |> set(key: \"_field\", value: \"Active threads\")",
               "refId": "A"
@@ -641,7 +641,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"transaction\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))\r\n  |> set(key: \"_field\", value: \"Transactions per second\")\r\n",
@@ -650,7 +650,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))\r\n  |> set(key: \"_field\", value: \"Requests per second\")\r\n",
@@ -663,7 +663,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -744,7 +744,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"Median\")",
               "refId": "A"
@@ -752,7 +752,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct75\")",
@@ -761,7 +761,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct90\")",
@@ -774,7 +774,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -855,7 +855,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"connectTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"connect\")",
               "refId": "A"
@@ -863,7 +863,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"latency\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"latency\")",
@@ -872,7 +872,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"processingTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"processingTime\")",
@@ -899,7 +899,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -994,7 +994,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> mean()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"Avg\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1003,7 +1003,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"Median\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1012,7 +1012,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> quantile(q: 0.75)\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"pct75\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1021,7 +1021,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> quantile(q: 0.90)\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"pct90\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1030,7 +1030,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"connectTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"connectTime\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1039,7 +1039,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"latency\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"latency\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1048,7 +1048,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"processingTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"requestName\",\"_value\"])\r\n  |> group(columns:[\"requestName\"])\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"processingTime\"})\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1057,7 +1057,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\", \"requestName\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: 60s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 60))}))\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"RPS\"})\r\n  |> keep(columns: [\"RPS\",\"requestName\"])\r\n  |> rename(columns: {\"requestName\": \"transaction\"})",
@@ -1066,7 +1066,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"requestName\", \"result\"])\r\n  |> sum()\r\n  |> toFloat()\r\n  |> pivot(rowKey: [\"requestName\"], columnKey: [\"result\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with all: if exists r.fail then (r.fail + r.pass) else r.pass }))\r\n  |> map(fn: (r) => ({ r with Errors: if exists r.fail then (r.fail/r.all*100.0) else 0.0 }))\r\n  |> group()\r\n  |> keep(columns: [\"Errors\",\"requestName\",\"all\"])\r\n  |> rename(columns: {\"requestName\": \"transaction\"})\r\n  |> rename(columns: {\"all\": \"Count\"})",
@@ -1129,7 +1129,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1245,7 +1245,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": " from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"requestName\"])\r\n  |> keep(columns: [\"_value\", \"_time\", \"requestName\"])\r\n  |> toFloat() \r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))",
               "refId": "A"
@@ -1275,7 +1275,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1356,7 +1356,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"connectTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"Median\")",
               "refId": "A"
@@ -1364,7 +1364,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"connectTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct75\")",
@@ -1373,7 +1373,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"connectTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct90\")",
@@ -1386,7 +1386,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1467,7 +1467,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"latency\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"Median\")",
               "refId": "A"
@@ -1475,7 +1475,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"latency\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct75\")",
@@ -1484,7 +1484,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"latency\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct90\")",
@@ -1497,7 +1497,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1578,7 +1578,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"processingTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"Median\")",
               "refId": "A"
@@ -1586,7 +1586,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"processingTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct75\")",
@@ -1595,7 +1595,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "hide": false,
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"processingTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value: \"pct90\")",
@@ -1608,7 +1608,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1691,7 +1691,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"requestName\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: mean, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"requestName\", \"_value\"])",
               "refId": "A"
@@ -1703,7 +1703,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1786,7 +1786,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"requestName\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"requestName\", \"_value\"])",
               "refId": "A"
@@ -1798,7 +1798,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1881,7 +1881,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"requestName\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"requestName\", \"_value\"])",
               "refId": "A"
@@ -1893,7 +1893,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1976,7 +1976,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> group(columns:[\"requestName\"])\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"requestName\", \"_value\"])",
               "refId": "A"
@@ -2006,7 +2006,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2086,7 +2086,7 @@
             {
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"errorCount\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"_value\"] == 1)\r\n  |> group(columns: [\"requestName\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: true)",
               "refId": "A"
@@ -2098,7 +2098,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "description": "",
           "fieldConfig": {
@@ -2199,7 +2199,7 @@
               "alias": "$tag_responseCode",
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "dsType": "InfluxDB_Sitecore_team",
               "groupBy": [
@@ -2252,7 +2252,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "description": "",
           "fieldConfig": {
@@ -2353,7 +2353,7 @@
               "alias": "$tag_responseCode",
               "datasource": {
                 "type": "influxdb",
-                "uid": "P469A0A94B6BCE947"
+                "uid": "${DS_INFLUXDB}"
               },
               "dsType": "InfluxDB_Sitecore_team",
               "groupBy": [
@@ -2421,7 +2421,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n  bucket: v.bucket, \r\n  tag: \"testName\",\r\n  start: 0\r\n)",
         "hide": 0,
@@ -2441,7 +2441,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"runId\",\r\n    predicate: (r) => r._measurement == \"requestsRaw\" and r[\"testName\"] == \"${app}\",\r\n    start: 0\r\n  )",
         "hide": 0,

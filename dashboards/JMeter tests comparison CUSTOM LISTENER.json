@@ -86,7 +86,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -169,7 +169,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"Median response time\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"Median response time\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -178,7 +178,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> quantile(q: 0.75)\r\n  |> set(key: \"Metric\", value: \"75%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> quantile(q: 0.75)\r\n  |> set(key: \"Metric\", value: \"75%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -187,7 +187,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> quantile(q: 0.90)\r\n  |> set(key: \"Metric\", value: \"90%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns:[\"_field\",\"_value\"])\r\n  |> quantile(q: 0.90)\r\n  |> set(key: \"Metric\", value: \"90%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -196,7 +196,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"testName\", \"result\"])\r\n  |> sum()\r\n  |> toFloat()\r\n  |> pivot(rowKey: [\"testName\"], columnKey: [\"result\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with all: if exists r.fail then (r.fail + r.pass) else r.pass }))\r\n  |> map(fn: (r) => ({ r with errors: if exists r.fail then (r.fail/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"errors\"])\r\n  |> rename(columns: {\"errors\": \"Current\"})\r\n  |> set(key: \"Metric\", value: \"Errors,%\")\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> group(columns: [\"testName\", \"result\"])\r\n  |> sum()\r\n  |> toFloat()\r\n  |> pivot(rowKey: [\"testName\"], columnKey: [\"result\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with all: if exists r.fail then (r.fail + r.pass) else r.pass }))\r\n  |> map(fn: (r) => ({ r with errors: if exists r.fail then (r.fail/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"errors\"])\r\n  |> rename(columns: {\"errors\": \"Baseline\"})\r\n  |> set(key: \"Metric\", value: \"Errors,%\")\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -205,7 +205,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"testName\"])\r\n  |> sum()\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> set(key: \"Metric\", value: \"Total requests\")\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> group(columns: [\"testName\", \"result\"])\r\n  |> sum()\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> set(key: \"Metric\", value: \"Total requests\")\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -214,7 +214,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)   \r\n  |> toFloat() \r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value /float(v: ${aggregation}))}))\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> set(key: \"Metric\", value: \"RPS\")\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"request\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)   \r\n  |> toFloat() \r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value /float(v: ${aggregation}))}))\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> set(key: \"Metric\", value: \"RPS\")\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -245,7 +245,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -372,7 +372,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: $__interval, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: $__interval_ms) * 1000.0)}))\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: $__interval, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: $__interval_ms) * 1000.0)}))\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -384,7 +384,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -511,7 +511,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -523,7 +523,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -650,7 +650,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.75, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -662,7 +662,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -789,7 +789,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> toFloat()\r\n  |> aggregateWindow(\r\n     every: [[aggregation]]s, \r\n     fn: (tables=<-, column) =>\r\n      tables\r\n        |> quantile(q: 0.90, method: \"exact_selector\"),\r\n     createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -801,7 +801,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -991,7 +991,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_value\", \"requestName\"])\r\n  |> group(columns: [\"requestName\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> keep(columns: [\"Current\", \"requestName\"])\r\n\r\nbaseline_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_value\", \"requestName\"])\r\n  |> group(columns: [\"requestName\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> keep(columns: [\"Baseline\", \"requestName\"])\r\n\r\njoin(tables: {d1: current_test, d2: baseline_test}, on: [\"requestName\"])\r\n  |> map(fn: (r) => ({ r with \"Diff,ms\": float(v: r.Current) - float(v: r.Baseline) }))\r\n  |> map(fn: (r) => ({ r with \"Diff,%\": float(v: r.Current) / float(v: r.Baseline) - float(v: 1) }))\r\n  |> group()",
           "refId": "A"
@@ -1021,7 +1021,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1211,7 +1211,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_value\", \"requestName\"])\r\n  |> group(columns: [\"requestName\"])\r\n  |> toFloat()\r\n  |> quantile(q: 0.75)\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> keep(columns: [\"Current\", \"requestName\"])\r\n\r\nbaseline_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_value\", \"requestName\"])\r\n  |> group(columns: [\"requestName\"])\r\n  |> toFloat()\r\n  |> quantile(q: 0.75)\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> keep(columns: [\"Baseline\", \"requestName\"])\r\n\r\njoin(tables: {d1: current_test, d2: baseline_test}, on: [\"requestName\"])\r\n  |> map(fn: (r) => ({ r with \"Diff,ms\": float(v: r.Current) - float(v: r.Baseline) }))\r\n  |> map(fn: (r) => ({ r with \"Diff,%\": float(v: r.Current) / float(v: r.Baseline) - float(v: 1) }))\r\n  |> group()",
           "refId": "A"
@@ -1241,7 +1241,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "P469A0A94B6BCE947"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1428,7 +1428,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "P469A0A94B6BCE947"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "current_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_value\", \"requestName\"])\r\n  |> group(columns: [\"requestName\"])\r\n  |> toFloat()\r\n  |> quantile(q: 0.90)\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> keep(columns: [\"Current\", \"requestName\"])\r\n\r\nbaseline_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"requestsRaw\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"responseTime\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"samplerType\"] == \"${type}\")\r\n  |> keep(columns: [\"_value\", \"requestName\"])\r\n  |> group(columns: [\"requestName\"])\r\n  |> toFloat()\r\n  |> quantile(q: 0.90)\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> keep(columns: [\"Baseline\", \"requestName\"])\r\n\r\njoin(tables: {d1: current_test, d2: baseline_test}, on: [\"requestName\"])\r\n  |> map(fn: (r) => ({ r with \"Diff,ms\": float(v: r.Current) - float(v: r.Baseline) }))\r\n  |> map(fn: (r) => ({ r with \"Diff,%\": float(v: r.Current) / float(v: r.Baseline) - float(v: 1) }))\r\n  |> group()",
           "refId": "A"
@@ -1469,7 +1469,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "import \"influxdata/influxdb/schema\"\n\nschema.tagValues(\n  bucket: v.bucket, \n  tag: \"testName\",\n  start: 0\n)",
         "hide": 0,
@@ -1489,7 +1489,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"runId\",\r\n    predicate: (r) => r._measurement == \"virtualUsers\" and r.testName == \"${app}\",\r\n    start: 0,\r\n    stop: now()\r\n  )",
         "hide": 0,
@@ -1512,7 +1512,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxActiveThreads\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> min(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
@@ -1531,7 +1531,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxActiveThreads\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> max(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
@@ -1550,7 +1550,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: time(v: ${current_startTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] != \"${testTitle}\")\r\n  |> distinct(column: \"runId\")\r\n  |> keep(columns: [\"runId\"])\r\n  |> group()",
         "hide": 0,
@@ -1569,7 +1569,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxActiveThreads\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> min(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
@@ -1588,7 +1588,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "P469A0A94B6BCE947"
+          "uid": "${DS_INFLUXDB}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"virtualUsers\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxActiveThreads\")\r\n  |> filter(fn: (r) => r[\"testName\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"runId\"] == \"${baseline_testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> max(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
