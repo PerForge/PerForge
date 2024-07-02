@@ -31,16 +31,14 @@ class AtlassianConfluenceReport(ReportingBase):
         self.output_obj = AtlassianConfluence(project=self.project, id=action_id)
 
     def add_group_text(self, text):
-        text += f'\n'
-        text = text.replace('\\"', '"')
-        text = text.replace('&', '&amp;')
+        text = f'<p>{text}</p><br>'
+        text = text.replace('\n', '<br>')
         return text
 
     def add_text(self, text):
         text = self.replace_variables(text)
-        text += f'\n'
-        text = text.replace('\\"', '"')
-        text = text.replace('&', '&amp;')
+        text = f'<p>{text}</p>'
+        text = text.replace('\n', '<br>')
         return text
     
     def add_graph(self, graph_id, current_run_id, baseline_run_id):
