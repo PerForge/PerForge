@@ -17,3 +17,4 @@ app/static/assets/.temp
 app/logs
 **/config.json
 **/nfrs.json
+debug_run.bat

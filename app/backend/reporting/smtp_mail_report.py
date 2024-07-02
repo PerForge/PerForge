@@ -117,6 +117,7 @@ class SmtpMailReport(ReportingBase):
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
-        result = self.analyze_template()
-        report_body = self.add_text(result) + report_body
+        if self.nfrs_switch or self.ai_switch:
+            result      = self.analyze_template()
+            report_body = self.add_text(result) + report_body
         return report_body
