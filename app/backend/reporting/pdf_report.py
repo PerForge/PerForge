@@ -285,5 +285,6 @@ class PdfReport(ReportingBase):
                 graph_data       = pkg.get_graph(self.project, obj["id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 self.add_graph(obj["id"], current_run_id, baseline_run_id)
-        result = self.analyze_template()
-        self.pdf_creator.add_text_summary(result)
+        if self.nfrs_switch or self.ai_switch:
+            result = self.analyze_template()
+            self.pdf_creator.add_text_summary(result)

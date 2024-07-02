@@ -31,21 +31,26 @@ class AtlassianConfluenceReport(ReportingBase):
         self.output_obj = AtlassianConfluence(project=self.project, id=action_id)
 
     def add_group_text(self, text):
-        text = f'<p>{text}</p><br>'
-        text = text.replace('\n', '<br>')
+        text = self.replace_variables(text)
+        text = f'<h1>{text}</h1><br/>'
+        text = text.replace('\\"', '"')
+        text = text.replace('&', '&amp;')
+        text = text.replace('\n', '<br/>')
         return text
 
     def add_text(self, text):
         text = self.replace_variables(text)
         text = f'<p>{text}</p>'
-        text = text.replace('\n', '<br>')
+        text = text.replace('\\"', '"')
+        text = text.replace('&', '&amp;')
+        text = text.replace('\n', '<br/>')
         return text
     
     def add_graph(self, graph_id, current_run_id, baseline_run_id):
         image = self.grafana_obj.render_image(graph_id, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
         fileName = self.output_obj.put_image_to_confl(image, graph_id, self.page_id)
         if(fileName):
-            graph = f'<ac:image ac:align="center" ac:layout="center" ac:original-height="500" ac:original-width="1000"><ri:attachment ri:filename="{str(fileName)}" /></ac:image>\n'
+            graph = f'<br/><ac:image ac:align="center" ac:layout="center" ac:original-height="500" ac:original-width="1000"><ri:attachment ri:filename="{str(fileName)}" /></ac:image><br/>'
         else:
             graph = f'Image failed to load, id: {graph_id}'
         if self.ai_switch and self.ai_graph_switch:
@@ -86,7 +91,7 @@ class AtlassianConfluenceReport(ReportingBase):
                         temporary_title = self.generate_path(False)
                         self.create_page_id(temporary_title)
                 title             = self.generate_path(False)
-                self.report_body += self.add_text(title)
+                self.report_body += self.add_group_text(title)
                 self.report_body += self.generate(run_id, baseline_run_id)
                 if not group_title:
                     templates_title += f'{title} | '
@@ -128,6 +133,7 @@ class AtlassianConfluenceReport(ReportingBase):
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
-        result = self.analyze_template()
-        report_body = self.add_text(result) + report_body
+        if self.nfrs_switch or self.ai_switch:
+            result      = self.analyze_template()
+            report_body = self.add_text(result) + report_body
         return report_body
