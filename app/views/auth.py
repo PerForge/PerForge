@@ -27,7 +27,7 @@ from functools          import wraps
 
 
 # List of routes that do not require authentication
-no_auth_required_routes = ['login', 'register', 'static','register_admin']
+no_auth_required_routes = ['login', 'register', 'static','register_admin', 'generate', 'generate_report']
 need_admin_routes = ['static','register_admin']
 
 @app.before_request

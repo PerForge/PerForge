@@ -119,7 +119,7 @@ class AtlassianConfluenceReport(ReportingBase):
         else:
             group_title += f' {time_str}'
             self.output_obj.update_page(page_id=self.page_id, title=group_title, content=self.report_body)
-        return self.report_body
+        return self.page_id
 
     def generate(self, current_run_id, baseline_run_id = None):
         report_body = ""
