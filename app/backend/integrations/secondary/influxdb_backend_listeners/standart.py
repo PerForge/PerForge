@@ -154,7 +154,7 @@ def flux_constructor(app_name, testTitle, start, stop, bucket, request_name = ''
 
 ########################## AGGREGATED TABLE
 
-def get_aggreagted_table(testTitle, start, stop, bucket):
+def get_aggregated_data(testTitle, start, stop, bucket):
   return '''import "join"
 rpm_set = from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
@@ -198,7 +198,7 @@ stats2 = from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
   |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
-  |> filter(fn: (r) => r._field == "avg" or r._field == "max" or r._field == "min" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
+  |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
   |> filter(fn: (r) => r["statut"] == "all")
   |> keep(columns: ["_value", "transaction", "_field"])
   |> group(columns: ["transaction","_field"])
@@ -219,7 +219,7 @@ stats3 = join.full(
     right: stats2,
     on: (l, r) => l.transaction== r.transaction,
     as: (l, r) => {
-        return {transaction: l.transaction, rpm:l.rpm, errors:l.errors, count:l.count, avg:r.avg, max:r.max, min:r.min, pct50:r.pct50, pct75:r.pct75, pct90:r.pct90}
+        return {transaction: l.transaction, rpm:l.rpm, errors:l.errors, count:l.count, avg:r.avg, pct50:r.pct50, pct75:r.pct75, pct90:r.pct90}
     },
 )
 
@@ -241,6 +241,6 @@ join.full(
     right: stddev,
     on: (l, r) => l.transaction== r.transaction,
     as: (l, r) => {
-        return {transaction: l.transaction, rpm:l.rpm, errors:l.errors, count:l.count, avg:l.avg, max:l.max, min:l.min, pct50:l.pct50, pct75:l.pct75, pct90:l.pct90, stddev:r.stddev }
+        return {transaction: l.transaction, rpm:l.rpm, errors:l.errors, count:l.count, avg:l.avg, pct50:l.pct50, pct75:l.pct75, pct90:l.pct90, stddev:r.stddev }
     },
 )'''

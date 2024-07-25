@@ -18,10 +18,10 @@ import json
 import uuid
 import logging
 import portalocker
+import yaml
 
 from app                            import config_path
 from app.models                     import Secret
-from app.backend.ai_support.prompts import Prompt
 from os                             import path as pt
 from werkzeug.datastructures        import MultiDict
 from datetime                       import datetime
@@ -441,8 +441,6 @@ def get_templates(project):
 
 def get_template_values(project, template):
     template_obj = get_json_values(project, "templates", template)
-    if 'prompt' not in template_obj or template_obj['prompt'] == "":
-        template_obj['prompt'] = Prompt(project).template['prompt']
     output = md.TemplateModel.model_validate(template_obj)
     return output.model_dump()
 
@@ -590,37 +588,7 @@ def delete_project(project):
 
 def generate_unique_id():
     return str(uuid.uuid4())
-####################### PROMPTS:
 
-def get_prompt_by_type(project, type):
-    validate_config(project, "prompts")
-    data = get_project_config(project)
-    for prompt in data["prompts"]:
-        if prompt["type"] == type:
-            return prompt
-
-def get_prompts(project_id):
-    validate_config(project_id, "prompts")
-    data = get_project_config(project_id)
-    return data["prompts"]
-
-def save_prompt(project_id, form):
-    validate_config(project_id, "prompts")
-    data            = get_project_config(project_id)
-    prompt_id       = form.get("id")
-    existing_prompt = next((prompt for prompt in data["prompts"] if prompt["id"] == prompt_id), None)
-    if not existing_prompt:
-        form["id"] = generate_unique_id()
-        data["prompts"].append(form)
-    else:
-        existing_prompt.update(form)
-    save_new_data(project_id, data)
-
-def delete_prompt(project, id):
-    validate_config(project, "prompts")
-    data = get_project_config(project)
-    for idx, obj in enumerate(data["prompts"]):
-        if obj["id"] == id:
-            data["prompts"].pop(idx)
-            break
-    save_new_data(project, data)
+def read_from_yaml(file_path):
+    with open(file_path, 'r') as file:
+        return yaml.safe_load(file)

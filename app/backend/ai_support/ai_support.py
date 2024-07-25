@@ -30,10 +30,10 @@ class AISupport(Integration):
         super().__init__(project)
         self.models_created = False
         self.set_config(id)
-        self.graph_analysis            = []
-        self.aggreagted_table_analysis = []
-        self.summary                   = []
-        self.prompt                    = Prompt(project)
+        self.graph_analysis           = []
+        self.aggregated_data_analysis = []
+        self.summary                  = []
+        self.prompt                   = Prompt(project)
 
     def __str__(self):
         return f'Integration id is {self.id}'
@@ -67,20 +67,21 @@ class AISupport(Integration):
             else:
                 logging.warning("There's no AI integration configured, or you're attempting to send a request from an unsupported location.")
 
-    def analyze_graph(self, name, graph, prompt):
+    def analyze_graph(self, name, graph, prompt_id):
         if not self.models_created: return ""
-        response = self.ai_obj.analyze_graph(graph, prompt)
+        prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+        response     = self.ai_obj.analyze_graph(graph, prompt_value)
         self.graph_analysis.append(name)
         self.graph_analysis.append(response)
         return response
 
-    def analyze_aggregated_data(self, data):
+    def analyze_aggregated_data(self, data, prompt_id):
         if self.models_created:
             try:
-                prompt = self.prompt.aggreagted_table["prompt"]
-                prompt = prompt + "\n\n" + "Here are the test results for your analysis:" + "\n" + str(data)
-                result = self.ai_obj.send_prompt(prompt)
-                self.aggreagted_table_analysis.append(result)
+                prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+                prompt_value = prompt_value + "\n\n" + str(data)
+                result       = self.ai_obj.send_prompt(prompt_value)
+                self.aggregated_data_analysis.append(result)
             except Exception as er:
                 logging.warning("An error occurred: " + str(er))
                 err_info = traceback.format_exc()  
@@ -93,20 +94,22 @@ class AISupport(Integration):
             result += "\n\n"
         return str(result)
 
-    def create_template_summary(self, prompt, nfr_summary):
+    def create_template_summary(self, prompt_id, nfr_summary):
         if not self.models_created:
             return "Error: AI failed to initialize."
-        prompt = prompt.replace("[aggreagted_data_analysis]", self.prepare_list_of_analysis(self.aggreagted_table_analysis))
-        prompt = prompt.replace("[graphs_analysis]", self.prepare_list_of_analysis(self.graph_analysis))
-        prompt = prompt.replace("[nfr_summary]", nfr_summary)
-        result = self.ai_obj.send_prompt(prompt)
+        prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+        prompt_value = prompt_value.replace("[aggreagted_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
+        prompt_value = prompt_value.replace("[graphs_analysis]", self.prepare_list_of_analysis(self.graph_analysis))
+        prompt_value = prompt_value.replace("[nfr_summary]", nfr_summary)
+        result       = self.ai_obj.send_prompt(prompt_value)
         self.summary.append(result)
         return result
 
-    def create_template_group_summary(self, prompt):
+    def create_template_group_summary(self, prompt_id):
         if not self.models_created:
             return "Error: AI failed to initialize."
+        prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
         for text in self.summary:
-            prompt = prompt + "\n" + text
-        self.ai_obj.send_prompt(prompt)
-        return self.ai_obj.send_prompt(prompt)
+            prompt_value = prompt_value + "\n" + text
+        result = self.ai_obj.send_prompt(prompt_value)
+        return result

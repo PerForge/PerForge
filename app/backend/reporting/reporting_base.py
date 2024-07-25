@@ -34,25 +34,26 @@ class ReportingBase:
         self.influxdb_obj.close_influxdb_connection()
 
     def set_template(self, template, influxdb):
-        template_obj             = pkg.get_template_values(self.project, template)
-        self.nfr                 = template_obj["nfr"]
-        self.title               = template_obj["title"]
-        self.data                = template_obj["data"]
-        self.summary_prompt      = template_obj["prompt"]
-        self.influxdb_obj        = Influxdb(project=self.project, id=influxdb).connect_to_influxdb()
-        self.ai_switch           = template_obj["ai_switch"]
-        self.nfrs_switch         = template_obj["nfrs_switch"]
-        self.ai_graph_switch     = template_obj["ai_graph_switch"]
-        self.ai_to_graphs_switch = template_obj["ai_to_graphs_switch"]
+        template_obj              = pkg.get_template_values(self.project, template)
+        self.nfr                  = template_obj["nfr"]
+        self.title                = template_obj["title"]
+        self.data                 = template_obj["data"]
+        self.template_prompt_id   = template_obj["template_prompt_id"]
+        self.aggregated_prompt_id = template_obj["aggregated_prompt_id"]
+        self.influxdb_obj         = Influxdb(project=self.project, id=influxdb).connect_to_influxdb()
+        self.ai_switch            = template_obj["ai_switch"]
+        self.nfrs_switch          = template_obj["nfrs_switch"]
+        self.ai_graph_switch      = template_obj["ai_graph_switch"]
+        self.ai_to_graphs_switch  = template_obj["ai_to_graphs_switch"]
         if self.ai_switch:
             self.ai_support_obj = AISupport(project=self.project)
 
     def set_template_group(self, template_group):
-        template_group_obj         = pkg.get_template_group_values(self.project, template_group)
-        self.group_title           = template_group_obj["title"]
-        self.template_order        = template_group_obj["data"]
-        self.template_group_prompt = template_group_obj["prompt"]
-        self.ai_summary            = template_group_obj["ai_summary"]
+        template_group_obj            = pkg.get_template_group_values(self.project, template_group)
+        self.group_title              = template_group_obj["title"]
+        self.template_order           = template_group_obj["data"]
+        self.template_group_prompt_id = template_group_obj["prompt_id"]
+        self.ai_summary               = template_group_obj["ai_summary"]
 
     def get_template_data(self, template):
         template_obj = pkg.get_template_values(self.project, template)
@@ -74,10 +75,10 @@ class ReportingBase:
         if self.nfrs_switch or self.ai_switch:
             data = self.influxdb_obj.get_aggregated_table(self.current_run_id, self.current_start_time, self.current_end_time)
         if self.nfrs_switch:
-            nfr_summary      = self.validation_obj.create_summary(self.nfr, data)
+            nfr_summary = self.validation_obj.create_summary(self.nfr, data)
         if self.ai_switch:
-            self.ai_support_obj.analyze_aggregated_data(data)
-            overall_summary = self.ai_support_obj.create_template_summary(self.summary_prompt, nfr_summary)
+            self.ai_support_obj.analyze_aggregated_data(data, self.aggregated_prompt_id)
+            overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
         else: 
             overall_summary += f"\n\n {nfr_summary}"
         return overall_summary
@@ -85,7 +86,7 @@ class ReportingBase:
     def analyze_template_group(self):
         overall_summary = ""
         if self.ai_summary:
-            overall_summary = self.ai_support_obj.create_template_group_summary(self.template_group_prompt)
+            overall_summary = self.ai_support_obj.create_template_group_summary(self.template_group_prompt_id)
         return overall_summary
         
     def collect_data(self, current_run_id, baseline_run_id = None):

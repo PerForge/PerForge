@@ -1,0 +1,81 @@
+prompts:
+- id: graph_of_a_single_test
+  name: Graph of a single test
+  type: default
+  place: graph
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: graph_comparison_of_tests
+  name: Graph comparison of tests
+  type: default
+  place: graph
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: table_of_a_single_test
+  name: Table of a single test
+  type: default
+  place: graph
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: table_comparison_of_tests
+  name: Table comparison of tests
+  type: default
+  place: graph
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: aggregated_data_of_a_single test
+  name: Aggregated data of a single test
+  type: default
+  place: aggregated_data
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: template_of_a_single_test
+  name: Template of a single test
+  type: default
+  place: template
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: template_comparison_tests
+  name: Template comparison tests
+  type: default
+  place: template
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:
+- id: template_group
+  name: Template group
+  type: default
+  place: template_group
+  prompt: |
+    Role: Senior Performance Analyst
+    Context:
+    Task:
+    Please consider the following:
+    Constraints:

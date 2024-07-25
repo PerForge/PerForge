@@ -114,16 +114,17 @@ class TemplateObjectModel(BaseModel):
 
 
 class TemplateModel(BaseModel):
-    id                 : str
-    name               : str
-    nfr                : str
-    title              : str
-    ai_switch          : bool
-    ai_graph_switch    : bool
-    ai_to_graphs_switch: bool
-    nfrs_switch        : bool
-    prompt             : str
-    data               : list[TemplateObjectModel]
+    id                  : str
+    name                : str
+    nfr                 : str
+    title               : str
+    ai_switch           : bool
+    ai_graph_switch     : bool
+    ai_to_graphs_switch : bool
+    nfrs_switch         : bool
+    template_prompt_id  : str
+    aggregated_prompt_id: str
+    data                : list[TemplateObjectModel]
 
 
 class TemplateGroupModel(BaseModel):
@@ -131,7 +132,7 @@ class TemplateGroupModel(BaseModel):
     name      : str
     title     : str
     ai_summary: bool
-    prompt    : str
+    prompt_id : str
     data      : list[TemplateObjectModel]
 
 

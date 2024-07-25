@@ -27,11 +27,12 @@ from app.forms                      import GraphForm
 def get_graphs():
     try:
         project         = request.cookies.get('project')
-        prompt          = Prompt(project)
-        form_for_graphs = GraphForm(request.form, prompt=prompt.graph['prompt'])
+        prompt_obj      = Prompt(project)
+        graph_prompts   = prompt_obj.get_prompts_by_place("graph")
+        form_for_graphs = GraphForm(request.form)
         graphs_list     = pkg.get_graphs(project)
         grafana_configs = pkg.get_grafana_configs_names_ids_and_dashboards(project)
-        return render_template('home/graphs.html', graphs_list=graphs_list, form_for_graphs=form_for_graphs, grafana_configs=grafana_configs)
+        return render_template('home/graphs.html', graphs_list=graphs_list, graph_prompts=graph_prompts, form_for_graphs=form_for_graphs, grafana_configs=grafana_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_GRAPHS.value, "error")

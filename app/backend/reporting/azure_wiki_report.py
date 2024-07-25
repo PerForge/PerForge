@@ -37,17 +37,16 @@ class AzureWikiReport(ReportingBase):
         text += f'\n\n'
         return text
 
-    def add_graph(self, graph_id, current_run_id, baseline_run_id):
-        image         = self.grafana_obj.render_image(graph_id, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
+    def add_graph(self, graph_data, current_run_id, baseline_run_id):
+        image         = self.grafana_obj.render_image(graph_data["id"], self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
         encoded_image = self.grafana_obj.encode_image(image)
-        fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_id)
+        fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["id"])
         if(fileName):
             graph = f'![image.png](/.attachments/{str(fileName)})\n\n'
         else:
-            graph = f'Image failed to load, id: {graph_id}'
+            graph = f'Image failed to load, id: {graph_data["id"]}'
         if self.ai_switch and self.ai_graph_switch:
-            graph_json          = pkg.get_graph(self.project, graph_id)
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_json["name"], image, graph_json["prompt"])
+            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
             return graph, ai_support_response
         else:
             return graph, ""
@@ -94,7 +93,7 @@ class AzureWikiReport(ReportingBase):
             elif obj["type"] == "graph":
                 graph_data       = pkg.get_graph(self.project, obj["id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                graph, ai_support_response = self.add_graph(obj["id"], current_run_id, baseline_run_id)
+                graph, ai_support_response = self.add_graph(graph_data, current_run_id, baseline_run_id)
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
