@@ -389,7 +389,15 @@ def get_output_configs(project):
         for config in configs:
             config["type"] = type
         result += configs
+    print(result)
     return result
+
+def get_output_type_by_id(project, id):
+    output_configs = get_output_configs(project)
+    for config in output_configs:
+        if config.get("id") == id:
+            return config["type"]
+    return None
 
 ####################### NFRS CONFIG:
 

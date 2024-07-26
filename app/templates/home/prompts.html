@@ -15,27 +15,27 @@
         <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
           <div class="card-header">
             <div class="justify-content-between align-items-center">
-              <h4 class="mb-0">Prompts</h4>
+              <h4 class="mb-0">Prompts
+                <a href="https://perforge.app/docs/configuration/prompts" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                </a>
+              </h4>
             </div>
           </div>
           <div class="card-body">
-              <div id="table-id" data-list='{"valueNames":["name", "prompt", "place", "type"], "page": 10, "pagination": true}'>
+              <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
-                      <div class="d-flex">
-                          <div class="me-2">
-                              <select class="form-select" id="selectedType">
-                                  <option value='default'>Default</option>
-                                  <option value='custom'>Custom</option>
-                              </select>
+                          <label class="me-2" for="selectedTypeSwitch">Default</label>
+                          <div class="form-check form-switch">
+                              <input class="form-check-input" type="checkbox" id="selectedTypeSwitch" unchecked>
                           </div>
+                          <label class="me-2" for="selectedTypeSwitch">Custom prompts</label>
                           <div>
                               <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
                                   <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" />
                                   <span class="fas fa-search search-box-icon"></span>
                               </div>
                           </div>
-                          <button class="btn btn-primary ms-2" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" add-prompt="add-prompt">Add prompt</button>
-                      </div>
+                          <button class="btn btn-primary ms-2" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" add-prompt="add-prompt">Add custom prompt</button>
                   </div>
                   <div class="table-responsive">
                       <table class="table fs--1 mb-0">
@@ -108,18 +108,6 @@
                             {% endfor %}
                         </tbody>
                       </table>
-                  </div>
-                  <div class="d-flex justify-content-between mt-3 fs--1">
-                      <span data-list-info="data-list-info"></span>
-                      <div class="d-flex">
-                          <button class="page-link" data-list-pagination="prev">
-                              <span class="fas fa-chevron-left"></span>
-                          </button>
-                          <ul class="mb-0 pagination"></ul>
-                          <button class="page-link pe-0" data-list-pagination="next">
-                              <span class="fas fa-chevron-right"></span>
-                          </button>
-                      </div>
                   </div>
               </div>
           </div>
@@ -214,20 +202,41 @@
           $('#view_prompt').val('');
         });
     
-        // Filter prompts based on selected type
-        $('#selectedType').change(function() {
-          var selectedType = $(this).val();
-          if (selectedType === 'default') {
-            $('tr.custom-prompt').hide();
-            $('tr.default-prompt').show();
-          } else if (selectedType === 'custom') {
+        // Handle the switch change event
+        $('#selectedTypeSwitch').change(function() {
+          if ($(this).is(':checked')) {
+            // Show default prompts, hide custom prompts
             $('tr.default-prompt').hide();
             $('tr.custom-prompt').show();
+            updateURL('custom');
+          } else {
+            // Show custom prompts, hide default prompts
+            $('tr.custom-prompt').hide();
+            $('tr.default-prompt').show();
+            updateURL('default');
           }
         });
     
-        // Trigger change event on page load to show default prompts initially
-        $('#selectedType').trigger('change');
+        // Update the URL with the selected type
+        function updateURL(type) {
+          var currentURL = new URL(window.location.href);
+          currentURL.searchParams.set('type', type);
+          window.history.replaceState({}, '', currentURL);
+        }
+    
+        // Read the switcher state from the URL on page load
+        function initializeSwitcher() {
+          var currentURL = new URL(window.location.href);
+          var type = currentURL.searchParams.get('type');
+          if (type === 'custom') {
+            $('#selectedTypeSwitch').prop('checked', true).trigger('change');
+          } else {
+            $('#selectedTypeSwitch').prop('checked', false).trigger('change');
+          }
+        }
+    
+        // Initialize the switcher based on the URL
+        initializeSwitcher();
       });
     </script>
   </main>

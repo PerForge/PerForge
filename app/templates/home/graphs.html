@@ -22,7 +22,7 @@
             </div>
           </div>
           <div class="card-body">
-              <div id="table-id" data-list='{"valueNames":["name", "view_panel", "dash_id", "width", "height"], "page": 10, "pagination": true}'>
+              <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
                       <div class="d-flex">
                           <div>
@@ -44,6 +44,7 @@
                                   <th class="sort" data-sort="view_panel">View Panel</th>
                                   <th class="sort" data-sort="height">Height</th>
                                   <th class="sort" data-sort="width">Width</th>
+                                  <th class="sort" data-sort="prompt_id">Prompt</th>
                                   <th class="sort" data-sort="actions">Actions</th>
                               </tr>
                           </thead>
@@ -70,6 +71,13 @@
                                   <td class="view_panel">{{ graph.view_panel }}</td>
                                   <td class="height">{{ graph.height }}</td>
                                   <td class="width">{{ graph.width }}</td>
+                                  <td class="prompt_id">
+                                      {% for prompt in graph_prompts %}
+                                          {% if prompt.id == graph.prompt_id %}
+                                              {{ prompt.name }}
+                                          {% endif %}
+                                      {% endfor %}
+                                  </td>
                                   <td class="actions" style="width: 20%;">
                                       <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#graphModal" data-graph='{{ graph | tojson | safe }}'>Edit</button>
                                       <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ graph.id }}">Delete</a>
@@ -95,18 +103,6 @@
                               {% endfor %}
                           </tbody>
                       </table>
-                  </div>
-                  <div class="d-flex justify-content-between mt-3 fs--1">
-                      <span data-list-info="data-list-info"></span>
-                      <div class="d-flex">
-                          <button class="page-link" data-list-pagination="prev">
-                              <span class="fas fa-chevron-left"></span>
-                          </button>
-                          <ul class="mb-0 pagination"></ul>
-                          <button class="page-link pe-0" data-list-pagination="next">
-                              <span class="fas fa-chevron-right"></span>
-                          </button>
-                      </div>
                   </div>
               </div>
           </div>
@@ -159,7 +155,7 @@
                     <select class="form-select" id="prompt_id" name="prompt_id">
                         <option value="" selected>Select a prompt</option>
                         {% for prompt in graph_prompts %}
-                            <option value="{{ prompt.id }}" data-prompt="{{ prompt.prompt }}">{{ prompt.name }}</option>
+                            <option value="{{ prompt.id }}" data-prompt="{{ prompt.prompt }}">{{ prompt.name }} ({{ prompt.type }})</option>
                         {% endfor %}
                     </select>
                 </div>

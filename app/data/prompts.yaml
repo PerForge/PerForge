@@ -39,7 +39,7 @@ prompts:
     Task:
     Please consider the following:
     Constraints:
-- id: aggregated_data_of_a_single test
+- id: aggregated_data_of_a_single_test
   name: Aggregated data of a single test
   type: default
   place: aggregated_data

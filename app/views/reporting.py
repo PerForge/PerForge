@@ -80,7 +80,7 @@ def template_group():
         templates              = pkg.get_config_names_and_ids(project, "templates")
         template_group_config  = request.args.get('template_group_config')
         prompt_obj             = Prompt(project)
-        template_group_prompts = prompt_obj.get_prompts_by_place("template")
+        template_group_prompts = prompt_obj.get_prompts_by_place("template_group")
         template_group_data    = []
         if template_group_config is not None:
             template_group_data = pkg.get_template_group_values(project, template_group_config)
@@ -118,11 +118,15 @@ def delete_template_group():
 @app.route('/reporting', methods=['GET', 'POST'])
 def get_reporting():
     try:
-        project         = request.cookies.get('project')
-        templates       = pkg.get_templates(project)
-        template_groups = pkg.get_template_groups(project)
-        nfrs            = pkg.get_nfrs(project)
-        return render_template('home/reporting.html', templates=templates, template_groups=template_groups, nfrs=nfrs)
+        project                 = request.cookies.get('project')
+        templates               = pkg.get_templates(project)
+        template_groups         = pkg.get_template_groups(project)
+        nfrs                    = pkg.get_nfrs(project)
+        prompt_obj              = Prompt(project)
+        template_prompts        = prompt_obj.get_prompts_by_place("template")
+        aggregated_data_prompts = prompt_obj.get_prompts_by_place("aggregated_data")
+        template_group_prompts  = prompt_obj.get_prompts_by_place("template_group")
+        return render_template('home/reporting.html', templates=templates, template_groups=template_groups, nfrs=nfrs, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts, template_group_prompts=template_group_prompts)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.REPORTING.value, "error")
@@ -165,13 +169,12 @@ def generate_report():
         project = request.cookies.get('project')
         if request.method == "POST":
             data = request.get_json()
-            action_data = data["selectedAction"]
-            if "selectedAction" in data:
+            if "outputId" in data:
                 influxdb       = data.get("influxdbId")
                 template_group = data.get("templateGroup")
-                action_type    = action_data.get("type")
-                action_id      = action_data.get("id")
-            else: 
+                action_id      = data.get("outputId")
+                action_type    = pkg.get_output_type_by_id(project, action_id)
+            else:
                 action_type = None
             result = "Wrong action: " + action_type
             if action_type == "azure":

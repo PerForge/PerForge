@@ -119,7 +119,7 @@ def save_prompt():
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.SAVE_PROMPT.value, "error")
         return redirect(url_for("index"))
-    return redirect(url_for('prompts'))
+    return redirect(url_for('prompts', type='custom'))
 
 @app.route('/delete-prompt', methods=['GET'])
 def delete_prompt():
@@ -132,4 +132,5 @@ def delete_prompt():
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.DELETE_PROMPT.value, "error")
-    return redirect(url_for('prompts'))
+        return redirect(url_for("index"))
+    return redirect(url_for('prompts', type='custom'))
