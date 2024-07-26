@@ -42,25 +42,21 @@ def gen_az_report():
 @app.route('/delete-influxdata', methods=['GET'])
 def influx_data_delete():
     try:
-        influxdb_obj = Influxdb("default")
-        grafana_obj  = Grafana("default")
+        project      = request.args.get('project')
+        influxdb_obj = Influxdb(project)
+        grafana_obj  = Grafana(project)
         influxdb_obj.connect_to_influxdb()
+        bucket = request.args.get('bucket')
         run_id = request.args.get('run_id')
         start  = request.args.get('start')
         end    = request.args.get('end')
         status = request.args.get('status')
-        if request.args.get('user') == "admin":
-            if status == "delete_test_status":
-                influxdb_obj.delete_test_data("tests", run_id)
-            elif status == "delete_test":
-                influxdb_obj.delete_test_data(influxdb_obj.measurement, run_id)
-                influxdb_obj.delete_test_data("tests", run_id)
-                influxdb_obj.delete_test_data("virtualUsers", run_id)
-                influxdb_obj.delete_test_data("testStartEnd", run_id)
+        if bucket: influxdb_obj.bucket = bucket
+        if request.args.get('user') in ["admin"]:
+            if status == "delete_test":
+                influxdb_obj.delete_run_id(run_id=run_id)
             elif status == "delete_timerange":
-                influxdb_obj.delete_test_data(influxdb_obj.measurement, run_id, start, end)
-                influxdb_obj.delete_test_data("virtualUsers", run_id, start, end)
-                influxdb_obj.delete_test_data("testStartEnd", run_id, start, end)
+                influxdb_obj.delete_run_id(run_id=run_id, start=start, end=end)
     except Exception:
         logging.warning(str(traceback.format_exc()))
     resp = make_response("Done")

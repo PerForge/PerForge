@@ -57,7 +57,9 @@
                                     <label class="form-check-label" for="ai_summary">AI summary</label>
                                 </div>
                                 <div v-if="ai_summary" class="mt-3">
-                                    <textarea v-model="prompt" id="ai_prompt_input" class="form-control mb-5" placeholder="Prompt..."></textarea>
+                                    <label>Template group prompt:</label>
+                                    <v-select class="vue-select-imput" v-model="selectedTemplateGroupPrompt" :options="template_group_prompts" label="name" @input="updateTemplateGroupPrompt"></v-select>
+                                    <textarea v-model="templateGroupPromptText" class="form-control mt-2" rows="7" readonly></textarea>
                                 </div>
                             </div>
                             <div class="col-12 col-xl-4">
@@ -122,8 +124,14 @@
                         title: "",
                         template: [],
                         ai_summary: false,
-                        prompt: ""
+                        prompt_id: "",
+                        selectedTemplateGroupPrompt: null,
                     };
+                },
+                computed: {
+                    templateGroupPromptText() {
+                        return this.selectedTemplateGroupPrompt ? this.selectedTemplateGroupPrompt.prompt : '';
+                    }
                 },
                 methods: {
                     addTextElement() {
@@ -155,7 +163,7 @@
                                     "name": this.name,
                                     "title": this.title,
                                     "data": plainTemplate,
-                                    "prompt": this.prompt,
+                                    "prompt_id": this.prompt_id,
                                     "ai_summary": this.ai_summary
                                 }
                                 perforge.utils
@@ -169,10 +177,14 @@
                             }
                         });
                     },
+                    updateTemplateGroupPrompt(selectedOption) {
+                        this.prompt_id = selectedOption.id;
+                        this.selectedTemplateGroupPrompt = selectedOption; // Ensure the selected option is updated
+                    },
                 },
                 created() {
                     this.templates = JSON.parse('{{ templates | tojson }}');
-                    this.default_prompt = JSON.parse('{{ default_prompt | tojson | safe }}'.replace(/\n/g, "\\n"));
+                    this.template_group_prompts = JSON.parse('{{ template_group_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
 
                     this.template_group_data = JSON.parse('{{ template_group_data | tojson }}'.replace(/\n/g, "\\n"));
                     if (this.template_group_data && this.template_group_data.name != null) {
@@ -180,9 +192,12 @@
                         this.name       = this.template_group_data.name;
                         this.template   = this.template_group_data.data;
                         this.ai_summary = this.template_group_data.ai_summary;
-                        this.prompt     = this.template_group_data && this.template_group_data.prompt ? this.template_group_data.prompt : this.default_prompt.prompt;
-                    } else {
-                        this.prompt = this.default_prompt.prompt
+                        this.prompt_id  = this.template_group_data.prompt_id;
+
+                        // Set selected options after data is loaded
+                        if (this.template_group_prompts.length) {
+                            this.selectedTemplateGroupPrompt = this.template_group_prompts.find(prompt => prompt.id === this.prompt_id);
+                        }
                     }
                 },
             });

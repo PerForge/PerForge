@@ -26,7 +26,7 @@
                         <form class="needs-validation" novalidate="">
                             <div class="flex-direction-column" id="nfrs-container">
                                 <div class="full-screen-section">
-                                    <div class="marging-10">
+                                    <div class="marging-10 mt-3">
                                         <label class="col-form-nfr-label">Name:</label>
                                     </div>
                                     <div class="marging-10">
@@ -86,8 +86,6 @@
                 <div class="nfr-col-s padding-10">
                   <select class="form-select metric-nfr-field" required>
                     <option value="avg" selected>avg</option>
-                    <option value="min">min</option>
-                    <option value="max">max</option>
                     <option value="pct50">50%-tile</option>
                     <option value="pct75">75%-tile</option>
                     <option value="pct90">90%-tile</option>
@@ -99,10 +97,8 @@
                 </div>
                 <div class="nfr-col-s padding-10">
                   <select class="form-select operation-nfr-field" required>
-                    <option value=">" selected>></option>
-                    <option value="<"><</option>
-                    <option value="==">==</option>
-                    <option value="!=">!=</option>
+                    <option value="<" selected><</option>
+                    <option value=">"><</option>
                     <option value=">=">>=</option>
                     <option value="<="><=</option>
                   </select>

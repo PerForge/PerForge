@@ -33,8 +33,6 @@ class DataRow:
         self.count       = data_row["count"]
         self.errors      = data_row["errors"]
         self.rpm         = data_row["rpm"]
-        self.max         = data_row["max"]
-        self.min         = data_row["min"]
         self.pct50       = data_row["pct50"]
         self.pct75       = data_row["pct75"]
         self.pct90       = data_row["pct90"]
@@ -78,10 +76,6 @@ class Validation:
                     return "PASSED" if value > threshold else "FAILED"
                 elif operation == '<':
                     return "PASSED" if value < threshold else "FAILED"
-                elif operation == '==':
-                    return "PASSED" if value == threshold else "FAILED"
-                elif operation == '!=':
-                    return "PASSED" if value != threshold else "FAILED"
                 elif operation == '>=':
                     return "PASSED" if value >= threshold else "FAILED"
                 elif operation == '<=':
@@ -105,8 +99,6 @@ class Validation:
         operations = {
             '>': 'is greater than',
             '<': 'is less than',
-            '==': 'is equal to',
-            '!=': 'is not equal to',
             '>=': 'is greater than or equal to',
             '<=': 'is less than or equal to'
         }
@@ -124,8 +116,6 @@ class Validation:
         operations = {
             '>': 'is less than',
             '<': 'is greater than',
-            '==': 'is not equal to',
-            '!=': 'is equal to',
             '>=': 'is less than or not equal to',
             '<=': 'is greater than or not equal to'
         }
