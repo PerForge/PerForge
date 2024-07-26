@@ -389,7 +389,6 @@ def get_output_configs(project):
         for config in configs:
             config["type"] = type
         result += configs
-    print(result)
     return result
 
 def get_output_type_by_id(project, id):

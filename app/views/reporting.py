@@ -173,7 +173,12 @@ def generate_report():
                 influxdb       = data.get("influxdbId")
                 template_group = data.get("templateGroup")
                 action_id      = data.get("outputId")
-                action_type    = pkg.get_output_type_by_id(project, action_id)
+                if action_id == "pdf_report":
+                    action_type = action_id
+                elif action_id == "delete_test":
+                    action_type = action_id
+                else:
+                    action_type = pkg.get_output_type_by_id(project, action_id)
             else:
                 action_type = None
             result = "Wrong action: " + action_type
@@ -198,7 +203,7 @@ def generate_report():
                 filename = pdf.generate_report(data["tests"], influxdb, template_group)
                 pdf.pdf_io.seek(0)
                 return send_file(pdf.pdf_io, mimetype="application/pdf", download_name=f'{filename}.pdf', as_attachment=True)
-            elif action_type == "delete":
+            elif action_type == "delete_test":
                 try:
                     influxdb_obj = Influxdb(project=project, id=influxdb)
                     influxdb_obj.connect_to_influxdb()
