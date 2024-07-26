@@ -98,7 +98,7 @@ class AISupport(Integration):
         if not self.models_created:
             return "Error: AI failed to initialize."
         prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
-        prompt_value = prompt_value.replace("[aggreagted_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
+        prompt_value = prompt_value.replace("[aggregated_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
         prompt_value = prompt_value.replace("[graphs_analysis]", self.prepare_list_of_analysis(self.graph_analysis))
         prompt_value = prompt_value.replace("[nfr_summary]", nfr_summary)
         result       = self.ai_obj.send_prompt(prompt_value)

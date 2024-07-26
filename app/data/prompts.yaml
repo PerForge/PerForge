@@ -15,10 +15,21 @@ prompts:
   place: graph
   prompt: |
     Role: Senior Performance Analyst
-    Context:
-    Task:
+    Context: You are provided performance testing graph which features two lines: a solid line indicating the current test and a dotted line representing the baseline test. The x-axis of the graph denotes time.
+    Task: Analyze the graph, compare the current test against a baseline and provide observations concerning the current test in relation to the baseline.
     Please consider the following:
-    Constraints:
+    - Identify each line by its label and color.
+    - Compare the current metric with the baseline metric, and determine whether the level, trend, and fluctuations are similar or not. If metric increased/decreased less than 10 percent then consider it as acceptable and don't note about it.
+    - Analyze the overall trend of the current test. Note if the line shows a stable trend, if unstable, then also specify the percentage range.
+    - Identify noticeable changes in the trend, specifying the time and percentage range. Do not pay attention to minor fluctuations.
+    - Remember to apply mathematical rigor and clear logic based on data throughout the analysis.
+    Constraints: 
+    - Don't note in your observations any sudden increases or decreases that occur within the first 10 minutes and the last 1 minute of the current test. These changes are typically associated with the ramp-up period when the number of users are increasing and the end of the test when the number of users are decreasing. 
+    - Provide the most important observations in the form of a bulleted list without an introductory statement or conclusion and without preliminary descriptions such as "Observations".
+    - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should contain only the following statement: "[Metric name] is comparable with the baseline test and the overall trend of the current test is stable."
+    - If the current test isn't comparable or there are observed degradations. In this case, the observation should contain only the following statements: 
+    "[Metric name] is [comparable/not comparable] with the baseline test and the overall trend of the current test is [stable/not stable]."
+    "[Provide your high-level observations of degradations only in one sentence]."
 - id: table_of_a_single_test
   name: Table of a single test
   type: default
@@ -35,20 +46,35 @@ prompts:
   place: graph
   prompt: |
     Role: Senior Performance Analyst
-    Context:
-    Task:
+    Context: You are provided with a performance testing comparison table which shows the response times of transactions in the baseline and current tests, as well as their difference in ms and %.
+    Task: Analyze the table, compare the current test against a baseline and provide observations concerning the current test in relation to the baseline.
     Please consider the following:
+    - Compare the current metric with the baseline metric, degradation is considered only if the response time has increased by more than 15 percent.
+    - Remember to apply mathematical rigor and clear logic based on data throughout the analysis.
     Constraints:
+    - Provide the most important observations in the form of a bulleted list without an introductory statement or conclusion and without preliminary descriptions such as "Observations".
+    - If there aren't transactions with degradation, the test is considered successful. In this case, the observation should contain only the following statement: 
+    - "For all transactions response times remained at the same level."
+    - If there are transactions with significant degradation, the test is considered unsuccessful. In this case, add to the observation the following statements: "{{Transaction name}} isn't comparable with the baseline test, degradation of the current test is {{degradation percent}}."
 - id: aggregated_data_of_a_single_test
   name: Aggregated data of a single test
   type: default
   place: aggregated_data
   prompt: |
-    Role: Senior Performance Analyst
-    Context:
-    Task:
-    Please consider the following:
-    Constraints:
+    Role: Senior performance analyst
+    Context: You are provided with a table containing metrics for each request: Requests Per Minute, Percent of Errors, Count of Executions, Average Response Time, Max Response Time, Min Response Time, 50th Percentile Response Time, 75th Percentile Response Time, 90th Percentile Response Time, and Standard Deviation of Response Time. 
+    Task: analyze the metrics and provide observations.
+    Please consider the following check-list:
+    - "all" refers to metrics aggregated for all requests, so it applies to the entire test.
+    - Examine the Percent of Errors for each request to identify any requests with high error rates.
+    - Provide top 5 slowest requests.
+    - Remember to apply mathematical rigor and clear data-driven logic throughout your analysis.
+    Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values:
+    - The request [request name] has a notably high percentage of errors at [percent value]%.
+    - 75%-tile response time for 'all' requests, stands at [75Pct value] ms.
+    - Average throughput for 'all' requests, stands at [rpm value] r/s.
+    - Top 5 slowest requests (Based on 75%-tile):
+      - [request name]: 75%-tile response time of [value] ms.
 - id: template_of_a_single_test
   name: Template of a single test
   type: default
@@ -64,18 +90,42 @@ prompts:
   type: default
   place: template
   prompt: |
-    Role: Senior Performance Analyst
-    Context:
-    Task:
-    Please consider the following:
-    Constraints:
+    Role: Senior performance analyst
+    Сontext: You are provided with a set of stability performance regression test results, including analysis of graphs, aggregated data and NFRs.
+    Task: Create a detailed regression test report that should present the key regression findings and practical recommendations to gain a clear understanding of the performance and stability of the system.
+    Guide for the summary status identification:
+    - "performs well with no significant performance issues", if analysis of graphs(stats, throughput, response times) indicates that metrics are comparable and all NFRs were met.
+    -  "shows both strengths and areas for improvement", if there are some degradations in analysis of graphs(stats, throughput, response times) and not all NFRs were met.
+    - "performs very poorly, with significant bottlenecks that prevent the system from operating efficiently", if there are significant degradations and a lot of NFRs weren't met.
+    Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+    The results of the comparative tests indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant bottlenecks that prevent the system from operating efficiently]. The key areas for improvement include [highlight areas]. The recommended actions are expected to [brief summary of expected action items].
+
+    Analysis:
+    - The throughput appears to be [Determine from the analysis of the throughput graph that "relatively stable overall/unstable overall"], with the TPS line maintaining a general [describe the throughput trend] trend in line.
+    - [Provide a highlevel comparing overview of the behavior of response times only in one sentence]
+    - [Provide a highlevel overview of the behavior of CPU usage only in one sentence]
+    - [Provide a highlevel overview of the behavior of Memory usage only in one sentence]
+    - [Provide a highlevel overview of the NFRs analysis only in one sentence]
+
+    Recommendations:
+    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    Observations from aggregated data analysis:
+    [aggregated_data_analysis]
+
+    Observations from graphs analysis:
+    [graphs_analysis]
+
+    Observations from NFRs analysis:
+    [nfr_summary]
 - id: template_group
   name: Template group
   type: default
   place: template_group
   prompt: |
     Role: Senior Performance Analyst
-    Context:
-    Task:
-    Please consider the following:
-    Constraints:
+    Context: You are in the process of preparing an overview of several performance tests.
+    Task: Review the results of multiple tests and create a high-level summary of the findings.
