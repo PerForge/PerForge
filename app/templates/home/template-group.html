@@ -183,8 +183,14 @@
                     },
                 },
                 created() {
+                    function addTypeToName(prompts) {
+                        prompts.forEach(prompt => { prompt.name = `${prompt.name} (${prompt.type})`; });
+                        return prompts;
+                    }
+
                     this.templates = JSON.parse('{{ templates | tojson }}');
                     this.template_group_prompts = JSON.parse('{{ template_group_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
+                    this.template_group_prompts = addTypeToName(this.template_group_prompts);
 
                     this.template_group_data = JSON.parse('{{ template_group_data | tojson }}'.replace(/\n/g, "\\n"));
                     if (this.template_group_data && this.template_group_data.name != null) {

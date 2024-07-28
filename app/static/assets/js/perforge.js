@@ -54,6 +54,39 @@
     });
   };
 
+  const sendPostRequestReport = (url, json) => {
+    return new Promise((resolve, reject) => {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: json,
+        contentType: "application/json",
+        success: function (data) {
+          showResultModal(JSON.parse(data))
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          reject({ jqXHR, textStatus, errorThrown });
+        },
+      });
+    });
+  };
+
+  function showResultModal(result) {
+    // Populate the modal with the result data using a loop
+    const resultModalBody = document.getElementById('resultModalBody');
+    resultModalBody.innerHTML = ''; // Clear previous content
+
+    for (const [key, value] of Object.entries(result)) {
+      const p = document.createElement('p');
+      p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
+      resultModalBody.appendChild(p);
+    }
+
+    // Show the modal
+    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    resultModal.show();
+  }
+
   const sendDownloadRequest = (url, json) => {
     return new Promise((resolve, reject) => {
       $.ajax({
@@ -64,19 +97,23 @@
         success: function (data, textStatus, request) {
           const contentType = request.getResponseHeader("Content-Type");
           if (contentType === "application/pdf") {
-            const contentDisposition = request.getResponseHeader("Content-Disposition");
-            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : "demo.pdf";
-  
-            const blob = new Blob([data], { type: contentType });
+            const resultJson = request.getResponseHeader("X-Result-Data");
+            const result = JSON.parse(resultJson);
+
+            // Create a Blob from the response data
+            const blob = new Blob([data], { type: "application/pdf" });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = filename;
+            a.download = result.filename + '.pdf';
             document.body.appendChild(a);
             a.click();
             a.remove();
-            resolve();
+
+            // Show the result in the modal
+            showResultModal(result);
+            
+            resolve(result);
           } else {
             resolve(data.redirect_url);
           }
@@ -561,7 +598,7 @@
               spinnerText.style.display = "";
             });
           }else{
-            sendPostRequest('/generate',JSON.stringify(selectedRows)).finally(function (){
+            sendPostRequestReport('/generate',JSON.stringify(selectedRows)).finally(function (){
               spinner.style.display = "none";
               spinnerText.style.display = "";
             });

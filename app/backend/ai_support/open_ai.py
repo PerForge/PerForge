@@ -23,7 +23,6 @@ from openai import AzureOpenAI
 class ChatGPTAI:
 
     def __init__(self, ai_provider, ai_text_model, ai_image_model, token, temperature, azure_url = None, api_version = None):
-        self.models_created = False  # Flag to indicate successful model creation
         try:
             if ai_provider == "openai":
                 self.client = OpenAI(api_key=token)
@@ -36,9 +35,12 @@ class ChatGPTAI:
             self.temperature            = temperature
             self.model_text             = ai_text_model
             self.model_image            = ai_image_model
+            self.input_tokens = 0
+            self.output_tokens = 0
             self.list_of_graph_analysis = []
             self.models_created         = True  # Set flag to True if models are created successfully
         except Exception as er:
+            self.models_created = False  # Flag to indicate successful model creation
             logging.warning("An error occurred: " + str(er))
             err_info = traceback.format_exc()  
             logging.warning("Detailed error info: " + err_info)
@@ -66,6 +68,9 @@ class ChatGPTAI:
                         }
                     ]
                 )
+                if response.usage:
+                    self.input_tokens += response.usage.prompt_tokens
+                    self.output_tokens += response.usage.completion_tokens
                 if response.choices[0].message.content:
                     return response.choices[0].message.content
                 else:
@@ -88,6 +93,9 @@ class ChatGPTAI:
                     {"role": "user", "content": prompt}
                 ]
             )
+            if response.usage:
+                self.input_tokens += response.usage.prompt_tokens
+                self.output_tokens += response.usage.completion_tokens
             if response.choices[0].message.content:
                 return response.choices[0].message.content
             else:

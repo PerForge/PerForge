@@ -88,6 +88,21 @@ class ReportingBase:
         if self.ai_summary:
             overall_summary = self.ai_support_obj.create_template_group_summary(self.template_group_prompt_id)
         return overall_summary
+    
+    def generate_response(self):
+        response = {
+            "AI switch": str(self.ai_switch),
+            "NFRs switch": str(self.nfrs_switch),
+            "AI graph switch": str(self.ai_graph_switch),
+            "AI to graph switch": str(self.ai_to_graphs_switch)
+        }
+        if self.ai_switch:
+            response["Input tokens"] = self.ai_support_obj.ai_obj.input_tokens
+            response["Output tokens"] = self.ai_support_obj.ai_obj.output_tokens
+        else:
+            response["Input tokens"] = 0
+            response["Output tokens"] = 0
+        return response
         
     def collect_data(self, current_run_id, baseline_run_id = None):
         default_grafana              = pkg.get_default_grafana(self.project)

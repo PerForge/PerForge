@@ -295,10 +295,17 @@
                 },
             },
             created() {
+                function addTypeToName(prompts) {
+                    prompts.forEach(prompt => { prompt.name = `${prompt.name} (${prompt.type})`; });
+                    return prompts;
+                }
+
                 this.graphs                  = JSON.parse('{{ graphs | tojson }}');
                 this.nfrs                    = JSON.parse('{{ nfrs | tojson }}');
                 this.template_prompts        = JSON.parse('{{ template_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
+                this.template_prompts        = addTypeToName(this.template_prompts);
                 this.aggregated_data_prompts = JSON.parse('{{ aggregated_data_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
+                this.aggregated_data_prompts = addTypeToName(this.aggregated_data_prompts);
                 this.template_data           = JSON.parse('{{ template_data | tojson }}'.replace(/\n/g, "\\n"));
 
                 if (this.template_data && this.template_data.name != null) {

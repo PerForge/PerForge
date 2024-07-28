@@ -199,9 +199,19 @@ def generate_report():
                 del(smr)
             elif action_type == "pdf_report":
                 pdf      = PdfReport(project)
-                filename = pdf.generate_report(data["tests"], influxdb, template_group)
+                result = pdf.generate_report(data["tests"], influxdb, template_group)
                 pdf.pdf_io.seek(0)
-                return send_file(pdf.pdf_io, mimetype="application/pdf", download_name=f'{filename}.pdf', as_attachment=True)
+                # Convert the result to a JSON string and include it in the headers
+                result_json = json.dumps(result)
+                # Create a custom response with the PDF file and headers
+                response = send_file(
+                    pdf.pdf_io,
+                    mimetype="application/pdf",
+                    download_name=f'{result["filename"]}.pdf',
+                    as_attachment=True
+                )
+                response.headers['X-Result-Data'] = result_json
+                return response
             elif action_type == "delete":
                 try:
                     influxdb_obj = Influxdb(project=project, id=influxdb)

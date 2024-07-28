@@ -108,7 +108,9 @@ class AtlassianJiraReport(ReportingBase):
         else:
             group_title += f' {time_str}'
             self.output_obj.update_jira_page(self.issue_id, group_title, self.report_body)
-        return self.issue_id
+        response = self.generate_response()
+        response["Issue id"] = self.issue_id
+        return response
 
     def generate(self, current_run_id, baseline_run_id = None):
         report_body = ""

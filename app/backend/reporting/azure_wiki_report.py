@@ -83,7 +83,8 @@ class AzureWikiReport(ReportingBase):
             for test in tests:
                 process_test(test, False)
         self.output_obj.create_or_update_page(path, self.report_body)
-        return self.report_body
+        response = self.generate_response()
+        return response
 
     def generate(self, current_run_id, baseline_run_id = None):
         report_body = ""

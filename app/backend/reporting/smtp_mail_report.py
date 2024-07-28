@@ -98,11 +98,14 @@ class SmtpMailReport(ReportingBase):
         time_str     = current_time.strftime("%d.%m.%Y %H:%M")
         if not group_title:
             templates_title += time_str
-            self.output_obj.put_page_to_mail(templates_title, self.report_body, self.images)
+            title = templates_title
         else:
             group_title += f' {time_str}'
-            self.output_obj.put_page_to_mail(group_title, self.report_body, self.images)
-        return self.report_body
+            title = group_title
+        self.output_obj.put_page_to_mail(title, self.report_body, self.images)
+        response = self.generate_response()
+        response['title'] = title
+        return response
 
     def generate(self, current_run_id, baseline_run_id = None):
         report_body = ""

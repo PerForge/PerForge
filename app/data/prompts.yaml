@@ -62,10 +62,10 @@ prompts:
   place: aggregated_data
   prompt: |
     Role: Senior performance analyst
-    Context: You are provided with a table containing metrics for each request: Requests Per Minute, Percent of Errors, Count of Executions, Average Response Time, Max Response Time, Min Response Time, 50th Percentile Response Time, 75th Percentile Response Time, 90th Percentile Response Time, and Standard Deviation of Response Time. 
+    Context: You are provided with a table containing metrics for each request: Requests Per Minute, Percent of Errors, Count of Executions, Average Response Time, 50th Percentile Response Time, 75th Percentile Response Time, 90th Percentile Response Time, and Standard Deviation of Response Time. 
     Task: analyze the metrics and provide observations.
     Please consider the following check-list:
-    - "all" refers to metrics aggregated for all requests, so it applies to the entire test.
+    - 'all' refers to metrics aggregated for all requests, so it applies to the entire test.
     - Examine the Percent of Errors for each request to identify any requests with high error rates.
     - Provide top 5 slowest requests.
     - Remember to apply mathematical rigor and clear data-driven logic throughout your analysis.
@@ -75,23 +75,57 @@ prompts:
     - Average throughput for 'all' requests, stands at [rpm value] r/s.
     - Top 5 slowest requests (Based on 75%-tile):
       - [request name]: 75%-tile response time of [value] ms.
+
 - id: template_of_a_single_test
   name: Template of a single test
   type: default
   place: template
   prompt: |
-    Role: Senior Performance Analyst
-    Context:
-    Task:
-    Please consider the following:
-    Constraints:
+    Role: Senior performance analyst
+    Context: You are provided with a set of performance test observations, including graphs and test data analysis.
+    Task: Create a comprehensive report, that should encapsulate key findings, and actionable recommendations to provide a clear overview of the system's performance and stability.
+    Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+    The performance testing results indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant bottlenecks that prevent the system from operating efficiently]. The key areas for improvement include [highlight areas]. The recommended actions are expected to [brief summary of expected action items].
+    
+    Analysis:
+    - 75%-tile response time for 'all' requests, stands at [75Pct value] ms.
+    - Average throughput for 'all' requests, stands at [rpm value] r/s.
+    - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+    - The throughput appears to be [relatively stable overall/unstable overall], with the RPS line maintaining a general [describe the throughput trend] trend in line with the [increase in/fixed number of/decrease in] Active Users.
+    - [Provide a highlevel overview of the behavior of response times]
+    - [Provide a highlevel overview of the behavior of CPU usage]
+    - [Provide a highlevel overview of the behavior of Memory usage]
+
+    Top 5 slowest requests (Based on 75%-tile):
+    - [request name]: 75%-tile response time of [value] ms.
+
+    Requests with high error rate:
+    [If there are requests with a high error rate, include them]
+
+    Requests that do not meet NFRs:
+    [If there are requests that don't meet the NFRs, include them]
+
+    Recommendations:
+    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    Observations from aggregated data analysis:
+    [aggreagted_data_analysis]
+
+    Observations from graphs analysis:
+    [graphs_analysis]
+
+    NFRs summary
+    [nfr_summary]
 - id: template_comparison_tests
   name: Template comparison tests
   type: default
   place: template
   prompt: |
     Role: Senior performance analyst
-    Сontext: You are provided with a set of stability performance regression test results, including analysis of graphs, aggregated data and NFRs.
+    Context: You are provided with a set of stability performance regression test results, including analysis of graphs, aggregated data and NFRs.
     Task: Create a detailed regression test report that should present the key regression findings and practical recommendations to gain a clear understanding of the performance and stability of the system.
     Guide for the summary status identification:
     - "performs well with no significant performance issues", if analysis of graphs(stats, throughput, response times) indicates that metrics are comparable and all NFRs were met.

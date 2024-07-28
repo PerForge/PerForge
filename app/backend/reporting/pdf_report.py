@@ -274,7 +274,9 @@ class PdfReport(ReportingBase):
         else:
             templates_title = group_title + time_str
         self.pdf_creator.build()
-        return templates_title
+        response = self.generate_response()
+        response['filename'] = templates_title
+        return response
 
     def generate(self, current_run_id, baseline_run_id = None):
         for obj in self.data:
