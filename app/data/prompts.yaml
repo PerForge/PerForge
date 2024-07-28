@@ -25,11 +25,11 @@ prompts:
     - Remember to apply mathematical rigor and clear logic based on data throughout the analysis.
     Constraints: 
     - Don't note in your observations any sudden increases or decreases that occur within the first 10 minutes and the last 1 minute of the current test. These changes are typically associated with the ramp-up period when the number of users are increasing and the end of the test when the number of users are decreasing. 
-    - Provide the most important observations in the form of a bulleted list without an introductory statement or conclusion and without preliminary descriptions such as "Observations".
-    - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should contain only the following statement: "[Metric name] is comparable with the baseline test and the overall trend of the current test is stable."
+    - Provide the most important observations in the form of a bulleted list without an introductory statement or conclusion and without preliminary descriptions such as 'Observations'.
+    - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should contain only the following statement: '[Metric name] is comparable with the baseline test and the overall trend of the current test is stable.'
     - If the current test isn't comparable or there are observed degradations. In this case, the observation should contain only the following statements: 
-    "[Metric name] is [comparable/not comparable] with the baseline test and the overall trend of the current test is [stable/not stable]."
-    "[Provide your high-level observations of degradations only in one sentence]."
+    '[Metric name] is [comparable/not comparable] with the baseline test and the overall trend of the current test is [stable/not stable].'
+    '[Provide your high-level observations of degradations only in one sentence].'
 - id: table_of_a_single_test
   name: Table of a single test
   type: default
@@ -52,10 +52,10 @@ prompts:
     - Compare the current metric with the baseline metric, degradation is considered only if the response time has increased by more than 15 percent.
     - Remember to apply mathematical rigor and clear logic based on data throughout the analysis.
     Constraints:
-    - Provide the most important observations in the form of a bulleted list without an introductory statement or conclusion and without preliminary descriptions such as "Observations".
+    - Provide the most important observations in the form of a bulleted list without an introductory statement or conclusion and without preliminary descriptions such as 'Observations'.
     - If there aren't transactions with degradation, the test is considered successful. In this case, the observation should contain only the following statement: 
-    - "For all transactions response times remained at the same level."
-    - If there are transactions with significant degradation, the test is considered unsuccessful. In this case, add to the observation the following statements: "{{Transaction name}} isn't comparable with the baseline test, degradation of the current test is {{degradation percent}}."
+    - 'For all transactions response times remained at the same level.'
+    - If there are transactions with significant degradation, the test is considered unsuccessful. In this case, add to the observation the following statements: '{{Transaction name}} isn't comparable with the baseline test, degradation of the current test is {{degradation percent}}.'
 - id: aggregated_data_of_a_single_test
   name: Aggregated data of a single test
   type: default
@@ -128,16 +128,16 @@ prompts:
     Context: You are provided with a set of stability performance regression test results, including analysis of graphs, aggregated data and NFRs.
     Task: Create a detailed regression test report that should present the key regression findings and practical recommendations to gain a clear understanding of the performance and stability of the system.
     Guide for the summary status identification:
-    - "performs well with no significant performance issues", if analysis of graphs(stats, throughput, response times) indicates that metrics are comparable and all NFRs were met.
-    -  "shows both strengths and areas for improvement", if there are some degradations in analysis of graphs(stats, throughput, response times) and not all NFRs were met.
-    - "performs very poorly, with significant bottlenecks that prevent the system from operating efficiently", if there are significant degradations and a lot of NFRs weren't met.
+    - 'performs well with no significant performance issues', if analysis of graphs(stats, throughput, response times) indicates that metrics are comparable and all NFRs were met.
+    -  'shows both strengths and areas for improvement', if there are some degradations in analysis of graphs(stats, throughput, response times) and not all NFRs were met.
+    - 'performs very poorly, with significant bottlenecks that prevent the system from operating efficiently', if there are significant degradations and a lot of NFRs weren't met.
     Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
     @@@@
     Summary:
     The results of the comparative tests indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant bottlenecks that prevent the system from operating efficiently]. The key areas for improvement include [highlight areas]. The recommended actions are expected to [brief summary of expected action items].
 
     Analysis:
-    - The throughput appears to be [Determine from the analysis of the throughput graph that "relatively stable overall/unstable overall"], with the TPS line maintaining a general [describe the throughput trend] trend in line.
+    - The throughput appears to be [Determine from the analysis of the throughput graph that 'relatively stable overall/unstable overall'], with the TPS line maintaining a general [describe the throughput trend] trend in line.
     - [Provide a highlevel comparing overview of the behavior of response times only in one sentence]
     - [Provide a highlevel overview of the behavior of CPU usage only in one sentence]
     - [Provide a highlevel overview of the behavior of Memory usage only in one sentence]
