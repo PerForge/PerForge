@@ -56,9 +56,23 @@ class Prompt:
 
     def delete_custom_prompt(project, id):
         pkg.validate_config(project, "prompts")
-        data = pkg.get_project_config(project)
+        data           = pkg.get_project_config(project)
+        prompt_deleted = False
         for idx, obj in enumerate(data["prompts"]):
             if obj["id"] == id:
                 data["prompts"].pop(idx)
+                prompt_deleted = True
                 break
+        if prompt_deleted:
+            for graph in data.get("graphs", []):
+                if graph.get("prompt_id") == id:
+                    graph["prompt_id"] = ""
+            for template in data.get("templates", []):
+                if template.get("template_prompt_id") == id:
+                    template["template_prompt_id"] = ""
+                if template.get("aggregated_prompt_id") == id:
+                    template["aggregated_prompt_id"] = ""
+            for template_group in data.get("template_groups", []):
+                if template_group.get("prompt_id") == id:
+                    template_group["prompt_id"] = ""
         pkg.save_new_data(project, data)

@@ -429,14 +429,17 @@ def save_nfrs(project, nfr):
 
 def delete_nfr(project, id):
     validate_config(project, "nfrs")
-    data = get_project_config(project)
+    data        = get_project_config(project)
+    nfr_deleted = False
     for idx, obj in enumerate(data["nfrs"]):
         if obj["id"] == id:
             data["nfrs"].pop(idx)
+            nfr_deleted = True
             break
-    for template in data["templates"]:
-        if template["nfr"] == id:
-            template["nfr"] == ""
+    if nfr_deleted:
+        for template in data["templates"]:
+            if template["nfr"] == id:
+                template["nfr"] == ""
     save_new_data(project, data)
 
 ####################### TEMPLATE CONFIG:
@@ -448,7 +451,7 @@ def get_templates(project):
 
 def get_template_values(project, template):
     template_obj = get_json_values(project, "templates", template)
-    output = md.TemplateModel.model_validate(template_obj)
+    output       = md.TemplateModel.model_validate(template_obj)
     return output.model_dump()
 
 def save_template(project, template):
@@ -495,17 +498,20 @@ def save_template_group(project, template_group):
 
 def delete_template_config(project, config):
     validate_config(project, "templates")
-    data = get_project_config(project)
+    data             = get_project_config(project)
+    template_deleted = False
     for idx, obj in enumerate(data["templates"]):
         if obj["id"] == config:
             data["templates"].pop(idx)
+            template_deleted = True
             break
-    for template_group in data["template_groups"]:
-        template_group_data = template_group["data"]
-        for idx, data_item in enumerate(template_group_data):
-            if data_item["type"] == "template" and data_item["id"] == config:
-                template_group_data.pop(idx)
-                break
+    if template_deleted:
+        for template_group in data["template_groups"]:
+            template_group_data = template_group["data"]
+            for idx, data_item in enumerate(template_group_data):
+                if data_item["type"] == "template" and data_item["id"] == config:
+                    template_group_data.pop(idx)
+                    break
     save_new_data(project, data)
 
 def delete_template_group_config(project, config):
@@ -553,17 +559,20 @@ def save_graph(project, form):
 
 def delete_graph(project, graph_id):
     validate_config(project, "graphs")
-    data = get_project_config(project)
+    data          = get_project_config(project)
+    graph_deleted = False
     for idx, obj in enumerate(data["graphs"]):
         if obj["id"] == graph_id:
             data["graphs"].pop(idx)
+            graph_deleted = True
             break
-    for template in data["templates"]:
-        template_data = template["data"]
-        for idx, data_item in enumerate(template_data):
-            if data_item["type"] == "graph" and data_item["id"] == graph_id:
-                template_data.pop(idx)
-                break
+    if graph_deleted:
+        for template in data["templates"]:
+            template_data = template["data"]
+            for idx, data_item in enumerate(template_data):
+                if data_item["type"] == "graph" and data_item["id"] == graph_id:
+                    template_data.pop(idx)
+                    break
     save_new_data(project, data)
 
 ####################### OTHER:
