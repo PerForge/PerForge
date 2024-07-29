@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} PerForge {% endblock %} 
+{% block title %} Graphs {% endblock %} 
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -78,7 +78,7 @@
                                           {% endif %}
                                       {% endfor %}
                                   </td>
-                                  <td class="actions" style="width: 20%;">
+                                  <td class="actions" style="width: 15%;">
                                       <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#graphModal" data-graph='{{ graph | tojson | safe }}'>Edit</button>
                                       <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ graph.id }}">Delete</a>
                                   </td>

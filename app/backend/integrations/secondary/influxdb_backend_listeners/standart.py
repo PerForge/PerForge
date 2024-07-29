@@ -78,7 +78,8 @@ def get_max_active_users_stats(testTitle, start, stop, bucket):
 def get_app_name(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
-  |> filter(fn: (r) => r["_measurement"] == "events")
+  |> filter(fn: (r) => r["_measurement"] == "jmeter")
+  |> filter(fn: (r) => r["_field"] == "maxAT")
   |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
   |> distinct(column: "application")
   |> keep(columns: ["application"])'''
