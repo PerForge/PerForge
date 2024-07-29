@@ -90,12 +90,7 @@ class ReportingBase:
         return overall_summary
     
     def generate_response(self):
-        response = {
-            "AI switch": str(self.ai_switch),
-            "NFRs switch": str(self.nfrs_switch),
-            "AI graph switch": str(self.ai_graph_switch),
-            "AI to graph switch": str(self.ai_to_graphs_switch)
-        }
+        response = {}
         if self.ai_switch:
             response["Input tokens"] = self.ai_support_obj.ai_obj.input_tokens
             response["Output tokens"] = self.ai_support_obj.ai_obj.output_tokens

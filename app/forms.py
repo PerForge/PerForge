@@ -120,7 +120,7 @@ class SMTPMailForm(FlaskForm):
 class AISupportForm(FlaskForm):
     id             = StringField('Id')
     name           = StringField('Name', validators=[DataRequired()])
-    ai_provider    = SelectField('AI Provider', choices=[('gemini', 'Gemini'), ('openai', 'OpenAI'), ('azure_openai', 'Azure OpenAI')], default='gemini')
+    ai_provider    = SelectField('AI Provider', choices=[('openai', 'OpenAI'), ('azure_openai', 'Azure OpenAI'), ('gemini', 'Gemini')], default='openai')
     azure_url      = StringField('Azure url')
     api_version    = StringField('Api version')
     ai_text_model  = StringField('AI Text model', validators=[DataRequired()])

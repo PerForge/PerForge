@@ -28,6 +28,8 @@ class GeminiAI:
             self.generation_config = genai.types.GenerationConfig(
                 max_output_tokens = 2048,
                 temperature       = temperature)
+            self.input_tokens           = 0
+            self.output_tokens          = 0
             self.list_of_graph_analysis = []
             self.models_created         = True  # Set flag to True if models are created successfully
         except Exception as er:
@@ -45,6 +47,9 @@ class GeminiAI:
                 try:
                     response = self.model_image.generate_content([graph, prompt], generation_config=self.generation_config)
                     response.resolve()
+                    if response.usage_metadata:
+                        self.input_tokens  += response.usage_metadata.prompt_token_count
+                        self.output_tokens += response.usage_metadata.candidates_token_count
                     if response.text:
                         return response.text
                     else:
@@ -63,6 +68,9 @@ class GeminiAI:
             try:
                 response = self.model_text.generate_content(prompt, generation_config=self.generation_config)
                 response.resolve()
+                if response.usage_metadata:
+                    self.input_tokens  += response.usage_metadata.prompt_token_count
+                    self.output_tokens += response.usage_metadata.candidates_token_count
                 if response.text:
                     return response.text
                 else:
