@@ -216,6 +216,14 @@ a:active, a:hover {
     min-width: 4rem;
 }
 
+.nfr-col-n {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    width: 5%; 
+    min-width: 1rem;
+}
+
 .nfr-col-m {
     display: flex;
     flex-direction: column;

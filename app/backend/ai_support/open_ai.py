@@ -55,6 +55,10 @@ class ChatGPTAI:
                     max_tokens  = 300,
                     messages    = [
                         {
+                            "role": "system",
+                            "content": "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the graphs and performance test results."
+                        },
+                        {
                             "role": "user",
                             "content": [
                                 {"type": "text", "text": prompt},
@@ -90,6 +94,10 @@ class ChatGPTAI:
                 model=self.model_text,
                 temperature=self.temperature,
                 messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
+                    },
                     {"role": "user", "content": prompt}
                 ]
             )

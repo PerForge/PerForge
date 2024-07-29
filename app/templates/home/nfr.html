@@ -34,6 +34,11 @@
                                     </div>
                                 </div>
                                 <div class="full-screen-section">
+                                    <div class="nfr-col-n padding-10">
+                                        <label class="col-form-nfr-label">Regex:</label>
+                                        <label class="col-form-nfr-description">Is this a regex?
+                                        </label>
+                                    </div>
                                     <div class="nfr-col-l padding-10">
                                         <label class="col-form-nfr-label">Scope:</label>
                                         <label class="col-form-nfr-description">You can define the scope to which the NFRs check will be applied.
@@ -78,6 +83,11 @@
         <script>
             const rowTemplate = `
               <div class="full-screen-section nfr-row">
+                <div class="nfr-col-n padding-10 flex-center-center">
+                  <div class="form-check mb-0 fs-0">
+                      <input class="form-check-input regex-nfr-field" type="checkbox"/>
+                  </div>
+                </div>
                 <div class="nfr-col-l padding-10">
                   <input name="scope" class="form-control scope-nfr-field" required>
                   <div class="valid-feedback">Looks good!</div>
@@ -98,7 +108,7 @@
                 <div class="nfr-col-s padding-10">
                   <select class="form-select operation-nfr-field" required>
                     <option value="<" selected><</option>
-                    <option value=">"><</option>
+                    <option value=">">></option>
                     <option value=">=">>=</option>
                     <option value="<="><=</option>
                   </select>
@@ -136,6 +146,7 @@
               formData.name = document.querySelector('[name="test_name"]').value;
               const nfrs = document.querySelectorAll('.nfr-row');
               const data = Array.from(nfrs).map(element => ({
+                regex: element.querySelector('.regex-nfr-field').checked,
                 scope: element.querySelector('.scope-nfr-field').value,
                 metric: element.querySelector('.metric-nfr-field').value,
                 operation: element.querySelector('.operation-nfr-field').value,
@@ -156,6 +167,7 @@
                 for (const row of nfrsJson.rows) {
                     addNfrRow();
                     const newRow = document.querySelector('.nfr-row:last-child');
+                    newRow.querySelector('.regex-nfr-field').checked = row.regex;
                     newRow.querySelector('.scope-nfr-field').value = row.scope;
                     newRow.querySelector('.metric-nfr-field').value = row.metric;
                     newRow.querySelector('.operation-nfr-field').value = row.operation;
