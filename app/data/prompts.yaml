@@ -6,11 +6,11 @@ prompts:
   prompt: |
     Task: Analyze the graph
     Instructions:
-    - Identify each line by its label and color.
-    - Assess the trends of each metric line. 
-    - Minor fluctuations in metric are acceptable.
-    - Indicate whether the metric suggest a performance issue.
-    Constraints: Provide the most important observations as a bullet list without an opening statement or conclusion and without prefixed descriptions such as 'Observations'.
+      - Identify each line by its label and color.
+      - Assess the trends of each metric line.
+      - Minor fluctuations in metric are acceptable.
+      - Indicate whether the metric suggest a performance issue.
+      Constraints: Provide the most important observations as a bullet list without an opening statement or conclusion and without prefixed descriptions such as 'Observations'.
 - id: graph_comparison_of_tests
   name: Graph comparison of tests
   type: default
@@ -19,42 +19,42 @@ prompts:
     Context: You are provided with a performance testing graph featuring two lines: a solid line indicating the current test and a dotted line representing the baseline test.
     Task: Analyze the graph, compare the current test against a baseline and provide observations concerning the current test in relation to the baseline.
     Please consider the following:
-    - Identify each line by its label and color.
-    - Evaluate whether the current level aligns with the baseline.
-    - Assess the stability of the current trend, specifying the time and percentage range if unstable, ignoring minor fluctuations.
-    Constraints: 
-    - Provide the most important observations in a bulleted list without introductory statements or conclusions.
-    - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should contain only the following statement: '[Metric name] is comparable with the baseline test and the overall trend of the current test is stable.'
-    - If the current test isn't comparable or there are observed degradations, the observation should contain only the following statements:
-      '[Metric name] is [comparable/not comparable] with the baseline test and the overall trend of the current test is [stable/not stable].'
-      '[Provide your high-level observations of degradations up to 2 sentences].'
-- id: table_comparison_of_tests
-  name: Table comparison of tests
+      - Identify each line by its label and color.
+      - Evaluate whether the current level aligns with the baseline.
+      - Assess the stability of the current trend, specifying the time and percentage range if unstable, ignoring minor fluctuations.
+    Constraints:
+      - Provide the most important observations in a bulleted list without introductory statements or conclusions.
+      - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should contain only the following statement: '[Metric name] is comparable with the baseline test and the overall trend of the current test is stable.'
+      - If the current test isn't comparable or there are observed degradations, the observation should contain only the following statements:
+        '[Metric name] is [comparable/not comparable] with the baseline test and the overall trend of the current test is [stable/not stable].'
+        '[Provide your high-level observations of degradations up to 2 sentences].'
+- id: table_comparison_of_tests_response_time
+  name: Table comparison of tests response time
   type: default
   place: graph
   prompt: |
     Task: Analyze the table.
     Instructions:
-    - Determine transactions with positive value of difference is more than 300 milliseconds and mark them as degraded.
-    - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.' 
-    - If there are degraded transactions, then the output should contain only the following statements:
-      'For most transactions, the response time remained at the same level, except the following transactions:
-      - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
-- id: aggregated_data_of_the_test
-  name: Aggregated data of the test
+      - Determine transactions with positive value of difference is more than 300 milliseconds and mark them as degraded.
+      - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.'
+      - If there are degraded transactions, then the output should contain only the following statements:
+        'For most transactions, the response time remained at the same level, except the following transactions:
+        - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
+- id: aggregated_data_of_a_single_test
+  name: Aggregated data of a single test
   type: default
   place: aggregated_data
   prompt: |
     Task: Analyze the metrics.
     Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
     Instructions:
-    - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
-      - The request [request name] has a notably high percentage of errors at [percent value]%.
-    - If all requests have an error rate less than 2%, use this structure:
-      - No requests with high error rate.
-    - Provide the top 5 slowest requests. Structure in a bullet list:
-      - Top 5 slowest requests (Based on median):
-        - [request name]: median response time of [value] ms.
+      - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
+        - The request [request name] has a notably high percentage of errors at [percent value]%.
+      - If all requests have an error rate less than 2%, use this structure:
+        - No requests with high error rate.
+      - Provide the top 5 slowest requests. Structure in a bullet list:
+        - Top 5 slowest requests (Based on median):
+          - [request name]: median response time of [value] ms.
 - id: template_of_a_single_test
   name: Template of a single test
   type: default
@@ -65,17 +65,17 @@ prompts:
     Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
     @@@@
     Summary:
-    The performance testing results indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant issues]. The key areas for improvement include [highlight areas].
-    
+      The performance testing results indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant issues]. The key areas for improvement include [highlight areas].
+
     Analysis:
-    - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
-    - The throughput appears to be [relatively stable overall/unstable overall], with the throughput line maintaining a general [describe the throughput trend] trend in line with the [increase in/fixed number of/decrease in] Active Users.
-    - [Provide a highlevel overview of the behavior of response times]
-    - [Provide a highlevel overview of the behavior of CPU usage]
-    - [Provide a highlevel overview of the behavior of Memory usage]
+      - [Provide a highlevel overview of the behavior of throughput]
+      - [Provide a highlevel overview of the behavior of response times]
+      - [Provide a highlevel overview of the behavior of CPU usage]
+      - [Provide a highlevel overview of the behavior of Memory usage]
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
     Top 5 slowest requests:
-    - [request name]: median response time of [value] ms.
+      - [request name]: median response time of [value] ms.
 
     Requests with high error rate:
     [If there are requests with a high error rate, include them]
@@ -84,17 +84,17 @@ prompts:
     [If there are requests that don't meet the NFRs, include them]
 
     Recommendations:
-    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+      - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
     @@@@
 
     Observations from aggregated data analysis:
-    [aggreagted_data_analysis]
+      [aggreagted_data_analysis]
 
     Observations from graphs analysis:
-    [graphs_analysis]
+      [graphs_analysis]
 
     Observations from NFRs comparison.
-    [nfr_summary]
+      [nfr_summary]
 - id: template_comparison_tests
   name: Template comparison tests
   type: default
@@ -105,36 +105,36 @@ prompts:
     Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
     @@@@
     Summary:
-    The performance testing results are [comparable with no significant performance issues/comparable with areas for improvement/uncomparable, with significant issues]. The key areas for improvement include [highlight areas].
+      The performance testing results are [comparable with no significant performance issues/comparable with areas for improvement/uncomparable, with significant issues]. The key areas for improvement include [highlight areas].
 
     Analysis:
-    - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
-    - The throughput appears to be [relatively stable overall/unstable overall], with the throughput line maintaining a general [describe the throughput trend] trend in line with the [increase in/fixed number of/decrease in] Active Users.
-    - [Provide a highlevel comparing overview of the behavior of response times only in one sentence]
-    - [Provide a highlevel overview of the behavior of CPU usage only in one sentence]
-    - [Provide a highlevel overview of the behavior of Memory usage only in one sentence]
+      - [Provide a highlevel overview of the behavior of throughput]
+      - [Provide a highlevel comparing overview of the behavior of response times only in one sentence]
+      - [Provide a highlevel overview of the behavior of CPU usage only in one sentence]
+      - [Provide a highlevel overview of the behavior of Memory usage only in one sentence]
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
     Top 5 slowest requests:
-    - [request name]: median response time of [value] ms.
+      - [request name]: median response time of [value] ms.
 
     Requests with high error rate:
-    [If there are requests with a high error rate, include them]
+      [If there are requests with a high error rate, include them]
 
     Requests that do not meet NFRs:
-    [If there are requests that don't meet the NFRs, include them]
+      [If there are requests that don't meet the NFRs, include them]
 
     Recommendations:
-    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+      - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
     @@@@
 
     Observations from aggregated data analysis:
-    [aggregated_data_analysis]
+      [aggregated_data_analysis]
 
     Observations from graphs analysis:
-    [graphs_analysis]
+      [graphs_analysis]
 
     Observations from NFRs analysis:
-    [nfr_summary]
+      [nfr_summary]
 - id: template_group
   name: Template group
   type: default
@@ -144,6 +144,6 @@ prompts:
     Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
     @@@@
     Summary:
-    - The tests results are [satisfactory/not satisfactory].
-    - [Provide a highlevel overview of the performance issues].
+      - The tests results are [satisfactory/not satisfactory].
+      - [Provide a highlevel overview of the performance issues].
     @@@@
