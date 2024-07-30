@@ -18,10 +18,10 @@ import json
 import uuid
 import logging
 import portalocker
+import yaml
 
 from app                            import config_path
 from app.models                     import Secret
-from app.backend.ai_support.prompts import Prompt
 from os                             import path as pt
 from werkzeug.datastructures        import MultiDict
 from datetime                       import datetime
@@ -391,6 +391,13 @@ def get_output_configs(project):
         result += configs
     return result
 
+def get_output_type_by_id(project, id):
+    output_configs = get_output_configs(project)
+    for config in output_configs:
+        if config.get("id") == id:
+            return config["type"]
+    return None
+
 ####################### NFRS CONFIG:
 
 def get_nfr(project, id):
@@ -422,14 +429,17 @@ def save_nfrs(project, nfr):
 
 def delete_nfr(project, id):
     validate_config(project, "nfrs")
-    data = get_project_config(project)
+    data        = get_project_config(project)
+    nfr_deleted = False
     for idx, obj in enumerate(data["nfrs"]):
         if obj["id"] == id:
             data["nfrs"].pop(idx)
+            nfr_deleted = True
             break
-    for template in data["templates"]:
-        if template["nfr"] == id:
-            template["nfr"] == ""
+    if nfr_deleted:
+        for template in data["templates"]:
+            if template["nfr"] == id:
+                template["nfr"] == ""
     save_new_data(project, data)
 
 ####################### TEMPLATE CONFIG:
@@ -441,9 +451,7 @@ def get_templates(project):
 
 def get_template_values(project, template):
     template_obj = get_json_values(project, "templates", template)
-    if 'prompt' not in template_obj or template_obj['prompt'] == "":
-        template_obj['prompt'] = Prompt(project).template['prompt']
-    output = md.TemplateModel.model_validate(template_obj)
+    output       = md.TemplateModel.model_validate(template_obj)
     return output.model_dump()
 
 def save_template(project, template):
@@ -490,17 +498,20 @@ def save_template_group(project, template_group):
 
 def delete_template_config(project, config):
     validate_config(project, "templates")
-    data = get_project_config(project)
+    data             = get_project_config(project)
+    template_deleted = False
     for idx, obj in enumerate(data["templates"]):
         if obj["id"] == config:
             data["templates"].pop(idx)
+            template_deleted = True
             break
-    for template_group in data["template_groups"]:
-        template_group_data = template_group["data"]
-        for idx, data_item in enumerate(template_group_data):
-            if data_item["type"] == "template" and data_item["id"] == config:
-                template_group_data.pop(idx)
-                break
+    if template_deleted:
+        for template_group in data["template_groups"]:
+            template_group_data = template_group["data"]
+            for idx, data_item in enumerate(template_group_data):
+                if data_item["type"] == "template" and data_item["id"] == config:
+                    template_group_data.pop(idx)
+                    break
     save_new_data(project, data)
 
 def delete_template_group_config(project, config):
@@ -548,17 +559,20 @@ def save_graph(project, form):
 
 def delete_graph(project, graph_id):
     validate_config(project, "graphs")
-    data = get_project_config(project)
+    data          = get_project_config(project)
+    graph_deleted = False
     for idx, obj in enumerate(data["graphs"]):
         if obj["id"] == graph_id:
             data["graphs"].pop(idx)
+            graph_deleted = True
             break
-    for template in data["templates"]:
-        template_data = template["data"]
-        for idx, data_item in enumerate(template_data):
-            if data_item["type"] == "graph" and data_item["id"] == graph_id:
-                template_data.pop(idx)
-                break
+    if graph_deleted:
+        for template in data["templates"]:
+            template_data = template["data"]
+            for idx, data_item in enumerate(template_data):
+                if data_item["type"] == "graph" and data_item["id"] == graph_id:
+                    template_data.pop(idx)
+                    break
     save_new_data(project, data)
 
 ####################### OTHER:
@@ -590,37 +604,7 @@ def delete_project(project):
 
 def generate_unique_id():
     return str(uuid.uuid4())
-####################### PROMPTS:
 
-def get_prompt_by_type(project, type):
-    validate_config(project, "prompts")
-    data = get_project_config(project)
-    for prompt in data["prompts"]:
-        if prompt["type"] == type:
-            return prompt
-
-def get_prompts(project_id):
-    validate_config(project_id, "prompts")
-    data = get_project_config(project_id)
-    return data["prompts"]
-
-def save_prompt(project_id, form):
-    validate_config(project_id, "prompts")
-    data            = get_project_config(project_id)
-    prompt_id       = form.get("id")
-    existing_prompt = next((prompt for prompt in data["prompts"] if prompt["id"] == prompt_id), None)
-    if not existing_prompt:
-        form["id"] = generate_unique_id()
-        data["prompts"].append(form)
-    else:
-        existing_prompt.update(form)
-    save_new_data(project_id, data)
-
-def delete_prompt(project, id):
-    validate_config(project, "prompts")
-    data = get_project_config(project)
-    for idx, obj in enumerate(data["prompts"]):
-        if obj["id"] == id:
-            data["prompts"].pop(idx)
-            break
-    save_new_data(project, data)
+def read_from_yaml(file_path):
+    with open(file_path, 'r') as file:
+        return yaml.safe_load(file)

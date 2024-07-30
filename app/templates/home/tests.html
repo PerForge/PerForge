@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} PerForge {% endblock %} 
+{% block title %} Tests {% endblock %} 
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -114,6 +114,23 @@
                         </div>
                     </div>
                 </div>
+                <!-- Result Modal -->
+                <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                        <h5 class="modal-title" id="resultModalLabel">Report generated!</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="resultModalBody">
+                        <!-- Result content will be populated here -->
+                        </div>
+                        <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                    </div>
+                </div>
                 {% with msgs = get_flashed_messages() %}
                     {% include 'includes/flashed-msg.html' %}
                 {% endwith %}
@@ -159,7 +176,7 @@
                 }
 
                 function updateTable(tests) {
-                    $("#table-id").attr('data-list', '{"valueNames":["runId", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 7, "pagination": true}');
+                    $("#table-id").attr('data-list', '{"valueNames":["runId", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 10, "pagination": true}');
 
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body

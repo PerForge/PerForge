@@ -254,7 +254,7 @@ def get_test_names(run_id, bucket):
 
 ########################## AGGREGATED TABLE
 
-def get_aggreagted_table(testTitle, start, stop, bucket):
+def get_aggregated_data(testTitle, start, stop, bucket):
   return '''errorsCount = from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r["_measurement"] == "requestsRaw")

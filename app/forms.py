@@ -76,7 +76,7 @@ class GraphForm(FlaskForm):
     dash_id    = SelectField('Dashboard Id', validators=[DataRequired()])
     width      = StringField('Panel width', validators=[DataRequired()])
     height     = StringField('Panel height', validators=[DataRequired()])
-    prompt     = TextAreaField('Prompt (optional)')
+    prompt_id  = StringField('Prompt id', validators=[DataRequired()])
 
 
 class AtlassianConfluenceForm(FlaskForm):
@@ -120,7 +120,7 @@ class SMTPMailForm(FlaskForm):
 class AISupportForm(FlaskForm):
     id             = StringField('Id')
     name           = StringField('Name', validators=[DataRequired()])
-    ai_provider    = SelectField('AI Provider', choices=[('gemini', 'Gemini'), ('openai', 'OpenAI'), ('azure_openai', 'Azure OpenAI')], default='gemini')
+    ai_provider    = SelectField('AI Provider', choices=[('openai', 'OpenAI'), ('azure_openai', 'Azure OpenAI'), ('gemini', 'Gemini')], default='openai')
     azure_url      = StringField('Azure url')
     api_version    = StringField('Api version')
     ai_text_model  = StringField('AI Text model', validators=[DataRequired()])
@@ -129,11 +129,14 @@ class AISupportForm(FlaskForm):
     temperature    = FloatField('Temperature', validators=[DataRequired(), NumberRange(min=0.1, max=1.0)], default=0.2)
     is_default     = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
 
+
 class PromptForm(FlaskForm):
     id     = StringField('Id')
+    name   = StringField('Name', validators=[DataRequired()])
+    type   = StringField('Type', validators=[DataRequired()])
+    place  = SelectField('Place', choices=[('graph', 'Graph'), ('aggregated_data', 'Aggregated Data'), ('template', 'Template'), ('template_group', 'Template Group')])
     prompt = TextAreaField('Prompt', validators=[DataRequired()])
-    type   = SelectField('Type', choices=[('template', 'graph', 'aggreagted_table')])
-    place  = StringField('Place', validators=[DataRequired()])
+
 
 class SecretForm(FlaskForm):
     id    = StringField('Id')

@@ -1,28 +1,78 @@
+import os
+
 from app.backend import pkg
 
-class Prompt:
-    def __init__(self, project_id):
-        self.project_id = project_id
-        self.set_default_prompts()
-        self.aggreagted_table = pkg.get_prompt_by_type(project_id, "aggreagted_table")
-        self.graph            = pkg.get_prompt_by_type(project_id, "graph")
-        self.template         = pkg.get_prompt_by_type(project_id, "template")
-        self.template_group      = pkg.get_prompt_by_type(project_id, "template_group")
-    
-    def set_default_prompts(self):
-        default_graph_prompt = "Role: Senior performance analyst\r\nContext: You are provided with a graph that includes two lines: Requests Per Second (RPS - yellow line), and Active Users (green line). The x-axis represents time. The left y-axis represents requests per second, and the right y-axis represents the number of active users. \r\nTask: analyze throughout graph and provide observations.\r\nPlease consider the following check-list:\r\n- Based on your observations, determine whether the throughput is stable throughout the test.\r\n- Analyze the trends of the RPS line. If the Active Users line remains constant, then the  RPS line should also remain constant and stable. However, if the number of active users is on an upward trend, the RPS lines should proportionally increase as well.\r\n- Identify significant fluctuations or spikes. Ignore slight fluctuations.\r\n- Don't note in observations any sudden increases towards the end of the test, if they exist. They're likely related to the ramping down phase of the test.\r\n- Remember to apply mathematical rigor and clear data-driven logic throughout your analysis. \r\nConstraints: Provide up to 5 most important observations as a bullet list without an opening statement or conclusion and without prefixed descriptions such as \"Observations\"."
-        aggreagted_table     = "Role: Senior performance analyst\r\nContext: You are provided with a table containing metrics for each request: Requests Per Minute, Percent of Errors, Count of Executions, Average Response Time, Max Response Time, Min Response Time, 50th Percentile Response Time, 75th Percentile Response Time, 90th Percentile Response Time, and Standard Deviation of Response Time. \r\nTask: analyze the metrics and provide observations.\r\nPlease consider the following check-list:\r\n- \"all\" refers to metrics aggregated for all requests, so it applies to the entire test.\r\n- Examine the Percent of Errors for each request to identify any requests with high error rates.\r\n- Provide top 5 slowest requests.\r\n- Remember to apply mathematical rigor and clear data-driven logic throughout your analysis.\r\nConstraints: Provide your output using the following structure; do not use any other format. Replace [] with real values:\r\n- The request [request name] has a notably high percentage of errors at [percent value]%.\r\n- 75%-tile response time for 'all' requests, stands at [75Pct value] ms.\r\n- Average throughput for 'all' requests, stands at [rpm value] r/s.\r\n- Top 5 slowest requests (Based on 75%-tile):\r\n   - [request name]: 75%-tile response time of [value] ms."
-        summary_template     = "Role: Senior performance analyst\nContext: You are provided with a set of performance test observations, including graphs and test data analysis.\nTask: Create a comprehensive report, that should encapsulate key findings, and actionable recommendations to provide a clear overview of the system's performance and stability.\nConstraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.\n@@@@\nSummary:\nThe performance testing results indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant bottlenecks that prevent the system from operating efficiently]. The key areas for improvement include [highlight areas]. The recommended actions are expected to [brief summary of expected action items].\n\nAnalysis:\n- 75%-tile response time for 'all' requests, stands at [75Pct value] ms.\n- Average throughput for 'all' requests, stands at [rpm value] r/s.\n- The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.\n- The throughput appears to be [relatively stable overall/unstable overall], with the RPS line maintaining a general [describe the throughput trend] trend in line with the [increase in/fixed number of/decrease in] Active Users.\n- [Provide a highlevel overview of the behavior of response times]\n- [Provide a highlevel overview of the behavior of CPU usage]\n- [Provide a highlevel overview of the behavior of Memory usage]\n\nTop 5 slowest requests (Based on 75%-tile):\n- [request name]: 75%-tile response time of [value] ms.\n\nRequests with high error rate:\n[If there are requests with a high error rate, include them]\n\nRequests that do not meet NFRs:\n[If there are requests that don't meet the NFRs, include them]\n\nRecommendations:\n- [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].\n@@@@\n\nObservations from aggregated data analysis:\n[aggreagted_data_analysis]\n\nObservations from graphs analysis:\n[graphs_analysis]\n\nNFRs summary\n[nfr_summary]"
-        summary_template_group  = "Role: Lead Performance Analyst \nContext: You are in the process of preparing an overview of several performance tests. \nTask: Review the results of multiple tests and create a high-level summary of the findings. \nTest results:"
-        prompts              = pkg.get_prompts(self.project_id)
-        if len(prompts) == 0:
-            self.save_prompt({"prompt":default_graph_prompt, "type": "graph", "place": "default", "id": None })
-            self.save_prompt({"prompt":aggreagted_table, "type": "aggreagted_table", "place": "default", "id": None })
-            self.save_prompt({"prompt":summary_template, "type": "template", "place": "default", "id": None })
-            self.save_prompt({"prompt":summary_template_group, "type": "template_group", "place": "default", "id": None })
-        
-    def save_prompt(self, form):
-        pkg.save_prompt(self.project_id, form)
 
-    def get_prompts(self):
-        return pkg.get_prompts(self.project_id)
+class Prompt:
+    def __init__(self, project):
+        self.project         = project
+        self.default_prompts = self.get_default_prompts()
+        self.custom_prompts  = self.get_custom_prompts(project)
+
+    @staticmethod
+    def get_default_prompts():
+        file_path    = os.path.join("app", "data", "prompts.yaml")
+        yaml_prompts = pkg.read_from_yaml(file_path)
+        return yaml_prompts['prompts']
+
+    @staticmethod
+    def get_custom_prompts(project):
+        pkg.validate_config(project, "prompts")
+        data = pkg.get_project_config(project)
+        return data["prompts"]
+
+    def get_prompts_by_place(self, place):
+        filtered_prompts = [
+            prompt for prompt in self.default_prompts if prompt['place'] == place
+        ] + [
+            prompt for prompt in self.custom_prompts if prompt['place'] == place
+        ]
+        return filtered_prompts
+
+    def get_prompt_value_by_id(self, id):
+        # Search in default prompts
+        for prompt in self.default_prompts:
+            if prompt['id'] == id:
+                return prompt['prompt']
+        # Search in custom prompts
+        for prompt in self.custom_prompts:
+            if prompt['id'] == id:
+                return prompt['prompt']
+        return None
+
+    def save_custom_prompt(project, form):
+        pkg.validate_config(project, "prompts")
+        data            = pkg.get_project_config(project)
+        prompt_id       = form.get("id")
+        existing_prompt = next((prompt for prompt in data["prompts"] if prompt["id"] == prompt_id), None)
+        form["prompt"]  = form.get("prompt").replace('"', "'") 
+        if not existing_prompt:
+            form["id"] = pkg.generate_unique_id()
+            data["prompts"].append(form)
+        else:
+            existing_prompt.update(form)
+        pkg.save_new_data(project, data)
+        return form.get("id")
+
+    def delete_custom_prompt(project, id):
+        pkg.validate_config(project, "prompts")
+        data           = pkg.get_project_config(project)
+        prompt_deleted = False
+        for idx, obj in enumerate(data["prompts"]):
+            if obj["id"] == id:
+                data["prompts"].pop(idx)
+                prompt_deleted = True
+                break
+        if prompt_deleted:
+            for graph in data.get("graphs", []):
+                if graph.get("prompt_id") == id:
+                    graph["prompt_id"] = ""
+            for template in data.get("templates", []):
+                if template.get("template_prompt_id") == id:
+                    template["template_prompt_id"] = ""
+                if template.get("aggregated_prompt_id") == id:
+                    template["aggregated_prompt_id"] = ""
+            for template_group in data.get("template_groups", []):
+                if template_group.get("prompt_id") == id:
+                    template_group["prompt_id"] = ""
+        pkg.save_new_data(project, data)

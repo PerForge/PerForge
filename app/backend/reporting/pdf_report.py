@@ -197,12 +197,11 @@ class PdfReport(ReportingBase):
     def set_template(self, template, influxdb):
         super().set_template(template, influxdb)
 
-    def add_graph(self, graph_id, current_run_id, baseline_run_id):
-        image = self.grafana_obj.render_image(graph_id, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
+    def add_graph(self, graph_data, current_run_id, baseline_run_id):
+        image = self.grafana_obj.render_image(graph_data["id"], self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
         self.pdf_creator.add_image(image)
         if self.ai_switch and self.ai_graph_switch:
-            graph_json          = pkg.get_graph(self.project, graph_id)
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_json["name"], image, graph_json["prompt"])
+            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
             if self.ai_to_graphs_switch:
                 self.add_text(ai_support_response)
 
@@ -275,7 +274,9 @@ class PdfReport(ReportingBase):
         else:
             templates_title = group_title + time_str
         self.pdf_creator.build()
-        return templates_title
+        response = self.generate_response()
+        response['filename'] = templates_title
+        return response
 
     def generate(self, current_run_id, baseline_run_id = None):
         for obj in self.data:
@@ -284,7 +285,7 @@ class PdfReport(ReportingBase):
             elif obj["type"] == "graph":
                 graph_data       = pkg.get_graph(self.project, obj["id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                self.add_graph(obj["id"], current_run_id, baseline_run_id)
+                self.add_graph(graph_data, current_run_id, baseline_run_id)
         if self.nfrs_switch or self.ai_switch:
             result = self.analyze_template()
             self.pdf_creator.add_text_summary(result)

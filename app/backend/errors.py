@@ -18,6 +18,7 @@ class ErrorMessages(Enum):
     DELETE_PROJECT              = 'An error occurred while deleting the project. For more detailed information, please refer to the logs.'
     GET_PROMPTS                 = 'An error occurred while retrieving prompts. For more detailed information, please refer to the logs.'
     SAVE_PROMPT                 = 'An error occurred while saving the prompt. For more detailed information, please refer to the logs.'
+    DELETE_PROMPT               = 'An error occurred while deleting the prompt. For more detailed information, please refer to the logs.'
     GET_NFRS                    = 'An error occurred while retrieving NFRs. For more detailed information, please refer to the logs.'
     SAVE_NFR                    = 'An error occurred while saving NFRs. For more detailed information, please refer to the logs.'
     DELETE_NFR                  = 'An error occurred while deleting NFRs. For more detailed information, please refer to the logs.'

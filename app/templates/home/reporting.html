@@ -39,8 +39,9 @@
                                                 <th class="sort" data-sort="title">Report Title</th>
                                                 <th class="sort" data-sort="nfr">NFR</th>
                                                 <th class="sort" data-sort="nfr-switch">NFR Switch</th>
+                                                <th class="sort" data-sort="template_prompt_id">Template prompt</th>
+                                                <th class="sort" data-sort="aggregated_prompt_id">Aggregated data prompt</th>
                                                 <th class="sort" data-sort="ai-switch">AI Switch</th>
-                                                <th class="sort" data-sort="graphs-ai-switch">AI Graphs Switch</th>
                                                 <th class="sort" data-sort="actions">Actions</th>
                                             </tr>
                                         </thead>
@@ -57,8 +58,21 @@
                                                     {% endfor %}
                                                 </td>
                                                 <td class="nfr-switch">{{ template.nfrs_switch }}</td>
+                                                <td class="template_prompt_id">
+                                                    {% for prompt in template_prompts %}
+                                                        {% if prompt.id == template.template_prompt_id %}
+                                                            {{ prompt.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="aggregated_prompt_id">
+                                                    {% for prompt in aggregated_data_prompts %}
+                                                        {% if prompt.id == template.aggregated_prompt_id %}
+                                                            {{ prompt.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
                                                 <td class="ai-switch">{{ template.ai_switch }}</td>
-                                                <td class="graphs-ai-switch">{{ template.ai_graph_switch }}</td>
                                                 <td class="actions" style="width: 20%;">
                                                     <a class="btn btn-secondary" href="/template?template_config={{ template.id }}">Edit</a>
                                                     <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ template.id }}">Delete</a>
@@ -123,7 +137,8 @@
                                                 <th class="sort" data-sort="name">Name</th>
                                                 <th class="sort" data-sort="title">Report Title</th>
                                                 <th class="sort" data-sort="template">Templates</th>
-                                                <th class="sort" data-sort="ai_summary">AI Summary</th>
+                                                <th class="sort" data-sort="prompt_id">Prompt</th>
+                                                <th class="sort" data-sort="ai_summary">AI Switch</th>
                                                 <th class="sort" data-sort="actions">Actions</th>
                                             </tr>
                                         </thead>
@@ -138,6 +153,13 @@
                                                         {% if element.type == "template" %}
                                                             {% set counter.value = counter.value + 1 %}
                                                             {{ counter.value }}. {{ element.content }}<br>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="aggregated_prompt_id">
+                                                    {% for prompt in template_group_prompts %}
+                                                        {% if prompt.id == template_group.prompt_id %}
+                                                            {{ prompt.name }}
                                                         {% endif %}
                                                     {% endfor %}
                                                 </td>

@@ -32,12 +32,14 @@ from flask                                             import render_template, r
 @app.route('/template', methods=['GET', 'POST'])
 def template():
     try:
-        project         = request.cookies.get('project')
-        graphs          = pkg.get_config_names_and_ids(project, "graphs")
-        nfrs            = pkg.get_config_names_and_ids(project, "nfrs")
-        default_prompt  = Prompt(project).template
-        template_config = request.args.get('template_config')
-        template_data   = []
+        project                 = request.cookies.get('project')
+        graphs                  = pkg.get_config_names_and_ids(project, "graphs")
+        nfrs                    = pkg.get_config_names_and_ids(project, "nfrs")
+        prompt_obj              = Prompt(project)
+        template_prompts        = prompt_obj.get_prompts_by_place("template")
+        aggregated_data_prompts = prompt_obj.get_prompts_by_place("aggregated_data")
+        template_config         = request.args.get('template_config')
+        template_data           = []
         if template_config is not None:
             template_data = pkg.get_template_values(project, template_config)
         if request.method == "POST":
@@ -56,7 +58,7 @@ def template():
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_TEMPLATE.value, "error")
         return redirect(url_for("get_reporting"))
-    return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, default_prompt=default_prompt)
+    return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts)
 
 @app.route('/delete-template', methods=['GET'])
 def delete_template():
@@ -74,11 +76,12 @@ def delete_template():
 @app.route('/template-group', methods=['GET', 'POST'])
 def template_group():
     try:
-        project               = request.cookies.get('project')
-        templates             = pkg.get_config_names_and_ids(project, "templates")
-        template_group_config = request.args.get('template_group_config')
-        default_prompt        = Prompt(project).template_group
-        template_group_data   = []
+        project                = request.cookies.get('project')
+        templates              = pkg.get_config_names_and_ids(project, "templates")
+        template_group_config  = request.args.get('template_group_config')
+        prompt_obj             = Prompt(project)
+        template_group_prompts = prompt_obj.get_prompts_by_place("template_group")
+        template_group_data    = []
         if template_group_config is not None:
             template_group_data = pkg.get_template_group_values(project, template_group_config)
         if request.method == "POST":
@@ -97,7 +100,7 @@ def template_group():
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_TEMPLATE_GROUP.value, "error")
         return redirect(url_for("get_reporting"))
-    return render_template('home/template-group.html', template_group_config=template_group_config,templates=templates, template_group_data=template_group_data, default_prompt=default_prompt)
+    return render_template('home/template-group.html', template_group_config=template_group_config,templates=templates, template_group_data=template_group_data, template_group_prompts=template_group_prompts)
 
 @app.route('/delete-template-group', methods=['GET'])
 def delete_template_group():
@@ -115,11 +118,15 @@ def delete_template_group():
 @app.route('/reporting', methods=['GET', 'POST'])
 def get_reporting():
     try:
-        project         = request.cookies.get('project')
-        templates       = pkg.get_templates(project)
-        template_groups = pkg.get_template_groups(project)
-        nfrs            = pkg.get_nfrs(project)
-        return render_template('home/reporting.html', templates=templates, template_groups=template_groups, nfrs=nfrs)
+        project                 = request.cookies.get('project')
+        templates               = pkg.get_templates(project)
+        template_groups         = pkg.get_template_groups(project)
+        nfrs                    = pkg.get_nfrs(project)
+        prompt_obj              = Prompt(project)
+        template_prompts        = prompt_obj.get_prompts_by_place("template")
+        aggregated_data_prompts = prompt_obj.get_prompts_by_place("aggregated_data")
+        template_group_prompts  = prompt_obj.get_prompts_by_place("template_group")
+        return render_template('home/reporting.html', templates=templates, template_groups=template_groups, nfrs=nfrs, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts, template_group_prompts=template_group_prompts)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.REPORTING.value, "error")
@@ -162,15 +169,18 @@ def generate_report():
         project = request.cookies.get('project')
         if request.method == "POST":
             data = request.get_json()
-            action_data = data["selectedAction"]
-            if "selectedAction" in data:
+            if "outputId" in data:
                 influxdb       = data.get("influxdbId")
                 template_group = data.get("templateGroup")
-                action_type    = action_data.get("type")
-                action_id      = action_data.get("id")
-            else: 
+                action_id      = data.get("outputId")
+                if action_id == "pdf_report":
+                    action_type = action_id
+                elif action_id == "delete":
+                    action_type = action_id
+                else:
+                    action_type = pkg.get_output_type_by_id(project, action_id)
+            else:
                 action_type = None
-            result = "Wrong action: " + action_type
             if action_type == "azure":
                 az     = AzureWikiReport(project)
                 result = az.generate_report(data["tests"], influxdb, action_id, template_group)
@@ -189,9 +199,19 @@ def generate_report():
                 del(smr)
             elif action_type == "pdf_report":
                 pdf      = PdfReport(project)
-                filename = pdf.generate_report(data["tests"], influxdb, template_group)
+                result = pdf.generate_report(data["tests"], influxdb, template_group)
                 pdf.pdf_io.seek(0)
-                return send_file(pdf.pdf_io, mimetype="application/pdf", download_name=f'{filename}.pdf', as_attachment=True)
+                # Convert the result to a JSON string and include it in the headers
+                result_json = json.dumps(result)
+                # Create a custom response with the PDF file and headers
+                response = send_file(
+                    pdf.pdf_io,
+                    mimetype="application/pdf",
+                    download_name=f'{result["filename"]}.pdf',
+                    as_attachment=True
+                )
+                response.headers['X-Result-Data'] = result_json
+                return response
             elif action_type == "delete":
                 try:
                     influxdb_obj = Influxdb(project=project, id=influxdb)
@@ -202,6 +222,8 @@ def generate_report():
                     logging.warning(str(traceback.format_exc()))
                     flash(ErrorMessages.DELETE_TEST.value, "error")
                     return redirect(url_for("index"))
+            else:
+                result = f"Wrong action: {str(action_type)}"
             return result
     except Exception:
         logging.warning(str(traceback.format_exc()))

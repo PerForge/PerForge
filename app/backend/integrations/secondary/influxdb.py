@@ -93,9 +93,9 @@ class Influxdb(Integration):
         result = []
         try:
             if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-                query = standart.get_aggreagted_table(run_id, start, end, self.bucket) 
+                query = standart.get_aggregated_data(run_id, start, end, self.bucket) 
             else:
-                query = custom.get_aggreagted_table(run_id, start, end, self.bucket) 
+                query = custom.get_aggregated_data(run_id, start, end, self.bucket) 
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table:

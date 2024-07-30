@@ -54,6 +54,39 @@
     });
   };
 
+  const sendPostRequestReport = (url, json) => {
+    return new Promise((resolve, reject) => {
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: json,
+        contentType: "application/json",
+        success: function (data) {
+          showResultModal(JSON.parse(data))
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          reject({ jqXHR, textStatus, errorThrown });
+        },
+      });
+    });
+  };
+
+  function showResultModal(result) {
+    // Populate the modal with the result data using a loop
+    const resultModalBody = document.getElementById('resultModalBody');
+    resultModalBody.innerHTML = ''; // Clear previous content
+
+    for (const [key, value] of Object.entries(result)) {
+      const p = document.createElement('p');
+      p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
+      resultModalBody.appendChild(p);
+    }
+
+    // Show the modal
+    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    resultModal.show();
+  }
+
   const sendDownloadRequest = (url, json) => {
     return new Promise((resolve, reject) => {
       $.ajax({
@@ -64,19 +97,23 @@
         success: function (data, textStatus, request) {
           const contentType = request.getResponseHeader("Content-Type");
           if (contentType === "application/pdf") {
-            const contentDisposition = request.getResponseHeader("Content-Disposition");
-            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-            const filename = filenameMatch ? filenameMatch[1] : "demo.pdf";
-  
-            const blob = new Blob([data], { type: contentType });
+            const resultJson = request.getResponseHeader("X-Result-Data");
+            const result = JSON.parse(resultJson);
+
+            // Create a Blob from the response data
+            const blob = new Blob([data], { type: "application/pdf" });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = filename;
+            a.download = result.filename + '.pdf';
             document.body.appendChild(a);
             a.click();
             a.remove();
-            resolve();
+
+            // Show the result in the modal
+            showResultModal(result);
+            
+            resolve(result);
           } else {
             resolve(data.redirect_url);
           }
@@ -540,7 +577,12 @@
           const selectedRows = {}
           selectedRows["tests"] = transformedList;
           selectedRows["influxdbId"] = selectedInfluxdb.value;
-          selectedRows["selectedAction"] = JSON.parse(selectedAction.value.toString());
+          const output = JSON.parse(selectedAction.value.toString());
+          if (output.type == "pdf_report" || output.type == "delete"){
+            selectedRows["outputId"] = output.type;
+          }else{
+            selectedRows["outputId"] = output.id;
+          }
           if (selectedTemplateGroup.value !== "Choose template group"){
             selectedRows["templateGroup"] = selectedTemplateGroup.value;
           }
@@ -556,7 +598,7 @@
               spinnerText.style.display = "";
             });
           }else{
-            sendPostRequest('/generate',JSON.stringify(selectedRows)).finally(function (){
+            sendPostRequestReport('/generate',JSON.stringify(selectedRows)).finally(function (){
               spinner.style.display = "none";
               spinnerText.style.display = "";
             });
@@ -566,19 +608,45 @@
       if (showApiBtn) {
         const bulkSelectEl = document.getElementById('bulk-select-example');
         const bulkSelectInstance = window.perforge.BulkSelect.getInstance(bulkSelectEl);
+      
+        // Function to get the value of a specific cookie by name
+        function getCookieValue(name) {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+      
         showApiBtn.addEventListener('click', () => {
           const transformedList = bulkSelectInstance.getSelectedRows();
-          const selectedRows = {}
+          const selectedRows = {};
+          const output = JSON.parse(selectedAction.value.toString());
           selectedRows["tests"] = transformedList;
           selectedRows["influxdbId"] = selectedInfluxdb.value;
-          selectedRows["selectedAction"] = JSON.parse(selectedAction.value.toString());
-          if (selectedTemplateGroup.value !== "Choose template group"){
+          if (output.type == "pdf_report" || output.type == "delete"){
+            selectedRows["outputId"] = output.type;
+          }else{
+            selectedRows["outputId"] = output.id;
+          }
+          if (selectedTemplateGroup.value !== "Choose template group") {
             selectedRows["templateGroup"] = selectedTemplateGroup.value;
           }
-          let post_request = "POST /generate\n"
-          post_request += "Content-Type: application/json\n"
-          post_request += JSON.stringify(selectedRows, null, 2)
-          alert(post_request);
+      
+          // Retrieve the project cookie value
+          const projectCookieValue = getCookieValue('project');
+          const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+      
+          let post_request = "curl -k --fail-with-body --request POST \\ \n";
+          post_request += `--url ${baseUrl}/generate\n`;
+          post_request += `-H "Content-Type: application/json" \\ \n`;
+          post_request += `-H "Cookie: project=${projectCookieValue}" \\ \n`;
+          post_request += `--data '${JSON.stringify(selectedRows, null, 2)}'`;
+      
+          // Copy the post_request to the clipboard
+          navigator.clipboard.writeText(post_request).then(() => {
+            alert(`API request copied to clipboard!\n\n${post_request}`);
+          }).catch(err => {
+            console.error('Error copying to clipboard: ', err);
+          });
         });
       }
     });

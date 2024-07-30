@@ -18,9 +18,9 @@ import traceback
 from flask                          import flash, redirect, request, url_for, render_template
 from app                            import app
 from app.backend                    import pkg
+from app.backend.ai_support.prompts import Prompt
 from app.forms                      import PromptForm
 from app.backend.errors             import ErrorMessages
-from app.backend.ai_support.prompts import Prompt
 
 
 @app.route('/set-project', methods=['GET'])
@@ -94,25 +94,43 @@ def view_logs():
 @app.route('/prompts', methods=['GET'])
 def prompts():
     try:
-        project_id       = request.cookies.get('project')
-        prompt_obj       = Prompt(project_id)
+        project          = request.cookies.get('project')
         form_for_prompts = PromptForm(request.form)
-        prompts          = pkg.get_prompts(project_id)
+        default_prompts  = Prompt.get_default_prompts()
+        custom_prompts   = Prompt.get_custom_prompts(project)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_PROMPTS.value, "error")
         return redirect(url_for("index"))
-    return render_template('home/prompts.html', prompts = prompts, form_for_prompts = form_for_prompts)
+    return render_template('home/prompts.html', default_prompts = default_prompts, custom_prompts = custom_prompts, form_for_prompts = form_for_prompts)
 
 @app.route('/save-prompt', methods=['POST'])
 def save_prompt():
     try:
-        project_id = request.cookies.get('project')
+        project    = request.cookies.get('project')
         if request.method == "POST":
-            pkg.save_prompt(project_id, request.form.to_dict())
-        flash("Prompt updated", "info")
+            original_prompt_id = request.form.to_dict().get("id")
+            prompt_id          = Prompt.save_custom_prompt(project, request.form.to_dict())
+        if original_prompt_id == prompt_id:
+            flash("Custom prompt updated.", "info")
+        else:
+            flash("Custom prompt added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.SAVE_PROMPT.value, "error")
         return redirect(url_for("index"))
-    return redirect(url_for('prompts'))
+    return redirect(url_for('prompts', type='custom'))
+
+@app.route('/delete-prompt', methods=['GET'])
+def delete_prompt():
+    try:
+        project    = request.cookies.get('project')
+        prompt_id  = request.args.get('prompt_id')
+        if prompt_id is not None:
+            Prompt.delete_custom_prompt(project, prompt_id)
+            flash("Custom prompt deleted", "info")
+    except Exception:
+        logging.warning(str(traceback.format_exc()))
+        flash(ErrorMessages.DELETE_PROMPT.value, "error")
+        return redirect(url_for("index"))
+    return redirect(url_for('prompts', type='custom'))

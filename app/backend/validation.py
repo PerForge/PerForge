@@ -15,9 +15,12 @@
 from app                                                           import config_path
 from app.backend                                                   import pkg
 
+import re
+
 
 class Nfr:
     def __init__(self, nfr, description):
+        self.regex       = nfr["regex"]
         self.scope       = nfr["scope"]
         self.metric      = nfr["metric"]
         self.aggregation = nfr["scope"]
@@ -33,8 +36,6 @@ class DataRow:
         self.count       = data_row["count"]
         self.errors      = data_row["errors"]
         self.rpm         = data_row["rpm"]
-        self.max         = data_row["max"]
-        self.min         = data_row["min"]
         self.pct50       = data_row["pct50"]
         self.pct75       = data_row["pct75"]
         self.pct90       = data_row["pct90"]
@@ -78,10 +79,6 @@ class Validation:
                     return "PASSED" if value > threshold else "FAILED"
                 elif operation == '<':
                     return "PASSED" if value < threshold else "FAILED"
-                elif operation == '==':
-                    return "PASSED" if value == threshold else "FAILED"
-                elif operation == '!=':
-                    return "PASSED" if value != threshold else "FAILED"
                 elif operation == '>=':
                     return "PASSED" if value >= threshold else "FAILED"
                 elif operation == '<=':
@@ -90,6 +87,14 @@ class Validation:
                 return "threshold is not a number"
         except TypeError:
             return "value is not a number"
+        
+    def is_match(self, regex, string):
+        # Compile the regex pattern
+        compiled_pattern = re.compile(regex)
+        # Check if the string matches the regex pattern
+        match = compiled_pattern.match(string)
+        # Return True if there is a match, otherwise False
+        return match is not None
 
     # Method generates name based on NFR definition, for example:
     # NFR: {"scope": "all","metric": "response-time","aggregation": "95%-tile","operation": ">","threshold": 4000}
@@ -105,8 +110,6 @@ class Validation:
         operations = {
             '>': 'is greater than',
             '<': 'is less than',
-            '==': 'is equal to',
-            '!=': 'is not equal to',
             '>=': 'is greater than or equal to',
             '<=': 'is less than or equal to'
         }
@@ -124,8 +127,6 @@ class Validation:
         operations = {
             '>': 'is less than',
             '<': 'is greater than',
-            '==': 'is not equal to',
-            '!=': 'is equal to',
             '>=': 'is less than or not equal to',
             '<=': 'is greater than or not equal to'
         }
@@ -137,22 +138,43 @@ class Validation:
     def compare_with_nfrs(self, nfrs, data):
         # try:
         nfr_result = {}
+        # Initialize flags and variables
+        bad_weight = False
+
+        # Calculate total weight and count NFRs without weights
+        total_weight = 0
+        nfrs_without_weight = 0
+
+        for nfr in nfrs["rows"]:
+            if nfr["weight"] != '':
+                total_weight += int(nfr["weight"])
+            else:
+                nfrs_without_weight += 1
+
+        # Determine distribute_weight based on total weight
+        if total_weight < 100 and nfrs_without_weight > 0:
+            distribute_weight = (100 - total_weight) / nfrs_without_weight
+        else:
+            distribute_weight = 100 / len(nfrs["rows"])
+            bad_weight = True
+
         # Iterate through NFRs
         for nfr_row in nfrs["rows"]:
             nfr = Nfr(nfr_row, self.generate_name(nfr_row))
-            if nfr.scope == 'each' or nfr.scope in [item['transaction'] for item in data]:
-                # Apply weight to NFRs
-                total_weight = sum([int(nfr.weight) for nfr in nfrs["rows"] if nfr["weight"] != ''])
-                if total_weight < 100: distribute_weight = (100 - total_weight) / len([nfr for nfr in nfrs["rows"] if nfr["weight"] == ''])
-                else: distribute_weight = 100 / len(nfrs["rows"])
+            if nfr.scope == 'each' or nfr.scope in [item['transaction'] for item in data] or nfr.regex:
                 # Iterate through Data for validation
                 for row in data:
                     data_row = DataRow(row)
                     # Applying NFRs weights 
-                    if nfr.weight == '':
+                    if nfr.weight == '' or bad_weight:
                         nfr.weight = distribute_weight
+                    # Check if the regex matches the transaction
+                    is_regex_match = self.is_match(regex=nfr.scope, string=data_row.transaction) if nfr.regex else False
+
                     # Determine whether to process this row based on the NFR scope
-                    if nfr.scope == 'each' or (nfr.scope == data_row.transaction):
+                    should_process = nfr.scope == 'each' or nfr.scope == data_row.transaction or is_regex_match
+
+                    if should_process:
                         result = nfr_result.get("status", 'PASSED')
                         # Call compare_value function here
                         compare_result = self.compare_value(getattr(data_row, nfr.metric), nfr.operation, nfr.threshold)
@@ -164,20 +186,23 @@ class Validation:
                         nfr_result["weight"] = distribute_weight
             self.nfr_result.append(nfr_result)
             nfr_result = {}
-        # except Exception:
-        #     pass
 
     def calculate_apdex(self):
         total_weight = 0
         total_passed_weight = 0
         # Iterate over each NFR result
-        for nfr in self.nfr_result:
-            total_weight += nfr['weight']
-            # If the NFR status is PASSED, add the weight to total_passed_weight
-            if nfr['status'] == 'PASSED':
-                total_passed_weight += nfr['weight']
-        # Calculate Apdex as the percentage of total_passed_weight in total_weight
-        self.apdex = round((total_passed_weight / total_weight) * 100)
+        if len(self.nfr_result) > 0:
+            for nfr in self.nfr_result:
+                if 'weight' in nfr:
+                    total_weight += nfr['weight']
+                    # If the NFR status is PASSED, add the weight to total_passed_weight
+                    if nfr['status'] == 'PASSED':
+                        total_passed_weight += nfr['weight']
+            # Calculate Apdex as the percentage of total_passed_weight in total_weight
+            if total_weight == 0 or total_passed_weight == 0:
+                self.apdex = 0
+            else:
+                self.apdex = round((total_passed_weight / total_weight) * 100)
 
     def create_summary(self, id, data):
         # Get NFRs for the specific application

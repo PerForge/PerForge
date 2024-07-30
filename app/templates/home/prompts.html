@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} PerForge {% endblock %} 
+{% block title %} Prompts {% endblock %} 
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -15,25 +15,33 @@
         <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
           <div class="card-header">
             <div class="justify-content-between align-items-center">
-              <h4 class="mb-0">Prompts</h4>
+              <h4 class="mb-0">Prompts
+                <a href="https://perforge.app/docs/configuration/prompts" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
+                </a>
+              </h4>
             </div>
           </div>
           <div class="card-body">
-              <div id="table-id" data-list='{"valueNames":["prompt", "type"], "page": 10, "pagination": true}'>
+              <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
-                      <div class="d-flex">
+                          <label class="me-2" for="selectedTypeSwitch">Default</label>
+                          <div class="form-check form-switch">
+                              <input class="form-check-input" type="checkbox" id="selectedTypeSwitch" unchecked>
+                          </div>
+                          <label class="me-2" for="selectedTypeSwitch">Custom prompts</label>
                           <div>
                               <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
                                   <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" />
                                   <span class="fas fa-search search-box-icon"></span>
                               </div>
                           </div>
-                      </div>
+                          <button class="btn btn-primary ms-2" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" add-prompt="add-prompt">Add custom prompt</button>
                   </div>
                   <div class="table-responsive">
                       <table class="table fs--1 mb-0">
                           <thead>
                               <tr>
+                                  <th class="sort" data-sort="name">Name</th>
                                   <th class="sort" data-sort="prompt">Prompt</th>
                                   <th class="sort" data-sort="place">Place</th>
                                   <th class="sort" data-sort="type">Type</th>
@@ -41,30 +49,65 @@
                               </tr>
                           </thead>
                           <tbody class="list">
-                            {% for prompt in prompts %}
-                            <tr>
+                            {% for prompt in default_prompts %}
+                            <tr class="default-prompt">
+                                <td class="height">{{ prompt.name }}</td>
                                 <td class="prompt"><div style="display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prompt.prompt }}</div></td>
-                                <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
                                 <td class="place"><div class="badge badge-primary">{{ prompt.place }}</div></td>
+                                <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
                                 <td class="actions">
-                                    <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" data-prompt='{{ prompt | tojson | safe }}'>Edit</button>
+                                    <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#viewPromptModal" data-prompt='{{ prompt | tojson | safe }}'>View</button>
                                 </td>
                             </tr>
+                            <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Are you sure you want to delete the "{{ prompt.name }}" prompt?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <a class="btn btn-danger" href="/delete-prompt?prompt_id={{ prompt.id }}">Confirm Delete</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% for prompt in custom_prompts %}
+                            <tr class="custom-prompt">
+                                <td class="height">{{ prompt.name }}</td>
+                                <td class="prompt"><div style="display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prompt.prompt }}</div></td>
+                                <td class="place"><div class="badge badge-primary">{{ prompt.place }}</div></td>
+                                <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
+                                <td class="actions">
+                                    <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" data-prompt='{{ prompt | tojson | safe }}'>Edit</button>
+                                    <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ prompt.id }}">Delete</a>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Are you sure you want to delete the "{{ prompt.name }}" prompt?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <a class="btn btn-danger" href="/delete-prompt?prompt_id={{ prompt.id }}">Confirm Delete</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
                         </tbody>
                       </table>
-                  </div>
-                  <div class="d-flex justify-content-between mt-3 fs--1">
-                      <span data-list-info="data-list-info"></span>
-                      <div class="d-flex">
-                          <button class="page-link" data-list-pagination="prev">
-                              <span class="fas fa-chevron-left"></span>
-                          </button>
-                          <ul class="mb-0 pagination"></ul>
-                          <button class="page-link pe-0" data-list-pagination="next">
-                              <span class="fas fa-chevron-right"></span>
-                          </button>
-                      </div>
                   </div>
               </div>
           </div>
@@ -79,12 +122,22 @@
           <div class="modal-content">
             <form method="POST" action="/save-prompt">
               <input type="hidden" name="id" id="prompt_id">
-              <input type="hidden" name="type" id="type">
-              <input type="hidden" name="place" id="place">
+              <input type="hidden" name="type" id="prompt_type" value="custom">
+              <div class="modal-header">
+                <h2 class="modal-title" id="addnewpromptLabel">Add prompt</h2>
+              </div>
               <div class="modal-body">
                 <div class="mt-3">
+                  <label>Name</label>
+                  {{ form_for_prompts.name(class="form-control") }}
+                </div>
+                <div class="mt-3">
+                  <label>Place</label>
+                  {{ form_for_prompts.place(class="form-control") }}
+                </div>
+                <div class="mt-3">
                   <label>Prompt</label>
-                  {{ form_for_prompts.prompt(class="form-control") }}  
+                  {{ form_for_prompts.prompt(class="form-control") }}
                 </div>
               </div>
               <div class="modal-footer">
@@ -96,25 +149,94 @@
           </div>
       </div>
     </div>
+    <div class="modal fade" id="viewPromptModal" aria-hidden="true" style="display: none;">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                <h2 class="modal-title" id="addnewpromptLabel">Prompt</h2>
+              </div>
+              <div class="modal-body">
+                <div class="mt-3">
+                  <textarea class="form-control" id="view_prompt" rows="10" readonly></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                  <div class="status-place" style="float: left;"></div>
+                  <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
+              </div>
+          </div>
+      </div>
+    </div>
     <script>
       $(document).ready(function() {
-        // Store a reference to the modal and form
+        // Store a reference to the modals and form
         var modal = $('#promptModal');
+        var viewModal = $('#viewPromptModal');
         var form = modal.find('form');
-
-        // Listen for the modal open event
+    
+        // Listen for the modal open event for editing
         $('button[data-bs-toggle="modal"][data-bs-target="#promptModal"]').click(function() {
           var prompt = $(this).data('prompt');
-
+    
           $.each(prompt, function(key, value) {
             form.find('[name="' + key + '"]').val(value.toString());
           });
         });
-
-        // Listen for the modal close event
-        modal.on('hidden.bs.modal', function() {
-          form[0].reset(); // Reset the form to clear the values
+    
+        // Listen for the modal open event for viewing
+        $('button[data-bs-toggle="modal"][data-bs-target="#viewPromptModal"]').click(function() {
+          var prompt = $(this).data('prompt');
+    
+          $('#view_prompt').val(prompt.prompt);
         });
+    
+        // Listen for the modal close event for editing
+        modal.on('hidden.bs.modal', function() {
+          form[0].reset();
+          $('#prompt_id').val('');
+          $('#prompt_type').val('custom');
+        });
+    
+        // Listen for the modal close event for viewing
+        viewModal.on('hidden.bs.modal', function() {
+          $('#view_prompt').val('');
+        });
+    
+        // Handle the switch change event
+        $('#selectedTypeSwitch').change(function() {
+          if ($(this).is(':checked')) {
+            // Show default prompts, hide custom prompts
+            $('tr.default-prompt').hide();
+            $('tr.custom-prompt').show();
+            updateURL('custom');
+          } else {
+            // Show custom prompts, hide default prompts
+            $('tr.custom-prompt').hide();
+            $('tr.default-prompt').show();
+            updateURL('default');
+          }
+        });
+    
+        // Update the URL with the selected type
+        function updateURL(type) {
+          var currentURL = new URL(window.location.href);
+          currentURL.searchParams.set('type', type);
+          window.history.replaceState({}, '', currentURL);
+        }
+    
+        // Read the switcher state from the URL on page load
+        function initializeSwitcher() {
+          var currentURL = new URL(window.location.href);
+          var type = currentURL.searchParams.get('type');
+          if (type === 'custom') {
+            $('#selectedTypeSwitch').prop('checked', true).trigger('change');
+          } else {
+            $('#selectedTypeSwitch').prop('checked', false).trigger('change');
+          }
+        }
+    
+        // Initialize the switcher based on the URL
+        initializeSwitcher();
       });
     </script>
   </main>
