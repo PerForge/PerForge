@@ -62,7 +62,8 @@
         data: json,
         contentType: "application/json",
         success: function (data) {
-          showResultModal(JSON.parse(data))
+          showResultModal(JSON.parse(data));
+          resolve();
         },
         error: function (jqXHR, textStatus, errorThrown) {
           reject({ jqXHR, textStatus, errorThrown });
@@ -615,6 +616,29 @@
           const parts = value.split(`; ${name}=`);
           if (parts.length === 2) return parts.pop().split(';').shift();
         }
+
+        function copyToClipboard(text) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+              alert(`API request copied to clipboard!\n\n${text}`);
+            }).catch(err => {
+              console.error('Error copying to clipboard: ', err);
+            });
+          } else {
+            // Fallback for browsers that do not support navigator.clipboard
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+              document.execCommand('copy');
+              alert(`API request copied to clipboard!\n\n${text}`);
+            } catch (err) {
+              console.error('Error copying to clipboard: ', err);
+            }
+            document.body.removeChild(textarea);
+          }
+        }
       
         showApiBtn.addEventListener('click', () => {
           const transformedList = bulkSelectInstance.getSelectedRows();
@@ -642,11 +666,7 @@
           post_request += `--data '${JSON.stringify(selectedRows, null, 2)}'`;
       
           // Copy the post_request to the clipboard
-          navigator.clipboard.writeText(post_request).then(() => {
-            alert(`API request copied to clipboard!\n\n${post_request}`);
-          }).catch(err => {
-            console.error('Error copying to clipboard: ', err);
-          });
+          copyToClipboard(post_request);
         });
       }
     });
