@@ -11,7 +11,7 @@ class Prompt:
 
     @staticmethod
     def get_default_prompts():
-        file_path    = os.path.join("app", "data", "prompts.yaml")
+        file_path    = os.path.join("app", "backend", "ai_support", "prompts.yaml")
         yaml_prompts = pkg.read_from_yaml(file_path)
         return yaml_prompts['prompts']
 
