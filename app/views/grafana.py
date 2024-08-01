@@ -13,27 +13,56 @@
 # limitations under the License.
 import traceback
 import logging
+import json
 
-from flask                                       import request, make_response
-from app                                         import app
-from app.backend.reporting.azure_wiki_report     import AzureWikiReport
-from app.backend.integrations.secondary.influxdb import Influxdb
-from app.backend.integrations.secondary.grafana  import Grafana
+from flask                                             import request, redirect, make_response
+from app                                               import app
+from app.backend.reporting.azure_wiki_report           import AzureWikiReport
+from app.backend.reporting.atlassian_confluence_report import AtlassianConfluenceReport
+from app.backend.reporting.atlassian_jira_report       import AtlassianJiraReport
+from app.backend.reporting.smtp_mail_report            import SmtpMailReport
+from app.backend.integrations.secondary.influxdb       import Influxdb
+from app.backend.integrations.secondary.grafana        import Grafana
+from app.backend                                       import pkg
 
 
-@app.route('/gen-az-report', methods=['GET'])
-def gen_az_report():
+@app.route('/gen-report', methods=['GET'])
+def gen_report():
     try:
-        grafana_obj     = Grafana("default")
-        project         = "default"
-        run_id          = request.args.get('run_id')
-        baseline_run_id = request.args.get('baseline_run_id')
-        report_name     = request.args.get('reportName')
-        azreport        = AzureWikiReport(project, report_name)
-        azreport.generate_report(run_id, baseline_run_id)
+        project            = request.args.get('project')
+        influxdb           = request.args.get("influxdbId")
+        action_id          = request.args.get("outputId")
+        action_type        = pkg.get_output_type_by_id(project, action_id)
+        testTitle          = request.args.get('testTitle')
+        baseline_testTitle = request.args.get('baseline_testTitle')
+        template_id        = request.args.get('template_id')
+        data = {
+            "runId": testTitle,
+            "template_id": template_id
+        }
+        result = []
+        if baseline_testTitle:
+            data["baseline_run_id"] = baseline_testTitle
+        grafana_obj        = Grafana(project)
+        if action_type == "azure":
+            az     = AzureWikiReport(project)
+            result = az.generate_report([data], influxdb, action_id)
+            result = json.dumps(result)
+        elif action_type == "atlassian_confluence":
+            awr    = AtlassianConfluenceReport(project)
+            result = awr.generate_report([data], influxdb, action_id)
+            result = json.dumps(result)
+        elif action_type == "atlassian_jira":
+            ajr    = AtlassianJiraReport(project)
+            result = ajr.generate_report([data], influxdb, action_id)
+            result = json.dumps(result)
+        elif action_type == "smtp_mail":
+            smr    = SmtpMailReport(project)
+            result = smr.generate_report([data], influxdb, action_id)
+            result = json.dumps(result)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-    resp                                             = make_response("Done")
+    resp                                             = make_response(result)
     resp.headers['Access-Control-Allow-Origin']      = grafana_obj.server
     resp.headers['access-control-allow-methods']     = '*'
     resp.headers['access-control-allow-credentials'] = 'true'
@@ -45,18 +74,18 @@ def influx_data_delete():
         project      = request.args.get('project')
         influxdb_obj = Influxdb(project)
         grafana_obj  = Grafana(project)
+        bucket       = request.args.get('bucket')
+        testTitle    = request.args.get('testTitle')
+        start        = request.args.get('start')
+        end          = request.args.get('end')
+        status       = request.args.get('status')
         influxdb_obj.connect_to_influxdb()
-        bucket = request.args.get('bucket')
-        run_id = request.args.get('run_id')
-        start  = request.args.get('start')
-        end    = request.args.get('end')
-        status = request.args.get('status')
         if bucket: influxdb_obj.bucket = bucket
         if request.args.get('user') in ["admin"]:
             if status == "delete_test":
-                influxdb_obj.delete_run_id(run_id=run_id)
+                influxdb_obj.delete_run_id(run_id=testTitle)
             elif status == "delete_timerange":
-                influxdb_obj.delete_run_id(run_id=run_id, start=start, end=end)
+                influxdb_obj.delete_run_id(run_id=testTitle, start=start, end=end)
     except Exception:
         logging.warning(str(traceback.format_exc()))
     resp = make_response("Done")

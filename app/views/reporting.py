@@ -184,19 +184,19 @@ def generate_report():
             if action_type == "azure":
                 az     = AzureWikiReport(project)
                 result = az.generate_report(data["tests"], influxdb, action_id, template_group)
-                del(az)
+                result = json.dumps(result)
             elif action_type == "atlassian_confluence":
                 awr    = AtlassianConfluenceReport(project)
                 result = awr.generate_report(data["tests"], influxdb, action_id, template_group)
-                del(awr)
+                result = json.dumps(result)
             elif action_type == "atlassian_jira":
                 ajr    = AtlassianJiraReport(project)
                 result = ajr.generate_report(data["tests"], influxdb, action_id, template_group)
-                del(ajr)
+                result = json.dumps(result)
             elif action_type == "smtp_mail":
                 smr    = SmtpMailReport(project)
                 result = smr.generate_report(data["tests"], influxdb, action_id, template_group)
-                del(smr)
+                result = json.dumps(result)
             elif action_type == "pdf_report":
                 pdf      = PdfReport(project)
                 result = pdf.generate_report(data["tests"], influxdb, template_group)
