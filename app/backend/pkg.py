@@ -20,11 +20,11 @@ import logging
 import portalocker
 import yaml
 
-from app                            import config_path
-from app.models                     import Secret
-from os                             import path as pt
-from werkzeug.datastructures        import MultiDict
-from datetime                       import datetime
+from app.config              import config_path
+from app.models              import Secret
+from os                      import path as pt
+from werkzeug.datastructures import MultiDict
+from datetime                import datetime
 
 
 def get_files_in_dir(path):
@@ -191,15 +191,15 @@ def del_csrf_token(data):
 
 def save_integration(project, form, integration_type):
     validate_config(project, "integrations", integration_type)
-    data                 = get_project_config(project)
-    integration_id       = form.get("id")
-    existing_integration = next((integration for integration in data["integrations"][integration_type] if integration["id"] == integration_id), None)
-    form = del_csrf_token(form)
-    if not existing_integration:
+    data                       = get_project_config(project)
+    integration_id             = form.get("id")
+    existing_integration_index = next((index for index, i in enumerate(data["integrations"][integration_type]) if i["id"] == integration_id), None)
+    form                       = del_csrf_token(form)
+    if existing_integration_index is None:
         form["id"] = generate_unique_id()
         data["integrations"][integration_type].append(form)
     else:
-        existing_integration.update(form)
+        data["integrations"][integration_type][existing_integration_index] = form
     if form.get("is_default") == "true":
         for integration in data["integrations"][integration_type]:
             integration["is_default"] = "true" if integration["id"] == form["id"] else "false"
@@ -416,14 +416,14 @@ def get_nfrs(project):
 
 def save_nfrs(project, nfr):
     validate_config(project, "nfrs")
-    data         = get_project_config(project)
-    nfr_id       = nfr.get("id")
-    existing_nfr = next((nfr for nfr in data["nfrs"] if nfr["id"] == nfr_id), None)
-    if not existing_nfr:
+    data               = get_project_config(project)
+    nfr_id             = nfr.get("id")
+    existing_nfr_index = next((index for index, n in enumerate(data["nfrs"]) if n["id"] == nfr_id), None)
+    if existing_nfr_index is None:
         nfr["id"] = generate_unique_id()
         data["nfrs"].append(nfr)
     else:
-        existing_nfr.update(nfr)
+        data["nfrs"][existing_nfr_index] = nfr
     save_new_data(project, data)
     return nfr.get("id")
 
@@ -457,14 +457,14 @@ def get_template_values(project, template):
 def save_template(project, template):
     template = md.TemplateModel.model_validate(template).model_dump()
     validate_config(project, "templates")
-    data              = get_project_config(project)
-    template_id       = template.get("id")
-    existing_template = next((template for template in data["templates"] if template["id"] == template_id), None)
-    if not existing_template:
+    data                    = get_project_config(project)
+    template_id             = template.get("id")
+    existing_template_index = next((index for index, t in enumerate(data["templates"]) if t["id"] == template_id), None)
+    if existing_template_index is None:
         template["id"] = generate_unique_id()
         data["templates"].append(template)
     else:
-        existing_template.update(template)
+        data["templates"][existing_template_index] = template
         for template_group in data["template_groups"]:
             for item in template_group["data"]:
                 if item["type"] == "template" and item["id"] == template_id:
@@ -485,14 +485,14 @@ def get_template_group_values(project, template_group):
 def save_template_group(project, template_group):
     template_group = md.TemplateGroupModel.model_validate(template_group).model_dump()
     validate_config(project, "template_groups")
-    data                    = get_project_config(project)
-    template_group_id       = template_group.get("id")
-    existing_template_group = next((template_group for template_group in data["template_groups"] if template_group["id"] == template_group_id), None)
-    if not existing_template_group:
+    data                          = get_project_config(project)
+    template_group_id             = template_group.get("id")
+    existing_template_group_index = next((index for index, tg in enumerate(data["template_groups"]) if tg["id"] == template_group_id), None)
+    if existing_template_group_index is None:
         template_group["id"] = generate_unique_id()
         data["template_groups"].append(template_group)
     else:
-        existing_template_group.update(template_group)
+        data["template_groups"][existing_template_group_index] = template_group
     save_new_data(project, data)
     return template_group.get("id")
 
@@ -541,14 +541,14 @@ def get_graphs(project):
 
 def save_graph(project, form):
     validate_config(project, "graphs")
-    data           = get_project_config(project)
-    graph_id       = form.get("id")
-    existing_graph = next((graph for graph in data["graphs"] if graph["id"] == graph_id), None)
-    if not existing_graph:
+    data                 = get_project_config(project)
+    graph_id             = form.get("id")
+    existing_graph_index = next((index for index, g in enumerate(data["graphs"]) if g["id"] == graph_id), None)
+    if existing_graph_index is None:
         form["id"] = generate_unique_id()
         data["graphs"].append(form)
     else:
-        existing_graph.update(form)
+        data["graphs"][existing_graph_index] = form
         for template in data["templates"]:
             for item in template["data"]:
                 if item["type"] == "graph" and item["id"] == graph_id:

@@ -17,8 +17,14 @@
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
                                 <h4 class="mb-0">Atlassian Confluence integration
-                                    <a href="https://perforge.app/docs/configuration/integrations#atlassian-confluence" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
-                                    </a>
+                                    <div class="tooltip-container">
+                                      <a href="https://perforge.app/docs/configuration/integrations#atlassian-confluence" target="_blank">
+                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      </a>
+                                      <div class="tooltip-content" style="font-size: 16px;">
+                                          Click to learn more
+                                      </div>
+                                    </div>
                                 </h4>
                             </div>
                         </div>
@@ -35,10 +41,20 @@
                                     {{ form.name(class="form-control") }}
                                     <label for="email" class="input-label mt-2">Email:</label>
                                     {{ form.email(class="form-control") }}
-                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="Please note that an API token serves as the password for the account, while a Personal Access Token functions as both the login and the password."></span>
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        Please note that an API token serves as the password for the account, while a Personal Access Token functions as both the login and the password.
+                                      </div>
+                                    </div>
                                     <label for="token_type" class="mt-2">Token type:</label>
                                     {{ form.token_type(class="form-control") }}
-                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;."></span>
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;.
+                                      </div>
+                                    </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     {{ form.token(class="form-control") }}
                                     <label for="org_url" class="mt-2">Organization url:</label>

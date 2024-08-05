@@ -38,6 +38,7 @@ def template():
         prompt_obj              = Prompt(project)
         template_prompts        = prompt_obj.get_prompts_by_place("template")
         aggregated_data_prompts = prompt_obj.get_prompts_by_place("aggregated_data")
+        system_prompts          = prompt_obj.get_prompts_by_place("system")
         template_config         = request.args.get('template_config')
         template_data           = []
         if template_config is not None:
@@ -58,7 +59,7 @@ def template():
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_TEMPLATE.value, "error")
         return redirect(url_for("get_reporting"))
-    return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts)
+    return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts, system_prompts=system_prompts)
 
 @app.route('/delete-template', methods=['GET'])
 def delete_template():

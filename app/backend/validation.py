@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from app                                                           import config_path
+from app.config                                                           import config_path
 from app.backend                                                   import pkg
 
 import re

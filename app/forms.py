@@ -134,7 +134,7 @@ class PromptForm(FlaskForm):
     id     = StringField('Id')
     name   = StringField('Name', validators=[DataRequired()])
     type   = StringField('Type', validators=[DataRequired()])
-    place  = SelectField('Place', choices=[('graph', 'Graph'), ('aggregated_data', 'Aggregated Data'), ('template', 'Template'), ('template_group', 'Template Group')])
+    place  = SelectField('Place', choices=[('graph', 'Graph'), ('aggregated_data', 'Aggregated Data'), ('template', 'Template'), ('template_group', 'Template Group'), ('system', 'System')])
     prompt = TextAreaField('Prompt', validators=[DataRequired()])
 
 
