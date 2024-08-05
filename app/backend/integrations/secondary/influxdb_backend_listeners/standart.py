@@ -45,7 +45,7 @@ def get_test_log_query(bucket):
     |> map(fn: (r) => ({ r with duration: (int(v: r.endTime)/1000000000 - int(v: r.startTime)/1000000000)}))
     |> keep(columns: ["startTime","endTime","testTitle", "application", "maxThreads", "duration"])
     |> group()
-    |> rename(columns: {testTitle: "runId"})
+    |> rename(columns: {testTitle: "test_title"})
     |> rename(columns: {application: "testName"})'''
 
 def get_start_time(testTitle, bucket):
