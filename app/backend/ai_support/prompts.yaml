@@ -16,7 +16,6 @@ prompts:
     - Your output should follow the following structure if there is performance issue for a metric:
       - The [performance issue description], indicating performance issue.
     ###Input: response time metric graph
-prompts:
 - id: throughput_single_test
   name: Throughput graph of a single test
   type: default
@@ -34,31 +33,44 @@ prompts:
     - Your output should follow the following structure if there is performance issue for a metric:
       - The [performance issue description], indicating performance issue.
     ###Input: Throughput metric graph
-- id: graph_comparison_of_tests
-  name: Graph comparison of tests
+- id: response_time_comparison_of_tests
+  name: Response time comparison of tests
   type: default
   place: graph
   prompt: |
-    Context: You are provided with a performance testing graph featuring two lines: a solid line indicating the current test and a dotted line representing the baseline test.
-    Task: Analyze the graph, compare the current test against a baseline and provide observations concerning the current test in relation to the baseline.
-    Please consider the following:
-      - Identify each line by its label and color.
-      - Evaluate whether the current level aligns with the baseline.
-      - Assess the stability of the current trend, specifying the time and percentage range if unstable, ignoring minor fluctuations.
-    Constraints:
-      - Provide the most important observations in a bulleted list without introductory statements or conclusions.
-      - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should contain only the following statement: '[Metric name] is comparable with the baseline test and the overall trend of the current test is stable.'
-      - If the current test isn't comparable or there are observed degradations, the observation should contain only the following statements:
-        '[Metric name] is [comparable/not comparable] with the baseline test and the overall trend of the current test is [stable/not stable].'
-        '[Provide your high-level observations of degradations up to 2 sentences].'
+    ###Task: Follow the instructions below to analyze the graph, COMPARE the current test against a baseline, and PROVIDE observations corresponding to constraints and concerning the current test in relation to the baseline.
+    ###Context: You are provided with a performance testing graph featuring two lines: a solid line indicating the current test and a dotted line representing the baseline test.
+    ###Instructions:
+      - Assess the trends of each response time line.
+      - Evaluate if the current response time level is comparable to the baseline.
+      - Assess the stability of the current response time line. Minor fluctuations are acceptable.
+    ###Constraints: 
+      - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
+      - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
+      - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
+- id: throughput_comparison_of_tests
+  name: Throughput comparison of tests
+  type: default
+  place: graph
+  prompt: |
+    ###Task: Follow the instructions below to analyze the graph, COMPARE the current test against a baseline, and PROVIDE observations corresponding to constraints and concerning the current test in relation to the baseline.
+    ###Context: You are provided with a performance testing graph featuring two lines: a solid line indicating the current test and a dotted line representing the baseline test.
+    ###Instructions:
+      - Assess the trends of each throughput line.
+      - Evaluate if the current throughput level is comparable to the baseline.
+      - Assess the stability of the current throughput line. Minor fluctuations are acceptable.
+    ###Constraints: 
+      - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
+      - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
+      - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
 - id: table_comparison_of_tests_response_time
   name: Table comparison of tests response time
   type: default
   place: graph
   prompt: |
-    Task: Analyze the table.
-    Instructions:
-      - Determine transactions with positive value of difference is more than 300 milliseconds and mark them as degraded.
+    ###Task: FOLLOW the instructions below to ANALYZE the table and PROVIDE observations
+    ###Instructions:
+      - Identify transactions where the absolute difference value (Diff) is more than +300ms and the difference is positive (indicating degradation) and mark them as degraded. Ensure to consider the units (ms or s) for both baseline and current values.
       - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.'
       - If there are degraded transactions, then the output should contain only the following statements:
         'For most transactions, the response time remained at the same level, except the following transactions:
@@ -68,9 +80,9 @@ prompts:
   type: default
   place: aggregated_data
   prompt: |
-    Task: Analyze the metrics.
-    Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
-    Instructions:
+    ###Task: follow the instructions below to ANALYZE the metrics and PROVIDE observations corresponding to constraints
+    ###Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
+    ###Instructions:
       - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
         - The request [request name] has a notably high percentage of errors at [percent value]%.
       - If all requests have an error rate less than 2%, use this structure:
@@ -170,3 +182,9 @@ prompts:
       - The tests results are [satisfactory/not satisfactory].
       - [Provide a highlevel overview of the performance issues].
     @@@@
+- id: system_message
+  name: System message
+  type: default
+  place: system
+  prompt: |
+    You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results.
