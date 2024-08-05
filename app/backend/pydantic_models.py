@@ -12,18 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel
+import logging
+import traceback
+
+from pydantic    import BaseModel, Field, root_validator, ValidationError
+from typing      import List
+from app.backend import pkg
 
 
-class AzureModel(BaseModel):
-    id            : str
-    name          : str
-    token         : str
-    org_url       : str
-    project_id    : str
-    identifier    : str
-    path_to_report: str
-    is_default    : str
+class InfluxdbModel(BaseModel):
+    id        : str
+    name      : str
+    url       : str
+    org_id    : str
+    token     : str
+    timeout   : str
+    bucket    : str
+    listener  : str
+    is_default: str
 
 
 class GrafanaObjectModel(BaseModel):
@@ -44,15 +50,26 @@ class GrafanaModel(BaseModel):
     dashboards         : list[GrafanaObjectModel]
 
 
-class InfluxdbModel(BaseModel):
+class AzureModel(BaseModel):
+    id            : str
+    name          : str
+    token         : str
+    org_url       : str
+    project_id    : str
+    identifier    : str
+    path_to_report: str
+    is_default    : str
+
+
+class AtlassianConfluenceModel(BaseModel):
     id        : str
     name      : str
-    url       : str
-    org_id    : str
+    email     : str
     token     : str
-    timeout   : str
-    bucket    : str
-    listener  : str
+    token_type: str
+    org_url   : str
+    space_key : str
+    parent_id : str
     is_default: str
 
 
@@ -66,18 +83,6 @@ class AtlassianJiraModel(BaseModel):
     project_id: str
     epic_field: str
     epic_name : str
-    is_default: str
-
-
-class AtlassianConfluenceModel(BaseModel):
-    id        : str
-    name      : str
-    email     : str
-    token     : str
-    token_type: str
-    org_url   : str
-    space_key : str
-    parent_id : str
     is_default: str
 
 
@@ -107,6 +112,17 @@ class AISupportModel(BaseModel):
     is_default    : str
 
 
+class GraphModel(BaseModel):
+    id        : str
+    name      : str
+    grafana_id: str
+    dash_id   : str
+    view_panel: str
+    width     : str
+    height    : str
+    prompt_id : str
+
+
 class TemplateObjectModel(BaseModel):
     id     : str
     type   : str
@@ -114,17 +130,48 @@ class TemplateObjectModel(BaseModel):
 
 
 class TemplateModel(BaseModel):
-    id                  : str
-    name                : str
-    nfr                 : str
-    title               : str
-    ai_switch           : bool
-    ai_graph_switch     : bool
-    ai_to_graphs_switch : bool
-    nfrs_switch         : bool
-    template_prompt_id  : str
-    aggregated_prompt_id: str
-    data                : list[TemplateObjectModel]
+    id                       : str
+    name                     : str
+    nfr                      : str
+    title                    : str
+    ai_switch                : bool
+    ai_aggregated_data_switch: bool = Field(default=False)
+    ai_graph_switch          : bool
+    ai_to_graphs_switch      : bool
+    nfrs_switch              : bool
+    template_prompt_id       : str
+    aggregated_prompt_id     : str
+    system_prompt_id         : str = Field(default="system_message") ## This field should be added to all new fields
+    data                     : list[TemplateObjectModel]
+
+    # @root_validator(pre=True)
+    # def migration(cls, values):
+    #     if 'aggregated_data_prompt_id' in values:
+    #         values['aggregated_prompt_id'] = values.pop('aggregated_data_prompt_id')
+    #     return values
+
+
+class NFRObjectModel(BaseModel):
+    regex    : bool
+    scope    : str
+    metric   : str
+    operation: str
+    threshold: int
+    weight   : str
+
+
+class NFRsModel(BaseModel):
+    id  : str
+    name: str
+    rows: list[NFRObjectModel]
+
+
+class PromptModel(BaseModel):
+    id    : str
+    type  : str
+    name  : str
+    place : str
+    prompt: str
 
 
 class TemplateGroupModel(BaseModel):
@@ -136,17 +183,40 @@ class TemplateGroupModel(BaseModel):
     data      : list[TemplateObjectModel]
 
 
-class NfrModel(BaseModel):
-    scope      : str
-    metric     : str
-    aggregation: str
-    operation  : str
-    threshold  : int
-    weight     : str
-    name       : str
+class IntegrationsModel(BaseModel):
+    influxdb            : List[InfluxdbModel] = Field(default_factory=list)
+    grafana             : List[GrafanaModel] = Field(default_factory=list)
+    azure               : List[AzureModel] = Field(default_factory=list)
+    atlassian_confluence: List[AtlassianConfluenceModel] = Field(default_factory=list)
+    atlassian_jira      : List[AtlassianJiraModel] = Field(default_factory=list)
+    smtp_mail           : List[SmtpMailModel] = Field(default_factory=list)
+    ai_support          : List[AISupportModel] = Field(default_factory=list)
 
 
-class NfrGroupModel(BaseModel):
+class ProjectObjectModel(BaseModel):
+    integrations   : IntegrationsModel
+    graphs         : List[GraphModel] = Field(default_factory=list)
+    templates      : List[TemplateModel] = Field(default_factory=list)
+    nfrs           : List[NFRsModel] = Field(default_factory=list)
+    prompts        : List[PromptModel] = Field(default_factory=list)
+    template_groups: List[TemplateGroupModel] = Field(default_factory=list)
+
+
+class ProjectModel(BaseModel):
     id  : str
     name: str
-    rows: list[NfrModel]
+    data: ProjectObjectModel
+
+
+class ValidateConfig:
+    def validate_models():
+        try:
+            config = pkg.get_json_config()
+            for project in config:
+                project_config = ProjectModel.model_validate(project).model_dump()
+                pkg.save_new_data(project_config["id"], project_config["data"])
+            logging.warning("All models validated successfully.")
+        except ValidationError as er:
+            logging.warning("An error occurred: " + str(er))
+            err_info = traceback.format_exc()
+            logging.warning("Detailed error info: " + err_info)

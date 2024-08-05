@@ -26,14 +26,15 @@ from os                                   import path
 
 class AISupport(Integration):
 
-    def __init__(self, project, id = None):
+    def __init__(self, project, system_prompt, id = None):
         super().__init__(project)
         self.models_created = False
         self.set_config(id)
         self.graph_analysis           = []
         self.aggregated_data_analysis = []
         self.summary                  = []
-        self.prompt                   = Prompt(project)
+        self.prompt_obj               = Prompt(project)
+        self.system_prompt            = system_prompt
 
     def __str__(self):
         return f'Integration id is {self.id}'
@@ -57,19 +58,19 @@ class AISupport(Integration):
                             self.ai_obj         = GeminiAI(ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature)
                             self.models_created = True
                         if self.ai_provider == "openai":
-                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature)
+                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, system_prompt=self.system_prompt)
                             self.models_created = True
                         if self.ai_provider == "azure_openai":
                             self.azure_url      = config["azure_url"]
                             self.api_version    = config["api_version"]
-                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, azure_url=self.azure_url, api_version=self.api_version)
+                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, system_prompt=self.system_prompt, azure_url=self.azure_url, api_version=self.api_version)
                             self.models_created = True
             else:
                 logging.warning("There's no AI integration configured, or you're attempting to send a request from an unsupported location.")
 
     def analyze_graph(self, name, graph, prompt_id):
         if not self.models_created: return ""
-        prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+        prompt_value = self.prompt_obj.get_prompt_value_by_id(prompt_id)
         response     = self.ai_obj.analyze_graph(graph, prompt_value)
         self.graph_analysis.append(name)
         self.graph_analysis.append(response)
@@ -78,7 +79,7 @@ class AISupport(Integration):
     def analyze_aggregated_data(self, data, prompt_id):
         if self.models_created:
             try:
-                prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+                prompt_value = self.prompt_obj.get_prompt_value_by_id(prompt_id)
                 prompt_value = prompt_value + "\n\n" + str(data)
                 result       = self.ai_obj.send_prompt(prompt_value)
                 self.aggregated_data_analysis.append(result)
@@ -97,7 +98,7 @@ class AISupport(Integration):
     def create_template_summary(self, prompt_id, nfr_summary):
         if not self.models_created:
             return "Error: AI failed to initialize."
-        prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+        prompt_value = self.prompt_obj.get_prompt_value_by_id(prompt_id)
         prompt_value = prompt_value.replace("[aggregated_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
         prompt_value = prompt_value.replace("[graphs_analysis]", self.prepare_list_of_analysis(self.graph_analysis))
         prompt_value = prompt_value.replace("[nfr_summary]", nfr_summary)
@@ -108,7 +109,7 @@ class AISupport(Integration):
     def create_template_group_summary(self, prompt_id):
         if not self.models_created:
             return "Error: AI failed to initialize."
-        prompt_value = self.prompt.get_prompt_value_by_id(prompt_id)
+        prompt_value = self.prompt_obj.get_prompt_value_by_id(prompt_id)
         for text in self.summary:
             prompt_value = prompt_value + "\n" + text
         result = self.ai_obj.send_prompt(prompt_value)

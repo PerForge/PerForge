@@ -42,15 +42,15 @@ class Prompt:
 
     def save_custom_prompt(project, form):
         pkg.validate_config(project, "prompts")
-        data            = pkg.get_project_config(project)
-        prompt_id       = form.get("id")
-        existing_prompt = next((prompt for prompt in data["prompts"] if prompt["id"] == prompt_id), None)
-        form["prompt"]  = form.get("prompt").replace('"', "'") 
-        if not existing_prompt:
+        data                  = pkg.get_project_config(project)
+        prompt_id             = form.get("id")
+        existing_prompt_index = next((index for index, p in enumerate(data["prompts"]) if p["id"] == prompt_id), None)
+        form["prompt"]        = form.get("prompt").replace('"', "'")
+        if existing_prompt_index is None:
             form["id"] = pkg.generate_unique_id()
             data["prompts"].append(form)
         else:
-            existing_prompt.update(form)
+            data["prompts"][existing_prompt_index] = form
         pkg.save_new_data(project, data)
         return form.get("id")
 
