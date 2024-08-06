@@ -1,6 +1,6 @@
 prompts:
-- id: response_time_single_test
-  name: Response time graph of a single test
+- id: response_time_graph
+  name: Response time graph
   type: default
   place: graph
   prompt: |
@@ -16,8 +16,8 @@ prompts:
     - Your output should follow the following structure if there is performance issue for a metric:
       - The [performance issue description], indicating performance issue.
     ###Input: response time metric graph
-- id: throughput_single_test
-  name: Throughput graph of a single test
+- id: throughput_graph
+  name: Throughput graph
   type: default
   place: graph
   prompt: |
@@ -33,8 +33,42 @@ prompts:
     - Your output should follow the following structure if there is performance issue for a metric:
       - The [performance issue description], indicating performance issue.
     ###Input: Throughput metric graph
-- id: response_time_comparison_of_tests
-  name: Response time comparison of tests
+- id: cpu_usage_graph
+  name: CPU usage graph
+  type: default
+  place: graph
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+    ###Instructions:
+    - Assess the trends of each CPU usage line.
+    - CPU usage line should remain stable. Minor fluctuations in CPU usage are acceptable.
+    - Explicitly identify any performance issue in each metric.
+    ###Constraints: 
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'"
+    - Your output should follow the following structure if there is no performance issue for a metric:
+        - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
+    - Your output should follow the following structure if there is performance issue for a metric:
+        - The [performance issue description], indicating performance issue.
+    ###Input: CPU usage metric graph
+- id: memory_usage_graph
+  name: Memory usage graph
+  type: default
+  place: graph
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+    ###Instructions:
+    - Assess the trends of each Memory usage line.
+    - Memory usage line should remain stable. Minor fluctuations in Memory usage are acceptable.
+    - Explicitly identify any performance issue in each metric.
+    ###Constraints: 
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'"
+    - Your output should follow the following structure if there is no performance issue for a metric:
+        - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
+    - Your output should follow the following structure if there is performance issue for a metric:
+        - The [performance issue description], indicating performance issue.
+    ###Input: Memory usage metric graph
+- id: response_time_comparison_graph
+  name: Response time comparison graph
   type: default
   place: graph
   prompt: |
@@ -48,8 +82,8 @@ prompts:
       - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
       - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
       - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
-- id: throughput_comparison_of_tests
-  name: Throughput comparison of tests
+- id: throughput_comparison_graph
+  name: Throughput comparison graph
   type: default
   place: graph
   prompt: |
@@ -63,8 +97,8 @@ prompts:
       - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
       - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
       - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
-- id: table_comparison_of_tests_response_time
-  name: Table comparison of tests response time
+- id: response_time_comparison_table
+  name: Response time comparison table
   type: default
   place: graph
   prompt: |
@@ -75,23 +109,8 @@ prompts:
       - If there are degraded transactions, then the output should contain only the following statements:
         'For most transactions, the response time remained at the same level, except the following transactions:
         - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
-- id: aggregated_data_of_a_single_test
-  name: Aggregated data of a single test
-  type: default
-  place: aggregated_data
-  prompt: |
-    ###Task: follow the instructions below to ANALYZE the metrics and PROVIDE observations corresponding to constraints
-    ###Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
-    ###Instructions:
-      - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
-        - The request [request name] has a notably high percentage of errors at [percent value]%.
-      - If all requests have an error rate less than 2%, use this structure:
-        - No requests with high error rate.
-      - Provide the top 5 slowest requests. Structure in a bullet list:
-        - Top 5 slowest requests (Based on median):
-          - [request name]: median response time of [value] ms.
-- id: template_of_a_single_test
-  name: Template of a single test
+- id: template_for_the_test
+  name: Template for the test
   type: default
   place: template
   prompt: |
@@ -130,8 +149,8 @@ prompts:
 
     Observations from NFRs comparison.
       [nfr_summary]
-- id: template_comparison_tests
-  name: Template comparison tests
+- id: template_for_comparing_tests
+  name: Template for comparing tests
   type: default
   place: template
   prompt: |
@@ -182,6 +201,21 @@ prompts:
       - The tests results are [satisfactory/not satisfactory].
       - [Provide a highlevel overview of the performance issues].
     @@@@
+- id: aggregated_data
+  name: Aggregated data
+  type: default
+  place: aggregated_data
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the metrics and PROVIDE observations corresponding to constraints
+    ###Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
+    ###Instructions:
+      - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
+        - The request [request name] has a notably high percentage of errors at [percent value]%.
+      - If all requests have an error rate less than 2%, use this structure:
+        - No requests with high error rate.
+      - Provide the top 5 slowest requests. Structure in a bullet list:
+        - Top 5 slowest requests (Based on median):
+          - [request name]: median response time of [value] ms.
 - id: system_message
   name: System message
   type: default
