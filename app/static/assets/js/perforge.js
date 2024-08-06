@@ -684,12 +684,12 @@
         const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
   
         const post_request = `
-          curl -k --fail-with-body --request POST \\
-          --url ${baseUrl}/generate \\
-          -H "Content-Type: application/json" \\
-          -H "Cookie: project=${projectCookieValue}" \\
-          --data '${JSON.stringify(selectedRows, null, 2)}'
-        `;
+curl -k --fail-with-body --request POST \\
+--url ${baseUrl}/generate \\
+-H "Content-Type: application/json" \\
+-H "Cookie: project=${projectCookieValue}" \\
+--data '${JSON.stringify(selectedRows, null, 2)}'
+`;
   
         copyToClipboard(post_request.trim());
       });
