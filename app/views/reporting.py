@@ -170,10 +170,10 @@ def generate_report():
         project = request.cookies.get('project')
         if request.method == "POST":
             data = request.get_json()
-            if "outputId" in data:
-                influxdb       = data.get("influxdbId")
-                template_group = data.get("templateGroup")
-                action_id      = data.get("outputId")
+            if "output_id" in data:
+                influxdb       = data.get("influxdb_id")
+                template_group = data.get("template_group")
+                action_id      = data.get("output_id")
                 if action_id == "pdf_report":
                     action_type = action_id
                 elif action_id == "delete":
@@ -218,7 +218,7 @@ def generate_report():
                     influxdb_obj = Influxdb(project=project, id=influxdb)
                     influxdb_obj.connect_to_influxdb()
                     for test in data["tests"]:
-                        result = influxdb_obj.delete_run_id(test["runId"])
+                        result = influxdb_obj.delete_run_id(test["test_title"])
                 except:
                     logging.warning(str(traceback.format_exc()))
                     flash(ErrorMessages.DELETE_TEST.value, "error")

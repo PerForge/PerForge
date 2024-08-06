@@ -62,8 +62,8 @@ class AzureWikiReport(ReportingBase):
             template_id = test.get('template_id')
             if template_id:
                 self.set_template(template_id, influxdb, action_id)
-                run_id            = test.get('runId')
-                baseline_run_id   = test.get('baseline_run_id')
+                run_id            = test.get('test_title')
+                baseline_run_id   = test.get('baseline_test_title')
                 self.collect_data(run_id, baseline_run_id)
                 self.report_body += self.generate(run_id, baseline_run_id)
                 if not path:
