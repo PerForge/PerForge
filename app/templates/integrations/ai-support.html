@@ -17,8 +17,14 @@
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
                                 <h4 class="mb-0">AI support integration
-                                    <a href="https://perforge.app/docs/configuration/integrations#ai-support" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
-                                    </a>
+                                    <div class="tooltip-container">
+                                      <a href="https://perforge.app/docs/configuration/integrations#ai-support" target="_blank">
+                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      </a>
+                                      <div class="tooltip-content" style="font-size: 16px;">
+                                          Click to learn more
+                                      </div>
+                                    </div>
                                 </h4>
                             </div>
                         </div>
@@ -43,13 +49,28 @@
                                         <label for="api_version" class="mt-2" style="display: block; text-align: center;">Api version:</label>
                                         {{ form.api_version(class="form-control", id="api_version") }}
                                       </div>
-                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="Please note that for ChatGPT, the 'gpt-4-turbo' & 'gpt-4o' and for Gemini, the 'gemini-1.5-flash' models have been tested."></span>
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        Please note that for ChatGPT, the 'gpt-4-turbo' & 'gpt-4o' and for Gemini, the 'gemini-1.5-flash' models have been tested.
+                                      </div>
+                                    </div>
                                     <label for="ai_text_model" class="input-label mt-2">AI Text model:</label>
                                     {{ form.ai_text_model(class="form-control") }}
-                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="Please note that for ChatGPT, the 'gpt-4-turbo' & 'gpt-4o' and for Gemini, the 'gemini-1.5-flash' models have been tested."></span>
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        Please note that for ChatGPT, the 'gpt-4-turbo' & 'gpt-4o' and for Gemini, the 'gemini-1.5-flash' models have been tested.
+                                      </div>
+                                    </div>
                                     <label for="ai_image_model" class="input-label mt-2">AI Image model:</label>
                                     {{ form.ai_image_model(class="form-control") }}
-                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;."></span>
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;.
+                                      </div>
+                                    </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     {{ form.token(class="form-control") }}
                                     <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>

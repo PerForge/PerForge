@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
-from app import config_path
+from abc        import ABC, abstractmethod
+from app.config import config_path
 
 
 class Integration(ABC):

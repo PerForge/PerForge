@@ -17,8 +17,14 @@
                     <div class="card-header">
                       <div class="justify-content-between align-items-center">
                         <h4 class="mb-0">Test log
-                            <a href="https://perforge.app/docs/tutorial-extras/reporting-ui" class="fa-regular fa-circle-question" data-bs-toggle="tooltip" data-bs-placement="right" target="_blank" title="Click to learn more">
-                            </a>
+                            <div class="tooltip-container">
+                              <a href="https://perforge.app/docs/tutorial-extras/reporting-ui" target="_blank">
+                                  <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                              </a>
+                              <div class="tooltip-content" style="font-size: 16px;">
+                                  Click to learn more
+                              </div>
+                            </div>
                         </h4>
                       </div>
                     </div>
@@ -69,7 +75,7 @@
                                                     <input class="form-check-input" id="bulk-select-example" type="checkbox" data-bulk-select='{"body":"bulk-select-body","actions":"bulk-select-actions","replacedElement":"bulk-select-replace-element"}'/>
                                                 </div>
                                             </th>
-                                            <th class="sort" data-sort="runId">Test title</th>
+                                            <th class="sort" data-sort="test_title">Test title</th>
                                             <th>Template</th>
                                             <th class="sort" data-sort="testName">Application</th>
                                             <th class="sort" data-sort="duration">Duration (sec)</th>
@@ -119,8 +125,7 @@
                     <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                        <h5 class="modal-title" id="resultModalLabel">Report generated!</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="resultModalLabel"></h5>
                         </div>
                         <div class="modal-body" id="resultModalBody">
                         <!-- Result content will be populated here -->
@@ -176,7 +181,7 @@
                 }
 
                 function updateTable(tests) {
-                    $("#table-id").attr('data-list', '{"valueNames":["runId", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 10, "pagination": true}');
+                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 10, "pagination": true}');
 
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body
@@ -188,12 +193,12 @@
                         const checkboxCell = row.insertCell();
                         const checkboxDiv = document.createElement("div");
                         checkboxDiv.className = "form-check fs-0";
-                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"runId":"${test.runId}","testName":"${test.testName}","duration":"${test.duration}","maxThreads":"${test.maxThreads}","startTime":"${test.startTime}","endTime":"${test.endTime}","template_id":"no data"}' />`;
+                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","testName":"${test.testName}","duration":"${test.duration}","maxThreads":"${test.maxThreads}","startTime":"${test.startTime}","endTime":"${test.endTime}"}' />`;
                         checkboxCell.appendChild(checkboxDiv);
 
                         // Insert cells for each column based on your data structure
                         const runIdCell = row.insertCell();
-                        runIdCell.textContent = test.runId;
+                        runIdCell.textContent = test.test_title;
 
                         // Create and insert the Test ID dropdown
                         const templateIdCell = row.insertCell();
@@ -205,7 +210,7 @@
                         defaultTemplateOption.value = "no data"; // Set an empty value for the default option
                         defaultTemplateOption.textContent = "For report generation";
                         selectTemplate.appendChild(defaultTemplateOption);
-                        selectTemplate.setAttribute("template-test-id", test.runId)
+                        selectTemplate.setAttribute("template-test-id", test.test_title)
                         templates.forEach(tmp => {
                             const option = document.createElement("option");
                             option.value = tmp.id;
@@ -252,11 +257,11 @@
                         defaultOption.value = "no data"; // Set an empty value for the default option
                         defaultOption.textContent = "For comparison";
                         select.appendChild(defaultOption);
-                        select.setAttribute("data-test-id", test.runId)
+                        select.setAttribute("data-test-id", test.test_title)
                         tests.forEach(test => {
                             const option = document.createElement("option");
-                            option.value = test.runId;
-                            option.textContent = test.runId;
+                            option.value = test.test_title;
+                            option.textContent = test.test_title;
                             select.appendChild(option);
                         });
                         testIdCell.appendChild(select);
@@ -265,13 +270,13 @@
                             const value = event.target.value;
                             const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
                             let checkboxData = JSON.parse(checkbox.getAttribute('data-bulk-select-row'));
-                            checkboxData['baseline_run_id'] = value;
+                            checkboxData['baseline_test_title'] = value;
                             checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
                         });
 
                         // Add the Actions column (e.g., Grafana link)
                         // const actionsCell = row.insertCell();
-                        // actionsCell.innerHTML = `<a class="btn btn-danger" href="/grafana-result-dashboard?startTimestamp=${test.startTimestamp}&endTimestamp=${test.endTimestamp}&testTitle=${test.runId}">Grafana dashboard</a>`;
+                        // actionsCell.innerHTML = `<a class="btn btn-danger" href="/grafana-result-dashboard?startTimestamp=${test.startTimestamp}&endTimestamp=${test.endTimestamp}&testTitle=${test.test_title}">Grafana dashboard</a>`;
                     });
 
                     perforge.utils.listInit();

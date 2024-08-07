@@ -38,6 +38,7 @@ def template():
         prompt_obj              = Prompt(project)
         template_prompts        = prompt_obj.get_prompts_by_place("template")
         aggregated_data_prompts = prompt_obj.get_prompts_by_place("aggregated_data")
+        system_prompts          = prompt_obj.get_prompts_by_place("system")
         template_config         = request.args.get('template_config')
         template_data           = []
         if template_config is not None:
@@ -58,7 +59,7 @@ def template():
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_TEMPLATE.value, "error")
         return redirect(url_for("get_reporting"))
-    return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts)
+    return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts, system_prompts=system_prompts)
 
 @app.route('/delete-template', methods=['GET'])
 def delete_template():
@@ -169,10 +170,10 @@ def generate_report():
         project = request.cookies.get('project')
         if request.method == "POST":
             data = request.get_json()
-            if "outputId" in data:
-                influxdb       = data.get("influxdbId")
-                template_group = data.get("templateGroup")
-                action_id      = data.get("outputId")
+            if "output_id" in data:
+                influxdb       = data.get("influxdb_id")
+                template_group = data.get("template_group")
+                action_id      = data.get("output_id")
                 if action_id == "pdf_report":
                     action_type = action_id
                 elif action_id == "delete":
@@ -217,7 +218,7 @@ def generate_report():
                     influxdb_obj = Influxdb(project=project, id=influxdb)
                     influxdb_obj.connect_to_influxdb()
                     for test in data["tests"]:
-                        result = influxdb_obj.delete_run_id(test["runId"])
+                        result = influxdb_obj.delete_run_id(test["test_title"])
                 except:
                     logging.warning(str(traceback.format_exc()))
                     flash(ErrorMessages.DELETE_TEST.value, "error")

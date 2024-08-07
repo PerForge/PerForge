@@ -2657,3 +2657,31 @@ textarea:focus  {
 .disabled-checkbox {
   opacity: 0.5;
 }
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-content {
+  visibility: hidden;
+  width: 200px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 5px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%; /* Position above the element */
+  left: 50%;
+  margin-left: -100px; /* Center the tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip-container:hover .tooltip-content,
+.tooltip-container .tooltip-content:hover {
+  visibility: visible;
+  opacity: 1;
+}

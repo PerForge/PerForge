@@ -15,11 +15,12 @@
 import os
 import logging
 
-from logging.handlers import RotatingFileHandler
-from flask            import Flask
-from flask_login      import LoginManager
-from flask_bcrypt     import Bcrypt
-from app.models       import db
+from logging.handlers            import RotatingFileHandler
+from flask                       import Flask
+from flask_login                 import LoginManager
+from flask_bcrypt                import Bcrypt
+from app.models                  import db
+from app.backend.pydantic_models import ValidateConfig
 
 
 # Grabs the folder where the script runs.
@@ -31,7 +32,6 @@ database_directory = os.path.join(basedir, "data")
 app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'/database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
-
 
 class IgnoreStaticRequests(logging.Filter):
     def filter(self, record):
@@ -69,7 +69,7 @@ with app.app_context():
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-config_path = "./app/data/config.json"
+ValidateConfig.validate_models()
 
 # # Import routing, models and Start the App
 from app.views import (reporting, auth, integrations, nfrs, other, grafana, graphs)

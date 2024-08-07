@@ -62,7 +62,7 @@
         data: json,
         contentType: "application/json",
         success: function (data) {
-          showResultModal(JSON.parse(data));
+          showResultModal("Report generated!", JSON.parse(data));
           resolve();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -72,15 +72,27 @@
     });
   };
 
-  function showResultModal(result) {
+  function showResultModal(message, result=null) {
     // Populate the modal with the result data using a loop
     const resultModalBody = document.getElementById('resultModalBody');
+    const resultModalLabel = document.getElementById('resultModalLabel');
     resultModalBody.innerHTML = ''; // Clear previous content
-
-    for (const [key, value] of Object.entries(result)) {
+    resultModalLabel.innerHTML = message
+    if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
+      for (const [key, value] of Object.entries(result)) {
+        resultModalBody.style.display = 'block';
+        const p = document.createElement('p');
+        p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
+        resultModalBody.appendChild(p);
+      }
+    }else if (typeof result === 'string') {
+      resultModalBody.style.display = 'block';
       const p = document.createElement('p');
-      p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
+      p.textContent = result; // Set the text content to the string result
+      p.style.whiteSpace = 'pre-wrap'; // Preserve new lines and wrap text
       resultModalBody.appendChild(p);
+    }else{
+      resultModalBody.style.display = 'none';
     }
 
     // Show the modal
@@ -112,7 +124,7 @@
             a.remove();
 
             // Show the result in the modal
-            showResultModal(result);
+            showResultModal("Report generated!", result);
             
             resolve(result);
           } else {
@@ -553,123 +565,136 @@
     setCookie: setCookie,
     getCookie: getCookie,
     getRandomNumber: getRandomNumber
-};
+  };
 
   docReady(bulkSelectInit),
   docReady(listInit),
   docReady(() => {
-
-      //Tests
-      const selectedRowsBtn = document.querySelector('[data-selected-rows]');
-      const selectedAction = document.getElementById('selectedAction');
-      const showApiBtn = document.getElementById('show-api');
-      const selectedInfluxdb = document.getElementById('influxdbId');
-      const selectedTemplateGroup = document.getElementById('templateGroupName');
-      const spinner = document.getElementById("spinner-apply");
-      const spinnerText = document.getElementById("spinner-apply-text");
-      if (selectedRowsBtn) {
-        const bulkSelectEl = document.getElementById('bulk-select-example');
-        const bulkSelectInstance = window.perforge.BulkSelect.getInstance(bulkSelectEl);
-        selectedRowsBtn.addEventListener('click', () => {
-
-          spinner.style.display = "inline-block";
-          spinnerText.style.display = "none";
-          const transformedList = bulkSelectInstance.getSelectedRows();
-          const selectedRows = {}
-          selectedRows["tests"] = transformedList;
-          selectedRows["influxdbId"] = selectedInfluxdb.value;
-          const output = JSON.parse(selectedAction.value.toString());
-          if (output.type == "pdf_report" || output.type == "delete"){
-            selectedRows["outputId"] = output.type;
-          }else{
-            selectedRows["outputId"] = output.id;
-          }
-          if (selectedTemplateGroup.value !== "Choose template group"){
-            selectedRows["templateGroup"] = selectedTemplateGroup.value;
-          }
-          const selectedActionValue = JSON.parse(selectedAction.value.toString());
-          if (selectedActionValue.type === "pdf_report"){
-            sendDownloadRequest('/generate',JSON.stringify(selectedRows)).finally(function (){
-              spinner.style.display = "none";
-              spinnerText.style.display = "";
-            });
-          }else if (selectedActionValue.type === "delete"){
-            sendPostRequest('/generate',JSON.stringify(selectedRows)).finally(function (){
-              spinner.style.display = "none";
-              spinnerText.style.display = "";
-            });
-          }else{
-            sendPostRequestReport('/generate',JSON.stringify(selectedRows)).finally(function (){
-              spinner.style.display = "none";
-              spinnerText.style.display = "";
-            });
-          }
-        });
-      }
-      if (showApiBtn) {
-        const bulkSelectEl = document.getElementById('bulk-select-example');
-        const bulkSelectInstance = window.perforge.BulkSelect.getInstance(bulkSelectEl);
-      
-        // Function to get the value of a specific cookie by name
-        function getCookieValue(name) {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop().split(';').shift();
+    // DOM Elements
+    const selectedRowsBtn = document.querySelector('[data-selected-rows]');
+    const selectedAction = document.getElementById('selectedAction');
+    const showApiBtn = document.getElementById('show-api');
+    const selectedInfluxdb = document.getElementById('influxdbId');
+    const selectedTemplateGroup = document.getElementById('templateGroupName');
+    const spinner = document.getElementById("spinner-apply");
+    const spinnerText = document.getElementById("spinner-apply-text");
+  
+    // Utility Functions
+    const getCookieValue = (name) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      return parts.length === 2 ? parts.pop().split(';').shift() : null;
+    };
+  
+    const copyToClipboard = async (text) => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          showResultModal(`API request copied to clipboard!`, text);
+        } else {
+          // Fallback for browsers that do not support navigator.clipboard
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          showResultModal(`API request copied to clipboard!`, text);
         }
-
-        function copyToClipboard(text) {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(() => {
-              alert(`API request copied to clipboard!\n\n${text}`);
-            }).catch(err => {
-              console.error('Error copying to clipboard: ', err);
-            });
-          } else {
-            // Fallback for browsers that do not support navigator.clipboard
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-              document.execCommand('copy');
-              alert(`API request copied to clipboard!\n\n${text}`);
-            } catch (err) {
-              console.error('Error copying to clipboard: ', err);
-            }
-            document.body.removeChild(textarea);
+      } catch (err) {
+        console.error('Error copying to clipboard: ', err);
+      }
+    };
+  
+    const get_tests_data = () => {
+      const bulkSelectEl = document.getElementById('bulk-select-example');
+      const bulkSelectInstance = window.perforge.BulkSelect.getInstance(bulkSelectEl);
+      const transformedList = bulkSelectInstance.getSelectedRows();
+      const selectedRows = {};
+      const output = JSON.parse(selectedAction.value.toString());
+  
+      if (transformedList.length === 0) {
+        showResultModal("Please choose at least one test.");
+        return null;
+      }
+  
+      selectedRows["tests"] = transformedList;
+      selectedRows["influxdb_id"] = selectedInfluxdb.value;
+  
+      if (output.type === undefined || output.type === "none") {
+        showResultModal("Please choose an output.");
+        return null;
+      }
+  
+      selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
+      
+      if(output.type !== "delete"){
+        for (const item of selectedRows["tests"]) {
+          if (!item.template_id || item.template_id === "no data") {
+            showResultModal(`${item.test_title} has an empty template.`);
+            return null;
           }
         }
-      
-        showApiBtn.addEventListener('click', () => {
-          const transformedList = bulkSelectInstance.getSelectedRows();
-          const selectedRows = {};
-          const output = JSON.parse(selectedAction.value.toString());
-          selectedRows["tests"] = transformedList;
-          selectedRows["influxdbId"] = selectedInfluxdb.value;
-          if (output.type == "pdf_report" || output.type == "delete"){
-            selectedRows["outputId"] = output.type;
-          }else{
-            selectedRows["outputId"] = output.id;
-          }
-          if (selectedTemplateGroup.value !== "Choose template group") {
-            selectedRows["templateGroup"] = selectedTemplateGroup.value;
-          }
-      
-          // Retrieve the project cookie value
-          const projectCookieValue = getCookieValue('project');
-          const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
-      
-          let post_request = "curl -k --fail-with-body --request POST \\ \n";
-          post_request += `--url ${baseUrl}/generate\n`;
-          post_request += `-H "Content-Type: application/json" \\ \n`;
-          post_request += `-H "Cookie: project=${projectCookieValue}" \\ \n`;
-          post_request += `--data '${JSON.stringify(selectedRows, null, 2)}'`;
-      
-          // Copy the post_request to the clipboard
-          copyToClipboard(post_request);
-        });
       }
-    });
+
+      if (selectedTemplateGroup.value !== "") {
+        selectedRows["template_group"] = selectedTemplateGroup.value;
+      }
+  
+      return selectedRows;
+    };
+  
+    const handleRequest = async (url, data, requestType) => {
+      try {
+        spinner.style.display = "inline-block";
+        spinnerText.style.display = "none";
+  
+        if (requestType === 'download') {
+          await sendDownloadRequest(url, data);
+        } else if (requestType === 'delete') {
+          await sendPostRequest(url, data);
+        } else {
+          await sendPostRequestReport(url, data);
+        }
+      } finally {
+        spinner.style.display = "none";
+        spinnerText.style.display = "";
+      }
+    };
+  
+    // Event Listeners
+    if (selectedRowsBtn) {
+      selectedRowsBtn.addEventListener('click', async () => {
+        const selectedRows = get_tests_data();
+        if (!selectedRows) return;
+  
+        const selectedActionValue = JSON.parse(selectedAction.value.toString());
+        const requestType = selectedActionValue.type === "pdf_report" ? 'download' : selectedActionValue.type === "delete" ? 'delete' : 'report';
+  
+        await handleRequest('/generate', JSON.stringify(selectedRows), requestType);
+      });
+    }
+  
+    if (showApiBtn) {
+      showApiBtn.addEventListener('click', () => {
+        const selectedRows = get_tests_data();
+        if (!selectedRows) return;
+  
+        const projectCookieValue = getCookieValue('project');
+        const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
+  
+        const post_request = `
+curl -k --fail-with-body --request POST \\
+--url ${baseUrl}/generate \\
+-H "Content-Type: application/json" \\
+-H "Cookie: project=${projectCookieValue}" \\
+--data '${JSON.stringify(selectedRows, null, 2)}'
+`;
+  
+        copyToClipboard(post_request.trim());
+      });
+    }
+  });
   var perforge = {
       utils: utils,
       BulkSelect: BulkSelect

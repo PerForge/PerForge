@@ -17,9 +17,14 @@
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
                                 <h4 class="mb-0">SMTP Mail integration
-                                    <a href="https://perforge.app/docs/configuration/integrations#smtp-mail" target="_blank" data-toggle="tooltip" data-placement="right" title="Click to learn more">
-                                        <i class="fa-regular fa-circle-question"></i>
-                                    </a>
+                                    <div class="tooltip-container">
+                                      <a href="https://perforge.app/docs/configuration/integrations#smtp-mail" target="_blank">
+                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      </a>
+                                      <div class="tooltip-content" style="font-size: 16px;">
+                                          Click to learn more
+                                      </div>
+                                    </div>
                                 </h4>
                             </div>
                         </div>
@@ -50,7 +55,12 @@
                                     <label for="username" class="input-label mt-2">Username:</label>
                                     {{ form.username(id='username', class_='form-control') }}
 
-                                    <span class="fa-regular fa-circle-question me-2 mt-2" data-bs-toggle="tooltip" data-bs-placement="left" title="To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;."></span>
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;.
+                                      </div>
+                                    </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     {{ form.token(class="form-control") }}
 
