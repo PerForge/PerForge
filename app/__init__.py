@@ -19,7 +19,7 @@ from logging.handlers            import RotatingFileHandler
 from flask                       import Flask
 from flask_login                 import LoginManager
 from flask_bcrypt                import Bcrypt
-from app.models                  import db
+from app.models                  import db, DBMigrations
 from app.backend.pydantic_models import ValidateConfig
 
 
@@ -65,6 +65,7 @@ bc = Bcrypt(app)  # flask-bcrypt
 
 with app.app_context():
     db.create_all()
+    DBMigrations.migration_1()
 
 login_manager = LoginManager()
 login_manager.init_app(app)
