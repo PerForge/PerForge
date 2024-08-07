@@ -52,11 +52,13 @@ class Users(db.Model, UserMixin):
 
 class Secret(db.Model):
     __tablename__ = 'Secrets'
-    id            = db.Column(db.Integer, primary_key=True)
-    key           = db.Column(db.String(120), unique=True)
-    value         = db.Column(db.String(500))
+    id    = db.Column(db.Integer, primary_key=True)
+    type  = db.Column(db.String(120))
+    key   = db.Column(db.String(120), unique=True)
+    value = db.Column(db.String(500))
 
-    def __init__(self, value, key):
+    def __init__(self, type, value, key):
+        self.type  = type
         self.key   = key
         self.value = value
 
@@ -74,7 +76,7 @@ class Secret(db.Model):
     def get(cls, id):
         result = db.session.query(cls).filter_by(id=id).first()
         if result:
-            return MultiDict({"id":result.id,"key":result.key,"value":result.value})
+            return MultiDict({"id":result.id,"type":result.type,"key":result.key,"value":result.value})
         else:
             return "Secret not found"
 
@@ -95,11 +97,12 @@ class Secret(db.Model):
             return False
 
     @classmethod
-    def update(cls, id, new_value, new_key):
+    def update(cls, id, new_type, new_value, new_key):
         # Query the secret by key
         secret = db.session.query(cls).filter_by(id=id).first()
         if secret:
             # Update the value
+            secret.type  = new_type
             secret.value = new_value
             secret.key   = new_key
             # Commit the changes to the database
@@ -108,9 +111,9 @@ class Secret(db.Model):
     @classmethod
     def get_secrets(cls):
         # Query all ids and keys from the Secrets table
-        secrets = db.session.query(cls.id, cls.key).all()
+        secrets = db.session.query(cls.id, cls.type, cls.key).all()
         # Extract ids and keys from the result and return as a list of tuples
-        return [{"id":secret.id, "key": secret.key} for secret in secrets] if secrets else []
+        return [{"id":secret.id, "type":secret.type, "key": secret.key} for secret in secrets] if secrets else []
 
     @classmethod
     def delete(cls, id):

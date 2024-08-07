@@ -140,5 +140,6 @@ class PromptForm(FlaskForm):
 
 class SecretForm(FlaskForm):
     id    = StringField('Id')
+    type  = StringField('Type')
     key   = StringField('Key', validators=[DataRequired()])
     value = StringField('Value', validators=[DataRequired()])
