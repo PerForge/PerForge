@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from flask_login             import UserMixin
 from flask_sqlalchemy        import SQLAlchemy
 from werkzeug.datastructures import MultiDict
+from sqlalchemy              import inspect, text
 
 
 db = SQLAlchemy()
@@ -123,3 +126,22 @@ class Secret(db.Model):
     @classmethod
     def count_secrets(cls):
         return db.session.query(cls).count()
+
+
+class DBMigrations:
+    def migration_1():
+        logging.warning('Migration number 1 has started.')
+        # Check if the 'type' column already exists
+        inspector = inspect(db.engine)
+        columns   = [column['name'] for column in inspector.get_columns('Secrets')]
+
+        if 'type' not in columns:
+            try:
+                # Add the 'type' column to the 'Secrets' table
+                with db.engine.connect() as connection:
+                    connection.execute(text('ALTER TABLE "Secrets" ADD COLUMN "type" VARCHAR(120)'))
+                logging.warning('Successfully added "type" column to "Secrets" table.')
+            except Exception as e:
+                logging.error(f'Error adding "type" column to "Secrets" table: {e}')
+        else:
+            logging.warning('Column "type" has already exists in "Secrets" table.')
