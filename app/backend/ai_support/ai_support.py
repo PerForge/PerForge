@@ -26,15 +26,16 @@ from os                                   import path
 
 class AISupport(Integration):
 
-    def __init__(self, project, id = None):
+    def __init__(self, project, system_prompt, id = None):
         super().__init__(project)
         self.models_created = False
-        self.set_config(id)
         self.graph_analysis           = []
         self.aggregated_data_analysis = []
         self.summary                  = []
         self.prompt_obj               = Prompt(project)
-        # self.system_prompt            = system_prompt
+        self.system_prompt = self.prompt_obj.get_prompt_value_by_id(system_prompt) or "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
+        ##Should be in the end:
+        self.set_config(id)
 
     def __str__(self):
         return f'Integration id is {self.id}'
@@ -55,15 +56,15 @@ class AISupport(Integration):
                         self.token          = config["token"]
                         self.temperature    = config["temperature"]
                         if self.ai_provider == "gemini":
-                            self.ai_obj         = GeminiAI(ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature)
+                            self.ai_obj         = GeminiAI(ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, system_prompt=self.system_prompt)
                             self.models_created = True
                         if self.ai_provider == "openai":
-                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature)
+                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, system_prompt=self.system_prompt)
                             self.models_created = True
                         if self.ai_provider == "azure_openai":
                             self.azure_url      = config["azure_url"]
                             self.api_version    = config["api_version"]
-                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, azure_url=self.azure_url, api_version=self.api_version)
+                            self.ai_obj         = ChatGPTAI(ai_provider=self.ai_provider, ai_text_model=self.ai_text_model, ai_image_model=self.ai_image_model, token=self.token, temperature=self.temperature, system_prompt=self.system_prompt, azure_url=self.azure_url, api_version=self.api_version)
                             self.models_created = True
             else:
                 logging.warning("There's no AI integration configured, or you're attempting to send a request from an unsupported location.")

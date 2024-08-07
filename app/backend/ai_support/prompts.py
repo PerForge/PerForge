@@ -45,7 +45,7 @@ class Prompt:
         data                  = pkg.get_project_config(project)
         prompt_id             = form.get("id")
         existing_prompt_index = next((index for index, p in enumerate(data["prompts"]) if p["id"] == prompt_id), None)
-        form["prompt"]        = form.get("prompt").replace('"', "'")
+        form["prompt"]        = form.get("prompt").replace('"', "'").replace('\r', '')
         if existing_prompt_index is None:
             form["id"] = pkg.generate_unique_id()
             data["prompts"].append(form)

@@ -40,7 +40,7 @@ class ReportingBase:
         self.data                      = template_obj["data"]
         self.template_prompt_id        = template_obj["template_prompt_id"]
         self.aggregated_prompt_id      = template_obj["aggregated_prompt_id"]
-        # self.system_prompt_id          = template_obj["system_prompt_id"]
+        self.system_prompt_id          = template_obj["system_prompt_id"]
         self.influxdb_obj              = Influxdb(project=self.project, id=influxdb).connect_to_influxdb()
         self.ai_switch                 = template_obj["ai_switch"]
         self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
@@ -48,7 +48,7 @@ class ReportingBase:
         self.ai_graph_switch           = template_obj["ai_graph_switch"]
         self.ai_to_graphs_switch       = template_obj["ai_to_graphs_switch"]
         if self.ai_switch:
-            self.ai_support_obj = AISupport(project=self.project)
+            self.ai_support_obj = AISupport(project=self.project, system_prompt=self.system_prompt_id)
 
     def set_template_group(self, template_group):
         template_group_obj            = pkg.get_template_group_values(self.project, template_group)

@@ -19,7 +19,7 @@ import time
 
 class GeminiAI:
 
-    def __init__(self, ai_text_model, ai_image_model, token, temperature):
+    def __init__(self, ai_text_model, ai_image_model, token, temperature, system_prompt):
         self.models_created = False  # Flag to indicate successful model creation
         try:
             genai.configure(api_key=token)
