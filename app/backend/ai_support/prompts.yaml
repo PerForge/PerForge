@@ -10,7 +10,7 @@ prompts:
     - Response times should remain stable. Minor fluctuations in response times are acceptable.
     - Explicitly identify any spikes or significant deviations in each metric.
     ###Constraints: 
-    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'"
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
       - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
@@ -27,7 +27,7 @@ prompts:
     - Throughput should remain stable. Minor fluctuations in throughput are acceptable.
     - Explicitly identify any performance issue in each metric.
     ###Constraints: 
-    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'"
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
       - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
@@ -44,7 +44,7 @@ prompts:
     - CPU usage line should remain stable. Minor fluctuations in CPU usage are acceptable.
     - Explicitly identify any performance issue in each metric.
     ###Constraints: 
-    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'"
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
         - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
@@ -61,7 +61,7 @@ prompts:
     - Memory usage line should remain stable. Minor fluctuations in Memory usage are acceptable.
     - Explicitly identify any performance issue in each metric.
     ###Constraints: 
-    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'"
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
         - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
