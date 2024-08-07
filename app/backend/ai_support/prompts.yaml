@@ -142,13 +142,13 @@ prompts:
     @@@@
 
     Observations from aggregated data analysis:
-      [aggreagted_data_analysis]
+    [aggreagted_data_analysis]
 
     Observations from graphs analysis:
-      [graphs_analysis]
+    [graphs_analysis]
 
     Observations from NFRs comparison.
-      [nfr_summary]
+    [nfr_summary]
 - id: template_for_comparing_tests
   name: Template for comparing tests
   type: default
@@ -182,13 +182,13 @@ prompts:
     @@@@
 
     Observations from aggregated data analysis:
-      [aggregated_data_analysis]
+    [aggregated_data_analysis]
 
     Observations from graphs analysis:
-      [graphs_analysis]
+    [graphs_analysis]
 
     Observations from NFRs analysis:
-      [nfr_summary]
+    [nfr_summary]
 - id: template_group
   name: Template group
   type: default

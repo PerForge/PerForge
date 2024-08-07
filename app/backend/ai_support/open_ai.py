@@ -22,7 +22,7 @@ from openai import AzureOpenAI
 
 class ChatGPTAI:
 
-    def __init__(self, ai_provider, ai_text_model, ai_image_model, token, temperature, azure_url = None, api_version = None):
+    def __init__(self, ai_provider, ai_text_model, ai_image_model, token, temperature, system_prompt, azure_url = None, api_version = None):
         try:
             if ai_provider == "openai":
                 self.client = OpenAI(api_key=token)
@@ -35,7 +35,7 @@ class ChatGPTAI:
             self.temperature            = temperature
             self.model_text             = ai_text_model
             self.model_image            = ai_image_model
-            # self.system_prompt          = system_prompt
+            self.system_prompt          = system_prompt
             self.input_tokens           = 0
             self.output_tokens          = 0
             self.list_of_graph_analysis = []
@@ -57,7 +57,7 @@ class ChatGPTAI:
                     messages    = [
                         {
                             "role": "system",
-                            "content": "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
+                            "content": self.system_prompt
                         },
                         {
                             "role": "user",
@@ -97,7 +97,7 @@ class ChatGPTAI:
                 messages    = [
                     {
                         "role": "system",
-                        "content": "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
+                        "content": self.system_prompt
                     },
                     {"role": "user", "content": prompt}
                 ]
