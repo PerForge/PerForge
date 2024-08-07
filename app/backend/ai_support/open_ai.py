@@ -97,7 +97,7 @@ class ChatGPTAI:
                 messages    = [
                     {
                         "role": "system",
-                        "content": self.system_prompt
+                        "content": "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
                     },
                     {"role": "user", "content": prompt}
                 ]
