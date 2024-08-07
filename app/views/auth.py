@@ -247,10 +247,15 @@ def update_secret():
         if form.validate_on_submit():
             try:
                 secret_data = request.form.to_dict()
-                secret_id = secret_data.get("id")
+                secret_id   = secret_data.get("id")
                 secret_type = secret_data.get("type")
+                if secret_type == "None":
+                    if current_user.is_admin:
+                        secret_type = "admin"
+                    else:
+                        secret_type = "general"
                 if Secret.if_exists(id=secret_id):
-                    Secret.update(id=secret_id, new_type=secret_data.get("type"), new_value=secret_data.get("value"), new_key=secret_data.get("key"))
+                    Secret.update(id=secret_id, new_type=secret_type, new_value=secret_data.get("value"), new_key=secret_data.get("key"))
                     flash("Secret updated.", "info")
                 return redirect(url_for('get_secrets'))
             except Exception:
