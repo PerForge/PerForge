@@ -7,7 +7,7 @@ class ErrorMessages(Enum):
     SAVE_TEMPLATE_GROUP         = 'An error occurred while saving the template group. For more detailed information, please refer to the logs.'
     GET_TEMPLATE_GROUP          = 'An error occurred while retrieving the Template Group configuration. For more detailed information, please refer to the logs.'
     DEL_TEMPLATE_GROUP          = 'An error occurred while deleting the template group. For more detailed information, please refer to the logs.'
-    REPORTING                   = 'An error occurred while loading templates and template groups. For more detailed information, please refer to the logs.'
+    TEMPLATES                   = 'An error occurred while loading templates and template groups. For more detailed information, please refer to the logs.'
     GET_TESTS                   = 'An error occurred while loading tests from Influxdb. For more detailed information, please refer to the logs.'
     GET_INTEGRATIONS            = 'An error occurred while loading integrations. For more detailed information, please refer to the logs.'
     DELETE_TEST                 = 'An error occurred while deleting the test in Influxdb. For more detailed information, please refer to the logs.'

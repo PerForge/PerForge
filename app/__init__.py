@@ -73,4 +73,4 @@ login_manager.init_app(app)
 ValidateConfig.validate_models()
 
 # # Import routing, models and Start the App
-from app.views import (reporting, auth, integrations, nfrs, other, grafana, graphs)
+from app.views import (auth, custom, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates)

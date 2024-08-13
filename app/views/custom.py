@@ -15,7 +15,7 @@ import traceback
 import logging
 import json
 
-from flask                                             import request, redirect, make_response
+from flask                                             import request, make_response
 from app                                               import app
 from app.backend.reporting.azure_wiki_report           import AzureWikiReport
 from app.backend.reporting.atlassian_confluence_report import AtlassianConfluenceReport

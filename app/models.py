@@ -43,7 +43,7 @@ class Users(db.Model, UserMixin):
         # Commit change and save the object
         db.session.commit()
         return self
-    
+
     def check_admin_exists():
         # Query the Users table for any user with is_admin set to True
         admin_user = Users.query.filter_by(is_admin=True).first()
@@ -55,10 +55,10 @@ class Users(db.Model, UserMixin):
 
 class Secret(db.Model):
     __tablename__ = 'Secrets'
-    id    = db.Column(db.Integer, primary_key=True)
-    type  = db.Column(db.String(120))
-    key   = db.Column(db.String(120), unique=True)
-    value = db.Column(db.String(500))
+    id            = db.Column(db.Integer, primary_key=True)
+    type          = db.Column(db.String(120))
+    key           = db.Column(db.String(120), unique=True)
+    value         = db.Column(db.String(500))
 
     def __init__(self, type, value, key):
         self.type  = type
