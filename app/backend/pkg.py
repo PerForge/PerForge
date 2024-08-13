@@ -19,6 +19,8 @@ import uuid
 import logging
 import portalocker
 import yaml
+import requests
+import re
 
 from app.config              import config_path
 from app.models              import Secret
@@ -608,3 +610,32 @@ def generate_unique_id():
 def read_from_yaml(file_path):
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
+
+def get_current_version_from_file():
+    try:
+        with open('version.txt', 'r') as file:
+            version = file.read().strip()
+        return version
+    except Exception as e:
+        logging.warning(f"Failed to read version from file: {e}")
+        return None
+
+def get_new_version_from_docker_hub():
+    url = "https://hub.docker.com/v2/repositories/perforge/perforge-app/tags"
+    tags = []
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        tags.extend([tag['name'] for tag in data['results']])
+    return tags[1]
+
+def is_valid_new_version_from_docker_hub(current_version, new_version):
+    # Define a regex pattern for a valid version number (e.g., "1.0.15")
+    pattern = re.compile(r'^\d+\.\d+\.\d+$')
+    if not pattern.match(new_version):
+        return False
+    # Split the version strings into their numeric components
+    current_parts = list(map(int, current_version.split('.')))
+    new_parts     = list(map(int, new_version.split('.')))
+    # Compare the numeric components
+    return new_parts > current_parts

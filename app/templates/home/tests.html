@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Tests {% endblock %} 
+{% block title %} Tests {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,7 +11,8 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header">
+                <div class="main-body-header flex-center-center">
+                    <div id="version-info"></div>
                 </div>
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
                     <div class="card-header">
@@ -144,7 +145,7 @@
         <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
             $(document).ready(function(){
-                
+
                 const influxdb_select = document.getElementById("influxdbId");
                 influxdb_select.addEventListener("change", loadData);
 
@@ -282,6 +283,21 @@
                     perforge.utils.listInit();
                 }
             });
+
+            async function checkVersion() {
+                const response = await fetch('/check_new_version');
+                const data = await response.json();
+                const versionInfo = document.getElementById('version-info');
+
+                if (data.new_version_released) {
+                    versionInfo.innerHTML = `
+                        New version is available:<span class="text-primary fw-bold ms-2">${data.new_version}</span>
+                        Check out the <a href="https://github.com/PerForge/PerForge/releases/tag/${data.new_version}" class="text-primary fw-bold" target="_blank">release notes</a> and update.
+                    `;
+                }
+            }
+            // Check version when the page loads
+            checkVersion();
         </script>
     </main>
 {% endblock content %}

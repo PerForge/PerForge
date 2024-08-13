@@ -107,7 +107,7 @@ def register_admin():
         if form.validate_on_submit():
             # assign form data to variables
             username      = request.form.get('username', '', type=str)
-            password      = request.form.get('password', '', type=str) 
+            password      = request.form.get('password', '', type=str)
             # filter User out of database through username
             user          = Users.query.filter_by(user=username).first()
             # filter User out of database through username
@@ -154,7 +154,7 @@ def login():
 # App main route + generic routing
 @app.route('/choose-project', methods=['GET'])
 def choose_project():
-    try:    
+    try:
         projects = pkg.get_projects()
         return render_template('home/choose-project.html', projects=projects)
     except Exception:
@@ -169,9 +169,10 @@ def index(path):
     try:
         project = request.cookies.get('project')
         if project != None:
-            projects      = pkg.get_projects()
-            project_stats = pkg.get_project_stats(project)
-            return render_template( 'home/' + path, projects = projects, project_stats=project_stats)
+            projects        = pkg.get_projects()
+            project_stats   = pkg.get_project_stats(project)
+            current_version = pkg.get_current_version_from_file()
+            return render_template( 'home/' + path, projects = projects, project_stats=project_stats, current_version=current_version)
         else:
             return redirect(url_for('choose_project'))
     except TemplateNotFound:
@@ -180,7 +181,6 @@ def index(path):
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.OOPS_MSG.value, "error")
         return render_template('home/page-500.html'), 500
-    
 
 @app.route('/secrets', methods=['get'])
 def get_secrets():
@@ -226,11 +226,11 @@ def edit_secret():
         if not secret_id or not secret_type:
             flash("Secret ID and type are required.", "error")
             return redirect(url_for('get_secrets'))
-        
+
         if secret_type == "admin" and not current_user.is_admin:
             flash("You do not have permission to access this page.", "error")
             return redirect(url_for('get_secrets'))
-        
+
         output = Secret.get(id=secret_id)
         form   = SecretForm(output)
         return render_template('home/secret.html', form=form, secret_id=secret_id, secret_type=secret_type)

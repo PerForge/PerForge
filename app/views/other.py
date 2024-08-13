@@ -15,7 +15,7 @@
 import logging
 import traceback
 
-from flask                          import flash, redirect, request, url_for, render_template
+from flask                          import flash, redirect, request, url_for, render_template, jsonify
 from app                            import app
 from app.backend                    import pkg
 from app.backend.ai_support.prompts import Prompt
@@ -134,3 +134,21 @@ def delete_prompt():
         flash(ErrorMessages.DELETE_PROMPT.value, "error")
         return redirect(url_for("index"))
     return redirect(url_for('prompts', type='custom'))
+
+@app.route('/check_new_version')
+def check_version():
+    try:
+        current_version = pkg.get_current_version_from_file()
+        new_version     = pkg.get_new_version_from_docker_hub()
+        if current_version != new_version:
+            if pkg.is_valid_new_version_from_docker_hub(current_version, new_version):
+                return jsonify({
+                    "new_version_released": True,
+                    "new_version": new_version
+                })
+        else:
+            return jsonify({
+                "new_version_released": False
+            })
+    except Exception:
+        logging.warning(str(traceback.format_exc()))
