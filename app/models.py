@@ -23,6 +23,7 @@ from sqlalchemy              import inspect, text
 db = SQLAlchemy()
 
 class Users(db.Model, UserMixin):
+
     __tablename__ = 'Users'
     id            = db.Column(db.Integer, primary_key=True)
     user          = db.Column(db.String(64), unique=True)
@@ -54,6 +55,7 @@ class Users(db.Model, UserMixin):
             return False
 
 class Secret(db.Model):
+
     __tablename__ = 'Secrets'
     id            = db.Column(db.Integer, primary_key=True)
     type          = db.Column(db.String(120))
@@ -129,6 +131,7 @@ class Secret(db.Model):
 
 
 class DBMigrations:
+
     def migration_1():
         logging.warning('Migration number 1 has started.')
         # Check if the 'type' column already exists

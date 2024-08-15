@@ -158,8 +158,8 @@ def index(path):
     try:
         project = request.cookies.get('project')
         if project != None:
-            projects        = pkg.get_projects()
-            project_stats   = pkg.get_project_stats(project)
+            projects        = pkg.get_all_projects()
+            project_stats   = pkg.get_project_config_stats(project)
             current_version = pkg.get_current_version_from_file()
             return render_template('home/' + path, projects = projects, project_stats=project_stats, current_version=current_version)
         else:

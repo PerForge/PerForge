@@ -15,25 +15,25 @@
 import os
 import ast
 
-from io                                          import BytesIO
-from PIL                                         import Image as PILImage
-from reportlab.lib.colors                        import Color
-from reportlab.lib.enums                         import TA_LEFT
-from reportlab.lib.pagesizes                     import A4
-from reportlab.lib.styles                        import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units                         import inch
-from reportlab.lib.utils                         import ImageReader
-from reportlab.pdfbase                           import ttfonts
-from reportlab.pdfbase.pdfmetrics                import registerFont, registerFontFamily
-from reportlab.platypus                          import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
-from datetime                                    import datetime
-
-from app.backend.reporting.reporting_base        import ReportingBase
-from app.backend                                 import pkg
-from app.backend.integrations.secondary.grafana  import Grafana
+from app.backend.integrations.reporting_base    import ReportingBase
+from app.backend.integrations.grafana.grafana   import Grafana
+from app.backend.components.graphs.graph_config import GraphConfig
+from io                                         import BytesIO
+from PIL                                        import Image as PILImage
+from reportlab.lib.colors                       import Color
+from reportlab.lib.enums                        import TA_LEFT
+from reportlab.lib.pagesizes                    import A4
+from reportlab.lib.styles                       import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units                        import inch
+from reportlab.lib.utils                        import ImageReader
+from reportlab.pdfbase                          import ttfonts
+from reportlab.pdfbase.pdfmetrics               import registerFont, registerFontFamily
+from reportlab.platypus                         import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
+from datetime                                   import datetime
 
 
 class Pdf:
+
     def __init__(self, pdf_io, margin=15):
         self.doc              = BaseDocTemplate(pdf_io, pagesize=A4, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
         self.elements         = []
@@ -62,7 +62,7 @@ class Pdf:
             header_radius    = 10
             header_text_size = 16
             rect_y           = A4[1] - self.header_height
-            
+
             # Draw the new rectangle with full width and rounded bottom edges
             canvas.setFillColor(self.header_color)
             canvas.roundRect(0, rect_y, A4[0], 60, header_radius, fill=1, stroke=0)
@@ -162,7 +162,7 @@ class Pdf:
         text                   = text.replace('\n', '<br/>')
         self.elements.append(Spacer(1, 0.25 * inch))
         self.elements.append(Paragraph(text, normal_style))
-   
+
     def add_text_summary(self, text):
         styles                 = getSampleStyleSheet()
         normal_style           = styles["Normal"]
@@ -175,6 +175,7 @@ class Pdf:
         self.doc.build(self.elements)
 
 class RoundedImage(Image):
+
     def __init__(self, filename_or_object, width=None, height=None, kind='direct', mask=None, hAlign='CENTER', useDPI=False, rounded_corner_radius=6):
         super().__init__(filename_or_object, width, height, kind, mask, hAlign)
         self.rounded_corner_radius = rounded_corner_radius
@@ -188,6 +189,7 @@ class RoundedImage(Image):
             self.canv.restoreState()
 
 class PdfReport(ReportingBase):
+
     def __init__(self, project):
         super().__init__(project)
         self.pdf_io      = BytesIO()
@@ -213,7 +215,7 @@ class PdfReport(ReportingBase):
         table = self.check_if_table(text)
         if table == None:
             self.pdf_creator.add_text(text)
-        else: 
+        else:
             self.pdf_creator.add_table(table)
 
     def check_if_table(self, text):
@@ -231,7 +233,7 @@ class PdfReport(ReportingBase):
             return None  # Parsing failed
 
     def generate_title(self, isgroup):
-        if isgroup: 
+        if isgroup:
             title = self.group_title
         else:
             title = self.replace_variables(self.title)
@@ -283,7 +285,7 @@ class PdfReport(ReportingBase):
             if obj["type"] == "text":
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = pkg.get_graph(self.project, obj["id"])
+                graph_data       = GraphConfig.get_graph_value_by_id(self.project, obj["id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 self.add_graph(graph_data, current_run_id, baseline_run_id)
         if self.nfrs_switch or self.ai_switch:

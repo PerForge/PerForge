@@ -84,7 +84,6 @@
                                             <th class="sort" data-sort="startTime">Start time</th>
                                             <th class="sort" data-sort="endTime">End time</th>
                                             <th>Compare</th>
-                                            <!-- <th class="sort" data-sort="actions">Actions</th> -->
                                         </tr>
                                     </thead>
                                     <tbody class="list" id="bulk-select-body">
@@ -98,7 +97,6 @@
                                             <th></th>
                                             <th></th>
                                             <th></th>
-                                            <!-- <th></th> -->
                                         </tr>
                                     </tbody>
                                 </table>
@@ -274,10 +272,6 @@
                             checkboxData['baseline_test_title'] = value;
                             checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
                         });
-
-                        // Add the Actions column (e.g., Grafana link)
-                        // const actionsCell = row.insertCell();
-                        // actionsCell.innerHTML = `<a class="btn btn-danger" href="/grafana-result-dashboard?startTimestamp=${test.startTimestamp}&endTimestamp=${test.endTimestamp}&testTitle=${test.test_title}">Grafana dashboard</a>`;
                     });
 
                     perforge.utils.listInit();

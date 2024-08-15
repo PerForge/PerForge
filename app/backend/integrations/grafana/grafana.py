@@ -18,12 +18,14 @@ import logging
 import base64
 import traceback
 
-from app.backend                          import pkg
-from app.backend.integrations.integration import Integration
-from os                                   import path
+from app.backend.integrations.integration            import Integration
+from app.backend.integrations.grafana.grafana_config import GrafanaConfig
+from app.backend.components.graphs.graph_config      import GraphConfig
+from os                                              import path
 
 
 class Grafana(Integration):
+
     def __init__(self, project, id = None):
         super().__init__(project)
         self.set_config(id)
@@ -35,8 +37,8 @@ class Grafana(Integration):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
         else:
-            id = id if id else pkg.get_default_grafana(self.project)
-            config = pkg.get_grafana_config_values(self.project, id, is_internal=True)
+            id = id if id else GrafanaConfig.get_default_grafana_config_id(self.project)
+            config = GrafanaConfig.get_grafana_config_values(self.project, id, is_internal=True)
             if "id" in config:
                 if config['id'] == id:
                     self.id                  = config["id"]
@@ -54,22 +56,22 @@ class Grafana(Integration):
     def get_grafana_link(self, start, end, test_name, dash_id = None):
         dashboard_content = next((dashboard['content'] for dashboard in self.dashboards if dashboard['id'] == dash_id), self.dashboards[0]['content'])
         return self.server + dashboard_content + '?orgId=' + self.org_id + '&from='+str(start)+'&to='+str(end)+f'&var-{self.app}='+str(test_name)
-    
+
     def get_grafana_test_link(self, start, end, test_name, run_id, dash_id = None):
         url = self.get_grafana_link(start, end, test_name, dash_id)
         url = f'{url}&var-{self.test_title}={run_id}'
         return url
-    
+
     def dash_id_to_render(self, url):
         return url.replace("/d/", "/render/d-solo/")
-    
+
     def encode_image(self, image):
         return base64.b64encode(image)
 
     def render_image(self, graph_id, start, stop, test_name, run_id, baseline_run_id = None):
         image = None
-        if pkg.check_graph(self.project, graph_id):
-            graph_json = pkg.get_graph(self.project, graph_id)
+        if GraphConfig.check_graph_if_exist(self.project, graph_id):
+            graph_json = GraphConfig.get_graph_value_by_id(self.project, graph_id)
             url        = self.get_grafana_link(start, stop, test_name, graph_json["dash_id"]) + "&panelId="+graph_json["view_panel"]+"&width="+graph_json["width"]+"&height="+graph_json["height"]+"&scale=3"
             url = self.dash_id_to_render(url)
             if baseline_run_id:
@@ -84,6 +86,6 @@ class Grafana(Integration):
                     logging.info('ERROR: ' + response.content)
             except Exception as er:
                 logging.warning("An error occurred: " + str(er))
-                err_info = traceback.format_exc()  
+                err_info = traceback.format_exc()
                 logging.warning("Detailed error info: " + err_info)
         return image

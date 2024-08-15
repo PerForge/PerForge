@@ -15,9 +15,9 @@
 import logging
 import traceback
 
-from flask       import render_template, jsonify
 from app         import app
 from app.backend import pkg
+from flask       import render_template, jsonify
 
 
 @app.route('/view-logs', methods=['GET'])

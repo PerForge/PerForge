@@ -24,7 +24,7 @@ from flask              import render_template, request, url_for, redirect, flas
 @app.route('/choose-project', methods=['GET'])
 def choose_project():
     try:
-        projects = pkg.get_projects()
+        projects = pkg.get_all_projects()
         return render_template('home/choose-project.html', projects=projects)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -36,7 +36,7 @@ def set_project():
     try:
         project = request.args.get('project')
         if project is None:
-            projects = pkg.get_projects()
+            projects = pkg.get_all_projects()
             if projects:
                 project = projects[0]['id']
             else:
@@ -52,7 +52,7 @@ def set_project():
 def get_projects():
     try:
         projects = []
-        projects = pkg.get_projects()
+        projects = pkg.get_all_projects()
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_PROJECT.value, "error")
@@ -62,7 +62,7 @@ def get_projects():
 def save_project():
     try:
         project_name = request.args.get('project_name')
-        project      = pkg.save_new_project(project_name)
+        project      = pkg.save_new_project_config(project_name)
         res          = redirect(url_for('index'))
         res.set_cookie(key='project', value=project, max_age=None)
         flash("The project was successfully added.", "info")
@@ -75,8 +75,8 @@ def save_project():
 def delete_project():
     try:
         project = request.args.get('project')
-        pkg.delete_project(project)
-        projects = pkg.get_projects()
+        pkg.delete_project_config(project)
+        projects = pkg.get_all_projects()
         if projects:
             project = projects[0]['id']
         else:

@@ -15,15 +15,15 @@ import traceback
 import logging
 import json
 
-from flask                                             import request, make_response
-from app                                               import app
-from app.backend.reporting.azure_wiki_report           import AzureWikiReport
-from app.backend.reporting.atlassian_confluence_report import AtlassianConfluenceReport
-from app.backend.reporting.atlassian_jira_report       import AtlassianJiraReport
-from app.backend.reporting.smtp_mail_report            import SmtpMailReport
-from app.backend.integrations.secondary.influxdb       import Influxdb
-from app.backend.integrations.secondary.grafana        import Grafana
-from app.backend                                       import pkg
+from app                                                                       import app
+from app.backend                                                               import pkg
+from app.backend.integrations.azure_wiki.azure_wiki_report                     import AzureWikiReport
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
+from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
+from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
+from app.backend.integrations.influxdb.influxdb                                import Influxdb
+from app.backend.integrations.grafana.grafana                                  import Grafana
+from flask                                                                     import request, make_response
 
 
 @app.route('/gen-report', methods=['GET'])
@@ -32,7 +32,7 @@ def gen_report():
         project            = request.args.get('project')
         influxdb           = request.args.get("influxdbId")
         action_id          = request.args.get("outputId")
-        action_type        = pkg.get_output_type_by_id(project, action_id)
+        action_type        = pkg.get_output_integration_type_by_id(project, action_id)
         testTitle          = request.args.get('testTitle')
         baseline_testTitle = request.args.get('baseline_testTitle')
         template_id        = request.args.get('template_id')

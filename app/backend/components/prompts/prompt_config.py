@@ -1,9 +1,10 @@
 import os
 
-from app.backend import pkg
+from app.backend                 import pkg
+from app.backend.pydantic_models import PromptModel
 
 
-class Prompt:
+class PromptConfig:
     def __init__(self, project):
         self.project         = project
         self.default_prompts = self.get_default_prompts()
@@ -11,13 +12,12 @@ class Prompt:
 
     @staticmethod
     def get_default_prompts():
-        file_path    = os.path.join("app", "backend", "ai_support", "prompts.yaml")
+        file_path    = os.path.join("app", "backend", "components", "prompts", "prompts.yaml")
         yaml_prompts = pkg.read_from_yaml(file_path)
         return yaml_prompts['prompts']
 
     @staticmethod
     def get_custom_prompts(project):
-        pkg.validate_config(project, "prompts")
         data = pkg.get_project_config(project)
         return data["prompts"]
 
@@ -41,21 +41,20 @@ class Prompt:
         return None
 
     def save_custom_prompt(project, form):
-        pkg.validate_config(project, "prompts")
-        data                  = pkg.get_project_config(project)
-        prompt_id             = form.get("id")
-        existing_prompt_index = next((index for index, p in enumerate(data["prompts"]) if p["id"] == prompt_id), None)
-        form["prompt"]        = form.get("prompt").replace('"', "'").replace('\r', '')
+        validated_form           = PromptModel.model_validate(form).model_dump()
+        config_data              = pkg.get_project_config(project)
+        prompt_id                = validated_form.get("id")
+        existing_prompt_index    = next((index for index, p in enumerate(config_data["prompts"]) if p["id"] == prompt_id), None)
+        validated_form["prompt"] = validated_form.get("prompt").replace('"', "'").replace('\r', '')
         if existing_prompt_index is None:
-            form["id"] = pkg.generate_unique_id()
-            data["prompts"].append(form)
+            validated_form["id"] = pkg.generate_unique_id()
+            config_data["prompts"].append(validated_form)
         else:
-            data["prompts"][existing_prompt_index] = form
-        pkg.save_new_data(project, data)
-        return form.get("id")
+            config_data["prompts"][existing_prompt_index] = validated_form
+        pkg.save_new_data(project, config_data)
+        return validated_form.get("id")
 
     def delete_custom_prompt(project, id):
-        pkg.validate_config(project, "prompts")
         data           = pkg.get_project_config(project)
         prompt_deleted = False
         for idx, obj in enumerate(data["prompts"]):

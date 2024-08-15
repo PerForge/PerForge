@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from app.config                                                           import config_path
-from app.backend                                                   import pkg
-
 import re
+
+from app.config                             import config_path
+from app.backend.components.nfrs.nfr_config import NFRConfig
 
 
 class Nfr:
@@ -42,7 +42,7 @@ class DataRow:
         self.transaction = data_row["transaction"]
 
 
-class Validation:
+class NFRValidation:
     def __init__(self, project):
         self.project            = project
         self.path_to_nfrs       = config_path
@@ -50,22 +50,22 @@ class Validation:
         self.transaction_result = []
 
     def delete_nfrs(self, name):
-        pkg.delete_nfr(self.project, name)
+        NFRConfig.delete_nfr_config(self.project, name)
 
     # Method returns NFRs for specific application
     def get_nfr(self, name):
-        return pkg.get_nfr(self.project, name)
-    
+        return NFRConfig.get_nfr_values_by_id(self.project, name)
+
     def get_human_nfr(self, name):
         result = []
-        nfrs   = pkg.get_nfr(self.project, name)
+        nfrs   = NFRConfig.get_nfr_values_by_id(self.project, name)
         for nfr_row in nfrs["rows"]:
             result.append(self.generate_name(nfr_row))
         return result
 
     # Method reqturns all NFRs for all applications
     def get_nfrs(self):
-        return pkg.get_nfrs(self.project)
+        return NFRConfig.get_all_nfrs(self.project)
 
 
     # Method accepts test value, operation and threshold
@@ -87,7 +87,7 @@ class Validation:
                 return "threshold is not a number"
         except TypeError:
             return "value is not a number"
-        
+
     def is_match(self, regex, string):
         # Compile the regex pattern
         compiled_pattern = re.compile(regex)
@@ -122,7 +122,7 @@ class Validation:
             return True
         except ValueError:
             return False
-    
+
     def operation_to_text(self, operation):
         operations = {
             '>': 'is less than',
@@ -132,7 +132,7 @@ class Validation:
         }
         return operations[operation]
 
-    # Method takes a list of NFRs 
+    # Method takes a list of NFRs
     # Constructs a flux request to the InfluxDB based on the NFRs
     # Takes test data and compares it with the NFRs
     def compare_with_nfrs(self, nfrs, data):
@@ -165,7 +165,7 @@ class Validation:
                 # Iterate through Data for validation
                 for row in data:
                     data_row = DataRow(row)
-                    # Applying NFRs weights 
+                    # Applying NFRs weights
                     if nfr.weight == '' or bad_weight:
                         nfr.weight = distribute_weight
                     # Check if the regex matches the transaction

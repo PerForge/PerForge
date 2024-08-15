@@ -57,7 +57,7 @@ class GrafanaForm(FlaskForm):
     is_default          = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
 
 
-class AzureForm(FlaskForm):
+class AzureWikiForm(FlaskForm):
     id             = StringField('Id')
     name           = StringField('Name', validators=[DataRequired()])
     token          = StringField('Personal Access Token', validators=[DataRequired()])

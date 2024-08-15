@@ -15,11 +15,12 @@
 import logging
 import traceback
 
-from flask                          import flash, redirect, request, url_for, render_template
-from app                            import app
-from app.backend.ai_support.prompts import Prompt
-from app.forms                      import PromptForm
-from app.backend.errors             import ErrorMessages
+
+from app                                          import app
+from app.forms                                    import PromptForm
+from app.backend.errors                           import ErrorMessages
+from app.backend.components.prompts.prompt_config import PromptConfig
+from flask                                        import flash, redirect, request, url_for, render_template
 
 
 @app.route('/prompts', methods=['GET'])
@@ -27,8 +28,8 @@ def prompts():
     try:
         project          = request.cookies.get('project')
         form_for_prompts = PromptForm(request.form)
-        default_prompts  = Prompt.get_default_prompts()
-        custom_prompts   = Prompt.get_custom_prompts(project)
+        default_prompts  = PromptConfig.get_default_prompts()
+        custom_prompts   = PromptConfig.get_custom_prompts(project)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.GET_PROMPTS.value, "error")
@@ -41,7 +42,7 @@ def save_prompt():
         project    = request.cookies.get('project')
         if request.method == "POST":
             original_prompt_id = request.form.to_dict().get("id")
-            prompt_id          = Prompt.save_custom_prompt(project, request.form.to_dict())
+            prompt_id          = PromptConfig.save_custom_prompt(project, request.form.to_dict())
         if original_prompt_id == prompt_id:
             flash("Custom prompt updated.", "info")
         else:
@@ -58,7 +59,7 @@ def delete_prompt():
         project    = request.cookies.get('project')
         prompt_id  = request.args.get('prompt_id')
         if prompt_id is not None:
-            Prompt.delete_custom_prompt(project, prompt_id)
+            PromptConfig.delete_custom_prompt(project, prompt_id)
             flash("Custom prompt deleted", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

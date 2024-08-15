@@ -20,10 +20,9 @@ import random
 import traceback
 import time
 
-from app.backend                          import pkg
-from app.backend.integrations.integration import Integration
-from os                                   import path
-
+from app.backend.integrations.integration                  import Integration
+from app.backend.integrations.azure_wiki.azure_wiki_config import AzureWikiConfig
+from os                                                    import path
 
 class AzureWiki(Integration):
 
@@ -38,8 +37,8 @@ class AzureWiki(Integration):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
         else:
-            id = id if id else pkg.get_default_azure(self.project)
-            config = pkg.get_azure_config_values(self.project, id, is_internal = True)
+            id = id if id else AzureWikiConfig.get_default_azure_wiki_config_id(self.project)
+            config = AzureWikiConfig.get_azure_wiki_config_values(self.project, id, is_internal = True)
             if "id" in config:
                 if config['id'] == id:
                     self.id                        = config["id"]
@@ -77,7 +76,7 @@ class AzureWiki(Integration):
             except Exception as er:
                 logging.warning('ERROR: uploading image to azure failed')
                 logging.warning("An error occurred: " + str(er))
-                err_info = traceback.format_exc()  
+                err_info = traceback.format_exc()
                 logging.warning("Detailed error info: " + err_info)
             time.sleep(10)
         return None
@@ -91,7 +90,7 @@ class AzureWiki(Integration):
         except Exception as er:
             logging.warning('ERROR: failed to upload the page to wiki')
             logging.warning("An error occurred: " + str(er))
-            err_info = traceback.format_exc()  
+            err_info = traceback.format_exc()
             logging.warning("Detailed error info: " + err_info)
 
     def get_page(self, path):
@@ -102,7 +101,7 @@ class AzureWiki(Integration):
         except Exception as er:
             logging.warning('ERROR: getting ETag failed')
             logging.warning("An error occurred: " + str(er))
-            err_info = traceback.format_exc()  
+            err_info = traceback.format_exc()
             logging.warning("Detailed error info: " + err_info)
 
     def create_or_update_page(self, path, page_content):
@@ -121,7 +120,7 @@ class AzureWiki(Integration):
                 except Exception as er:
                     logging.warning('ERROR: getting ETag failed')
                     logging.warning("An error occurred: " + str(er))
-                    err_info = traceback.format_exc()  
+                    err_info = traceback.format_exc()
                     logging.warning("Detailed error info: " + err_info)
                 self.azure_authorization_headers["If-Match"]=str(response.headers["ETag"])
                 try:
@@ -129,5 +128,5 @@ class AzureWiki(Integration):
                 except Exception as er:
                     logging.warning('ERROR: failed to update the page in wiki')
                     logging.warning("An error occurred: " + str(er))
-                    err_info = traceback.format_exc()  
+                    err_info = traceback.format_exc()
                     logging.warning("Detailed error info: " + err_info)

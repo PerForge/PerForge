@@ -1,6 +1,7 @@
 from enum import Enum
 
 class ErrorMessages(Enum):
+
     SAVE_TEMPLATE               = 'An error occurred while saving the template. For more detailed information, please refer to the logs.'
     GET_TEMPLATE                = 'An error occurred while retrieving the Template configuration. For more detailed information, please refer to the logs.'
     DEL_TEMPLATE                = 'An error occurred while deleting the template. For more detailed information, please refer to the logs.'
@@ -34,9 +35,9 @@ class ErrorMessages(Enum):
     SAVE_GRAFANA                = 'An error occurred while saving the Grafana configuration. For more detailed information, please refer to the logs.'
     DELETE_GRAFANA              = 'An error occurred while deleting the Grafana configuration. For more detailed information, please refer to the logs.'
     GET_GRAFANA                 = 'An error occurred while retrieving the Grafana configuration. For more detailed information, please refer to the logs.'
-    SAVE_AZURE                  = 'An error occurred while saving the Azure configuration. For more detailed information, please refer to the logs.'
-    DELETE_AZURE                = 'An error occurred while deleting the Azure configuration. For more detailed information, please refer to the logs.'
-    GET_AZURE                   = 'An error occurred while retrieving the Azure configuration. For more detailed information, please refer to the logs.'
+    SAVE_AZURE_WIKI             = 'An error occurred while saving the Azure wiki configuration. For more detailed information, please refer to the logs.'
+    DELETE_AZURE_WIKI           = 'An error occurred while deleting the Azure wiki configuration. For more detailed information, please refer to the logs.'
+    GET_AZURE_WIKI              = 'An error occurred while retrieving the Azure wiki configuration. For more detailed information, please refer to the logs.'
     SAVE_ATLASSIAN_CONFLUENCE   = 'An error occurred while saving the Atlassian Confluence configuration. For more detailed information, please refer to the logs.'
     DELETE_ATLASSIAN_CONFLUENCE = 'An error occurred while deleting the Atlassian Confluence configuration. For more detailed information, please refer to the logs.'
     GET_ATLASSIAN_CONFLUENCE    = 'An error occurred while retrieving the Atlassian Confluence configuration. For more detailed information, please refer to the logs.'

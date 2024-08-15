@@ -16,12 +16,12 @@ import os
 import logging
 import traceback
 
-from app.backend                          import pkg
-from app.backend.integrations.integration import Integration
-from app.backend.ai_support.gemini_ai     import GeminiAI
-from app.backend.ai_support.open_ai       import ChatGPTAI
-from app.backend.ai_support.prompts       import Prompt
-from os                                   import path
+from app.backend.integrations.integration          import Integration
+from app.backend.integrations.ai_support.ai_config import AISupportConfig
+from app.backend.integrations.ai_support.gemini_ai import GeminiAI
+from app.backend.integrations.ai_support.open_ai   import ChatGPTAI
+from app.backend.components.prompts.prompt_config  import PromptConfig
+from os                                            import path
 
 
 class AISupport(Integration):
@@ -32,7 +32,7 @@ class AISupport(Integration):
         self.graph_analysis           = []
         self.aggregated_data_analysis = []
         self.summary                  = []
-        self.prompt_obj               = Prompt(project)
+        self.prompt_obj               = PromptConfig(project)
         self.system_prompt = self.prompt_obj.get_prompt_value_by_id(system_prompt) or "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
         ##Should be in the end:
         self.set_config(id)
@@ -44,9 +44,9 @@ class AISupport(Integration):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
         else:
-            id = id if id else pkg.get_default_ai_support(self.project)
+            id = id if id else AISupportConfig.get_default_ai_support_config_id(self.project)
             if id:
-                config = pkg.get_ai_support_config_values(self.project, id, is_internal=True)
+                config = AISupportConfig.get_ai_support_config_values(self.project, id, is_internal=True)
                 if config and "id" in config:
                     if config['id'] == id:
                         self.name           = config["name"]
@@ -86,7 +86,7 @@ class AISupport(Integration):
                 self.aggregated_data_analysis.append(result)
             except Exception as er:
                 logging.warning("An error occurred: " + str(er))
-                err_info = traceback.format_exc()  
+                err_info = traceback.format_exc()
                 logging.warning("Detailed error info: " + err_info)
 
     def prepare_list_of_analysis(self, list):

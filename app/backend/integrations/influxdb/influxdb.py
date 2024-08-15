@@ -15,15 +15,15 @@
 import logging
 import os
 
-from app.backend                                                   import pkg
-from app.backend.integrations.secondary.influxdb_backend_listeners import custom
-from app.backend.integrations.secondary.influxdb_backend_listeners import standart
-from app.backend.integrations.integration                          import Integration
-from influxdb_client                                               import InfluxDBClient
-from influxdb_client.client.write_api                              import SYNCHRONOUS
-from os                                                            import path
-from datetime                                                      import datetime
-from dateutil                                                      import tz
+from app.backend.integrations.integration                         import Integration
+from app.backend.integrations.influxdb.influxdb_config            import InfluxdbConfig
+from app.backend.integrations.influxdb.influxdb_backend_listeners import custom
+from app.backend.integrations.influxdb.influxdb_backend_listeners import standart
+from influxdb_client                                              import InfluxDBClient
+from influxdb_client.client.write_api                             import SYNCHRONOUS
+from os                                                           import path
+from datetime                                                     import datetime
+from dateutil                                                     import tz
 
 
 class Influxdb(Integration):
@@ -43,8 +43,8 @@ class Influxdb(Integration):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
         else:
-            id     = id if id else pkg.get_default_influxdb(self.project)
-            config = pkg.get_influxdb_config_values(self.project, id, is_internal=True)
+            id     = id if id else InfluxdbConfig.get_default_influxdb_config_id(self.project)
+            config = InfluxdbConfig.get_influxdb_config_values(self.project, id, is_internal=True)
             if "id" in config:
                 if config['id'] == id:
                     self.id       = config["id"]
@@ -75,7 +75,7 @@ class Influxdb(Integration):
         result = []
         try:
             if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-                query = standart.get_test_log_query(self.bucket) 
+                query = standart.get_test_log_query(self.bucket)
             else:
                 query = custom.get_test_log_query(self.bucket)
             tables = self.influxdb_connection.query_api().query(query)
@@ -88,14 +88,14 @@ class Influxdb(Integration):
         except Exception as er:
             logging.warning(er)
             return result
-        
+
     def get_aggregated_table(self, run_id, start, end):
         result = []
         try:
             if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-                query = standart.get_aggregated_data(run_id, start, end, self.bucket) 
+                query = standart.get_aggregated_data(run_id, start, end, self.bucket)
             else:
-                query = custom.get_aggregated_data(run_id, start, end, self.bucket) 
+                query = custom.get_aggregated_data(run_id, start, end, self.bucket)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table:
@@ -120,85 +120,85 @@ class Influxdb(Integration):
 
     def get_human_start_time(self, run_id):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_start_time(run_id, self.bucket) 
+            query = standart.get_start_time(run_id, self.bucket)
         else:
             query = custom.get_start_time(run_id, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz), "%Y-%m-%d %I:%M:%S %p") 
+                tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz), "%Y-%m-%d %I:%M:%S %p")
         return tmp
 
     def get_start_time(self, run_id):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_start_time(run_id, self.bucket) 
+            query = standart.get_start_time(run_id, self.bucket)
         else:
             query = custom.get_start_time(run_id, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
-                tmp = datetime.strftime(flux_record['_time'],"%Y-%m-%dT%H:%M:%SZ") 
+            for flux_record in flux_table:
+                tmp = datetime.strftime(flux_record['_time'],"%Y-%m-%dT%H:%M:%SZ")
         return tmp
 
     def get_start_tmp(self, run_id):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_start_time(run_id, self.bucket) 
+            query = standart.get_start_time(run_id, self.bucket)
         else:
             query = custom.get_start_time(run_id, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 tmp = int(flux_record['_time'].astimezone(self.tmz).timestamp() * 1000)
         return tmp
 
     def get_end_tmp(self, run_id):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_end_time(run_id, self.bucket) 
+            query = standart.get_end_time(run_id, self.bucket)
         else:
             query = custom.get_end_time(run_id, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 tmp = int(flux_record['_time'].astimezone(self.tmz).timestamp() * 1000)
         return tmp
 
     def get_human_end_time(self, run_id):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_end_time(run_id, self.bucket) 
+            query = standart.get_end_time(run_id, self.bucket)
         else:
             query = custom.get_end_time(run_id, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz), "%Y-%m-%d %I:%M:%S %p")
         return tmp
 
     def get_end_time(self, run_id):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_end_time(run_id, self.bucket) 
+            query = standart.get_end_time(run_id, self.bucket)
         else:
             query = custom.get_end_time(run_id, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 tmp = datetime.strftime(flux_record['_time'],"%Y-%m-%dT%H:%M:%SZ")
         return tmp
 
     def get_max_active_users(self, run_id, start, end):
         if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-            query = standart.get_max_active_users_stats(run_id, start, end, self.bucket) 
+            query = standart.get_max_active_users_stats(run_id, start, end, self.bucket)
         else:
             query = custom.get_max_active_users_stats(run_id, start, end, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 users = round(flux_record['_value'])
         return users
 
@@ -208,22 +208,22 @@ class Influxdb(Integration):
             query = standart.get_app_name(run_id, start, end, self.bucket)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
-                for flux_record in flux_table: 
+                for flux_record in flux_table:
                     appName = flux_record['application']
         else:
             query = custom.get_app_name(run_id, start, end, self.bucket)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
-                for flux_record in flux_table: 
+                for flux_record in flux_table:
                     appName = flux_record['testName']
         return appName
 
     def delete_test_data(self, measurement, run_id, start = None, end = None):
         if start == None: start = "2000-01-01T00:00:00Z"
-        else: 
+        else:
             start = datetime.strftime(datetime.fromtimestamp(int(start)/1000).astimezone(self.tmz),"%Y-%m-%dT%H:%M:%SZ")
         if end   == None: end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        else: 
+        else:
             end = datetime.strftime(datetime.fromtimestamp(int(end)/1000).astimezone(self.tmz),"%Y-%m-%dT%H:%M:%SZ")
         try:
             if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
@@ -252,7 +252,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         value=""
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 value = round(flux_record['_value'], 2)
         return value
 
@@ -261,7 +261,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         value=""
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 value = round(flux_record['_value'], 2)
         return value
 
@@ -270,7 +270,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         value=""
         for flux_table in flux_tables:
-            for flux_record in flux_table: 
+            for flux_record in flux_table:
                 value = round(flux_record['_value'], 2)
         return value
 
@@ -306,7 +306,7 @@ class Influxdb(Integration):
             # If the metric is rps, then add the aggregation window
             if nfr['metric'] == 'rps':
                 query += constr["aggregation"][nfr['metric']]
-            
+
             query += constr["aggregation"][nfr['aggregation']]
         else:
             constr = custom.flux_constructor(test_name, run_id, start, end, bucket, request_name=nfr["scope"])

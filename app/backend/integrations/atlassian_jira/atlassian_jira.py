@@ -18,10 +18,10 @@ import logging
 import uuid
 import time
 
-from app.backend                          import pkg
-from app.backend.integrations.integration import Integration
-from atlassian                            import Jira
-from os                                   import path
+from app.backend.integrations.integration                          import Integration
+from app.backend.integrations.atlassian_jira.atlassian_jira_config import AtlassianJiraConfig
+from atlassian                                                     import Jira
+from os                                                            import path
 
 
 class AtlassianJira(Integration):
@@ -37,8 +37,8 @@ class AtlassianJira(Integration):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
         else:
-            id = id if id else pkg.get_default_atlassian_jira(self.project)
-            config = pkg.get_atlassian_jira_config_values(self.project, id, is_internal=True)
+            id = id if id else AtlassianJiraConfig.get_default_atlassian_jira_config_id(self.project)
+            config = AtlassianJiraConfig.get_atlassian_jira_config_values(self.project, id, is_internal=True)
             if "id" in config:
                 if config['id'] == id:
                     self.id         = config["id"]

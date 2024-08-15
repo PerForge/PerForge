@@ -15,12 +15,12 @@
 import os
 import logging
 
-from app                                  import app
-from app.backend                          import pkg
-from app.backend.integrations.integration import Integration
-from flask                                import render_template
-from flask_mail                           import Mail, Message
-from os                                   import path
+from app                                                 import app
+from app.backend.integrations.integration                import Integration
+from app.backend.integrations.smtp_mail.smtp_mail_config import SmtpMailConfig
+from flask                                               import render_template
+from flask_mail                                          import Mail, Message
+from os                                                  import path
 
 
 class SmtpMail(Integration):
@@ -36,8 +36,8 @@ class SmtpMail(Integration):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
         else:
-            id     = id if id else pkg.get_default_smtp_mail(self.project)
-            config = pkg.get_smtp_mail_config_values(self.project, id, is_internal=True)
+            id     = id if id else SmtpMailConfig.get_default_smtp_mail_config_id(self.project)
+            config = SmtpMailConfig.get_smtp_mail_config_values(self.project, id, is_internal=True)
             if "id" in config:
                 if config['id'] == id:
                     self.id         = config["id"]

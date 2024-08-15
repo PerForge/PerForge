@@ -16,16 +16,16 @@ import traceback
 import json
 import logging
 
-from app                                               import app
-from app.backend                                       import pkg
-from app.backend.integrations.secondary.influxdb       import Influxdb
-from app.backend.reporting.azure_wiki_report           import AzureWikiReport
-from app.backend.reporting.atlassian_confluence_report import AtlassianConfluenceReport
-from app.backend.reporting.atlassian_jira_report       import AtlassianJiraReport
-from app.backend.reporting.smtp_mail_report            import SmtpMailReport
-from app.backend.reporting.pdf_report                  import PdfReport
-from app.backend.errors                                import ErrorMessages
-from flask                                             import render_template, request, url_for, redirect, flash, jsonify, send_file
+from app                                                                       import app
+from app.backend                                                               import pkg
+from app.backend.errors                                                        import ErrorMessages
+from app.backend.integrations.influxdb.influxdb                                import Influxdb
+from app.backend.integrations.azure_wiki.azure_wiki_report                     import AzureWikiReport
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
+from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
+from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
+from app.backend.integrations.pdf.pdf_report                                   import PdfReport
+from flask                                                                     import render_template, request, url_for, redirect, flash, jsonify, send_file
 
 
 @app.route('/tests', methods=['GET'])
@@ -36,7 +36,7 @@ def get_tests():
         influxdb_configs = pkg.get_integration_config_names_and_ids(project, "influxdb")
         templates        = pkg.get_config_names_and_ids(project, "templates")
         template_groups  = pkg.get_config_names_and_ids(project, "template_groups")
-        output_configs   = pkg.get_output_configs(project)
+        output_configs   = pkg.get_output_integration_configs(project)
         return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = templates, template_groups = template_groups, output_configs=output_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -74,7 +74,7 @@ def generate_report():
                 elif action_id == "delete":
                     action_type = action_id
                 else:
-                    action_type = pkg.get_output_type_by_id(project, action_id)
+                    action_type = pkg.get_output_integration_type_by_id(project, action_id)
             else:
                 action_type = None
             if action_type == "azure":

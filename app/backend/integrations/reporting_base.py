@@ -15,11 +15,12 @@
 import re
 import logging
 
-from app.backend                                 import pkg
-from app.backend.ai_support.ai_support           import AISupport
-from app.backend.integrations.secondary.grafana  import Grafana
-from app.backend.integrations.secondary.influxdb import Influxdb
-from app.backend.validation                      import Validation
+from app.backend.integrations.ai_support.ai_support   import AISupport
+from app.backend.integrations.grafana.grafana         import Grafana
+from app.backend.integrations.influxdb.influxdb       import Influxdb
+from app.backend.integrations.grafana.grafana_config  import GrafanaConfig
+from app.backend.components.nfrs.nfr_validation       import NFRValidation
+from app.backend.components.templates.template_config import TemplateConfig
 
 
 class ReportingBase:
@@ -28,13 +29,13 @@ class ReportingBase:
         self.project        = project
         self.progress       = 0
         self.status         = "Not started"
-        self.validation_obj = Validation(project)
+        self.validation_obj = NFRValidation(project)
 
     def __del__(self):
         self.influxdb_obj.close_influxdb_connection()
 
     def set_template(self, template, influxdb):
-        template_obj                   = pkg.get_template_values(self.project, template)
+        template_obj                   = TemplateConfig.get_template_config_values(self.project, template)
         self.nfr                       = template_obj["nfr"]
         self.title                     = template_obj["title"]
         self.data                      = template_obj["data"]
@@ -51,14 +52,14 @@ class ReportingBase:
             self.ai_support_obj = AISupport(project=self.project, system_prompt=self.system_prompt_id)
 
     def set_template_group(self, template_group):
-        template_group_obj            = pkg.get_template_group_values(self.project, template_group)
+        template_group_obj            = TemplateConfig.get_template_group_config_values(self.project, template_group)
         self.group_title              = template_group_obj["title"]
         self.template_order           = template_group_obj["data"]
         self.template_group_prompt_id = template_group_obj["prompt_id"]
         self.ai_summary               = template_group_obj["ai_summary"]
 
     def get_template_data(self, template):
-        template_obj = pkg.get_template_values(self.project, template)
+        template_obj = TemplateConfig.get_template_config_values(self.project, template)
         return template_obj["data"]
 
     def replace_variables(self, text):
@@ -69,7 +70,7 @@ class ReportingBase:
             else:
                 logging.warning(f"Variable {var} not found in parameters")
         return text
-    
+
     def analyze_template(self):
         overall_summary = ""
         nfr_summary     = ""
@@ -82,7 +83,7 @@ class ReportingBase:
             if self.ai_aggregated_data_switch:
                 self.ai_support_obj.analyze_aggregated_data(data, self.aggregated_prompt_id)
             overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
-        else: 
+        else:
             overall_summary += f"\n\n {nfr_summary}"
         return overall_summary
 
@@ -91,7 +92,7 @@ class ReportingBase:
         if self.ai_summary:
             overall_summary = self.ai_support_obj.create_template_group_summary(self.template_group_prompt_id)
         return overall_summary
-    
+
     def generate_response(self):
         response = {}
         if self.ai_switch:
@@ -101,9 +102,9 @@ class ReportingBase:
             response["Input tokens"]  = 0
             response["Output tokens"] = 0
         return response
-        
+
     def collect_data(self, current_run_id, baseline_run_id = None):
-        default_grafana              = pkg.get_default_grafana(self.project)
+        default_grafana              = GrafanaConfig.get_default_grafana_config_id(self.project)
         default_grafana_obj          = Grafana(project=self.project, id=default_grafana)
         self.current_run_id          = current_run_id
         self.baseline_run_id         = baseline_run_id

@@ -15,12 +15,11 @@
 import os
 import logging
 
-from logging.handlers            import RotatingFileHandler
-from flask                       import Flask
-from flask_login                 import LoginManager
-from flask_bcrypt                import Bcrypt
-from app.models                  import db, DBMigrations
-from app.backend.pydantic_models import ValidateConfig
+from app.models       import db, DBMigrations
+from logging.handlers import RotatingFileHandler
+from flask            import Flask
+from flask_login      import LoginManager
+from flask_bcrypt     import Bcrypt
 
 
 # Grabs the folder where the script runs.
@@ -34,6 +33,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 class IgnoreStaticRequests(logging.Filter):
+
     def filter(self, record):
         return 'GET /static/' not in record.getMessage()
 
@@ -69,8 +69,6 @@ with app.app_context():
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-
-ValidateConfig.validate_models()
 
 # # Import routing, models and Start the App
 from app.views import (auth, custom, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates)

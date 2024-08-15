@@ -15,17 +15,17 @@
 import traceback
 import logging
 
-from flask              import render_template, request, url_for, redirect, flash, jsonify
-from app                import app
-from app.backend        import pkg
-from app.backend.errors import ErrorMessages
+from app                                    import app
+from app.backend.errors                     import ErrorMessages
+from app.backend.components.nfrs.nfr_config import NFRConfig
+from flask                                  import render_template, request, url_for, redirect, flash, jsonify
 
 
 @app.route('/nfrs', methods=['GET'])
 def get_nfrs():
     try:
         project   = request.cookies.get('project')
-        nfrs_list = pkg.get_nfrs(project)
+        nfrs_list = NFRConfig.get_all_nfrs(project)
         return render_template('home/nfrs.html', nfrs_list=nfrs_list)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -39,10 +39,10 @@ def get_nfr():
         project    = request.cookies.get('project')
         nfr_config = request.args.get('nfr_config')
         if nfr_config is not None:
-            nfr_data = pkg.get_nfr(project, nfr_config)
+            nfr_data = NFRConfig.get_nfr_values_by_id(project, nfr_config)
         if request.method == "POST":
             original_nfr_config = request.get_json().get("id")
-            nfr_config          = pkg.save_nfrs(project, request.get_json())
+            nfr_config          = NFRConfig.save_nfr_config(project, request.get_json())
             if original_nfr_config == nfr_config:
                 flash("NFR updated.", "info")
             else:
@@ -57,7 +57,7 @@ def get_nfr():
 def delete_nfrs():
     try:
         project = request.cookies.get('project')
-        pkg.delete_nfr(project, request.args.get('nfr_config'))
+        NFRConfig.delete_nfr_config(project, request.args.get('nfr_config'))
         flash("NFR deleted.", "info")
         return redirect(url_for('get_nfrs'))
     except Exception as er:

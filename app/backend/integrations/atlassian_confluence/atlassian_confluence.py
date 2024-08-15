@@ -18,10 +18,10 @@ import uuid
 import traceback
 import time
 
-from app.backend                          import pkg
-from app.backend.integrations.integration import Integration
-from atlassian                            import Confluence
-from os                                   import path
+from app.backend.integrations.integration                                      import Integration
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_config import AtlassianConfluenceConfig
+from atlassian                                                                 import Confluence
+from os                                                                        import path
 
 
 class AtlassianConfluence(Integration):
@@ -32,13 +32,13 @@ class AtlassianConfluence(Integration):
 
     def __str__(self):
         return f'Integration id is {self.id}, url is {self.org_url}'
-    
+
     def set_config(self, id):
         if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
             logging.warning("There is no config file.")
-        else:   
-            id = id if id else pkg.get_default_atlassian_confluence(self.project)
-            config = pkg.get_atlassian_confluence_config_values(self.project, id, is_internal=True)
+        else:
+            id = id if id else AtlassianConfluenceConfig.get_default_atlassian_confluence_config_id(self.project)
+            config = AtlassianConfluenceConfig.get_atlassian_confluence_config_values(self.project, id, is_internal=True)
             if "id" in config:
                 if config['id'] == id:
                     self.id        = config["id"]
