@@ -25,6 +25,7 @@ class InfluxdbModel(BaseModel):
     timeout   : str
     bucket    : str
     listener  : str
+    tmz       : str = Field(default="UTC")
     is_default: str
 
 

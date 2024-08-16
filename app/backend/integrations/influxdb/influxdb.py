@@ -31,7 +31,8 @@ class Influxdb(Integration):
     def __init__(self, project, id = None):
         super().__init__(project)
         self.set_config(id)
-        self.tmz = tz.tzutc()
+        self.tmz_utc   = tz.tzutc()
+        self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
 
     def __str__(self):
         return f'Integration id is {self.id}, url is {self.url}'
@@ -55,6 +56,7 @@ class Influxdb(Integration):
                     self.timeout  = config["timeout"]
                     self.bucket   = config["bucket"]
                     self.listener = config["listener"]
+                    self.tmz      = config["tmz"]
 
     def connect_to_influxdb(self):
         try:
@@ -70,6 +72,17 @@ class Influxdb(Integration):
         except Exception as er:
             logging.warning('ERROR: influxdb connection closing failed')
             logging.warning(er)
+   
+    def sort_tests(self, tests):
+        def start_time(e): return e['startTime']
+        if len(tests) != 0:
+            for test in tests:
+                test["startTimestamp"] = str(int(test["startTime"].timestamp() * 1000))
+                test["endTimestamp"]   = str(int(test["endTime"].timestamp() * 1000))
+                test["startTime"]      = datetime.strftime(test["startTime"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
+                test["endTime"]        = datetime.strftime(test["endTime"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
+        tests.sort(key=start_time, reverse=True)
+        return tests
 
     def get_test_log(self):
         result = []
@@ -84,6 +97,8 @@ class Influxdb(Integration):
                     del row.values["result"]
                     del row.values["table"]
                     result.append(row.values)
+            if result:
+                result = self.sort_tests(result)
             return result
         except Exception as er:
             logging.warning(er)
@@ -127,7 +142,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz), "%Y-%m-%d %I:%M:%S %p")
+                tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
         return tmp
 
     def get_start_time(self, run_id):
@@ -151,7 +166,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                tmp = int(flux_record['_time'].astimezone(self.tmz).timestamp() * 1000)
+                tmp = int(flux_record['_time'].astimezone(self.tmz_utc).timestamp() * 1000)
         return tmp
 
     def get_end_tmp(self, run_id):
@@ -163,7 +178,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                tmp = int(flux_record['_time'].astimezone(self.tmz).timestamp() * 1000)
+                tmp = int(flux_record['_time'].astimezone(self.tmz_utc).timestamp() * 1000)
         return tmp
 
     def get_human_end_time(self, run_id):
@@ -175,7 +190,7 @@ class Influxdb(Integration):
         # Influxdb returns a list of tables and rows, therefore it needs to be iterated in a loop
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz), "%Y-%m-%d %I:%M:%S %p")
+                tmp = datetime.strftime(flux_record['_time'].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
         return tmp
 
     def get_end_time(self, run_id):
@@ -221,15 +236,24 @@ class Influxdb(Integration):
     def delete_test_data(self, measurement, run_id, start = None, end = None):
         if start == None: start = "2000-01-01T00:00:00Z"
         else:
-            start = datetime.strftime(datetime.fromtimestamp(int(start)/1000).astimezone(self.tmz),"%Y-%m-%dT%H:%M:%SZ")
+            start = datetime.strftime(datetime.fromtimestamp(int(start)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
         if end   == None: end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         else:
-            end = datetime.strftime(datetime.fromtimestamp(int(end)/1000).astimezone(self.tmz),"%Y-%m-%dT%H:%M:%SZ")
+            end = datetime.strftime(datetime.fromtimestamp(int(end)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
         try:
             if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
                 self.influxdb_connection.delete_api().delete(start, end, '_measurement="'+measurement+'" AND testTitle="'+run_id+'"',bucket=self.bucket, org=self.org_id)
             else:
                 self.influxdb_connection.delete_api().delete(start, end, '_measurement="'+measurement+'" AND runId="'+run_id+'"',bucket=self.bucket, org=self.org_id)
+        except Exception as er:
+            logging.warning('ERROR: deleteTestPoint method failed')
+            logging.warning(er)
+    
+    def delete_custom(self, bucket, filetr):
+        try:
+            start = "2000-01-01T00:00:00Z"
+            end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.influxdb_connection.delete_api().delete(start, end, filetr, bucket=bucket, org=self.org_id)
         except Exception as er:
             logging.warning('ERROR: deleteTestPoint method failed')
             logging.warning(er)

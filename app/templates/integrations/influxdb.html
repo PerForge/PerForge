@@ -63,6 +63,14 @@
                                     </div>
                                     <label for="listener" class="input-label mt-2">Backend listener:</label>
                                     {{ form.listener(class="form-control") }}
+                                    <div class="tooltip-container">
+                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      <div class="tooltip-content">
+                                        The timezone will be used when generating timestamps in a human-readable format. If no timezone is specified, UTC will be used by default. For example, a timestamp might use 'US/Eastern'. More available timezones can be found here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+                                      </div>
+                                    </div>
+                                    <label for="tmz" class="mt-2">Timezone:</label>
+                                    {{ form.tmz(class="form-control") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>
