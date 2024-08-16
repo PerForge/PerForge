@@ -51,8 +51,6 @@ def load_tests():
         influxdb_obj = Influxdb(project=project, id=influxdb)
         influxdb_obj.connect_to_influxdb()
         tests = influxdb_obj.get_test_log()
-        if(tests):
-            tests = pkg.sort_tests(tests)
         return jsonify(status="success", tests=tests)
     except Exception:
         logging.warning(str(traceback.format_exc()))

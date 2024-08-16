@@ -36,6 +36,7 @@ class InfluxDBForm(FlaskForm):
     timeout    = StringField('Timeout', validators=[DataRequired()])
     bucket     = StringField('Bucket', validators=[DataRequired()])
     listener   = SelectField('Backend listener', choices=[('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient'), ('mderevyankoaqa', 'mderevyankoaqa')], default='InfluxdbBackendListenerClient')
+    tmz        = StringField('Timezone', default="UTC")
     is_default = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
 
 

@@ -23,7 +23,7 @@ from app.backend.integrations.atlassian_jira.atlassian_jira_report             i
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
 from app.backend.integrations.influxdb.influxdb                                import Influxdb
 from app.backend.integrations.grafana.grafana                                  import Grafana
-from flask                                                                     import request, make_response
+from flask                                                                     import request, redirect, make_response
 
 
 @app.route('/gen-report', methods=['GET'])
@@ -79,6 +79,7 @@ def influx_data_delete():
         start        = request.args.get('start')
         end          = request.args.get('end')
         status       = request.args.get('status')
+        redirect_url = request.args.get('redirect_url')
         influxdb_obj.connect_to_influxdb()
         if bucket: influxdb_obj.bucket = bucket
         if request.args.get('user') in ["admin"]:
@@ -86,10 +87,16 @@ def influx_data_delete():
                 influxdb_obj.delete_run_id(run_id=testTitle)
             elif status == "delete_timerange":
                 influxdb_obj.delete_run_id(run_id=testTitle, start=start, end=end)
+            elif status == "delete_custom":
+                filter = request.args.get('filter')
+                influxdb_obj.delete_custom(bucket=bucket, filetr=filter)
     except Exception:
         logging.warning(str(traceback.format_exc()))
     resp = make_response("Done")
     resp.headers['Access-Control-Allow-Origin']      = grafana_obj.server
     resp.headers['access-control-allow-methods']     = '*'
     resp.headers['access-control-allow-credentials'] = 'true'
-    return resp
+    if redirect_url:
+        return redirect(redirect_url, code=302)
+    else:
+        return resp
