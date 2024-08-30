@@ -1,0 +1,227 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Templates {% endblock %}
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<!-- <link type="text/css" href="/static/assets/css/integrations.css" rel="stylesheet"> -->
+{% endblock stylesheets %}
+{% block content %}
+    <main>
+        <div class="main-background">
+            {% include 'includes/sidebar.html' %}
+            <div class="main-body">
+                <div class="main-body-header">
+                    <a></a>
+                </div>
+                <div class="d-flex" style="flex-wrap: wrap;">
+                    <div class="card mb-3 margin-all-10" data-component-card="data-component-card" style="width: 100%;">
+                        <div class="card-header">
+                            <div class="justify-content-between align-items-center">
+                                <h4 class="mb-0">Templates
+                                    <div class="tooltip-container">
+                                      <a href="https://perforge.app/docs/configuration/templates" target="_blank">
+                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      </a>
+                                      <div class="tooltip-content" style="font-size: 16px;">
+                                          Click to learn more
+                                      </div>
+                                    </div>
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="templates" data-list='{"valueNames":["name", "actions"], "page": 5, "pagination": true}'>
+                                <div class="d-flex align-items-center justify-content-end mb-3">
+                                    <div class="d-flex">
+                                        <a class="btn btn-primary ms-2" type="button" href="/template">Add template</a>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table fs--1 mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th class="sort" data-sort="name">Name</th>
+                                                <th class="sort" data-sort="title">Report Title</th>
+                                                <th class="sort" data-sort="nfr">NFR</th>
+                                                <th class="sort" data-sort="nfr-switch">NFR Switch</th>
+                                                <th class="sort" data-sort="template_prompt_id">Template prompt</th>
+                                                <th class="sort" data-sort="aggregated_prompt_id">Aggregated data prompt</th>
+                                                <th class="sort" data-sort="ai-switch">AI Switch</th>
+                                                <th class="sort" data-sort="actions">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="list">
+                                            {% for template in templates %}
+                                            <tr>
+                                                <td class="name">{{ template.name }}</td>
+                                                <td class="title">{{ template.title }}</td>
+                                                <td class="nfr">
+                                                    {% for nfr in nfrs %}
+                                                        {% if nfr.id == template.nfr %}
+                                                            {{ nfr.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="nfr-switch">{{ template.nfrs_switch }}</td>
+                                                <td class="template_prompt_id">
+                                                    {% for prompt in template_prompts %}
+                                                        {% if prompt.id == template.template_prompt_id %}
+                                                            {{ prompt.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="aggregated_prompt_id">
+                                                    {% for prompt in aggregated_data_prompts %}
+                                                        {% if prompt.id == template.aggregated_prompt_id %}
+                                                            {{ prompt.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="ai-switch">{{ template.ai_switch }}</td>
+                                                <td class="actions" style="width: 20%;">
+                                                    <a class="btn btn-secondary" href="/template?template_config={{ template.id }}">Edit</a>
+                                                    <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ template.id }}">Delete</a>
+                                                </td>
+                                            </tr>
+                                            <div class="modal fade" id="deleteModal{{ template.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                              <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                  <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                  </div>
+                                                  <div class="modal-body">
+                                                    Are you sure you want to delete the "{{ template.name }}" template?
+                                                  </div>
+                                                  <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <a class="btn btn-danger" href="/delete-template?template_config={{ template.id }}">Confirm Delete</a>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between mt-3 fs--1">
+                                    <span data-list-info="data-list-info"></span>
+                                    <div class="d-flex">
+                                        <button class="page-link" data-list-pagination="prev">
+                                            <span class="fas fa-chevron-left"></span>
+                                        </button>
+                                        <ul class="mb-0 pagination"></ul>
+                                        <button class="page-link pe-0" data-list-pagination="next">
+                                            <span class="fas fa-chevron-right"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-3 margin-all-10" data-component-card="data-component-card" style="width: 100%;">
+                        <div class="card-header">
+                            <div class="justify-content-between align-items-center">
+                                <h4 class="mb-0">Template groups (optional)
+                                    <div class="tooltip-container">
+                                      <a href="https://perforge.app/docs/configuration/template_groups" target="_blank">
+                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                      </a>
+                                      <div class="tooltip-content" style="font-size: 16px;">
+                                          Click to learn more
+                                      </div>
+                                    </div>
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="template_groups" data-list='{"valueNames":["name", "actions"], "page": 5, "pagination": true}'>
+                                <div class="d-flex align-items-center justify-content-end mb-3">
+                                    <div class="d-flex">
+                                        <a class="btn btn-primary ms-2" type="button" href="/template-group">Add template group</a>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table fs--1 mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th class="sort" data-sort="name">Name</th>
+                                                <th class="sort" data-sort="title">Report Title</th>
+                                                <th class="sort" data-sort="template">Templates</th>
+                                                <th class="sort" data-sort="prompt_id">Prompt</th>
+                                                <th class="sort" data-sort="ai_summary">AI Switch</th>
+                                                <th class="sort" data-sort="actions">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="list">
+                                            {% for template_group in template_groups %}
+                                            <tr>
+                                                <td class="name">{{ template_group.name }}</td>
+                                                <td class="title">{{ template_group.title }}</td>
+                                                {% set counter = namespace(value=0) %}
+                                                <td class="template list">
+                                                    {% for element in template_group.data %}
+                                                        {% if element.type == "template" %}
+                                                            {% set counter.value = counter.value + 1 %}
+                                                            {{ counter.value }}. {{ element.content }}<br>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="aggregated_prompt_id">
+                                                    {% for prompt in template_group_prompts %}
+                                                        {% if prompt.id == template_group.prompt_id %}
+                                                            {{ prompt.name }}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="ai_summary">{{ template_group.ai_summary }}</td>
+                                                <td class="actions" style="width: 20%;">
+                                                    <a class="btn btn-secondary" href="/template-group?template_group_config={{ template_group.id }}">Edit</a>
+                                                    <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModalGroup{{ template_group.id }}">Delete</a>
+                                                </td>
+                                            </tr>
+                                            <div class="modal fade" id="deleteModalGroup{{ template_group.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                              <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                  <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                  </div>
+                                                  <div class="modal-body">
+                                                    Are you sure you want to delete the "{{ template_group.name }}" template group?
+                                                  </div>
+                                                  <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <a class="btn btn-danger" href="/delete-template-group?template_group_config={{ template_group.id }}">Confirm Delete</a>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between mt-3 fs--1">
+                                    <span data-list-info="data-list-info"></span>
+                                    <div class="d-flex">
+                                        <button class="page-link" data-list-pagination="prev">
+                                            <span class="fas fa-chevron-left"></span>
+                                        </button>
+                                        <ul class="mb-0 pagination"></ul>
+                                        <button class="page-link pe-0" data-list-pagination="next">
+                                            <span class="fas fa-chevron-right"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% with msgs = get_flashed_messages() %}
+                    {% include 'includes/flashed-msg.html' %}
+                {% endwith %}
+            </div>
+        </div>
+    </main>
+{% endblock content %}

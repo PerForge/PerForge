@@ -17,8 +17,8 @@ import logging
 
 from app                import app, login_manager, bc
 from app.backend        import pkg
-from app.models         import Users, Secret
-from app.forms          import LoginForm, RegisterForm, SecretForm
+from app.models         import Users
+from app.forms          import LoginForm, RegisterForm
 from app.backend.errors import ErrorMessages
 from flask              import g, render_template, request, url_for, redirect, flash
 from flask_login        import login_user, logout_user, current_user
@@ -27,7 +27,7 @@ from functools          import wraps
 
 
 # List of routes that do not require authentication
-no_auth_required_routes = ['login', 'register', 'static','register_admin', 'generate', 'generate_report']
+no_auth_required_routes = ['login', 'register', 'static','register_admin', 'generate', 'generate_report','delete-influxdata','gen-report']
 need_admin_routes = ['static','register_admin']
 
 @app.before_request
@@ -86,7 +86,7 @@ def register():
                 return redirect(url_for('login')), flash("User created", "info")
         else:
             flash("Input error.", "info")
-        return render_template( 'accounts/register.html', form=form)
+        return render_template('accounts/register.html', form=form)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.REGISTER.value, "error")
@@ -106,10 +106,10 @@ def register_admin():
         # check if both http method is POST and form is valid on submit
         if form.validate_on_submit():
             # assign form data to variables
-            username      = request.form.get('username', '', type=str)
-            password      = request.form.get('password', '', type=str) 
+            username = request.form.get('username', '', type=str)
+            password = request.form.get('password', '', type=str)
             # filter User out of database through username
-            user          = Users.query.filter_by(user=username).first()
+            user = Users.query.filter_by(user=username).first()
             # filter User out of database through username
             pw_hash = bc.generate_password_hash(password)
             user    = Users(username, pw_hash, is_admin=True)
@@ -117,7 +117,7 @@ def register_admin():
             return redirect(url_for('login')), flash("Admin user created", "info")
         else:
             flash("Input error.", "info")
-        return render_template( 'accounts/register.html', form=form, admin=True)
+        return render_template('accounts/register.html', form=form, admin=True)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.REGISTER.value, "error")
@@ -145,22 +145,11 @@ def login():
             else:
                 flash("Unknown user.", "info")
         admin = getattr(current_user, 'is_admin', False)
-        return render_template( 'accounts/login.html', form=form, admin=admin)
+        return render_template('accounts/login.html', form=form, admin=admin)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.LOGIN.value, "error")
         return redirect(url_for('login'))
-
-# App main route + generic routing
-@app.route('/choose-project', methods=['GET'])
-def choose_project():
-    try:    
-        projects = pkg.get_projects()
-        return render_template('home/choose-project.html', projects=projects)
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_PROMPTS.value, "error")
-    return redirect(url_for('index'))
 
 # App main route + generic routing
 @app.route('/', defaults={'path': 'index.html'})
@@ -169,9 +158,10 @@ def index(path):
     try:
         project = request.cookies.get('project')
         if project != None:
-            projects      = pkg.get_projects()
-            project_stats = pkg.get_project_stats(project)
-            return render_template( 'home/' + path, projects = projects, project_stats=project_stats)
+            projects        = pkg.get_all_projects()
+            project_stats   = pkg.get_project_config_stats(project)
+            current_version = pkg.get_current_version_from_file()
+            return render_template('home/' + path, projects = projects, project_stats=project_stats, current_version=current_version)
         else:
             return redirect(url_for('choose_project'))
     except TemplateNotFound:
@@ -180,111 +170,3 @@ def index(path):
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.OOPS_MSG.value, "error")
         return render_template('home/page-500.html'), 500
-    
-
-@app.route('/secrets', methods=['get'])
-def get_secrets():
-    try:
-        secrets = Secret.get_secrets()
-        return render_template('home/secrets.html', secrets=secrets)
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
-        return redirect(url_for("index"))
-
-@app.route('/add_secret', methods=['GET', 'POST'])
-def add_secret():
-    try:
-        form = SecretForm(request.form)
-        if form.validate_on_submit():
-            try:
-                secret = request.form.to_dict()
-                if current_user.is_admin:
-                    secret_type = "admin"
-                else:
-                    secret_type = "general"
-                new_secret = Secret(type=secret_type, value=secret.get("value"), key=secret.get("key"))
-                new_secret.save()
-                flash("Secret added.", "info")
-                return redirect(url_for('get_secrets'))
-            except Exception:
-                logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_SECRET.value, "error")
-                return redirect(url_for('get_secrets'))
-        return render_template('home/secret.html', form=form)
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
-        return redirect(url_for('get_secrets'))
-
-@app.route('/edit_secret', methods=['GET'])
-def edit_secret():
-    try:
-        secret_id   = request.args.get('secret_id')
-        secret_type = request.args.get('secret_type')
-
-        if not secret_id or not secret_type:
-            flash("Secret ID and type are required.", "error")
-            return redirect(url_for('get_secrets'))
-        
-        if secret_type == "admin" and not current_user.is_admin:
-            flash("You do not have permission to access this page.", "error")
-            return redirect(url_for('get_secrets'))
-        
-        output = Secret.get(id=secret_id)
-        form   = SecretForm(output)
-        return render_template('home/secret.html', form=form, secret_id=secret_id, secret_type=secret_type)
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
-        return redirect(url_for('get_secrets'))
-
-@app.route('/update_secret', methods=['POST'])
-def update_secret():
-    try:
-        form      = SecretForm(request.form)
-        secret_id = request.args.get('secret_id')
-        if form.validate_on_submit():
-            try:
-                secret_data = request.form.to_dict()
-                secret_id   = secret_data.get("id")
-                secret_type = secret_data.get("type")
-                if secret_type == "None":
-                    if current_user.is_admin:
-                        secret_type = "admin"
-                    else:
-                        secret_type = "general"
-                if Secret.if_exists(id=secret_id):
-                    Secret.update(id=secret_id, new_type=secret_type, new_value=secret_data.get("value"), new_key=secret_data.get("key"))
-                    flash("Secret updated.", "info")
-                return redirect(url_for('get_secrets'))
-            except Exception:
-                logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_SECRET.value, "error")
-                return redirect(url_for('get_secrets'))
-        return render_template('home/secret.html', form=form, secret_id=secret_id, secret_type=secret_type)
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
-        return redirect(url_for('get_secrets'))
-
-@app.route('/delete/secret', methods=['GET'])
-def delete_secret():
-    try:
-        secret_id   = request.args.get('secret_id')
-        secret_type = request.args.get('secret_type')
-
-        if not secret_id or not secret_type:
-            flash("Secret ID and type are required.", "error")
-            return redirect(url_for('get_secrets'))
-
-        if secret_type == "admin" and not current_user.is_admin:
-            flash("You do not have permission to access this page.", "error")
-            return redirect(url_for('get_secrets'))
-
-        Secret.delete(id=secret_id)
-        flash("Secret deleted.", "info")
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_SECRET.value, "error")
-    return redirect(url_for('get_secrets'))

@@ -23,6 +23,7 @@ from sqlalchemy              import inspect, text
 db = SQLAlchemy()
 
 class Users(db.Model, UserMixin):
+
     __tablename__ = 'Users'
     id            = db.Column(db.Integer, primary_key=True)
     user          = db.Column(db.String(64), unique=True)
@@ -43,7 +44,7 @@ class Users(db.Model, UserMixin):
         # Commit change and save the object
         db.session.commit()
         return self
-    
+
     def check_admin_exists():
         # Query the Users table for any user with is_admin set to True
         admin_user = Users.query.filter_by(is_admin=True).first()
@@ -54,11 +55,12 @@ class Users(db.Model, UserMixin):
             return False
 
 class Secret(db.Model):
+
     __tablename__ = 'Secrets'
-    id    = db.Column(db.Integer, primary_key=True)
-    type  = db.Column(db.String(120))
-    key   = db.Column(db.String(120), unique=True)
-    value = db.Column(db.String(500))
+    id            = db.Column(db.Integer, primary_key=True)
+    type          = db.Column(db.String(120))
+    key           = db.Column(db.String(120), unique=True)
+    value         = db.Column(db.String(500))
 
     def __init__(self, type, value, key):
         self.type  = type
@@ -129,6 +131,7 @@ class Secret(db.Model):
 
 
 class DBMigrations:
+
     def migration_1():
         logging.warning('Migration number 1 has started.')
         # Check if the 'type' column already exists

@@ -16,11 +16,18 @@ import traceback
 import logging
 import json
 
-from flask              import render_template, request, url_for, redirect, flash
-from app                import app
-from app.backend        import pkg
-from app.backend.errors import ErrorMessages
-from app.forms          import InfluxDBForm, GrafanaForm, AzureForm, AtlassianConfluenceForm, AtlassianJiraForm, SMTPMailForm, AISupportForm
+from app                                                                       import app
+from app.forms                                                                 import InfluxDBForm, GrafanaForm, AzureWikiForm, AtlassianConfluenceForm, AtlassianJiraForm, SMTPMailForm, AISupportForm
+from app.backend                                                               import pkg
+from app.backend.errors                                                        import ErrorMessages
+from app.backend.integrations.influxdb.influxdb_config                         import InfluxdbConfig
+from app.backend.integrations.grafana.grafana_config                           import GrafanaConfig
+from app.backend.integrations.azure_wiki.azure_wiki_config                     import AzureWikiConfig
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_config import AtlassianConfluenceConfig
+from app.backend.integrations.atlassian_jira.atlassian_jira_config             import AtlassianJiraConfig
+from app.backend.integrations.smtp_mail.smtp_mail_config                       import SmtpMailConfig
+from app.backend.integrations.ai_support.ai_config                             import AISupportConfig
+from flask                                                                     import render_template, request, url_for, redirect, flash
 
 
 @app.route('/integrations')
@@ -55,12 +62,12 @@ def add_influxdb():
         project         = request.cookies.get('project')
         influxdb_config = request.args.get('influxdb_config')
         if influxdb_config is not None:
-            output = pkg.get_influxdb_config_values(project, influxdb_config)
+            output = InfluxdbConfig.get_influxdb_config_values(project, influxdb_config)
             form   = InfluxDBForm(output)
         if form.validate_on_submit():
             try:
                 original_influxdb_config = request.form.to_dict().get("id")
-                influxdb_config          = pkg.save_influxdb(project, request.form.to_dict())
+                influxdb_config          = InfluxdbConfig.save_influxdb_config(project, request.form.to_dict())
                 if original_influxdb_config == influxdb_config:
                     flash("Integration updated.", "info")
                 else:
@@ -81,7 +88,7 @@ def delete_influxdb():
         influxdb_config = request.args.get('influxdb_config')
         project         = request.cookies.get('project')
         if influxdb_config is not None:
-            pkg.delete_influxdb_config(project, influxdb_config)
+            InfluxdbConfig.delete_influxdb_config(project, influxdb_config)
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -95,13 +102,13 @@ def add_grafana():
         project        = request.cookies.get('project')
         grafana_config = request.args.get('grafana_config')
         if grafana_config is not None:
-            output = pkg.get_grafana_config_values(project, grafana_config)
+            output = GrafanaConfig.get_grafana_config_values(project, grafana_config)
             form   = GrafanaForm(data=output)
         if request.method == 'POST':
             try:
                 data                    = json.loads(request.data)
                 original_grafana_config = data.get("id")
-                grafana_config          = pkg.save_grafana(project, data)
+                grafana_config          = GrafanaConfig.save_grafana_config(project, data)
                 if original_grafana_config == grafana_config:
                     flash("Integration updated.", "info")
                 else:
@@ -123,7 +130,7 @@ def delete_grafana_config():
         grafana_config = request.args.get('grafana_config')
         project        = request.cookies.get('project')
         if grafana_config is not None:
-            pkg.delete_grafana_config(project, grafana_config)
+            GrafanaConfig.delete_grafana_config(project, grafana_config)
             flash("Integration deleted.", "info")
     except Exception as er:
         logging.warning(str(traceback.format_exc()))
@@ -133,28 +140,28 @@ def delete_grafana_config():
 @app.route('/azure', methods=['GET', 'POST'])
 def add_azure():
     try:
-        form         = AzureForm(request.form)
+        form         = AzureWikiForm(request.form)
         project      = request.cookies.get('project')
         azure_config = request.args.get('azure_config')
         if azure_config is not None:
-            output = pkg.get_azure_config_values(project, azure_config)
-            form   = AzureForm(output)
+            output = AzureWikiConfig.get_azure_wiki_config_values(project, azure_config)
+            form   = AzureWikiForm(output)
         if form.validate_on_submit():
             try:
                 original_azure_config = request.form.to_dict().get("id")
-                azure_config          = pkg.save_azure(project, request.form.to_dict())
+                azure_config          = AzureWikiConfig.save_azure_wiki_config(project, request.form.to_dict())
                 if original_azure_config == azure_config:
                     flash("Integration updated.", "info")
                 else:
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_AZURE.value, "error")
+                flash(ErrorMessages.SAVE_AZURE_WIKI.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/azure.html', form=form, azure_config=azure_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_AZURE.value, "error")
+        flash(ErrorMessages.GET_AZURE_WIKI.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/azure', methods=['GET'])
@@ -163,11 +170,11 @@ def delete_azure_config():
         azure_config = request.args.get('azure_config')
         project      = request.cookies.get('project')
         if azure_config is not None:
-            pkg.delete_azure_config(project, azure_config)
+            AzureWikiConfig.delete_azure_wiki_config(project, azure_config)
             flash("Integration deleted.", "info")
     except Exception as er:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_AZURE.value, "error")
+        flash(ErrorMessages.DELETE_AZURE_WIKI.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/atlassian-confluence', methods=['GET', 'POST'])
@@ -177,12 +184,12 @@ def add_atlassian_confluence():
         project                     = request.cookies.get('project')
         atlassian_confluence_config = request.args.get('atlassian_confluence_config')
         if atlassian_confluence_config is not None:
-            output = pkg.get_atlassian_confluence_config_values(project, atlassian_confluence_config)
+            output = AtlassianConfluenceConfig.get_atlassian_confluence_config_values(project, atlassian_confluence_config)
             form   = AtlassianConfluenceForm(output)
         if form.validate_on_submit():
             try:
                 original_atlassian_confluence_config = request.form.to_dict().get("id")
-                atlassian_confluence_config          = pkg.save_atlassian_confluence(project, request.form.to_dict())
+                atlassian_confluence_config          = AtlassianConfluenceConfig.save_atlassian_confluence_config(project, request.form.to_dict())
                 if original_atlassian_confluence_config == atlassian_confluence_config:
                     flash("Integration updated.", "info")
                 else:
@@ -203,7 +210,7 @@ def delete_atlassian_confluence():
         atlassian_confluence_config = request.args.get('atlassian_confluence_config')
         project                     = request.cookies.get('project')
         if atlassian_confluence_config is not None:
-            pkg.delete_atlassian_confluence_config(project, atlassian_confluence_config)
+            AtlassianConfluenceConfig.delete_atlassian_confluence_config(project, atlassian_confluence_config)
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -217,12 +224,12 @@ def add_atlassian_jira():
         project               = request.cookies.get('project')
         atlassian_jira_config = request.args.get('atlassian_jira_config')
         if atlassian_jira_config is not None:
-            output = pkg.get_atlassian_jira_config_values(project, atlassian_jira_config)
+            output = AtlassianJiraConfig.get_atlassian_jira_config_values(project, atlassian_jira_config)
             form   = AtlassianJiraForm(output)
         if form.validate_on_submit():
-            try: 
+            try:
                 original_atlassian_jira_config = request.form.to_dict().get("id")
-                atlassian_jira_config          = pkg.save_atlassian_jira(project, request.form.to_dict())
+                atlassian_jira_config          = AtlassianJiraConfig.save_atlassian_jira_config(project, request.form.to_dict())
                 if original_atlassian_jira_config == atlassian_jira_config:
                     flash("Integration updated.", "info")
                 else:
@@ -243,7 +250,7 @@ def delete_atlassian_jira():
         atlassian_jira_config = request.args.get('atlassian_jira_config')
         project               = request.cookies.get('project')
         if atlassian_jira_config is not None:
-            pkg.delete_atlassian_jira_config(project, atlassian_jira_config)
+            AtlassianJiraConfig.delete_atlassian_jira_config(project, atlassian_jira_config)
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -257,13 +264,13 @@ def add_smtp_mail():
         project          = request.cookies.get('project')
         smtp_mail_config = request.args.get('smtp_mail_config')
         if smtp_mail_config is not None:
-            output = pkg.get_smtp_mail_config_values(project, smtp_mail_config)
+            output = SmtpMailConfig.get_smtp_mail_config_values(project, smtp_mail_config)
             form   = SMTPMailForm(output)
         if request.method == 'POST':
             try:
                 data                      = json.loads(request.data)
                 original_smtp_mail_config = data.get("id")
-                smtp_mail_config          = pkg.save_smtp_mail(project, data)
+                smtp_mail_config          = SmtpMailConfig.save_smtp_mail_config(project, data)
                 if original_smtp_mail_config == smtp_mail_config:
                     flash("Integration updated.", "info")
                 else:
@@ -285,7 +292,7 @@ def delete_smtp_mail_config():
         smtp_mail_config = request.args.get('smtp_mail_config')
         project          = request.cookies.get('project')
         if smtp_mail_config is not None:
-            pkg.delete_smtp_mail_config(project, smtp_mail_config)
+            SmtpMailConfig.delete_smtp_mail_config(project, smtp_mail_config)
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -299,12 +306,12 @@ def add_ai_support():
         project           = request.cookies.get('project')
         ai_support_config = request.args.get('ai_support_config')
         if ai_support_config is not None:
-            output = pkg.get_ai_support_config_values(project, ai_support_config)
+            output = AISupportConfig.get_ai_support_config_values(project, ai_support_config)
             form   = AISupportForm(output)
         if form.validate_on_submit():
             try:
                 original_ai_support_config = request.form.to_dict().get("id")
-                ai_support_config          = pkg.save_ai_support(project, request.form.to_dict())
+                ai_support_config          = AISupportConfig.save_ai_support_config(project, request.form.to_dict())
                 if original_ai_support_config == ai_support_config:
                     flash("Integration updated.", "info")
                 else:
@@ -325,7 +332,7 @@ def delete_ai_support():
         ai_support_config = request.args.get('ai_support_config')
         project           = request.cookies.get('project')
         if ai_support_config is not None:
-            pkg.delete_ai_support_config(project, ai_support_config)
+            AISupportConfig.delete_ai_support_config(project, ai_support_config)
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

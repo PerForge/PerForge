@@ -25,7 +25,7 @@
             </span>
         </div>
     </a>
-    <a class="nav-link" type="button" href="/reporting">
+    <a class="nav-link" type="button" href="/templates">
         <div class="d-flex align-items-center">
             <span class="nav-link-icon">
                 <span class="fa-solid fa-diagram-project"></span>
@@ -157,7 +157,7 @@
                     const projectId = response['projects'][i]['id'];
                     const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="/set-project?project='+projectId+'">'+projectName+'</a>'
                     wrapper.insertAdjacentHTML("afterbegin", projectElement);
-                    
+
                     if (projectIdFromCookie === projectId) {
                         var currentProject = document.getElementById('projects-dropdown');
                         currentProject.textContent += projectName;
