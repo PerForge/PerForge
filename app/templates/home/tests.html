@@ -97,6 +97,7 @@
                                             <th></th>
                                             <th></th>
                                             <th></th>
+                                            <th></th>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -272,6 +273,13 @@
                             checkboxData['baseline_test_title'] = value;
                             checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
                         });
+
+                        const reportCell = row.insertCell();
+                        const btn = document.createElement('a');
+                        btn.className = 'btn btn-danger';
+                        btn.href = `/report?test_title=${test.test_title}`;
+                        btn.textContent = 'Report';
+                        reportCell.appendChild(btn);
                     });
 
                     perforge.utils.listInit();

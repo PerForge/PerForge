@@ -1,0 +1,398 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Prompts {% endblock %} 
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<style>
+    .chart-container {
+        width: 600px;
+        height: 400px;
+        margin: 20px auto;
+    }
+    .checkbox-container {
+        text-align: center;
+        margin: 20px;
+    }
+    .table-container {
+        width: 80%;
+        margin: 20px auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    th {
+        background-color: #f2f2f2;
+        text-align: left;
+    }
+</style>
+{% endblock stylesheets %}
+{% block content %}
+<main>
+    <div class="main-background">
+      {% include 'includes/sidebar.html' %}
+      <div class="main-body">
+        <div class="main-body-header">
+        {% with msgs = get_flashed_messages() %}
+            {% include 'includes/flashed-msg.html' %}
+        {% endwith %}
+        </div>
+        <div class="chart-container">
+            <canvas id="throughputUsersChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="rtChart"></canvas>
+        </div>
+        <div class="checkbox-container">
+            <label><input type="checkbox" id="throughputCheckbox" checked> Throughput</label>
+            <label><input type="checkbox" id="usersCheckbox" checked> Users</label>
+            <label><input type="checkbox" id="rtCheckbox" checked> Response Time</label>
+        </div>
+        <div class="chart-container">
+            <canvas id="customChart"></canvas>
+        </div>
+        <div class="table-container">
+            <table id="analysisTable">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Method</th>
+                        <th>Period</th>
+                        <th>Description</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Analysis data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let chartData = null;
+            let customChartInstance = null;
+            const testTitle = "{{ test_title }}";
+    
+            console.log(`Fetching data for test_title: ${testTitle}`); // Debugging
+    
+            fetch(`/api/data?test_title=${encodeURIComponent(testTitle)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(response => {
+                    console.log('Data fetched:', response); // Debugging
+                    chartData = response.data;
+                    const analysisData = response.analysis;
+                    const timestamps = chartData.map(d => new Date(d.timestamp));
+                    const throughput = chartData.map(d => d.throughput);
+                    const users = chartData.map(d => d.users);
+                    const rt = chartData.map(d => d.rt);
+                    const throughputAnomalies = chartData.map(d => d.throughput_anomaly !== 'Normal');
+                    const usersAnomalies = chartData.map(d => d.users_anomaly !== 'Normal');
+                    const rtAnomalies = chartData.map(d => d.rt_anomaly !== 'Normal');
+                    const throughputAnomalyMessages = chartData.map(d => d.throughput_anomaly);
+                    const usersAnomalyMessages = chartData.map(d => d.users_anomaly);
+                    const rtAnomalyMessages = chartData.map(d => d.rt_anomaly);
+    
+                    renderCombinedChart('throughputUsersChart', 'Throughput and Users', timestamps, throughput, users, throughputAnomalies, usersAnomalies, throughputAnomalyMessages, usersAnomalyMessages);
+                    renderChart('rtChart', 'Response Time', timestamps, rt, rtAnomalies, rtAnomalyMessages);
+                    renderCustomChart();
+                    renderAnalysisTable(analysisData);
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error); // Debugging
+                });
+    
+            function renderCombinedChart(canvasId, label, labels, data1, data2, anomalies1, anomalies2, anomalyMessages1, anomalyMessages2) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Throughput',
+                                data: data1,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                                fill: false,
+                                yAxisID: 'y1',
+                                pointBackgroundColor: anomalies1.map(anomaly => anomaly ? 'red' : 'rgba(75, 192, 192, 1)'),
+                                pointRadius: anomalies1.map(anomaly => anomaly ? 3 : 1.5),  // Smaller points
+                                cubicInterpolationMode: 'monotone'  // Smoother lines
+                            },
+                            {
+                                label: 'Users',
+                                data: data2,
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1,
+                                fill: false,
+                                yAxisID: 'y2',
+                                pointBackgroundColor: anomalies2.map(anomaly => anomaly ? 'red' : 'rgba(255, 99, 132, 1)'),
+                                pointRadius: anomalies2.map(anomaly => anomaly ? 3 : 1.5),  // Smaller points
+                                cubicInterpolationMode: 'monotone'  // Smoother lines
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Timestamp'
+                                }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Throughput'
+                                }
+                            },
+                            y2: {
+                                beginAtZero: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Users'
+                                },
+                                grid: {
+                                    drawOnChartArea: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        const datasetIndex = context.datasetIndex;
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.parsed.y;
+                                        if (datasetIndex === 0 && anomalies1[index]) {
+                                            label += ` (Anomaly: ${anomalyMessages1[index]})`;
+                                        } else if (datasetIndex === 1 && anomalies2[index]) {
+                                            label += ` (Anomaly: ${anomalyMessages2[index]})`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+    
+            function renderChart(canvasId, label, labels, data, anomalies, anomalyMessages) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                            fill: false,
+                            pointBackgroundColor: anomalies.map(anomaly => anomaly ? 'red' : 'rgba(75, 192, 192, 1)'),
+                            pointRadius: anomalies.map(anomaly => anomaly ? 3 : 1.5),  // Smaller points
+                            cubicInterpolationMode: 'monotone'  // Smoother lines
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Timestamp'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: label
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.parsed.y;
+                                        if (anomalies[index]) {
+                                            label += ` (Anomaly: ${anomalyMessages[index]})`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+    
+            function renderCustomChart() {
+                const ctx = document.getElementById('customChart').getContext('2d');
+                const timestamps = chartData.map(d => new Date(d.timestamp));
+                const throughput = chartData.map(d => d.throughput);
+                const users = chartData.map(d => d.users);
+                const rt = chartData.map(d => d.rt);
+                const throughputAnomalies = chartData.map(d => d.throughput_anomaly !== 'Normal');
+                const usersAnomalies = chartData.map(d => d.users_anomaly !== 'Normal');
+                const rtAnomalies = chartData.map(d => d.rt_anomaly !== 'Normal');
+                const throughputAnomalyMessages = chartData.map(d => d.throughput_anomaly);
+                const usersAnomalyMessages = chartData.map(d => d.users_anomaly);
+                const rtAnomalyMessages = chartData.map(d => d.rt_anomaly);
+    
+                const datasets = [];
+                if (document.getElementById('throughputCheckbox').checked) {
+                    datasets.push({
+                        label: 'Throughput',
+                        data: throughput,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        fill: false,
+                        pointBackgroundColor: throughputAnomalies.map(anomaly => anomaly ? 'red' : 'rgba(75, 192, 192, 1)'),
+                        pointRadius: throughputAnomalies.map(anomaly => anomaly ? 3 : 1.5),  // Smaller points
+                        cubicInterpolationMode: 'monotone'  // Smoother lines
+                    });
+                }
+                if (document.getElementById('usersCheckbox').checked) {
+                    datasets.push({
+                        label: 'Users',
+                        data: users,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1,
+                        fill: false,
+                        pointBackgroundColor: usersAnomalies.map(anomaly => anomaly ? 'red' : 'rgba(255, 99, 132, 1)'),
+                        pointRadius: usersAnomalies.map(anomaly => anomaly ? 3 : 1.5),  // Smaller points
+                        cubicInterpolationMode: 'monotone'  // Smoother lines
+                    });
+                }
+                if (document.getElementById('rtCheckbox').checked) {
+                    datasets.push({
+                        label: 'Response Time',
+                        data: rt,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        fill: false,
+                        pointBackgroundColor: rtAnomalies.map(anomaly => anomaly ? 'red' : 'rgba(54, 162, 235, 1)'),
+                        pointRadius: rtAnomalies.map(anomaly => anomaly ? 3 : 1.5),  // Smaller points
+                        cubicInterpolationMode: 'monotone'  // Smoother lines
+                    });
+                }
+    
+                if (customChartInstance) {
+                    customChartInstance.destroy();
+                }
+    
+                customChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timestamps,
+                        datasets: datasets
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'minute'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Timestamp'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += context.parsed.y;
+                                        if (context.dataset.label === 'Throughput' && throughputAnomalies[index]) {
+                                            label += ` (Anomaly: ${throughputAnomalyMessages[index]})`;
+                                        } else if (context.dataset.label === 'Users' && usersAnomalies[index]) {
+                                            label += ` (Anomaly: ${usersAnomalyMessages[index]})`;
+                                        } else if (context.dataset.label === 'Response Time' && rtAnomalies[index]) {
+                                            label += ` (Anomaly: ${rtAnomalyMessages[index]})`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+    
+            function renderAnalysisTable(analysisData) {
+                const tableBody = document.getElementById('analysisTable').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = ''; // Clear existing rows
+    
+                analysisData.forEach(item => {
+                    const row = tableBody.insertRow();
+                    const statusCell = row.insertCell(0);
+                    const methodCell = row.insertCell(1);
+                    const periodCell = row.insertCell(2);
+                    const descriptionCell = row.insertCell(3);
+                    const valueCell = row.insertCell(4);
+    
+                    statusCell.textContent = item.status;
+                    methodCell.textContent = item.method || '';
+                    periodCell.textContent = item.period || '';
+                    descriptionCell.textContent = item.description;
+                    valueCell.textContent = item.value !== null ? item.value : '';
+                });
+            }
+    
+            document.getElementById('throughputCheckbox').addEventListener('change', renderCustomChart);
+            document.getElementById('usersCheckbox').addEventListener('change', renderCustomChart);
+            document.getElementById('rtCheckbox').addEventListener('change', renderCustomChart);
+        });
+    </script>
+</main>
+{% endblock content %}
