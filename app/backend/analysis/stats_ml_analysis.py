@@ -67,7 +67,7 @@ class PerformanceAnalysis:
         anomaly_values = []  # To track values within an anomaly sequence
 
         for index, row in df.iterrows():
-            if 'Anomaly' in row[anomaly_cl]:
+            if method in row[anomaly_cl]:
                 if not anomaly_started:  # Start of an anomaly sequence
                     anomaly_started = True
                     start_time = index  # Use index as timestamp
@@ -152,8 +152,21 @@ class PerformanceAnalysis:
         non_missing_rows = df_with_features.dropna()
 
         if not non_missing_rows.empty:
-            iso_forest = IsolationForest(contamination=self.contamination, random_state=42)
-            non_missing_rows.loc[:, f'{metric}_anomaly_isf'] = iso_forest.fit_predict(non_missing_rows[[metric, f'{metric}_rolling_mean', f'{metric}_rolling_std']])
+            # Fit the Isolation Forest model
+            iso_forest = IsolationForest(contamination=0.005, random_state=42)
+            iso_forest.fit(non_missing_rows[[metric, f'{metric}_rolling_mean', f'{metric}_rolling_std']])
+            
+            # Get the anomaly scores
+            anomaly_scores = iso_forest.decision_function(non_missing_rows[[metric, f'{metric}_rolling_mean', f'{metric}_rolling_std']])
+            print(anomaly_scores)
+            
+            # Set a custom threshold for anomaly scores
+            threshold = 0.5  # Adjust this threshold based on your tolerance level
+            
+            # Determine anomalies based on the custom threshold
+            non_missing_rows[f'{metric}_anomaly_isf'] = (anomaly_scores < threshold).astype(int)
+            
+            # Update the anomaly status
             non_missing_rows = self.update_anomaly_status(df=non_missing_rows, metric=metric, anomaly_metric=f'{metric}_anomaly_isf', method='isf')
 
         # Combine the non-missing rows with the original DataFrame
@@ -165,7 +178,7 @@ class PerformanceAnalysis:
         # Delete rolling feature columns from the combined DataFrame
         self.delete_columns(df=combined_df, columns=[f'{metric}_anomaly_isf', f'{metric}_rolling_mean', f'{metric}_rolling_std'])
 
-        self.collect_anomalies(df=combined_df, metric=metric, anomaly_cl=f'{metric}_anomaly', period="fixed-load", method="isolation_forest")
+        self.collect_anomalies(df=combined_df, metric=metric, anomaly_cl=f'{metric}_anomaly', period="fixed-load", method="isf")
         return combined_df
 
     def detect_anomalies_z_score(self, df, metric):
