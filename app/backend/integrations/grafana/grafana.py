@@ -43,7 +43,7 @@ class Grafana(Integration):
                 if config['id'] == id:
                     self.id                  = config["id"]
                     self.name                = config["name"]
-                    self.server              = self.remove_trailing_slash(config["server"])
+                    self.server              = config["server"]
                     self.org_id              = config["org_id"]
                     self.token               = config["token"]
                     self.test_title          = config["test_title"]
@@ -55,7 +55,6 @@ class Grafana(Integration):
 
     def get_grafana_link(self, start, end, test_name, dash_id = None):
         dashboard_content = next((dashboard['content'] for dashboard in self.dashboards if dashboard['id'] == dash_id), self.dashboards[0]['content'])
-        dashboard_content = self.ensure_leading_slash(dashboard_content)
         return self.server + dashboard_content + '?orgId=' + self.org_id + '&from='+str(start)+'&to='+str(end)+f'&var-{self.app}='+str(test_name)
 
     def get_grafana_test_link(self, start, end, test_name, run_id, dash_id = None):

@@ -50,7 +50,7 @@ class Influxdb(Integration):
                 if config['id'] == id:
                     self.id       = config["id"]
                     self.name     = config["name"]
-                    self.url      = self.remove_trailing_slash(config["url"])
+                    self.url      = config["url"]
                     self.org_id   = config["org_id"]
                     self.token    = config["token"]
                     self.timeout  = config["timeout"]

@@ -15,6 +15,17 @@
 from pydantic import BaseModel, Field, model_validator
 from typing   import List
 
+# Cleaning functions
+def remove_trailing_slash(url: str) -> str:
+    url = remove_all_spaces(url)
+    return url[:-1] if url.endswith('/') else url
+
+def ensure_leading_slash(url: str) -> str:
+    url = remove_all_spaces(url)
+    return '/' + url if not url.startswith('/') else url
+
+def remove_all_spaces(url: str) -> str:
+    return url.replace(' ', '')
 
 class InfluxdbModel(BaseModel):
     id        : str
@@ -28,11 +39,21 @@ class InfluxdbModel(BaseModel):
     tmz       : str = Field(default="UTC")
     is_default: str
 
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'url' in values:
+            values['url'] = remove_trailing_slash(values['url'])
+        return values
 
 class GrafanaObjectModel(BaseModel):
     id     : str
     content: str
 
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'content' in values:
+            values['content'] = ensure_leading_slash(values['content'])
+        return values
 
 class GrafanaModel(BaseModel):
     id                 : str
@@ -46,6 +67,11 @@ class GrafanaModel(BaseModel):
     is_default         : str
     dashboards         : list[GrafanaObjectModel]
 
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'server' in values:
+            values['server'] = remove_trailing_slash(values['server'])
+        return values
 
 class AzureWikiModel(BaseModel):
     id            : str
@@ -57,6 +83,11 @@ class AzureWikiModel(BaseModel):
     path_to_report: str
     is_default    : str
 
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'org_url' in values:
+            values['org_url'] = remove_trailing_slash(values['org_url'])
+        return values
 
 class AtlassianConfluenceModel(BaseModel):
     id        : str
@@ -69,6 +100,11 @@ class AtlassianConfluenceModel(BaseModel):
     parent_id : str
     is_default: str
 
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'org_url' in values:
+            values['org_url'] = remove_trailing_slash(values['org_url'])
+        return values
 
 class AtlassianJiraModel(BaseModel):
     id        : str
@@ -81,6 +117,12 @@ class AtlassianJiraModel(BaseModel):
     epic_field: str
     epic_name : str
     is_default: str
+
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'org_url' in values:
+            values['org_url'] = remove_trailing_slash(values['org_url'])
+        return values
 
 
 class SmtpMailModel(BaseModel):
@@ -95,6 +137,11 @@ class SmtpMailModel(BaseModel):
     is_default: str
     recipients: list
 
+    @model_validator(mode='before')
+    def validate_url(cls, values):
+        if 'server' in values:
+            values['server'] = remove_trailing_slash(values['server'])
+        return values
 
 class AISupportModel(BaseModel):
     id            : str

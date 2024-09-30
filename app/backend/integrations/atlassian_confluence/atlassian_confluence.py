@@ -45,7 +45,7 @@ class AtlassianConfluence(Integration):
                     self.name      = config["name"]
                     self.email     = config["email"]
                     self.token     = config["token"]
-                    self.org_url   = self.remove_trailing_slash(config["org_url"])
+                    self.org_url   = config["org_url"]
                     self.space_key = config["space_key"]
                     self.parent_id = config["parent_id"]
                     if config["token_type"] == "api_token":

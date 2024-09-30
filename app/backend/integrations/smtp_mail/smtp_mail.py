@@ -42,7 +42,7 @@ class SmtpMail(Integration):
                 if config['id'] == id:
                     self.id         = config["id"]
                     self.name       = config["name"]
-                    self.server     = self.remove_trailing_slash(config["server"])
+                    self.server     = config["server"]
                     self.port       = config["port"]
                     self.use_ssl    = config["use_ssl"]
                     self.use_tls    = config["use_tls"]

@@ -46,7 +46,7 @@ class AtlassianJira(Integration):
                     self.email      = config["email"]
                     self.token      = config["token"]
                     self.token_type = config["token_type"]
-                    self.org_url    = self.remove_trailing_slash(config["org_url"])
+                    self.org_url    = config["org_url"]
                     self.project_id = config["project_id"]
                     self.epic_field = config["epic_field"]
                     self.epic_name  = config["epic_name"]
