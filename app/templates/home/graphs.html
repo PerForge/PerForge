@@ -157,7 +157,13 @@
                     {{ form_for_graphs.height(class="form-control") }} 
                 </div>
                 <div class="mt-3">
-                    <label class="mt-3">Custom vars</label>
+                    <label class="mt-3">Custom vars (optional)</label>
+                    <div class="tooltip-container">
+                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                        <div class="tooltip-content">
+                            You can add additional custom variables to draw graphs with these variables. For example, use the following format: &var-varname=varvalue
+                        </div>
+                    </div>
                     {{ form_for_graphs.custom_vars(class="form-control") }} 
                 </div>
                 <div class="mt-3">
