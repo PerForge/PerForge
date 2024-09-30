@@ -29,3 +29,13 @@ class Integration(ABC):
     @abstractmethod
     def __str__(self):
         pass
+
+    def remove_trailing_slash(self, url):
+        if url.endswith('/'):
+            return url[:-1]
+        return url
+    
+    def ensure_leading_slash(self, path):
+        if not path.startswith('/'):
+            return '/' + path
+        return path

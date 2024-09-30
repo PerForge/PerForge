@@ -44,7 +44,7 @@ class AzureWiki(Integration):
                     self.id                        = config["id"]
                     self.name                      = config["name"]
                     self.token                     = config["token"]
-                    self.org_url                   = config["org_url"]
+                    self.org_url                   = self.remove_trailing_slash(config["org_url"])
                     self.project_id                = config["project_id"]
                     self.identifier                = config["identifier"]
                     self.path_to_report            = config["path_to_report"]

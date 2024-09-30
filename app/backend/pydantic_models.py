@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 from typing   import List
 
 
@@ -110,14 +110,21 @@ class AISupportModel(BaseModel):
 
 
 class GraphModel(BaseModel):
-    id        : str
-    name      : str
-    grafana_id: str
-    dash_id   : str
-    view_panel: str
-    width     : str
-    height    : str
-    prompt_id : str
+    id         : str
+    name       : str
+    grafana_id : str
+    dash_id    : str
+    view_panel : str
+    width      : str
+    height     : str
+    custom_vars: str = Field(default="") ## This field should be added to all new fields
+    prompt_id  : str = Field(default="") ## This field should be added to all new fields
+
+    @model_validator(mode='before')
+    def migration(cls, values):
+        if 'custom_vars' in values:
+            values['custom_vars'] = values.pop('custom_vars')
+        return values
 
 
 class TemplateObjectModel(BaseModel):
