@@ -352,3 +352,21 @@ class Influxdb(Integration):
                 query += constr["aggregation"][nfr['metric']]
             query += constr["aggregation"][nfr['aggregation']]
         return query
+    
+    def get_rps(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_rps(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_active_threads(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_active_threads(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_response_time(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_response_time(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables

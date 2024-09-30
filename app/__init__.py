@@ -71,4 +71,4 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 # # Import routing, models and Start the App
-from app.views import (auth, custom, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates)
+from app.views import (auth, custom, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates, report)

@@ -245,3 +245,49 @@ join.full(
         return {transaction: l.transaction, rpm:l.rpm, errors:l.errors, count:l.count, avg:l.avg, pct50:l.pct50, pct75:l.pct75, pct90:l.pct90, stddev:r.stddev }
     },
 )'''
+
+
+########################## TIME SERIES DATA
+
+def get_rps(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r["_measurement"] == "jmeter")
+  |> filter(fn: (r) => r["_field"] == "count")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> filter(fn: (r) => r["transaction"] !~ /TR/ and r["transaction"] != "all")
+  |> keep(columns: ["_field", "_value", "_time"])
+  |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
+  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 30))}))
+  |> set(key: "_field", value: "Requests per second")
+  '''
+
+def get_active_threads(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "maxAT")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> keep(columns: ["_field", "_value", "_time"])
+  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)
+  |> set(key: "_field", value: "Active threads")
+  '''
+
+def get_response_time(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "avg")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> filter(
+        fn: (r) => if "transaction" == "transaction" then
+            r.transaction =~ /TR/
+        else
+            r.transaction !~ /TR/ and r.transaction != "all",
+  )
+  |> group(columns: ["_field"])
+  |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)
+  |> set(key: "_field",value: "Average response time")
+  '''
