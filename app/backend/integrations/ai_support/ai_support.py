@@ -71,6 +71,7 @@ class AISupport(Integration):
 
     def analyze_graph(self, name, graph, prompt_id):
         if not self.models_created: return ""
+        if not prompt_id or not graph: return ""
         prompt_value = self.prompt_obj.get_prompt_value_by_id(prompt_id)
         response     = self.ai_obj.analyze_graph(graph, prompt_value)
         self.graph_analysis.append(name)
