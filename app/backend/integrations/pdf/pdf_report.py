@@ -202,7 +202,7 @@ class PdfReport(ReportingBase):
     def add_graph(self, graph_data, current_run_id, baseline_run_id):
         image = self.grafana_obj.render_image(graph_data["id"], self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
         self.pdf_creator.add_image(image)
-        if self.ai_switch and self.ai_graph_switch:
+        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
             if self.ai_to_graphs_switch:
                 self.add_text(ai_support_response)
