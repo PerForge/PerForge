@@ -16,18 +16,21 @@ from pydantic import BaseModel, Field, model_validator
 from typing   import List
 
 # Cleaning functions
-def remove_trailing_slash(url: str) -> str:
-    url = remove_all_spaces(url)
-    return url[:-1] if url.endswith('/') else url
-
 def ensure_leading_slash(url: str) -> str:
-    url = remove_all_spaces(url)
     return '/' + url if not url.startswith('/') else url
 
-def remove_all_spaces(url: str) -> str:
-    return url.replace(' ', '')
+class BaseModelWithStripping(BaseModel):
+    @model_validator(mode='before')
+    def strip_whitespace_and_trailing_slash(cls, values):
+        for field_name, value in values.items():
+            if isinstance(value, str):
+                value = value.strip()
+                if field_name in {'url', 'org_url', 'server', 'azure_url'}:
+                    value = value.rstrip('/')
+                values[field_name] = value
+        return values
 
-class InfluxdbModel(BaseModel):
+class InfluxdbModel(BaseModelWithStripping):
     id        : str
     name      : str
     url       : str
@@ -39,23 +42,18 @@ class InfluxdbModel(BaseModel):
     tmz       : str = Field(default="UTC")
     is_default: str
 
-    @model_validator(mode='before')
-    def validate_url(cls, values):
-        if 'url' in values:
-            values['url'] = remove_trailing_slash(values['url'])
-        return values
 
-class GrafanaObjectModel(BaseModel):
+class GrafanaObjectModel(BaseModelWithStripping):
     id     : str
     content: str
 
     @model_validator(mode='before')
-    def validate_url(cls, values):
+    def validate_content(cls, values):
         if 'content' in values:
             values['content'] = ensure_leading_slash(values['content'])
         return values
 
-class GrafanaModel(BaseModel):
+class GrafanaModel(BaseModelWithStripping):
     id                 : str
     name               : str
     server             : str
@@ -67,13 +65,8 @@ class GrafanaModel(BaseModel):
     is_default         : str
     dashboards         : list[GrafanaObjectModel]
 
-    @model_validator(mode='before')
-    def validate_url(cls, values):
-        if 'server' in values:
-            values['server'] = remove_trailing_slash(values['server'])
-        return values
 
-class AzureWikiModel(BaseModel):
+class AzureWikiModel(BaseModelWithStripping):
     id            : str
     name          : str
     token         : str
@@ -83,13 +76,8 @@ class AzureWikiModel(BaseModel):
     path_to_report: str
     is_default    : str
 
-    @model_validator(mode='before')
-    def validate_url(cls, values):
-        if 'org_url' in values:
-            values['org_url'] = remove_trailing_slash(values['org_url'])
-        return values
 
-class AtlassianConfluenceModel(BaseModel):
+class AtlassianConfluenceModel(BaseModelWithStripping):
     id        : str
     name      : str
     email     : str
@@ -100,13 +88,8 @@ class AtlassianConfluenceModel(BaseModel):
     parent_id : str
     is_default: str
 
-    @model_validator(mode='before')
-    def validate_url(cls, values):
-        if 'org_url' in values:
-            values['org_url'] = remove_trailing_slash(values['org_url'])
-        return values
 
-class AtlassianJiraModel(BaseModel):
+class AtlassianJiraModel(BaseModelWithStripping):
     id        : str
     name      : str
     email     : str
@@ -118,14 +101,8 @@ class AtlassianJiraModel(BaseModel):
     epic_name : str
     is_default: str
 
-    @model_validator(mode='before')
-    def validate_url(cls, values):
-        if 'org_url' in values:
-            values['org_url'] = remove_trailing_slash(values['org_url'])
-        return values
 
-
-class SmtpMailModel(BaseModel):
+class SmtpMailModel(BaseModelWithStripping):
     id        : str
     name      : str
     server    : str
@@ -137,13 +114,8 @@ class SmtpMailModel(BaseModel):
     is_default: str
     recipients: list
 
-    @model_validator(mode='before')
-    def validate_url(cls, values):
-        if 'server' in values:
-            values['server'] = remove_trailing_slash(values['server'])
-        return values
 
-class AISupportModel(BaseModel):
+class AISupportModel(BaseModelWithStripping):
     id            : str
     name          : str
     ai_provider   : str
@@ -156,7 +128,7 @@ class AISupportModel(BaseModel):
     is_default    : str
 
 
-class GraphModel(BaseModel):
+class GraphModel(BaseModelWithStripping):
     id         : str
     name       : str
     grafana_id : str
@@ -174,13 +146,13 @@ class GraphModel(BaseModel):
         return values
 
 
-class TemplateObjectModel(BaseModel):
+class TemplateObjectModel(BaseModelWithStripping):
     id     : str
     type   : str
     content: str
 
 
-class TemplateModel(BaseModel):
+class TemplateModel(BaseModelWithStripping):
     id                       : str
     name                     : str
     nfr                      : str
@@ -195,14 +167,8 @@ class TemplateModel(BaseModel):
     system_prompt_id         : str = Field(default="system_message") ## This field should be added to all new fields
     data                     : list[TemplateObjectModel]
 
-    # @root_validator(pre=True)
-    # def migration(cls, values):
-    #     if 'aggregated_data_prompt_id' in values:
-    #         values['aggregated_prompt_id'] = values.pop('aggregated_data_prompt_id')
-    #     return values
 
-
-class NFRObjectModel(BaseModel):
+class NFRObjectModel(BaseModelWithStripping):
     regex    : bool
     scope    : str
     metric   : str
@@ -211,13 +177,13 @@ class NFRObjectModel(BaseModel):
     weight   : str
 
 
-class NFRsModel(BaseModel):
+class NFRsModel(BaseModelWithStripping):
     id  : str
     name: str
     rows: list[NFRObjectModel]
 
 
-class PromptModel(BaseModel):
+class PromptModel(BaseModelWithStripping):
     id    : str
     type  : str
     name  : str
@@ -225,7 +191,7 @@ class PromptModel(BaseModel):
     prompt: str
 
 
-class TemplateGroupModel(BaseModel):
+class TemplateGroupModel(BaseModelWithStripping):
     id        : str
     name      : str
     title     : str
@@ -234,7 +200,7 @@ class TemplateGroupModel(BaseModel):
     data      : list[TemplateObjectModel]
 
 
-class IntegrationsModel(BaseModel):
+class IntegrationsModel(BaseModelWithStripping):
     influxdb            : List[InfluxdbModel] = Field(default_factory=list)
     grafana             : List[GrafanaModel] = Field(default_factory=list)
     azure               : List[AzureWikiModel] = Field(default_factory=list)
@@ -244,7 +210,7 @@ class IntegrationsModel(BaseModel):
     ai_support          : List[AISupportModel] = Field(default_factory=list)
 
 
-class ProjectObjectModel(BaseModel):
+class ProjectObjectModel(BaseModelWithStripping):
     integrations   : IntegrationsModel = Field(default_factory=IntegrationsModel)
     graphs         : List[GraphModel] = Field(default_factory=list)
     templates      : List[TemplateModel] = Field(default_factory=list)
@@ -252,7 +218,7 @@ class ProjectObjectModel(BaseModel):
     prompts        : List[PromptModel] = Field(default_factory=list)
     template_groups: List[TemplateGroupModel] = Field(default_factory=list)
 
-class ProjectModel(BaseModel):
+class ProjectModel(BaseModelWithStripping):
     id  : str
     name: str
     data: ProjectObjectModel = Field(default_factory=ProjectObjectModel)
