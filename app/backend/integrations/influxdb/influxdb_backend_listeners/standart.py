@@ -270,7 +270,8 @@ def get_active_threads(testTitle, start, stop, bucket):
   |> filter(fn: (r) => r._field == "maxAT")
   |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
   |> keep(columns: ["_field", "_value", "_time"])
-  |> aggregateWindow(every: 30s, fn: last, createEmpty: false)
+  |> aggregateWindow(every: 30s, fn: max, createEmpty: false)
+  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 2))}))
   |> set(key: "_field", value: "Active threads")
   '''
 
@@ -281,13 +282,82 @@ def get_response_time(testTitle, start, stop, bucket):
   |> filter(fn: (r) => r._field == "avg")
   |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
   |> filter(fn: (r) => r["statut"] == "all")
-  |> filter(
-        fn: (r) => if "transaction" == "transaction" then
-            r.transaction =~ /TR/
-        else
-            r.transaction !~ /TR/ and r.transaction != "all",
-  )
   |> group(columns: ["_field"])
   |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)
   |> set(key: "_field",value: "Average response time")
   '''
+
+def get_response_time_median(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "pct50.0")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> group(columns: ["_field"])
+  |> aggregateWindow(every: 30s, fn: median, createEmpty: false)
+  |> set(key: "_field",value: "Median response time")
+  '''
+
+def get_response_time_pct(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "pct90.0")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> group(columns: ["_field"])
+  |> aggregateWindow(
+     every: 30s, 
+     fn: (tables=<-, column) =>
+      tables
+        |> quantile(q: 0.90, method: "exact_selector"),
+     createEmpty: false)
+  |> set(key: "_field",value: "Pct response time")
+  '''
+
+def get_errors(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "countError")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["transaction"] == "all")
+  |> group(columns: ["_field"])
+  |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
+  |> set(key: "_field", value: "Errors Per Second")'''
+
+def get_response_time_per_req(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "avg")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> keep(columns: ["_value", "_time", "transaction"])
+  |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)'''
+
+def get_response_time_per_req_median(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "pct50.0")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> keep(columns: ["_value", "_time", "transaction"])
+  |> aggregateWindow(every: 30s, fn: median, createEmpty: false)'''
+
+def get_response_time_per_req_pct(testTitle, start, stop, bucket):
+  return '''from(bucket: "'''+bucket+'''")
+  |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
+  |> filter(fn: (r) => r._measurement == "jmeter")
+  |> filter(fn: (r) => r._field == "pct90.0")
+  |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
+  |> filter(fn: (r) => r["statut"] == "all")
+  |> keep(columns: ["_value", "_time", "transaction"])
+  |> aggregateWindow(
+     every: 30s, 
+     fn: (tables=<-, column) =>
+      tables
+        |> quantile(q: 0.90, method: "exact_selector"),
+     createEmpty: false)'''

@@ -20,12 +20,18 @@ from logging.handlers import RotatingFileHandler
 from flask            import Flask
 from flask_login      import LoginManager
 from flask_bcrypt     import Bcrypt
+from flask_compress   import Compress
 
 
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
+# Enable compression
+Compress(app)
+# Minimum response size in bytes to apply gzip compression
+app.config['COMPRESS_MIN_SIZE'] = 500
+
 # Setup database
 database_directory = os.path.join(basedir, "data")
 app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'/database.db'

@@ -19,19 +19,53 @@ from app                                    import app
 from app.backend.errors                     import ErrorMessages
 from app.backend.components.nfrs.nfr_config import NFRConfig
 from flask                                  import render_template, request, url_for, redirect, flash, jsonify
-from app.backend.analysis.prepare_data      import DataPreparation
+from app.backend.data_provider.data_provider import DataProvider
 
 
 @app.route('/api/data')
 def get_data():
     project = request.cookies.get('project')
-    dp = DataPreparation(project=project)
+    dp = DataProvider(project=project)
     test_title = request.args.get('test_title')
-    df = dp.get_test_data(test_title=test_title)
-    df_reset = df.reset_index()
+    test_data, analysis, aggregated_results, test_details, statistics, llm_response = dp.get_test_results_and_analyze(test_title=test_title)
     response = {
-        'data': df_reset.to_dict(orient='records'),
-        'analysis': dp.analysis
+        'data': test_data,
+        'analysis': analysis,
+        'aggregated_results': aggregated_results,
+        'test_details': test_details,
+        'statistics': statistics,
+        'llm_response': llm_response,
+        'styling': {
+            'paper_bgcolor': 'rgba(0,0,0,0)',  # Transparent background
+            'plot_bgcolor': 'rgba(0,0,0,0)',   # Transparent background
+            'title_font_color': '#ced4da',
+            'axis_font_color': '#ced4da',
+            'hover_bgcolor': '#333',
+            'hover_bordercolor': '#fff',
+            'hover_font_color': '#fff',
+            'line_shape': 'spline',
+            'line_width': 2,
+            'marker_size': 8,
+            'marker_color_normal': 'rgba(75, 192, 192, 1)',
+            'marker_color_anomaly': 'red',
+            'yaxis_tickformat': ',.0f',
+            'font_family': 'Nunito Sans, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;',
+            'yaxis_tickfont_size': 10,
+            'xaxis_tickfont_size': 10,
+            'title_size': 13,
+            'gridcolor': '#444'  # Grid color
+        },
+        'layout': {
+            'margin': {
+                'l': 50,
+                'r': 50,
+                'b': 50,
+                't': 50,
+                'pad': 1
+            },
+            'autosize': True,
+            'responsive': True
+        }
     }
     return jsonify(response)
 

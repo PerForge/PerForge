@@ -370,3 +370,39 @@ class Influxdb(Integration):
             query = standart.get_response_time(run_id, start, end, self.bucket)
         flux_tables = self.influxdb_connection.query_api().query(query)
         return flux_tables
+    
+    def get_response_time_median(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_response_time_median(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_response_time_pct(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_response_time_pct(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_errors(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_errors(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_response_time_per_req(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_response_time_per_req(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_response_time_per_req_median(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_response_time_per_req_median(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables
+    
+    def get_response_time_per_req_pct(self, run_id, start, end):
+        if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
+            query = standart.get_response_time_per_req_pct(run_id, start, end, self.bucket)
+        flux_tables = self.influxdb_connection.query_api().query(query)
+        return flux_tables

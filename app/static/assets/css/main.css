@@ -513,11 +513,31 @@ img {
     border-radius: var(--card-border-radius);
 }
 
+.chart-card {
+    --card-border-radius: 8px;
+    --card-border-color: var(--border-main-color);
+    --card-border-width: 1.5px;
+    background-color: var(--bs-background);
+    padding: 20px;
+    border: var(--card-border-width) solid var(--card-border-color);
+    border-radius: var(--card-border-radius);
+    color: var(--text-main-color);
+}
+
 .card-header {
     padding: var(--card-cap-padding-y) var(--card-cap-padding-x);
     margin-bottom: 0;
     color: var(--text-main-color);
     background-color: var(--bs-background-dark);
+    border-bottom: var(--card-border-width) solid var(--card-border-color);
+}
+
+.card-header-sm {
+    --card-cap-padding-y: 15px;
+    --card-cap-padding-x: 15px;
+    padding: var(--card-cap-padding-y) var(--card-cap-padding-x);
+    margin-bottom: 0;
+    color: var(--text-main-color);
     border-bottom: var(--card-border-width) solid var(--card-border-color);
 }
 
@@ -929,7 +949,7 @@ p {
     -webkit-overflow-scrolling: touch;
 }
 
-[data-list] .sort[data-sort]::after, .table-list .sort[data-sort]::after {
+.sort[data-sort]::after, .table-list .sort[data-sort]::after {
     content: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNyIgaGVpZ2h0PSI5IiB2aWV3Qm94PSIwIDAgNyA5IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMy4xNDkgMC42NDY3NjhDMy4zNDM2NiAwLjQ1NDg4NSAzLjY1NjM0IDAuNDU0ODg1IDMuODUxIDAuNjQ2NzY4TDYuMTMxNTEgMi44OTQ2OUM2LjQ0OTk4IDMuMjA4NjIgNi4yMjc2OSAzLjc1MDc4IDUuNzgwNSAzLjc1MDc4SDEuMjE5NUMwLjc3MjMwNyAzLjc1MDc4IDAuNTUwMDE4IDMuMjA4NjIgMC44Njg0OTUgMi44OTQ2OUwzLjE0OSAwLjY0Njc2OFoiIGZpbGw9IiM2RTc4OTEiLz4KPHBhdGggZD0iTTMuMTQ5IDguMTU0MDFDMy4zNDM2NiA4LjM0NTkgMy42NTYzNCA4LjM0NTkgMy44NTEgOC4xNTQwMUw2LjEzMTUxIDUuOTA2MDlDNi40NDk5OCA1LjU5MjE2IDYuMjI3NjkgNS4wNSA1Ljc4MDUgNS4wNUgxLjIxOTVDMC43NzIzMDcgNS4wNSAwLjU1MDAxOCA1LjU5MjE2IDAuODY4NDk1IDUuOTA2MDlMMy4xNDkgOC4xNTQwMVoiIGZpbGw9IiM2RTc4OTEiLz4KPC9zdmc+Cg==);
     margin-left: 0.25rem;
 }
@@ -1758,6 +1778,12 @@ textarea:focus  {
     --badge-bg: rgba(144, 214, 127, 0.08);
     --badge-color: #90d67f !important;
     --badge-border-color: rgba(144, 214, 127, 0.2 );
+}
+
+.badge-failure {
+    --badge-bg: rgba(214, 127, 127, 0.08);
+    --badge-color: #d67f7f !important;
+    --badge-border-color: rgba(214, 127, 127, 0.2);
 }
 
 .badge-primary {
@@ -2684,4 +2710,8 @@ textarea:focus  {
 .tooltip-container .tooltip-content:hover {
   visibility: visible;
   opacity: 1;
+}
+
+.secondary-text {
+    color: #8e8e8e;
 }
