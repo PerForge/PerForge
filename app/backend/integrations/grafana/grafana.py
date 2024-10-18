@@ -67,6 +67,19 @@ class Grafana(Integration):
 
     def encode_image(self, image):
         return base64.b64encode(image)
+    
+    def add_custom_tags(self, url, graph_json):
+        if "custom_vars" in graph_json:
+            custom_vars = graph_json["custom_vars"]
+            if custom_vars:
+                # Ensure the URL ends with an ampersand if it doesn't already
+                if not url.endswith('&'):
+                    url += '&'
+                # Ensure custom_vars does not start with an ampersand
+                if custom_vars.startswith('&'):
+                    custom_vars = custom_vars[1:]
+                url += custom_vars
+        return url
 
     def render_image(self, graph_id, start, stop, test_name, run_id, baseline_run_id = None):
         image = None
@@ -78,6 +91,7 @@ class Grafana(Integration):
                 url = url+f'&var-{self.test_title}='+run_id+f'&var-{self.baseline_test_title}='+baseline_run_id
             else:
                 url = url+f'&var-{self.test_title}='+run_id
+            url = self.add_custom_tags(url=url, graph_json=graph_json)
             try:
                 response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180)
                 if response.status_code == 200:
