@@ -271,7 +271,6 @@ def get_active_threads(testTitle, start, stop, bucket):
   |> filter(fn: (r) => r["testTitle"] == "'''+testTitle+'''")
   |> keep(columns: ["_field", "_value", "_time"])
   |> aggregateWindow(every: 30s, fn: max, createEmpty: false)
-  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 2))}))
   |> set(key: "_field", value: "Active threads")
   '''
 

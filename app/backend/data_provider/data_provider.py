@@ -25,7 +25,7 @@ class DataProvider:
         self.influxdb_obj   = Influxdb(project=self.project).connect_to_influxdb()
         # Initialize the AnomalyDetectionEngine
         self.engine = AnomalyDetectionEngine(
-            contamination=0.001, 
+            contamination=0.003, 
             z_score_threshold=4,
             detectors=[
                 IsolationForestDetector(),
@@ -124,7 +124,8 @@ class DataProvider:
             dataframes[metric] = df
         
         merged_df = pd.concat(dataframes.values(), axis=1) 
-
+        merged_df = merged_df.sort_index()
+        
         # Filter ramp-up and fixed-load periods
         fixed_load_period, ramp_up_period = self.engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
 
@@ -132,7 +133,8 @@ class DataProvider:
         ramp_up_period = self.engine.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
 
         # Check if the test is a fixed load
-        if self.engine.check_if_fixed_load(total_rows=len(merged_df), fixed_load_rows=len(fixed_load_period)):
+        is_fixed_load = self.engine.check_if_fixed_load(total_rows=len(merged_df), fixed_load_rows=len(fixed_load_period))
+        if is_fixed_load:
             for metric in standart_metrics:
                 if standart_metrics[metric]['analysis']:
                    fixed_load_period = self.engine.detect_anomalies(fixed_load_period, metric=metric, period_type='fixed_load')
@@ -184,8 +186,9 @@ class DataProvider:
         pctRespTimePerReq_data = process_data_req(pctRespTimePerReq)
 
         result["pctResponseTimePerReq"] = pctRespTimePerReq_data
-
-        self.engine.process_anomalies(merged_df)
+        
+        if is_fixed_load:
+            self.engine.process_anomalies(merged_df)
         
         # Output the analysis results
         analysis_output = self.engine.output

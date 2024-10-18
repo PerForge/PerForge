@@ -21,7 +21,6 @@ from app.backend.components.nfrs.nfr_config import NFRConfig
 from flask                                  import render_template, request, url_for, redirect, flash, jsonify
 from app.backend.data_provider.data_provider import DataProvider
 
-
 @app.route('/api/data')
 def get_data():
     project = request.cookies.get('project')

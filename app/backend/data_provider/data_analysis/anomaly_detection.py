@@ -64,7 +64,7 @@ class AnomalyDetectionEngine:
         current_methods = set()
 
         for index, row in df.iterrows():
-            if 'Anomaly' in row[anomaly_cl]:
+            if 'Anomaly' in str(row[anomaly_cl]) and 'potential saturation point' not in str(row[anomaly_cl]):
                 methods = set(row[anomaly_cl].replace('Anomaly: ', '').split(', '))
                 current_methods.update(methods)
                 if not anomaly_started:
@@ -83,10 +83,10 @@ class AnomalyDetectionEngine:
                 if anomaly_started:
                     buffer_counter += 1
                     if buffer_counter > buffer_period:
+                        prev_normal_value = row[metric]
                         self._append_anomaly_result(metric, ', '.join(current_methods), start_time, end_time, prev_normal_value, post_anomaly_value, anomaly_values)
                         anomaly_started = False
                         buffer_counter = 0
-                        prev_normal_value = row[metric]
                         current_methods.clear()
                     else:
                         anomaly_values.append(row[metric])
