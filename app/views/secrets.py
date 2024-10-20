@@ -30,7 +30,7 @@ def get_secrets():
         return render_template('home/secrets.html', secrets=secrets)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
+        flash(ErrorMessages.ER00051.value, "error")
         return redirect(url_for("index"))
 
 @app.route('/add_secret', methods=['GET', 'POST'])
@@ -47,12 +47,12 @@ def add_secret():
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_SECRET.value, "error")
+                flash(ErrorMessages.ER00049.value, "error")
                 return redirect(url_for('get_secrets'))
         return render_template('home/secret.html', form=form)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
+        flash(ErrorMessages.ER00051.value, "error")
         return redirect(url_for('get_secrets'))
 
 @app.route('/edit_secret', methods=['GET'])
@@ -74,7 +74,7 @@ def edit_secret():
         return render_template('home/secret.html', form=form, secret_id=secret_id, secret_type=secret_type)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
+        flash(ErrorMessages.ER00051.value, "error")
         return redirect(url_for('get_secrets'))
 
 @app.route('/update_secret', methods=['POST'])
@@ -98,12 +98,12 @@ def update_secret():
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_SECRET.value, "error")
+                flash(ErrorMessages.ER00049.value, "error")
                 return redirect(url_for('get_secrets'))
         return render_template('home/secret.html', form=form, secret_id=secret_id, secret_type=secret_type)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SECRET.value, "error")
+        flash(ErrorMessages.ER00051.value, "error")
         return redirect(url_for('get_secrets'))
 
 @app.route('/delete/secret', methods=['GET'])
@@ -124,5 +124,5 @@ def delete_secret():
         flash("Secret deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_SECRET.value, "error")
+        flash(ErrorMessages.ER00050.value, "error")
     return redirect(url_for('get_secrets'))

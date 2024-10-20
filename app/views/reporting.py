@@ -19,7 +19,7 @@ import logging
 from app                                                                       import app
 from app.backend                                                               import pkg
 from app.backend.errors                                                        import ErrorMessages
-from app.backend.integrations.influxdb.influxdb                                import Influxdb
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction                                import InfluxdbV2
 from app.backend.integrations.azure_wiki.azure_wiki_report                     import AzureWikiReport
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
@@ -40,7 +40,7 @@ def get_tests():
         return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = templates, template_groups = template_groups, output_configs=output_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_INTEGRATIONS.value, "error")
+        flash(ErrorMessages.ER00009.value, "error")
         return redirect(url_for("index"))
 
 @app.route('/load_tests', methods=['GET'])
@@ -48,14 +48,14 @@ def load_tests():
     try:
         project      = request.cookies.get('project')
         influxdb     = request.args.get('influxdb')
-        influxdb_obj = Influxdb(project=project, id=influxdb)
-        influxdb_obj.connect_to_influxdb()
+        influxdb_obj = InfluxdbV2(project=project, id=influxdb)
+        influxdb_obj._initialize_client()
         tests = influxdb_obj.get_test_log()
         return jsonify(status="success", tests=tests)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_TESTS.value, "error")
-        return jsonify(status="error", message=ErrorMessages.GET_TESTS.value)
+        flash(ErrorMessages.ER00008.value, "error")
+        return jsonify(status="error", message=ErrorMessages.ER00008.value)
 
 @app.route('/generate', methods=['GET','POST'])
 def generate_report():
@@ -108,18 +108,18 @@ def generate_report():
                 return response
             elif action_type == "delete":
                 try:
-                    influxdb_obj = Influxdb(project=project, id=influxdb)
-                    influxdb_obj.connect_to_influxdb()
+                    influxdb_obj = InfluxdbV2(project=project, id=influxdb)
+                    influxdb_obj._initialize_client()
                     for test in data["tests"]:
                         result = influxdb_obj.delete_run_id(test["test_title"])
                 except:
                     logging.warning(str(traceback.format_exc()))
-                    flash(ErrorMessages.DELETE_TEST.value, "error")
+                    flash(ErrorMessages.ER00010.value, "error")
                     return redirect(url_for("index"))
             else:
                 result = f"Wrong action: {str(action_type)}"
             return result
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GENERATE_REPORT.value, "error")
+        flash(ErrorMessages.ER00011.value, "error")
         return redirect(url_for("index"))

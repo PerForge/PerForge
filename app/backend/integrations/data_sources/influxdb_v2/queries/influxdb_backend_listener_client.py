@@ -274,7 +274,7 @@ def get_active_threads(testTitle, start, stop, bucket):
   |> set(key: "_field", value: "Active threads")
   '''
 
-def get_response_time(testTitle, start, stop, bucket):
+def get_average_response_time(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
@@ -286,7 +286,7 @@ def get_response_time(testTitle, start, stop, bucket):
   |> set(key: "_field",value: "Average response time")
   '''
 
-def get_response_time_median(testTitle, start, stop, bucket):
+def get_median_response_time(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
@@ -298,7 +298,7 @@ def get_response_time_median(testTitle, start, stop, bucket):
   |> set(key: "_field",value: "Median response time")
   '''
 
-def get_response_time_pct(testTitle, start, stop, bucket):
+def get_pct90_response_time(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
@@ -315,7 +315,7 @@ def get_response_time_pct(testTitle, start, stop, bucket):
   |> set(key: "_field",value: "Pct response time")
   '''
 
-def get_errors(testTitle, start, stop, bucket):
+def get_error_count(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
@@ -326,7 +326,7 @@ def get_errors(testTitle, start, stop, bucket):
   |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
   |> set(key: "_field", value: "Errors Per Second")'''
 
-def get_response_time_per_req(testTitle, start, stop, bucket):
+def get_average_response_time_per_req(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
@@ -336,7 +336,7 @@ def get_response_time_per_req(testTitle, start, stop, bucket):
   |> keep(columns: ["_value", "_time", "transaction"])
   |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)'''
 
-def get_response_time_per_req_median(testTitle, start, stop, bucket):
+def get_median_response_time_per_req(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")
@@ -346,7 +346,7 @@ def get_response_time_per_req_median(testTitle, start, stop, bucket):
   |> keep(columns: ["_value", "_time", "transaction"])
   |> aggregateWindow(every: 30s, fn: median, createEmpty: false)'''
 
-def get_response_time_per_req_pct(testTitle, start, stop, bucket):
+def get_pct90_response_time_per_req(testTitle, start, stop, bucket):
   return '''from(bucket: "'''+bucket+'''")
   |> range(start: '''+str(start)+''', stop: '''+str(stop)+''')
   |> filter(fn: (r) => r._measurement == "jmeter")

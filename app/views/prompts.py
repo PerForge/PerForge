@@ -32,7 +32,7 @@ def prompts():
         custom_prompts   = PromptConfig.get_custom_prompts(project)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_PROMPTS.value, "error")
+        flash(ErrorMessages.ER00016.value, "error")
         return redirect(url_for("index"))
     return render_template('home/prompts.html', default_prompts = default_prompts, custom_prompts = custom_prompts, form_for_prompts = form_for_prompts)
 
@@ -49,7 +49,7 @@ def save_prompt():
             flash("Custom prompt added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SAVE_PROMPT.value, "error")
+        flash(ErrorMessages.ER00017.value, "error")
         return redirect(url_for("index"))
     return redirect(url_for('prompts', type='custom'))
 
@@ -63,6 +63,6 @@ def delete_prompt():
             flash("Custom prompt deleted", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_PROMPT.value, "error")
+        flash(ErrorMessages.ER00018.value, "error")
         return redirect(url_for("index"))
     return redirect(url_for('prompts', type='custom'))

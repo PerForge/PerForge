@@ -208,7 +208,8 @@ def get_app_name(run_id, start, stop, bucket):
   |> filter(fn: (r) => r["_field"] == "responseTime")
   |> group(columns: ["testName"])
   |> max()
-  |> keep(columns: ["testName"])'''
+  |> keep(columns: ["testName"])
+  |> rename(columns: {testName: "application"})'''
   
 def flux_constructor(app_name, run_id, start, stop, bucket, request_name = ''):
   constr                                  = {}

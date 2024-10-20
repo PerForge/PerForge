@@ -36,7 +36,7 @@ def get_graphs():
         return render_template('home/graphs.html', graphs_list=graphs_list, graph_prompts=graph_prompts, form_for_graphs=form_for_graphs, grafana_configs=grafana_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_GRAPHS.value, "error")
+        flash(ErrorMessages.ER00025.value, "error")
     return redirect(url_for('index'))
 
 @app.route('/save-graph', methods=['POST'])
@@ -52,7 +52,7 @@ def save_graph():
                 flash("Graph added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SAVE_GRAPH.value, "error")
+        flash(ErrorMessages.ER00026.value, "error")
     return redirect(url_for('get_graphs'))
 
 @app.route('/delete-graph', methods=['GET'])
@@ -65,5 +65,5 @@ def delete_graph():
             flash("Graph deleted", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_GRAPH.value, "error")
+        flash(ErrorMessages.ER00027.value, "error")
     return redirect(url_for('get_graphs'))

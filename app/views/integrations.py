@@ -20,7 +20,7 @@ from app                                                                       i
 from app.forms                                                                 import InfluxDBForm, GrafanaForm, AzureWikiForm, AtlassianConfluenceForm, AtlassianJiraForm, SMTPMailForm, AISupportForm
 from app.backend                                                               import pkg
 from app.backend.errors                                                        import ErrorMessages
-from app.backend.integrations.influxdb.influxdb_config                         import InfluxdbConfig
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_config                         import InfluxdbConfig
 from app.backend.integrations.grafana.grafana_config                           import GrafanaConfig
 from app.backend.integrations.azure_wiki.azure_wiki_config                     import AzureWikiConfig
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_config import AtlassianConfluenceConfig
@@ -52,7 +52,7 @@ def integrations():
                                )
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_INTEGRATIONS.value, "error")
+        flash(ErrorMessages.ER00009.value, "error")
         return render_template('home/integrations.html')
 
 @app.route('/influxdb', methods=['GET', 'POST'])
@@ -74,12 +74,12 @@ def add_influxdb():
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_INFLUXDB.value, "error")
+                flash(ErrorMessages.ER00028.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/influxdb.html', form=form, influxdb_config=influxdb_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_INFLUXDB.value, "error")
+        flash(ErrorMessages.ER00030.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/influxdb', methods=['GET'])
@@ -92,7 +92,7 @@ def delete_influxdb():
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_INFLUXDB.value, "error")
+        flash(ErrorMessages.ER00029.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/grafana', methods=['GET', 'POST'])
@@ -116,12 +116,12 @@ def add_grafana():
                 return "grafana_config=" + grafana_config
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_GRAFANA.value, "error")
+                flash(ErrorMessages.ER00031.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/grafana.html', form=form, grafana_config=grafana_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_GRAFANA.value, "error")
+        flash(ErrorMessages.ER00033.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/grafana', methods=['GET'])
@@ -134,7 +134,7 @@ def delete_grafana_config():
             flash("Integration deleted.", "info")
     except Exception as er:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_GRAFANA.value, "error")
+        flash(ErrorMessages.ER00032.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/azure', methods=['GET', 'POST'])
@@ -156,12 +156,12 @@ def add_azure():
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_AZURE_WIKI.value, "error")
+                flash(ErrorMessages.ER00034.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/azure.html', form=form, azure_config=azure_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_AZURE_WIKI.value, "error")
+        flash(ErrorMessages.ER00036.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/azure', methods=['GET'])
@@ -174,7 +174,7 @@ def delete_azure_config():
             flash("Integration deleted.", "info")
     except Exception as er:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_AZURE_WIKI.value, "error")
+        flash(ErrorMessages.ER00035.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/atlassian-confluence', methods=['GET', 'POST'])
@@ -196,12 +196,12 @@ def add_atlassian_confluence():
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_ATLASSIAN_CONFLUENCE.value, "error")
+                flash(ErrorMessages.ER00037.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/atlassian-confluence.html', form=form, atlassian_confluence_config=atlassian_confluence_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_ATLASSIAN_CONFLUENCE.value, "error")
+        flash(ErrorMessages.ER00039.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/atlassian-confluence', methods=['GET'])
@@ -214,7 +214,7 @@ def delete_atlassian_confluence():
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_ATLASSIAN_CONFLUENCE.value, "error")
+        flash(ErrorMessages.ER00038.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/atlassian-jira', methods=['GET', 'POST'])
@@ -236,12 +236,12 @@ def add_atlassian_jira():
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_ATLASSIAN_JIRA.value, "error")
+                flash(ErrorMessages.ER00040.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/atlassian-jira.html', form=form, atlassian_jira_config=atlassian_jira_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_ATLASSIAN_JIRA.value, "error")
+        flash(ErrorMessages.ER00042.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/atlassian-jira', methods=['GET'])
@@ -254,7 +254,7 @@ def delete_atlassian_jira():
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_ATLASSIAN_JIRA.value, "error")
+        flash(ErrorMessages.ER00041.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/smtp-mail', methods=['GET', 'POST'])
@@ -278,12 +278,12 @@ def add_smtp_mail():
                 return "smtp_mail_config=" + smtp_mail_config
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_SMTP.value, "error")
+                flash(ErrorMessages.ER00043.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/smtp-mail.html', form=form, smtp_mail_config=smtp_mail_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_SMTP.value, "error")
+        flash(ErrorMessages.ER00045.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/smtp-mail', methods=['GET'])
@@ -296,7 +296,7 @@ def delete_smtp_mail_config():
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_SMTP.value, "error")
+        flash(ErrorMessages.ER00044.value, "error")
     return redirect(url_for('integrations'))
 
 @app.route('/ai-support', methods=['GET', 'POST'])
@@ -318,12 +318,12 @@ def add_ai_support():
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_AI.value, "error")
+                flash(ErrorMessages.ER00046.value, "error")
                 return redirect(url_for('integrations'))
         return render_template('integrations/ai-support.html', form=form, ai_support_config=ai_support_config)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_AI.value, "error")
+        flash(ErrorMessages.ER00048.value, "error")
         return redirect(url_for('integrations'))
 
 @app.route('/delete/ai-support', methods=['GET'])
@@ -336,5 +336,5 @@ def delete_ai_support():
             flash("Integration deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_AI.value, "error")
+        flash(ErrorMessages.ER00047.value, "error")
     return redirect(url_for('integrations'))

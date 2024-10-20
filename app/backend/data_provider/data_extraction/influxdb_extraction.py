@@ -1,4 +1,4 @@
-from app.backend.data_provider.data_extraction.base_extraction import DataExtractionBase
+from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 
 from influxdb_client import InfluxDBClient
 

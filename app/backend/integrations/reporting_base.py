@@ -17,7 +17,7 @@ import logging
 
 from app.backend.integrations.ai_support.ai_support   import AISupport
 from app.backend.integrations.grafana.grafana         import Grafana
-from app.backend.integrations.influxdb.influxdb       import Influxdb
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction       import InfluxdbV2
 from app.backend.integrations.grafana.grafana_config  import GrafanaConfig
 from app.backend.components.nfrs.nfr_validation       import NFRValidation
 from app.backend.components.templates.template_config import TemplateConfig
@@ -32,7 +32,7 @@ class ReportingBase:
         self.validation_obj = NFRValidation(project)
 
     def __del__(self):
-        self.influxdb_obj.close_influxdb_connection()
+        self.influxdb_obj._close_client()
 
     def set_template(self, template, influxdb):
         template_obj                   = TemplateConfig.get_template_config_values(self.project, template)
@@ -42,7 +42,7 @@ class ReportingBase:
         self.template_prompt_id        = template_obj["template_prompt_id"]
         self.aggregated_prompt_id      = template_obj["aggregated_prompt_id"]
         self.system_prompt_id          = template_obj["system_prompt_id"]
-        self.influxdb_obj              = Influxdb(project=self.project, id=influxdb).connect_to_influxdb()
+        self.influxdb_obj              = InfluxdbV2(project=self.project, id=influxdb)
         self.ai_switch                 = template_obj["ai_switch"]
         self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
         self.nfrs_switch               = template_obj["nfrs_switch"]
@@ -108,28 +108,28 @@ class ReportingBase:
         default_grafana_obj          = Grafana(project=self.project, id=default_grafana)
         self.current_run_id          = current_run_id
         self.baseline_run_id         = baseline_run_id
-        self.current_start_time      = self.influxdb_obj.get_start_time(current_run_id)
-        self.current_end_time        = self.influxdb_obj.get_end_time(current_run_id)
-        self.current_start_timestamp = self.influxdb_obj.get_start_tmp(current_run_id)
-        self.current_end_timestamp   = self.influxdb_obj.get_end_tmp(current_run_id)
+        self.current_start_time      = self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'iso')
+        self.current_end_time        = self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'iso')
+        self.current_start_timestamp = self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'timestamp')
+        self.current_end_timestamp   = self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'timestamp')
         self.test_name               = self.influxdb_obj.get_test_name(current_run_id, self.current_start_time, self.current_end_time)
         self.parameters              = {
             "test_name"           : self.test_name,
-            "current_start_time"  : self.influxdb_obj.get_human_start_time(current_run_id),
-            "current_end_time"    : self.influxdb_obj.get_human_end_time(current_run_id),
+            "current_start_time"  : self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'human'),
+            "current_end_time"    : self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'human'),
             "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id),
             "current_duration"    : str(int((self.current_end_timestamp - self.current_start_timestamp) / 1000)),
             "current_vusers"      : self.influxdb_obj.get_max_active_users(current_run_id, self.current_start_time, self.current_end_time)
         }
         if baseline_run_id is not None:
-            self.baseline_start_time      = self.influxdb_obj.get_start_time(baseline_run_id)
-            self.baseline_end_time        = self.influxdb_obj.get_end_time(baseline_run_id)
-            self.baseline_start_timestamp = self.influxdb_obj.get_start_tmp(baseline_run_id)
-            self.baseline_end_timestamp   = self.influxdb_obj.get_end_tmp(baseline_run_id)
+            self.baseline_start_time      = self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'iso')
+            self.baseline_end_time        = self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'iso')
+            self.baseline_start_timestamp = self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'timestamp')
+            self.baseline_end_timestamp   = self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'timestamp')
 
             self.parameters.update({
-                "baseline_start_time"  : self.influxdb_obj.get_human_start_time(baseline_run_id),
-                "baseline_end_time"    : self.influxdb_obj.get_human_end_time(baseline_run_id),
+                "baseline_start_time"  : self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'human'),
+                "baseline_end_time"    : self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'human'),
                 "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_start_timestamp, self.baseline_end_timestamp, self.test_name, baseline_run_id),
                 "baseline_duration"    : str(int((self.baseline_end_timestamp - self.baseline_start_timestamp) / 1000)),
                 "baseline_vusers"      : self.influxdb_obj.get_max_active_users(baseline_run_id, self.baseline_start_time, self.baseline_end_time)

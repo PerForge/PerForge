@@ -28,7 +28,7 @@ def choose_project():
         return render_template('home/choose-project.html', projects=projects)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_PROMPTS.value, "error")
+        flash(ErrorMessages.ER00016.value, "error")
     return redirect(url_for('index'))
 
 @app.route('/set-project', methods=['GET'])
@@ -45,7 +45,7 @@ def set_project():
         res.set_cookie(key='project', value=project, max_age=None)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SET_PROJECT.value, "error")
+        flash(ErrorMessages.ER00012.value, "error")
     return res
 
 @app.route('/get-projects', methods=['GET'])
@@ -55,7 +55,7 @@ def get_projects():
         projects = pkg.get_all_projects()
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_PROJECT.value, "error")
+        flash(ErrorMessages.ER00013.value, "error")
     return {'projects': projects}
 
 @app.route('/save-project', methods=['GET'])
@@ -68,7 +68,7 @@ def save_project():
         flash("The project was successfully added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SAVE_PROJECT.value, "error")
+        flash(ErrorMessages.ER00014.value, "error")
     return res
 
 @app.route('/delete-project', methods=['GET'])
@@ -85,5 +85,5 @@ def delete_project():
         res.set_cookie(key='project', value=project, max_age=None)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_PROJECT.value, "error")
+        flash(ErrorMessages.ER00015.value, "error")
     return res

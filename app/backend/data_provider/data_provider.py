@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from app.backend.integrations.influxdb.influxdb import Influxdb
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.data_provider.data_analysis.detectors import IsolationForestDetector, ZScoreDetector, MetricStabilityDetector, RampUpPeriodAnalyzer
 
 import pandas as pd
 from collections import defaultdict
+from typing import List, Dict, Any
 
 class DataProvider:
     def __init__(self, project):
         self.project        = project
-        self.influxdb_obj   = Influxdb(project=self.project).connect_to_influxdb()
+        self.influxdb_obj   = InfluxdbV2(project=self.project)
         # Initialize the AnomalyDetectionEngine
         self.engine = AnomalyDetectionEngine(
             contamination=0.003, 
@@ -45,31 +46,31 @@ class DataProvider:
         """
         Retrieve test results from the internal database and perform analysis.
         """
-        def process_data(result):
-            records = []
-            for table in result:
-                for record in table.records:
-                    records.append((record.get_time(), record.get_value()))
-
-            df = pd.DataFrame(records, columns=['timestamp', 'value'])
-            df.set_index('timestamp', inplace=True)
-            return df 
         
-        def process_data_req(result):
+        def transform_to_json(result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            """
+            Transform the output of get_average_response_time_per_req to a JSON format.
+            :param result: List of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
+            :return: JSON-friendly list of dictionaries.
+            """
+
+            # Group records by transaction
             grouped_records = defaultdict(list)
             
-            for table in result:
-                for record in table.records:
-                    timestamp = record.get_time()
-                    value = record.get_value()
-                    transaction = record.values.get('transaction', 'default')  # Use 'default' if no transaction
-                    
+            for entry in result:
+                transaction = entry['transaction']
+                df = entry['data']
+                
+                # Iterate over DataFrame rows
+                for timestamp, row in df.iterrows():
+                    value = row['value']
                     grouped_records[transaction].append({
                         'timestamp': timestamp.isoformat(),
                         'value': value,
-                        "anomaly": "Normal"
+                        'anomaly': 'Normal'
                     })
             
+            # Prepare JSON result
             json_result = []
             for transaction, data in grouped_records.items():
                 json_result.append({
@@ -79,8 +80,8 @@ class DataProvider:
             
             return json_result
         
-        current_start_time      = self.influxdb_obj.get_start_time(test_title)
-        current_end_time        = self.influxdb_obj.get_end_time(test_title)
+        current_start_time      = self.influxdb_obj.get_start_time(test_title = test_title, time_format = 'iso')
+        current_end_time        = self.influxdb_obj.get_end_time(test_title = test_title, time_format = 'iso')
 
         standart_metrics = {
             "overalThroughput": {
@@ -94,22 +95,22 @@ class DataProvider:
                 "analysis": False
             },
             "overalAvgResponseTime": {
-                "func": self.influxdb_obj.get_response_time,
+                "func": self.influxdb_obj.get_average_response_time,
                 "name": "Avg Response Time",
                 "analysis": True
             },
             "overalMedianResponseTime": {
-                "func": self.influxdb_obj.get_response_time_median,
+                "func": self.influxdb_obj.get_median_response_time,
                 "name": "Median Response Time",
                 "analysis": True
             },
             "overal90PctResponseTime": {
-                "func": self.influxdb_obj.get_response_time_pct,
+                "func": self.influxdb_obj.get_pct90_response_time,
                 "name": "90th Percentile Response Time",
                 "analysis": True
             },
             "overalErrors": {
-                "func": self.influxdb_obj.get_errors,
+                "func": self.influxdb_obj.get_error_count,
                 "name": "Errors",
                 "analysis": False
             }
@@ -118,9 +119,8 @@ class DataProvider:
         dataframes = {}
         for metric, details in standart_metrics.items():
             func = details["func"]
-            result = func(run_id=test_title, start=current_start_time, end=current_end_time)
-            df = process_data(result)
-            df = df.rename(columns={'value': metric})
+            result = func(test_title=test_title, start=current_start_time, end=current_end_time)
+            df = result.rename(columns={'value': metric})
             dataframes[metric] = df
         
         merged_df = pd.concat(dataframes.values(), axis=1) 
@@ -172,18 +172,18 @@ class DataProvider:
                         'anomaly': anomaly_value
                     })
 
-        avgResponseTimePerReq = self.influxdb_obj.get_response_time_per_req(run_id=test_title, start=current_start_time, end=current_end_time)
-        avgResponseTimePerReq_data = process_data_req(avgResponseTimePerReq)
+        avgResponseTimePerReq = self.influxdb_obj.get_average_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
+        avgResponseTimePerReq_data = transform_to_json(avgResponseTimePerReq)
 
         result["avgResponseTimePerReq"] = avgResponseTimePerReq_data
 
-        medianRespTimePerReq = self.influxdb_obj.get_response_time_per_req_median(run_id=test_title, start=current_start_time, end=current_end_time)
-        medianRespTimePerReq_data = process_data_req(medianRespTimePerReq)
+        medianRespTimePerReq = self.influxdb_obj.get_median_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
+        medianRespTimePerReq_data = transform_to_json(medianRespTimePerReq)
 
         result["medianResponseTimePerReq"] = medianRespTimePerReq_data
 
-        pctRespTimePerReq = self.influxdb_obj.get_response_time_per_req_pct(run_id=test_title, start=current_start_time, end=current_end_time)
-        pctRespTimePerReq_data = process_data_req(pctRespTimePerReq)
+        pctRespTimePerReq = self.influxdb_obj.get_pct90_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
+        pctRespTimePerReq_data = transform_to_json(pctRespTimePerReq)
 
         result["pctResponseTimePerReq"] = pctRespTimePerReq_data
         
@@ -197,7 +197,7 @@ class DataProvider:
 
         test_details = self.get_test_details()
 
-        statistics = self.influxdb_obj.get_aggregated_table(run_id=test_title, start=current_start_time, end=current_end_time)
+        statistics = self.influxdb_obj.get_aggregated_table(test_title=test_title, start=current_start_time, end=current_end_time)
 
         prompt = f''''''
         llm_response = ""
