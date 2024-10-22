@@ -59,7 +59,7 @@ def validate_string_output(func: Callable):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         result = func(self, *args, **kwargs)
-        if not isinstance(result, int):
+        if not isinstance(result, str):
             raise ValueError(f"The return value must be a string, got {type(result).__name__} instead.")
         return result
     return wrapper
@@ -94,6 +94,15 @@ def validate_dict_output(func: Callable):
                 raise ValueError(f"The 'data' key must contain a pandas DataFrame, got {type(entry['data']).__name__} instead.")
             if entry['data'].index.name != 'timestamp' or 'value' not in entry['data'].columns:
                 raise ValueError(f"The DataFrame must have 'timestamp' as the index and a 'value' column.")
+        return result
+    return wrapper
+
+def validate_float_output(func: Callable):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        if not isinstance(result, float):
+            raise ValueError(f"The return value must be a float, got {type(result).__name__} instead.")
         return result
     return wrapper
 
@@ -216,28 +225,6 @@ class DataExtractionBase(ABC):
         :return: The end time in the specified format.
         """
         return self._fetch_end_time(test_title, **kwargs)
-    
-    @abstractmethod
-    def _fetch_max_active_users(self, test_title: str, start: str, end: str) -> int:
-        """
-        Fetch the maximum number of active users between the specified time range.
-        :param test_title: The title of the test.
-        :param start: The start time.
-        :param end: The end time.
-        :return: The maximum number of active users.
-        """
-        pass
-
-    @validate_integer_output
-    def get_max_active_users(self, test_title: str, start: str, end: str) -> int:
-        """
-        Retrieve the maximum number of active users for the specified test.
-        :param test_title: The title of the test.
-        :param start: The start time.
-        :param end: The end time.
-        :return: The maximum number of active users.
-        """
-        return self._fetch_max_active_users(test_title, start, end)
     
     @abstractmethod
     def _fetch_test_name(self, test_title: str, start: str, end: str) -> str:
@@ -460,3 +447,113 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
         """
         return self._fetch_pct90_response_time_per_req(test_title, start, end)
+    
+    @abstractmethod
+    def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
+        """
+        Fetch the maximum number of active users between the specified time range.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The maximum number of active users.
+        """
+        pass
+
+    @validate_integer_output
+    def get_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
+        """
+        Retrieve the maximum number of active users for the specified test.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The maximum number of active users.
+        """
+        return self._fetch_max_active_users_stats(test_title, start, end)
+    
+    @abstractmethod
+    def _fetch_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
+        """
+        Fetch the median throughput stats between the specified time range.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The median throughput stats as an integer.
+        """
+        pass
+
+    @validate_integer_output
+    def get_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
+        """
+        Retrieve the median throughput stats for the specified test.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The median throughput stats as an integer.
+        """
+        return self._fetch_median_throughput_stats(test_title, start, end)
+    
+    @abstractmethod
+    def _fetch_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
+        """
+        Fetch the median response time stats between the specified time range.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The median response time stats as a float.
+        """
+        pass
+
+    @validate_float_output
+    def get_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
+        """
+        Retrieve the median response time stats for the specified test.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The median response time stats as a float.
+        """
+        return self._fetch_median_response_time_stats(test_title, start, end)
+    
+    @abstractmethod
+    def _fetch_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
+        """
+        Fetch the 90th percentile response time stats between the specified time range.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The 90th percentile response time stats as a float.
+        """
+        pass
+
+    @validate_float_output
+    def get_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
+        """
+        Retrieve the 90th percentile response time stats for the specified test.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The 90th percentile response time stats as a float.
+        """
+        return self._fetch_pct90_response_time_stats(test_title, start, end)
+    
+    @abstractmethod
+    def _fetch_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
+        """
+        Fetch the percentage of errors between the specified time range.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The percentage of errors as a float.
+        """
+        pass
+
+    @validate_float_output
+    def get_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
+        """
+        Retrieve the percentage of errors for the specified test.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The percentage of errors as a float.
+        """
+        return self._fetch_errors_pct_stats(test_title, start, end)

@@ -72,3 +72,7 @@ class ErrorMessages(Enum):
     ER00069               = 'An error occurred while fetching average response time per request. Integration name: {}'
     ER00070               = 'An error occurred while fetching median response time per request. Integration name: {}'
     ER00071               = 'An error occurred while fetching 90th percentile response time per request. Integration name: {}'
+    ER00072               = 'Parameters for AnomalyDetectionEngine should be provided in a dictionary.'
+    ER00073               = 'Unexpected parameter "{}" in dictionary for AnomalyDetectionEngine.'
+    ER00074               = 'An error occurred while fetching median throughput stat value. Integration name: {}'
+    ER00075               = 'An error occurred while fetching median response time stat value. Integration name: {}'

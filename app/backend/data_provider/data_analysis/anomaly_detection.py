@@ -2,22 +2,50 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from abc import ABC, abstractmethod
+from app.backend.errors import ErrorMessages
+import logging
 
 class AnomalyDetectionEngine:
-    def __init__(self, contamination, z_score_threshold, detectors=None):
-        self.contamination = contamination
-        self.isf_threshold = 0.1
-        self.isf_feature_metric = "overalThroughput"
-        self.z_score_threshold = z_score_threshold
-        self.rolling_window = 5
-        self.rolling_correlation_threshold = 0.4
-        self.ramp_up_period = None
-        self.fixed_load_period = None
-        self.output = []
-        self.fixed_load_percentage = 60
-        self.slope_threshold = 0.015
-        self.p_value_threshold = 0.15
+    def __init__(self, params, detectors=None):
+        self.output            = []
         self.anomaly_detectors = detectors if detectors is not None else []
+        
+        # Define default parameters
+        default_params = {
+            'contamination'                 : 0.001,
+            'isf_threshold'                 : 0.1,
+            'isf_feature_metric'            : "overalThroughput",
+            'z_score_threshold'             : 4,
+            'rolling_window'                : 5,
+            'rolling_correlation_threshold' : 0.4,
+            'fixed_load_percentage'         : 60,
+            'slope_threshold'               : 0.015,
+            'p_value_threshold'             : 0.15
+        }
+        
+         # Ensure default parameters are updated with user provided params
+        if not isinstance(params, dict):
+            logging.warning(ErrorMessages.ER00072.value)
+            params = {}
+        
+        for key in params:
+            if key not in default_params:
+                logging.error(ErrorMessages.ER00073.value.format(key))
+            
+        # Update default params with provided params
+        default_params.update(params)
+        
+        # Assign parameters to instance variables
+        self.contamination                 = default_params['contamination']
+        self.isf_threshold                 = default_params['isf_threshold']
+        self.isf_feature_metric            = default_params['isf_feature_metric']
+        self.z_score_threshold             = default_params['z_score_threshold']
+        self.rolling_window                = default_params['rolling_window']
+        self.rolling_correlation_threshold = default_params['rolling_correlation_threshold']
+        self.fixed_load_percentage         = default_params['fixed_load_percentage']
+        self.slope_threshold               = default_params['slope_threshold']
+        self.p_value_threshold             = default_params['p_value_threshold']
+
 
     def add_anomaly_detector(self, detector):
         self.anomaly_detectors.append(detector)

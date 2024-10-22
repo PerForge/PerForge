@@ -119,7 +119,7 @@ class ReportingBase:
             "current_end_time"    : self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'human'),
             "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id),
             "current_duration"    : str(int((self.current_end_timestamp - self.current_start_timestamp) / 1000)),
-            "current_vusers"      : self.influxdb_obj.get_max_active_users(current_run_id, self.current_start_time, self.current_end_time)
+            "current_vusers"      : self.influxdb_obj.get_max_active_users_stats(current_run_id, self.current_start_time, self.current_end_time)
         }
         if baseline_run_id is not None:
             self.baseline_start_time      = self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'iso')
@@ -132,7 +132,7 @@ class ReportingBase:
                 "baseline_end_time"    : self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'human'),
                 "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_start_timestamp, self.baseline_end_timestamp, self.test_name, baseline_run_id),
                 "baseline_duration"    : str(int((self.baseline_end_timestamp - self.baseline_start_timestamp) / 1000)),
-                "baseline_vusers"      : self.influxdb_obj.get_max_active_users(baseline_run_id, self.baseline_start_time, self.baseline_end_time)
+                "baseline_vusers"      : self.influxdb_obj.get_max_active_users_stats(baseline_run_id, self.baseline_start_time, self.baseline_end_time)
             })
         self.status = "Collected data from InfluxDB"
         self.progress = 25

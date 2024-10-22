@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def get_test_log_query(bucket):
+def get_test_log(bucket):
   return '''data = from(bucket: "'''+bucket+'''")
   |> range(start: 0, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "virtualUsers")

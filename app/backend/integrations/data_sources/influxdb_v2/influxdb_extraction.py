@@ -18,6 +18,7 @@ import pandas as pd
 
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_config import InfluxdbConfig
+from app.backend.integrations.data_sources.influxdb_v2.queries.influxdb_backend_listener_client import InfluxDBBackendListenerClientImpl
 from app.backend.integrations.data_sources.influxdb_v2.queries import mderevyankoaqa, influxdb_backend_listener_client
 from app.backend.errors import ErrorMessages
 from influxdb_client import InfluxDBClient
@@ -31,7 +32,7 @@ from collections import defaultdict
 class InfluxdbV2(DataExtractionBase):
 
     queries_map = {
-        "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": influxdb_backend_listener_client,
+        "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": InfluxDBBackendListenerClientImpl,
         "mderevyankoaqa": mderevyankoaqa
     }
 
@@ -40,9 +41,14 @@ class InfluxdbV2(DataExtractionBase):
         self.set_config(id)
         self.tmz_utc = tz.tzutc()
         self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
-        self.queries = self.queries_map.get(self.listener, None)
-        if not self.queries:
+        
+        if self.listener in self.queries_map:
+            # Instantiate the correct client class
+            self.queries = self.queries_map[self.listener]()
+        else:
+            self.queries = None
             logging.warning(ErrorMessages.ER00054.value.format(self.listener))
+
         self._initialize_client()
 
     def __enter__(self):
@@ -89,7 +95,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_test_log(self) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_test_log_query(self.bucket)
+            query = self.queries.get_test_log(self.bucket)
             records = self._execute_query(query)
         
             df = pd.DataFrame(records)
@@ -142,19 +148,6 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(ErrorMessages.ER00060.value.format(self.name))
             logging.error(er)
             return None
-
-    def _fetch_max_active_users(self, test_title: str, start: str, end: str) -> int:
-        try:
-            query = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket)
-            flux_tables = self.influxdb_connection.query_api().query(query)
-            for flux_table in flux_tables:
-                for flux_record in flux_table:
-                    users = round(flux_record['_value'])
-            return users
-        except Exception as er:
-            logging.error(ErrorMessages.ER00061.value.format(self.name))
-            logging.error(er)
-            return 0
 
     def _fetch_test_name(self, test_title: str, start: str, end: str) -> str:
         try:
@@ -267,6 +260,71 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(ErrorMessages.ER00071.value.format(self.name))
             logging.error(er)
             return []
+        
+    def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
+        try:
+            query = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            for flux_table in flux_tables:
+                for flux_record in flux_table:
+                    users = round(flux_record['_value'])
+            return users
+        except Exception as er:
+            logging.error(ErrorMessages.ER00061.value.format(self.name))
+            logging.error(er)
+            return 0
+        
+    def _fetch_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
+        try:
+            query = self.queries.get_median_throughput_stats(test_title, start, end, self.bucket)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            for flux_table in flux_tables:
+                for flux_record in flux_table:
+                    value = round(flux_record['_value'])
+            return value
+        except Exception as er:
+            logging.error(ErrorMessages.ER00074.value.format(self.name))
+            logging.error(er)
+            return 0
+        
+    def _fetch_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
+        try:
+            query = self.queries.get_median_response_time_stats(test_title, start, end, self.bucket)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            for flux_table in flux_tables:
+                for flux_record in flux_table.records:
+                    value = round(flux_record['_value'], 2)
+            return value
+        except Exception as er:
+            logging.error(ErrorMessages.ER00075.value.format(self.name))
+            logging.error(er)
+            return 0.0
+    
+    def _fetch_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
+        try:
+            query = self.queries.get_pct90_response_time_stats(test_title, start, end, self.bucket)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            for flux_table in flux_tables:
+                for flux_record in flux_table.records:
+                    value = round(flux_record['_value'], 2)
+            return value
+        except Exception as er:
+            logging.error(ErrorMessages.ER00075.value.format(self.name))
+            logging.error(er)
+            return 0.0
+    
+    def _fetch_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
+        try:
+            query = self.queries.get_errors_pct_stats(test_title, start, end, self.bucket)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            for flux_table in flux_tables:
+                for flux_record in flux_table.records:
+                    value = round(flux_record['errors'], 2)
+            return value
+        except Exception as er:
+            logging.error(ErrorMessages.ER00075.value.format(self.name))
+            logging.error(er)
+            return 0.0
 
     def delete_test_data(self, measurement, test_title, start = None, end = None):
         if start == None: start = "2000-01-01T00:00:00Z"
