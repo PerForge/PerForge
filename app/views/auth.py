@@ -89,7 +89,7 @@ def register():
         return render_template('accounts/register.html', form=form)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.REGISTER.value, "error")
+        flash(ErrorMessages.ER00022.value, "error")
         return redirect(url_for('register'))
 
 # Register a new admin
@@ -120,7 +120,7 @@ def register_admin():
         return render_template('accounts/register.html', form=form, admin=True)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.REGISTER.value, "error")
+        flash(ErrorMessages.ER00022.value, "error")
         return redirect(url_for('register'))
 
 # Authenticate user
@@ -148,7 +148,7 @@ def login():
         return render_template('accounts/login.html', form=form, admin=admin)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.LOGIN.value, "error")
+        flash(ErrorMessages.ER00023.value, "error")
         return redirect(url_for('login'))
 
 # App main route + generic routing
@@ -168,5 +168,5 @@ def index(path):
         return render_template('home/page-404.html'), 404
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.OOPS_MSG.value, "error")
+        flash(ErrorMessages.ER00024.value, "error")
         return render_template('home/page-500.html'), 500

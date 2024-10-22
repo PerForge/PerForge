@@ -24,7 +24,7 @@ def get_templates():
         return render_template('home/templates.html', templates=templates, template_groups=template_groups, nfrs=nfrs, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts, template_group_prompts=template_group_prompts)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.TEMPLATES.value, "error")
+        flash(ErrorMessages.ER00007.value, "error")
         return redirect(url_for("index"))
 
 @app.route('/template', methods=['GET', 'POST'])
@@ -51,11 +51,11 @@ def template():
                     flash("Template added.","info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_TEMPLATE.value, "error")
+                flash(ErrorMessages.ER00001.value, "error")
             return jsonify({'redirect_url': 'templates'})
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_TEMPLATE.value, "error")
+        flash(ErrorMessages.ER00002.value, "error")
         return redirect(url_for("get_templates"))
     return render_template('home/template.html', template_config=template_config, graphs=graphs, nfrs=nfrs, template_data=template_data, template_prompts=template_prompts, aggregated_data_prompts=aggregated_data_prompts, system_prompts=system_prompts)
 
@@ -69,7 +69,7 @@ def delete_template():
             flash("Template is deleted.","info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DEL_TEMPLATE.value, "error")
+        flash(ErrorMessages.ER00003.value, "error")
     return redirect(url_for("get_templates"))
 
 @app.route('/template-group', methods=['GET', 'POST'])
@@ -93,11 +93,11 @@ def template_group():
                     flash("Template group added.","info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.SAVE_TEMPLATE_GROUP.value, "error")
+                flash(ErrorMessages.ER00004.value, "error")
             return jsonify({'redirect_url': 'templates'})
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_TEMPLATE_GROUP.value, "error")
+        flash(ErrorMessages.ER00005.value, "error")
         return redirect(url_for("get_templates"))
     return render_template('home/template-group.html', template_group_config=template_group_config,templates=templates, template_group_data=template_group_data, template_group_prompts=template_group_prompts)
 
@@ -111,5 +111,5 @@ def delete_template_group():
             flash("Template group is deleted.","info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DEL_TEMPLATE_GROUP.value, "error")
+        flash(ErrorMessages.ER00006.value, "error")
     return redirect(url_for("get_templates"))

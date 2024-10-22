@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def get_test_log_query(bucket):
+def get_test_log(bucket):
   return '''data = from(bucket: "'''+bucket+'''")
   |> range(start: 0, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "virtualUsers")
@@ -208,7 +208,8 @@ def get_app_name(run_id, start, stop, bucket):
   |> filter(fn: (r) => r["_field"] == "responseTime")
   |> group(columns: ["testName"])
   |> max()
-  |> keep(columns: ["testName"])'''
+  |> keep(columns: ["testName"])
+  |> rename(columns: {testName: "application"})'''
   
 def flux_constructor(app_name, run_id, start, stop, bucket, request_name = ''):
   constr                                  = {}

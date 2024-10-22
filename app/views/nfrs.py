@@ -29,7 +29,7 @@ def get_nfrs():
         return render_template('home/nfrs.html', nfrs_list=nfrs_list)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_NFRS.value, "error")
+        flash(ErrorMessages.ER00019.value, "error")
     return redirect(url_for('get_nfrs'))
 
 @app.route('/nfr', methods=['GET', 'POST'])
@@ -50,7 +50,7 @@ def get_nfr():
             return jsonify({'redirect_url': 'nfrs'})
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SAVE_NFR.value, "error")
+        flash(ErrorMessages.ER00020.value, "error")
     return render_template('home/nfr.html', nfr_config=nfr_config,nfr_data=nfr_data)
 
 @app.route('/delete/nfr', methods=['GET'])
@@ -62,5 +62,5 @@ def delete_nfrs():
         return redirect(url_for('get_nfrs'))
     except Exception as er:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_NFR.value, "error")
+        flash(ErrorMessages.ER00021.value, "error")
         return redirect(url_for('get_nfrs'))

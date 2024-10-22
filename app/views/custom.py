@@ -21,7 +21,7 @@ from app.backend.integrations.azure_wiki.azure_wiki_report                     i
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
-from app.backend.integrations.influxdb.influxdb                                import Influxdb
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction                                import InfluxdbV2
 from app.backend.integrations.grafana.grafana                                  import Grafana
 from flask                                                                     import request, redirect, make_response
 
@@ -72,7 +72,7 @@ def gen_report():
 def influx_data_delete():
     try:
         project      = request.args.get('project')
-        influxdb_obj = Influxdb(project)
+        influxdb_obj = InfluxdbV2(project)
         grafana_obj  = Grafana(project)
         bucket       = request.args.get('bucket')
         testTitle    = request.args.get('testTitle')
@@ -80,13 +80,13 @@ def influx_data_delete():
         end          = request.args.get('end')
         status       = request.args.get('status')
         redirect_url = request.args.get('redirect_url')
-        influxdb_obj.connect_to_influxdb()
+        influxdb_obj._initialize_client()
         if bucket: influxdb_obj.bucket = bucket
         if request.args.get('user') in ["admin"]:
             if status == "delete_test":
-                influxdb_obj.delete_run_id(run_id=testTitle)
+                influxdb_obj.delete_test_title(test_title=testTitle)
             elif status == "delete_timerange":
-                influxdb_obj.delete_run_id(run_id=testTitle, start=start, end=end)
+                influxdb_obj.delete_test_title(test_title=testTitle, start=start, end=end)
             elif status == "delete_custom":
                 filter = request.args.get('filter')
                 influxdb_obj.delete_custom(bucket=bucket, filetr=filter)

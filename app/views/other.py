@@ -17,7 +17,7 @@ import traceback
 
 from app         import app
 from app.backend import pkg
-from flask       import render_template, jsonify
+from flask       import render_template, jsonify, make_response, send_from_directory
 
 
 @app.route('/view-logs', methods=['GET'])
