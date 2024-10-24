@@ -208,12 +208,25 @@ def save_integration(project, form, integration_type):
             data["integrations"][integration_type][0]["is_default"] = "true"
     save_new_data(project, data)
     return form.get("id")
-
+        
 def get_default_integration(project, integration_type):
     data = get_project_config(project)
-    for config in data["integrations"][integration_type]:
-        if config["is_default"] == "true":
+    
+    integrations = data["integrations"].get(integration_type, [])
+    
+    if len(integrations) == 0:
+        logging.warning(f"There are no integrations for integration type: {integration_type}")
+        return None
+
+    for config in integrations:
+        if config.get("is_default") == "true":
             return config["id"]
+    
+    if len(integrations) > 0:
+        logging.warning(f"There is no default integration for integration type: {integration_type}. Returning the first one.")
+        return integrations[0]["id"]
+    
+    return None
 
 def get_output_integration_configs(project):
     result = []

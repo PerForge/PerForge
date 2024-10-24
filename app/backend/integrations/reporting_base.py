@@ -70,6 +70,25 @@ class ReportingBase:
             else:
                 logging.warning(f"Variable {var} not found in parameters")
         return text
+    
+    def round_dict_values(self, data):
+        # List to store modified dictionaries
+        rounded_data = []
+        
+        for item in data:
+            # Create a new dictionary with rounded values
+            rounded_item = {}
+            
+            for key, value in item.items():
+                if isinstance(value, (int, float)):
+                    rounded_item[key] = round(value, 2)
+                else:
+                    rounded_item[key] = value
+            
+            # Append the modified dictionary to the new list
+            rounded_data.append(rounded_item)
+            
+        return rounded_data
 
     def analyze_template(self):
         overall_summary = ""
@@ -77,6 +96,7 @@ class ReportingBase:
         data            = []
         if self.nfrs_switch or self.ai_aggregated_data_switch:
             data = self.influxdb_obj.get_aggregated_table(self.current_run_id, self.current_start_time, self.current_end_time)
+            data = self.round_dict_values(data)
         if self.nfrs_switch:
             nfr_summary = self.validation_obj.create_summary(self.nfr, data)
         if self.ai_switch:
