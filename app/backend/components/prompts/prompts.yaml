@@ -142,7 +142,7 @@ prompts:
     @@@@
 
     Observations from aggregated data analysis:
-    [aggreagted_data_analysis]
+    [aggregated_data_analysis]
 
     Observations from graphs analysis:
     [graphs_analysis]
@@ -209,9 +209,9 @@ prompts:
     ###Task: follow the instructions below to ANALYZE the metrics and PROVIDE observations corresponding to constraints
     ###Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
     ###Instructions:
-      - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
+      - Provide requests with high error rate. If there are requests with an error rate greater than 2.00%, follow this structure:
         - The request [request name] has a notably high percentage of errors at [percent value]%.
-      - If all requests have an error rate less than 2%, use this structure:
+      - If each requests have an error rate less than 2.00%, use this statement:
         - No requests with high error rate.
       - Provide the top 5 slowest requests. Structure in a bullet list:
         - Top 5 slowest requests (Based on median):
