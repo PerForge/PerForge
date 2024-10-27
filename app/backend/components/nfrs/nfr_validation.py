@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import re
+import logging
 
 from app.config                             import config_path
 from app.backend.components.nfrs.nfr_config import NFRConfig
@@ -144,7 +145,7 @@ class NFRValidation:
         # Calculate total weight and count NFRs without weights
         total_weight = 0
         nfrs_without_weight = 0
-
+        
         for nfr in nfrs["rows"]:
             if nfr["weight"] != '':
                 total_weight += int(nfr["weight"])
@@ -157,7 +158,8 @@ class NFRValidation:
         else:
             distribute_weight = 100 / len(nfrs["rows"])
             bad_weight = True
-
+            logging.warning("The total weight of your NFRs exceeds 100, so all NFRs will be considered equal.")
+            
         # Iterate through NFRs
         for nfr_row in nfrs["rows"]:
             nfr = Nfr(nfr_row, self.generate_name(nfr_row))
@@ -183,7 +185,7 @@ class NFRValidation:
                         # Append NFR result only if it was not set to FAILED before
                         nfr_result["status"] = compare_result if result != 'FAILED' else result
                         nfr_result["nfr"] = nfr.description
-                        nfr_result["weight"] = distribute_weight
+                        nfr_result["weight"] = float(nfr.weight)
             self.nfr_result.append(nfr_result)
             nfr_result = {}
 
