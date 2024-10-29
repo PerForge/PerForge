@@ -35,16 +35,15 @@ def view_logs():
 def check_version():
     try:
         current_version = pkg.get_current_version_from_file()
-        new_version     = pkg.get_new_version_from_docker_hub()
+        new_version     = pkg.get_new_version_from_docker_hub(current_version)
         if current_version != new_version:
             if pkg.is_valid_new_version_from_docker_hub(current_version, new_version):
                 return jsonify({
                     "new_version_released": True,
                     "new_version": new_version
                 })
-        else:
-            return jsonify({
-                "new_version_released": False
-            })
+        return jsonify({
+            "new_version_released": False
+        })
     except Exception:
         logging.warning(str(traceback.format_exc()))

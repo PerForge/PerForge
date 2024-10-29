@@ -77,6 +77,7 @@ class GraphForm(FlaskForm):
     dash_id    = SelectField('Dashboard Id', validators=[DataRequired()])
     width      = StringField('Panel width', validators=[DataRequired()])
     height     = StringField('Panel height', validators=[DataRequired()])
+    custom_vars= StringField('Custom vars', default="")
     prompt_id  = StringField('Prompt id', validators=[DataRequired()])
 
 

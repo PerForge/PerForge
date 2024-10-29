@@ -211,9 +211,22 @@ def save_integration(project, form, integration_type):
 
 def get_default_integration(project, integration_type):
     data = get_project_config(project)
-    for config in data["integrations"][integration_type]:
-        if config["is_default"] == "true":
+
+    integrations = data["integrations"].get(integration_type, [])
+
+    if len(integrations) == 0:
+        logging.warning(f"There are no integrations for integration type: {integration_type}")
+        return None
+
+    for config in integrations:
+        if config.get("is_default") == "true":
             return config["id"]
+
+    if len(integrations) > 0:
+        logging.warning(f"There is no default integration for integration type: {integration_type}. Returning the first one.")
+        return integrations[0]["id"]
+
+    return None
 
 def get_output_integration_configs(project):
     result = []
@@ -241,14 +254,16 @@ def get_current_version_from_file():
         logging.warning(f"Failed to read version from file: {e}")
         return None
 
-def get_new_version_from_docker_hub():
+def get_new_version_from_docker_hub(current_version):
     url = "https://hub.docker.com/v2/repositories/perforge/perforge-app/tags"
     tags = []
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         tags.extend([tag['name'] for tag in data['results']])
-    return tags[1]
+        return tags[1]
+    else:
+        return current_version
 
 def is_valid_new_version_from_docker_hub(current_version, new_version):
     # Define a regex pattern for a valid version number (e.g., "1.0.15")
