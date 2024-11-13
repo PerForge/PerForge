@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from app.backend                 import pkg
-from app.backend.pydantic_models import AzureWikiModel
 from werkzeug.datastructures     import MultiDict
 
 
@@ -23,14 +22,6 @@ class AzureWikiConfig:
         data = pkg.get_integration_values(project, "azure", azure_config, is_internal)
         return MultiDict(data)
 
-    def save_azure_wiki_config(project, data):
-        validated_data = AzureWikiModel.model_validate(data).model_dump()
-        id             = pkg.save_integration(project, validated_data, "azure")
-        return id
-
     def get_default_azure_wiki_config_id(project):
         id = pkg.get_default_integration(project, "azure")
         return id
-
-    def delete_azure_wiki_config(project, config):
-        pkg.delete_config(project, config, "integrations", "azure")

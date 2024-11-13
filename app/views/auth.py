@@ -15,15 +15,16 @@
 import traceback
 import logging
 
-from app                import app, login_manager, bc
-from app.backend        import pkg
-from app.models         import Users
-from app.forms          import LoginForm, RegisterForm
-from app.backend.errors import ErrorMessages
-from flask              import g, render_template, request, url_for, redirect, flash
-from flask_login        import login_user, logout_user, current_user
-from jinja2             import TemplateNotFound
-from functools          import wraps
+from app                           import app, login_manager, bc
+from app.backend                   import pkg
+from app.backend.database.users    import DBUsers
+from app.backend.database.projects import DBProjects
+from app.forms                     import LoginForm, RegisterForm
+from app.backend.errors            import ErrorMessages
+from flask                         import g, render_template, request, url_for, redirect, flash
+from flask_login                   import login_user, logout_user, current_user
+from jinja2                        import TemplateNotFound
+from functools                     import wraps
 
 
 # List of routes that do not require authentication
@@ -33,7 +34,7 @@ need_admin_routes = ['static','register_admin']
 @app.before_request
 def check_authentication():
     g.user = current_user
-    if not Users.check_admin_exists():
+    if not DBUsers.check_admin_exists():
         if request.endpoint not in need_admin_routes:  # Exclude register_admin from redirect
             return redirect(url_for('register_admin'))
     elif not g.user.is_authenticated and request.endpoint not in no_auth_required_routes:
@@ -42,7 +43,8 @@ def check_authentication():
 # provide login manager with load_user callback
 @login_manager.user_loader
 def load_user(user_id):
-    return Users.query.filter(Users.id == int(user_id)).first()
+    config = DBUsers.get_config_by_id(user_id)
+    return config
 
 def admin_required(f):
     @wraps(f)
@@ -75,13 +77,13 @@ def register():
             username = request.form.get('username', '', type=str)
             password = request.form.get('password', '', type=str)
             # filter User out of database through username
-            user = Users.query.filter_by(user=username).first()
+            user = DBUsers.get_config_by_username(user=username)
             # filter User out of database through username
             if user :
                 flash("User exists!", "info")
             else:
-                pw_hash = bc.generate_password_hash(password)
-                user    = Users(username, pw_hash)
+                pw_hash = bc.generate_password_hash(password).decode('utf-8')
+                user    = DBUsers(username, pw_hash, is_admin=False)
                 user.save()
                 return redirect(url_for('login')), flash("User created", "info")
         else:
@@ -96,7 +98,7 @@ def register():
 @app.route('/register-admin', methods=['GET', 'POST'])
 def register_admin():
     try:
-        if Users.check_admin_exists():
+        if DBUsers.check_admin_exists():
             flash("You do not have permission to access this page.", "error")
             return redirect(url_for('index'))
         # declare the Registration Form
@@ -109,10 +111,10 @@ def register_admin():
             username = request.form.get('username', '', type=str)
             password = request.form.get('password', '', type=str)
             # filter User out of database through username
-            user = Users.query.filter_by(user=username).first()
+            user = DBUsers.get_config_by_username(user=username)
             # filter User out of database through username
-            pw_hash = bc.generate_password_hash(password)
-            user    = Users(username, pw_hash, is_admin=True)
+            pw_hash = bc.generate_password_hash(password).decode('utf-8')
+            user    = DBUsers(username, pw_hash, is_admin=True)
             user.save()
             return redirect(url_for('login')), flash("Admin user created", "info")
         else:
@@ -135,7 +137,7 @@ def login():
             username = request.form.get('username', '', type=str)
             password = request.form.get('password', '', type=str)
             # filter User out of database through username
-            user = Users.query.filter_by(user=username).first()
+            user = DBUsers.get_config_by_username(user=username)
             if user:
                 if bc.check_password_hash(user.password, password):
                     login_user(user)
@@ -158,8 +160,8 @@ def index(path):
     try:
         project = request.cookies.get('project')
         if project != None:
-            projects        = pkg.get_all_projects()
-            project_stats   = pkg.get_project_config_stats(project)
+            projects        = DBProjects.get_configs()
+            project_stats   = DBProjects.get_project_stats(project)
             current_version = pkg.get_current_version_from_file()
             return render_template('home/' + path, projects = projects, project_stats=project_stats, current_version=current_version)
         else:

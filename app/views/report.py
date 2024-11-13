@@ -15,10 +15,8 @@
 import traceback
 import logging
 
-from app                                    import app
-from app.backend.errors                     import ErrorMessages
-from app.backend.components.nfrs.nfr_config import NFRConfig
-from flask                                  import render_template, request, url_for, redirect, flash, jsonify
+from app                                     import app
+from flask                                   import render_template, request, jsonify
 from app.backend.data_provider.data_provider import DataProvider
 
 @app.route('/api/data')

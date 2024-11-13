@@ -22,12 +22,11 @@ import re
 import logging
 import traceback
 
-from app.config                  import config_path
-from app.models                  import Secret
-from app.backend.pydantic_models import ProjectModel
-from os                          import path as pt
-from datetime                    import datetime
-from pydantic                    import ValidationError
+from app.config                   import config_path
+from app.backend.database.secrets import DBSecrets
+from app.backend.pydantic_models  import ProjectModel
+from os                           import path as pt
+from pydantic                     import ValidationError
 
 
 def generate_unique_id():
@@ -101,60 +100,6 @@ def get_project_config(project):
             return obj["data"]
     return {}
 
-def delete_config(project, config, list_name, type = None):
-    data = get_project_config(project)
-    if list_name == "templates" or list_name == "template_groups":
-        for idx, obj in enumerate(data[list_name]):
-            if obj["id"] == config:
-                data[list_name].pop(idx)
-    else:
-        for idx, obj in enumerate(data[list_name][type]):
-            if obj["id"] == config:
-                data[list_name][type].pop(idx)
-    save_new_data(project, data)
-
-def get_all_projects():
-    config = get_json_config()
-    result = []
-    for obj in config:
-        project_data = {"id": obj["id"], "name": obj["name"]}
-        result.append(project_data)
-    return result
-
-def get_project_config_stats(project):
-    result = {}
-    result["integrations"] = 0
-    result["graphs"]       = 0
-    result["nfrs"]         = 0
-    result["templates"]    = 0
-    result["secrets"]      = 0
-    data = get_project_config(project)
-    for integration in data["integrations"]:
-        result["integrations"] += len(data["integrations"][integration])
-    result["graphs"]    = len(data["graphs"])
-    result["templates"] = len(data["templates"])
-    result["nfrs"]      = len(data["nfrs"])
-    result["secrets"]   = Secret.count_secrets()
-    return result
-
-def save_new_project_config(project_name):
-    config     = get_json_config()
-    project_id = generate_unique_id()
-    config.append({"id": project_id, "name": project_name, "data": {}})
-    save_new_config(config)
-    return project_id
-
-def delete_project_config(project):
-    data = get_json_config()
-    for idx, obj in enumerate(data):
-        if obj["id"] == project:
-            data.pop(idx)
-            break
-    save_new_config(data)
-
-def get_integration_config_names_and_ids(project, integration_name):
-    return get_config_names_and_ids(project, "integrations", integration_name)
-
 def get_config_names_and_ids(project, key1, key2=None):
     result = []
     data = get_project_config(project)
@@ -170,7 +115,7 @@ def check_if_token(value):
     if isinstance(value, str):
         if value.startswith("{{") and value.endswith("}}"):
             secret_key = value[2:-2]
-            value = Secret.get_by_key(secret_key)
+            value = DBSecrets.get_config_by_key(secret_key)
     return value
 
 def get_integration_values(project, integration_name, config_id, is_internal = None):
@@ -185,35 +130,11 @@ def get_integration_values(project, integration_name, config_id, is_internal = N
                     output[key] = value
     return output
 
-def del_csrf_token(data):
-    if 'csrf_token' in data:
-       del data['csrf_token']
-    return data
-
-def save_integration(project, form, integration_type):
-    data                       = get_project_config(project)
-    integration_id             = form.get("id")
-    existing_integration_index = next((index for index, i in enumerate(data["integrations"][integration_type]) if i["id"] == integration_id), None)
-    form                       = del_csrf_token(form)
-    if existing_integration_index is None:
-        form["id"] = generate_unique_id()
-        data["integrations"][integration_type].append(form)
-    else:
-        data["integrations"][integration_type][existing_integration_index] = form
-    if form.get("is_default") == "true":
-        for integration in data["integrations"][integration_type]:
-            integration["is_default"] = "true" if integration["id"] == form["id"] else "false"
-    else:
-        if all(integration.get("is_default") == "false" for integration in data["integrations"][integration_type]):
-            data["integrations"][integration_type][0]["is_default"] = "true"
-    save_new_data(project, data)
-    return form.get("id")
-        
 def get_default_integration(project, integration_type):
     data = get_project_config(project)
-    
+
     integrations = data["integrations"].get(integration_type, [])
-    
+
     if len(integrations) == 0:
         logging.warning(f"There are no integrations for integration type: {integration_type}")
         return None
@@ -221,11 +142,11 @@ def get_default_integration(project, integration_type):
     for config in integrations:
         if config.get("is_default") == "true":
             return config["id"]
-    
+
     if len(integrations) > 0:
         logging.warning(f"There is no default integration for integration type: {integration_type}. Returning the first one.")
         return integrations[0]["id"]
-    
+
     return None
 
 def get_output_integration_configs(project):
@@ -254,14 +175,16 @@ def get_current_version_from_file():
         logging.warning(f"Failed to read version from file: {e}")
         return None
 
-def get_new_version_from_docker_hub():
+def get_new_version_from_docker_hub(current_version):
     url = "https://hub.docker.com/v2/repositories/perforge/perforge-app/tags"
     tags = []
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         tags.extend([tag['name'] for tag in data['results']])
-    return tags[1]
+        return tags[1]
+    else:
+        return current_version
 
 def is_valid_new_version_from_docker_hub(current_version, new_version):
     # Define a regex pattern for a valid version number (e.g., "1.0.15")

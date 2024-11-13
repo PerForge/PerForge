@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from app.backend.pydantic_models import NFRsModel
 from app.backend import pkg
 
 
@@ -29,19 +28,6 @@ class NFRConfig:
     def get_all_nfrs(project):
         data = pkg.get_project_config(project)
         return data["nfrs"]
-
-    def save_nfr_config(project, form):
-        validated_form     = NFRsModel.model_validate(form).model_dump()
-        config_data        = pkg.get_project_config(project)
-        nfr_id             = validated_form.get("id")
-        existing_nfr_index = next((index for index, n in enumerate(config_data["nfrs"]) if n["id"] == nfr_id), None)
-        if existing_nfr_index is None:
-            validated_form["id"] = pkg.generate_unique_id()
-            config_data["nfrs"].append(validated_form)
-        else:
-            config_data["nfrs"][existing_nfr_index] = validated_form
-        pkg.save_new_data(project, config_data)
-        return validated_form.get("id")
 
     def delete_nfr_config(project, id):
         data        = pkg.get_project_config(project)

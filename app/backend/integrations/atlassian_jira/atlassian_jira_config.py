@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from app.backend                 import pkg
-from app.backend.pydantic_models import AtlassianJiraModel
 from werkzeug.datastructures     import MultiDict
 
 class AtlassianJiraConfig:
@@ -22,14 +21,6 @@ class AtlassianJiraConfig:
         data           = pkg.get_integration_values(project, "atlassian_jira", atlassian_jira_config, is_internal)
         return MultiDict(data)
 
-    def save_atlassian_jira_config(project, data):
-        validated_data = AtlassianJiraModel.model_validate(data).model_dump()
-        id             = pkg.save_integration(project, validated_data, "atlassian_jira")
-        return id
-
     def get_default_atlassian_jira_config_id(project):
         id = pkg.get_default_integration(project, "atlassian_jira")
         return id
-
-    def delete_atlassian_jira_config(project, config):
-        pkg.delete_config(project, config, "integrations", "atlassian_jira")

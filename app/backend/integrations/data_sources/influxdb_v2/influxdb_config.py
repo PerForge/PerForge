@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from app.backend                 import pkg
-from app.backend.pydantic_models import InfluxdbModel
 from werkzeug.datastructures     import MultiDict
 
 
@@ -23,14 +22,6 @@ class InfluxdbConfig:
         data = pkg.get_integration_values(project, "influxdb", influxdb_config, is_internal)
         return MultiDict(data)
 
-    def save_influxdb_config(project, data):
-        validated_data = InfluxdbModel.model_validate(data).model_dump()
-        id             = pkg.save_integration(project, validated_data, "influxdb")
-        return id
-
     def get_default_influxdb_config_id(project):
         id = pkg.get_default_integration(project, "influxdb")
         return id
-
-    def delete_influxdb_config(project, config):
-        pkg.delete_config(project, config, "integrations", "influxdb")

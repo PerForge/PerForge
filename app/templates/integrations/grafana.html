@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Grafana {% endblock %} 
+{% block title %} Grafana {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -42,7 +42,7 @@
 
                                     <label for="server" class="input-label mt-2">Server:</label>
                                     {{ form.server(id='server', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -50,11 +50,16 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    {{ form.token(class="form-control") }}
-                                    
+                                    <select class="form-control" name="token" id="token">
+                                        <option value="" {% if form.token.data is none or form.token.data == null %} selected {% endif %}>Select the secret</option>
+                                        {% for secret in secret_configs %}
+                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                        {% endfor %}
+                                    </select>
+
                                     <label for="org_id" class="input-label mt-2">Organization ID:</label>
                                     {{ form.org_id(id='org_id', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -63,7 +68,7 @@
                                     </div>
                                     <label for="test_title" class="input-label mt-2">Test title tag:</label>
                                     {{ form.test_title(id='test_title', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -72,7 +77,7 @@
                                     </div>
                                     <label for="app" class="input-label mt-2">App name tag:</label>
                                     {{ form.app(id='app', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -160,7 +165,7 @@
               container.innerHTML = html;
               document.getElementById('dashboards-container').appendChild(container.firstChild);
             };
-        
+
             window.removeDashboard = function(e) {
               var dashboardId = e.parentNode.querySelector('[name$="-id"]').value;
               if (dashboardId) {
@@ -173,13 +178,13 @@
                 removeDashboardElement(e);
               }
             };
-            
+
             function removeDashboardElement(e) {
               var dashboardsContainer = document.getElementById('dashboards-container');
               dashboardsContainer.removeChild(e.parentNode);
               updateDashboardInputs();
             }
-            
+
             function updateDashboardInputs() {
               var dashboardInputs = document.querySelectorAll('.dashboardInput');
               var dashboardIds = document.querySelectorAll('[name^="dashboards-"][name$="-id"]');
@@ -203,7 +208,7 @@
               test_title: $('#test_title').val(),
               app: $('#app').val(),
               baseline_test_title: $('#baseline_test_title').val(),
-              is_default: $('#is_default').val(),
+              is_default: $('#is_default').val() === 'True',
               dashboards: []
           };
           $('.dashboardInput').each(function(index) {
@@ -217,8 +222,8 @@
               url: "/grafana",
               contentType: "application/json",
               data: JSON.stringify(formData),
-              success: function(response) {
-                  window.location.replace("/grafana?" + response);
+              success: function() {
+                  window.location.replace("/integrations?tab=grafana");
               },
               error: function(err){
                   console.error('Error saving configuration:', err);

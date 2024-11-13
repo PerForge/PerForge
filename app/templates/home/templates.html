@@ -163,8 +163,12 @@
                                                 <td class="template list">
                                                     {% for element in template_group.data %}
                                                         {% if element.type == "template" %}
-                                                            {% set counter.value = counter.value + 1 %}
-                                                            {{ counter.value }}. {{ element.content }}<br>
+                                                            {% for template in templates %}
+                                                                {% if element.template_id == template.id %}
+                                                                    {% set counter.value = counter.value + 1 %}
+                                                                    {{ counter.value }}. {{ template.name }}<br>
+                                                                {% endif %}
+                                                            {% endfor %}
                                                         {% endif %}
                                                     {% endfor %}
                                                 </td>

@@ -37,7 +37,7 @@ class InfluxDBForm(FlaskForm):
     bucket     = StringField('Bucket', validators=[DataRequired()])
     listener   = SelectField('Backend listener', choices=[('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient'), ('mderevyankoaqa', 'mderevyankoaqa')], default='InfluxdbBackendListenerClient')
     tmz        = StringField('Timezone', default="UTC")
-    is_default = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class DashboardForm(FlaskForm):
@@ -55,7 +55,7 @@ class GrafanaForm(FlaskForm):
     app                 = StringField('App name', validators=[DataRequired()], default="app")
     baseline_test_title = StringField('Baseline test title', validators=[DataRequired()], default="baseline_testTitle")
     dashboards          = FieldList(FormField(DashboardForm), min_entries=1)
-    is_default          = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class AzureWikiForm(FlaskForm):
@@ -66,7 +66,7 @@ class AzureWikiForm(FlaskForm):
     project_id     = StringField('Wiki Project', validators=[DataRequired()])
     identifier     = StringField('Wiki Identifier', validators=[DataRequired()])
     path_to_report = StringField('Wiki Path To Report', validators=[DataRequired()])
-    is_default     = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class GraphForm(FlaskForm):
@@ -74,11 +74,11 @@ class GraphForm(FlaskForm):
     name       = StringField('Name', validators=[DataRequired()])
     view_panel = StringField('View panel id', validators=[DataRequired()])
     grafana_id = StringField('Grafana id', validators=[DataRequired()])
-    dash_id    = SelectField('Dashboard Id', validators=[DataRequired()])
+    dash_id    = StringField('Dashboard Id', validators=[DataRequired()])
     width      = StringField('Panel width', validators=[DataRequired()])
     height     = StringField('Panel height', validators=[DataRequired()])
     custom_vars= StringField('Custom vars', default="")
-    prompt_id  = StringField('Prompt id', validators=[DataRequired()])
+    prompt_id  = StringField('Prompt id')
 
 
 class AtlassianConfluenceForm(FlaskForm):
@@ -90,7 +90,7 @@ class AtlassianConfluenceForm(FlaskForm):
     org_url    = StringField('Organization url', validators=[DataRequired()])
     space_key  = StringField('Space key', validators=[DataRequired()])
     parent_id  = StringField('Parent id', validators=[DataRequired()])
-    is_default = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class AtlassianJiraForm(FlaskForm):
@@ -103,7 +103,7 @@ class AtlassianJiraForm(FlaskForm):
     project_id = StringField('Project id', validators=[DataRequired()])
     epic_field = StringField('Epic field')
     epic_name  = StringField('Epic name')
-    is_default = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class SMTPMailForm(FlaskForm):
@@ -111,12 +111,12 @@ class SMTPMailForm(FlaskForm):
     name       = StringField('Name', validators=[DataRequired()])
     server     = StringField('Server', validators=[DataRequired()])
     port       = IntegerField('Port', validators=[DataRequired()])
-    use_ssl    = SelectField('Use SSL', choices=[('True', 'True'), ('False', 'False')], default='True')
-    use_tls    = SelectField('Use TLS', choices=[('True', 'True'), ('False', 'False')], default='False')
+    use_ssl    = SelectField('Use SSL', choices=[(True, 'Yes'), ('', 'No')], coerce=bool)
+    use_tls    = SelectField('Use TLS', choices=[('', 'No'), (True, 'Yes')], coerce=bool)
     username   = StringField('Username', validators=[DataRequired(), Email()])
     token      = StringField('Password', validators=[DataRequired()])
     recipients = FieldList(StringField('Recipient'), min_entries=1, validators=[DataRequired(), Email()])
-    is_default = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class AISupportForm(FlaskForm):
@@ -129,19 +129,21 @@ class AISupportForm(FlaskForm):
     ai_image_model = StringField('AI Image model', validators=[DataRequired()])
     token          = StringField('Token', validators=[DataRequired()])
     temperature    = FloatField('Temperature', validators=[DataRequired(), NumberRange(min=0.1, max=1.0)], default=0.2)
-    is_default     = SelectField('Default', choices=[('true', 'True'), ('false', 'False')], default='false')
+    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
 
 
 class PromptForm(FlaskForm):
-    id     = StringField('Id')
-    name   = StringField('Name', validators=[DataRequired()])
-    type   = StringField('Type', validators=[DataRequired()])
-    place  = SelectField('Place', choices=[('graph', 'Graph'), ('aggregated_data', 'Aggregated Data'), ('template', 'Template'), ('template_group', 'Template Group'), ('system', 'System')])
-    prompt = TextAreaField('Prompt', validators=[DataRequired()])
+    id         = StringField('Id')
+    name       = StringField('Name', validators=[DataRequired()])
+    type       = StringField('Type', validators=[DataRequired()])
+    place      = SelectField('Place', choices=[('graph', 'Graph'), ('aggregated_data', 'Aggregated Data'), ('template', 'Template'), ('template_group', 'Template Group'), ('system', 'System')])
+    prompt     = TextAreaField('Prompt', validators=[DataRequired()])
+    project_id = SelectField('Scope', choices=[('all', 'All Projects'), ('project', 'Current Project Only')])
 
 
 class SecretForm(FlaskForm):
-    id    = StringField('Id')
-    type  = StringField('Type')
-    key   = StringField('Key', validators=[DataRequired()])
-    value = StringField('Value', validators=[DataRequired()])
+    id         = StringField('Id')
+    type       = StringField('Type')
+    key        = StringField('Key', validators=[DataRequired()])
+    value      = StringField('Value', validators=[DataRequired()])
+    project_id = SelectField('Scope', choices=[('all', 'All Projects'), ('project', 'Current Project Only')])

@@ -15,25 +15,26 @@
 import traceback
 import logging
 
-from app                                             import app
-from app.forms                                       import GraphForm
-from app.backend.errors                              import ErrorMessages
-from app.backend.integrations.grafana.grafana_config import GrafanaConfig
-from app.backend.components.graphs.graph_config      import GraphConfig
-from app.backend.components.prompts.prompt_config    import PromptConfig
-from flask                                           import render_template, request, url_for, redirect, flash
+from app                           import app
+from app.forms                     import GraphForm
+from app.backend.errors            import ErrorMessages
+from app.backend.database.projects import DBProjects
+from app.backend.database.prompts  import DBPrompts
+from app.backend.database.graphs   import DBGraphs
+from app.backend.database.grafana  import DBGrafana
+from flask                         import render_template, request, url_for, redirect, flash
 
 
 @app.route('/graphs', methods=['GET'])
 def get_graphs():
     try:
-        project         = request.cookies.get('project')
-        prompt_obj      = PromptConfig(project)
-        graph_prompts   = prompt_obj.get_prompts_by_place("graph")
-        form_for_graphs = GraphForm(request.form)
-        graphs_list     = GraphConfig.get_all_graphs(project)
-        grafana_configs = GrafanaConfig.get_grafana_config_names_ids_and_dashboards(project)
-        return render_template('home/graphs.html', graphs_list=graphs_list, graph_prompts=graph_prompts, form_for_graphs=form_for_graphs, grafana_configs=grafana_configs)
+        project_id      = request.cookies.get('project')
+        project_data    = DBProjects.get_config_by_id(id=project_id)
+        graph_configs   = DBGraphs.get_configs(schema_name=project_data['name'])
+        prompt_configs  = DBPrompts.get_configs_by_place(project_id=project_id, place="graph")
+        form            = GraphForm(request.form)
+        grafana_configs = DBGrafana.get_configs(schema_name=project_data['name'])
+        return render_template('home/graphs.html', graphs_list=graph_configs, graph_prompts=prompt_configs, form_for_graphs=form, grafana_configs=grafana_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00025.value, "error")
@@ -42,13 +43,37 @@ def get_graphs():
 @app.route('/save-graph', methods=['POST'])
 def save_graph():
     try:
-        project = request.cookies.get('project')
-        if request.method == "POST":
-            original_graph_id = request.form.to_dict().get("id")
-            graph_id          = GraphConfig.save_graph_config(project, request.form.to_dict())
-            if original_graph_id == graph_id:
+        form = GraphForm(request.form)
+        if form.validate_on_submit():
+            project_id   = request.cookies.get('project')
+            project_data = DBProjects.get_config_by_id(id=project_id)
+            graph_data   = form.data
+            if graph_data['id']:
+                DBGraphs.update(
+                    schema_name = project_data['name'],
+                    id          = graph_data['id'],
+                    name        = graph_data['name'],
+                    grafana_id  = graph_data['grafana_id'],
+                    dash_id     = graph_data['dash_id'],
+                    view_panel  = graph_data['view_panel'],
+                    width       = graph_data['width'],
+                    height      = graph_data['height'],
+                    custom_vars = graph_data['custom_vars'] if graph_data['custom_vars'] else None,
+                    prompt_id   = graph_data['prompt_id'] if graph_data['prompt_id'] else None
+                )
                 flash("Graph updated.", "info")
             else:
+                graph_obj = DBGraphs(
+                    name        = graph_data['name'],
+                    grafana_id  = graph_data['grafana_id'],
+                    dash_id     = graph_data['dash_id'],
+                    view_panel  = graph_data['view_panel'],
+                    width       = graph_data['width'],
+                    height      = graph_data['height'],
+                    custom_vars = graph_data['custom_vars'] if graph_data['custom_vars'] else None,
+                    prompt_id   = graph_data['prompt_id'] if graph_data['prompt_id'] else None
+                )
+                graph_obj.save(schema_name=project_data['name'])
                 flash("Graph added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -58,10 +83,11 @@ def save_graph():
 @app.route('/delete-graph', methods=['GET'])
 def delete_graph():
     try:
-        project  = request.cookies.get('project')
-        graph_id = request.args.get('graph_id')
+        project_id   = request.cookies.get('project')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        graph_id     = request.args.get('graph_id')
         if graph_id is not None:
-            GraphConfig.delete_graph_config(project, graph_id)
+            DBGraphs.delete(schema_name=project_data['name'], id=graph_id)
             flash("Graph deleted", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

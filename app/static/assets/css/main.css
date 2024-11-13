@@ -6,7 +6,7 @@
   box-sizing: border-box; }
 
 :root {
-    --bs-blue: #0d6efd; 
+    --bs-blue: #0d6efd;
     --bs-indigo: #6610f2;
     --bs-purple: #6f42c1;
     --bs-pink: #d63384;
@@ -65,7 +65,7 @@ h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
 
 a {
     font-weight: 500;    transition: all 0.2s ease;
-    text-decoration: none; 
+    text-decoration: none;
     color: var(--text-main-color);
     font-family: var(--bs-font-sans-serif);
 }
@@ -116,7 +116,7 @@ img {
     height: 100vh;
     backdrop-filter: blur(5px);
 }
-    
+
 
 .sidebar {
     height: 100%;
@@ -247,7 +247,7 @@ img {
         border-radius: 10px;
         color: var(--bs-white);
         background-color: var(--bs-cyan);
-        border-color: var(--bs-dark); 
+        border-color: var(--bs-dark);
 }
 
 .btn-secondary2 {
@@ -1665,7 +1665,7 @@ svg:not(:host).svg-inline--fa, svg:not(:root).svg-inline--fa {
     width: 300px !important;
     height: 300px !important;
     margin: 5px;
-    border-radius: 16px !important; 
+    border-radius: 16px !important;
 }
 
 .card-project {
@@ -1674,7 +1674,7 @@ svg:not(:host).svg-inline--fa, svg:not(:root).svg-inline--fa {
     margin-top: 0px !important;
     margin-left: 0px !important;
     margin-right: 10px !important;
-    border-radius: 16px !important; 
+    border-radius: 16px !important;
     width: 100%;
     font-size: 30px;
 }
@@ -1685,7 +1685,7 @@ svg:not(:host).svg-inline--fa, svg:not(:root).svg-inline--fa {
     margin-top: 0px !important;
     margin-left: 0px !important;
     margin-right: 10px !important;
-    border-radius: 16px !important; 
+    border-radius: 16px !important;
     width: 100%;
 }
 
@@ -1758,16 +1758,16 @@ textarea:focus  {
 .vue-select-imput {
     --vs-controls-color: var(--text-main-color);
     --vs-border-color: var(--border-main-color);
-  
+
     --vs-dropdown-bg: var(--bs-background-dark);
     --vs-dropdown-color: var(--text-main-color);
     --vs-dropdown-option-color: var(--text-main-color);
-  
+
     --vs-selected-bg: var(--bs-primary);
     --vs-selected-color: var(--text-main-color);
-  
+
     --vs-search-input-bg: var(--bs-background-dark);
-  
+
     --vs-dropdown-option--active-bg: var(--bs-primary);
     --vs-dropdown-option--active-color: var(--text-main-color);
     --vs-line-height: 1.6;
@@ -2685,26 +2685,27 @@ textarea:focus  {
 }
 
 .tooltip-container {
-  position: relative;
-  display: inline-block;
-}
+    position: relative;
+    display: inline-block;
+  }
 
 .tooltip-content {
-  visibility: hidden;
-  width: 200px;
-  background-color: #555;
-  color: #fff;
-  text-align: center;
-  border-radius: 5px;
-  padding: 5px;
-  position: absolute;
-  z-index: 1;
-  bottom: 125%; /* Position above the element */
-  left: 50%;
-  margin-left: -100px; /* Center the tooltip */
-  opacity: 0;
-  transition: opacity 0.3s;
-}
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 100%;
+    margin-top: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+    transform: translateY(-50%);
+  }
 
 .tooltip-container:hover .tooltip-content,
 .tooltip-container .tooltip-content:hover {
@@ -2789,4 +2790,9 @@ textarea:focus  {
 
 #spark {
     animation: spark-appear 1s linear infinite;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }

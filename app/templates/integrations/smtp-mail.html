@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} SMTP Mail {% endblock %} 
+{% block title %} SMTP Mail {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -42,7 +42,7 @@
 
                                     <label for="server" class="input-label mt-2">Server:</label>
                                     {{ form.server(id='server', class_='form-control') }}
-                                    
+
                                     <label for="port" class="input-label mt-2">Port:</label>
                                     {{ form.port(id='port', class_='form-control') }}
 
@@ -62,7 +62,12 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    {{ form.token(class="form-control") }}
+                                    <select class="form-control" name="token" id="token">
+                                        <option value="" {% if form.token.data is none or form.token.data == '' %} selected {% endif %}>Select the secret</option>
+                                        {% for secret in secret_configs %}
+                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                        {% endfor %}
+                                    </select>
 
                                     <label for="is_default" class="input-label mt-2">Is Default:</label>
                                     {{ form.is_default(id='is_default', class_='form-control') }}
@@ -71,7 +76,10 @@
                                     <div id="dashboards-container" style="width: 100%;">
                                         {% for recipient in form.recipients %}
                                         <div class="flex m10-top">
-                                            {{ recipient(class_='form-control dashboardInput', required=true) }}
+                                            <input type="text"
+                                                class="form-control dashboardInput"
+                                                required
+                                                value="{{ recipient.data.email }}">
                                             <button type="button" class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
                                         </div>
                                         {% endfor %}
@@ -123,11 +131,11 @@
                 container.innerHTML = html;
                 document.getElementById('dashboards-container').appendChild(container.firstChild);
             };
-        
+
             window.removeDashboard = function(e) {
                 var dashboardsContainer = document.getElementById('dashboards-container');
                 dashboardsContainer.removeChild(e.parentNode);
-        
+
                 // After removing an input field, update all name and id attributes
                 var dashboardInputs = document.querySelectorAll('.dashboardInput');
                 for (var i = 0, len = dashboardInputs.length; i < len; i++) {
@@ -137,18 +145,18 @@
             };
         });
 
-        $("form").submit(function(event){  
+        $("form").submit(function(event){
             event.preventDefault(); // prevent form from doing its default action (submitting)
             // get values of all inputs
             var id         = $('#config_id').val();
             var name       = $('#name').val();
             var server     = $('#server').val();
             var port       = $('#port').val();
-            var use_ssl    = $('#use_ssl').val();
-            var use_tls    = $('#use_tls').val();
+            var use_ssl    = $('#use_ssl').val() === 'True';
+            var use_tls    = $('#use_tls').val() === 'True';
             var username   = $('#username').val();
             var token      = $('#token').val();
-            var is_default = $('#is_default').val();
+            var is_default = $('#is_default').val() === 'True';
             var recipients = [];
             $('.dashboardInput').each(function() {
               recipients.push($(this).val());
@@ -172,11 +180,8 @@
                 url: "/smtp-mail",
                 contentType: "application/json",
                 data: JSON.stringify(formData),
-                success: function(response) {
-                        // alert('Configuration saved successfully!');
-                        if (response.includes("smtp_mail_config")) {
-                            window.location.replace("/smtp-mail?"+response);
-                        }
+                success: function() {
+                    window.location.replace("/integrations?tab=smtp-mail");
                 },
                 error: function(err){
                     // If request resulted in error, handle it here
@@ -184,8 +189,8 @@
             });
         });
 
-        $(document).ready(function(){ 
-          $('[data-toggle="tooltip"]').tooltip(); 
+        $(document).ready(function(){
+          $('[data-toggle="tooltip"]').tooltip();
         });
         </script>
 {% endblock content %}

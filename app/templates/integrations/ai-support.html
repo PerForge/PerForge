@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} AI Support {% endblock %} 
+{% block title %} AI Support {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -72,7 +72,12 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    {{ form.token(class="form-control") }}
+                                    <select class="form-control" name="token" id="token">
+                                        <option value="" {% if form.token.data is none or form.token.data == '' %} selected {% endif %}>Select the secret</option>
+                                        {% for secret in secret_configs %}
+                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                        {% endfor %}
+                                    </select>
                                     <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
                                     {{ form.temperature(class="form-control") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>

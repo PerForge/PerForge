@@ -26,19 +26,23 @@ from app.backend.integrations.atlassian_confluence.atlassian_confluence_report i
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
 from app.backend.integrations.pdf.pdf_report                                   import PdfReport
+from app.backend.database.projects                                             import DBProjects
+from app.backend.database.influxdb                                             import DBInfluxdb
+from app.backend.database.templates                                            import DBTemplates
+from app.backend.database.template_groups                                      import DBTemplateGroups
 from flask                                                                     import render_template, request, url_for, redirect, flash, jsonify, send_file
 
 
 @app.route('/tests', methods=['GET'])
 def get_tests():
     try:
-        # Get current project
-        project          = request.cookies.get('project')
-        influxdb_configs = pkg.get_integration_config_names_and_ids(project, "influxdb")
-        templates        = pkg.get_config_names_and_ids(project, "templates")
-        template_groups  = pkg.get_config_names_and_ids(project, "template_groups")
-        output_configs   = pkg.get_output_integration_configs(project)
-        return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = templates, template_groups = template_groups, output_configs=output_configs)
+        project_id             = request.cookies.get('project')
+        project_data           = DBProjects.get_config_by_id(id=project_id)
+        influxdb_configs       = DBInfluxdb.get_configs(schema_name=project_data['name'])
+        template_configs       = DBTemplates.get_configs(schema_name=project_data['name'])
+        template_group_configs = DBTemplateGroups.get_configs(schema_name=project_data['name'])
+        output_configs         = DBProjects.get_project_output_configs(id=project_id)
+        return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = template_configs, template_groups = template_group_configs, output_configs=output_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00009.value, "error")

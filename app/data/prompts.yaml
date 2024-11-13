@@ -1,5 +1,5 @@
 prompts:
-- id: response_time_graph
+- id: 1
   name: Response time graph
   type: default
   place: graph
@@ -9,14 +9,14 @@ prompts:
     - Assess the trends of each response time line.
     - Response times should remain stable. Minor fluctuations in response times are acceptable.
     - Explicitly identify any spikes or significant deviations in each metric.
-    ###Constraints: 
+    ###Constraints:
     - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
       - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
       - The [performance issue description], indicating performance issue.
     ###Input: response time metric graph
-- id: throughput_graph
+- id: 2
   name: Throughput graph
   type: default
   place: graph
@@ -26,14 +26,14 @@ prompts:
     - Assess the trends of each throughput line.
     - Throughput should remain stable. Minor fluctuations in throughput are acceptable.
     - Explicitly identify any performance issue in each metric.
-    ###Constraints: 
+    ###Constraints:
     - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
       - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
       - The [performance issue description], indicating performance issue.
     ###Input: Throughput metric graph
-- id: cpu_usage_graph
+- id: 3
   name: CPU usage graph
   type: default
   place: graph
@@ -43,14 +43,14 @@ prompts:
     - Assess the trends of each CPU usage line.
     - CPU usage line should remain stable. Minor fluctuations in CPU usage are acceptable.
     - Explicitly identify any performance issue in each metric.
-    ###Constraints: 
+    ###Constraints:
     - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
         - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
         - The [performance issue description], indicating performance issue.
     ###Input: CPU usage metric graph
-- id: memory_usage_graph
+- id: 4
   name: Memory usage graph
   type: default
   place: graph
@@ -60,14 +60,14 @@ prompts:
     - Assess the trends of each Memory usage line.
     - Memory usage line should remain stable. Minor fluctuations in Memory usage are acceptable.
     - Explicitly identify any performance issue in each metric.
-    ###Constraints: 
+    ###Constraints:
     - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
     - Your output should follow the following structure if there is no performance issue for a metric:
         - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
     - Your output should follow the following structure if there is performance issue for a metric:
         - The [performance issue description], indicating performance issue.
     ###Input: Memory usage metric graph
-- id: response_time_comparison_graph
+- id: 5
   name: Response time comparison graph
   type: default
   place: graph
@@ -78,11 +78,11 @@ prompts:
       - Assess the trends of each response time line.
       - Evaluate if the current response time level is comparable to the baseline.
       - Assess the stability of the current response time line. Minor fluctuations are acceptable.
-    ###Constraints: 
+    ###Constraints:
       - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
       - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
       - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
-- id: throughput_comparison_graph
+- id: 6
   name: Throughput comparison graph
   type: default
   place: graph
@@ -93,11 +93,11 @@ prompts:
       - Assess the trends of each throughput line.
       - Evaluate if the current throughput level is comparable to the baseline.
       - Assess the stability of the current throughput line. Minor fluctuations are acceptable.
-    ###Constraints: 
+    ###Constraints:
       - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
       - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
       - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
-- id: response_time_comparison_table
+- id: 7
   name: Response time comparison table
   type: default
   place: graph
@@ -109,7 +109,7 @@ prompts:
       - If there are degraded transactions, then the output should contain only the following statements:
         'For most transactions, the response time remained at the same level, except the following transactions:
         - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
-- id: template_for_the_test
+- id: 8
   name: Template for the test
   type: default
   place: template
@@ -149,7 +149,7 @@ prompts:
 
     Observations from NFRs comparison.
     [nfr_summary]
-- id: template_for_comparing_tests
+- id: 9
   name: Template for comparing tests
   type: default
   place: template
@@ -189,7 +189,7 @@ prompts:
 
     Observations from NFRs analysis:
     [nfr_summary]
-- id: template_group
+- id: 10
   name: Template group
   type: default
   place: template_group
@@ -201,7 +201,7 @@ prompts:
       - The tests results are [satisfactory/not satisfactory].
       - [Provide a highlevel overview of the performance issues].
     @@@@
-- id: aggregated_data
+- id: 11
   name: Aggregated data
   type: default
   place: aggregated_data
@@ -216,7 +216,7 @@ prompts:
       - Provide the top 5 slowest requests. Structure in a bullet list:
         - Top 5 slowest requests (Based on median):
           - [request name]: median response time of [value] ms.
-- id: system_message
+- id: 12
   name: System message
   type: default
   place: system

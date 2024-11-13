@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from app.backend                 import pkg
-from app.backend.pydantic_models import AISupportModel
 from werkzeug.datastructures     import MultiDict
 
 
@@ -23,14 +22,6 @@ class AISupportConfig:
         data = pkg.get_integration_values(project, "ai_support", ai_support_config, is_internal)
         return MultiDict(data)
 
-    def save_ai_support_config(project, data):
-        validated_data = AISupportModel.model_validate(data).model_dump()
-        id             = pkg.save_integration(project, validated_data, "ai_support")
-        return id
-
     def get_default_ai_support_config_id(project):
         id = pkg.get_default_integration(project, "ai_support")
         return id
-
-    def delete_ai_support_config(project, config):
-        pkg.delete_config(project, config, "integrations", "ai_support")

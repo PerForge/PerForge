@@ -15,12 +15,11 @@
 import logging
 import traceback
 
-
-from app                                          import app
-from app.forms                                    import PromptForm
-from app.backend.errors                           import ErrorMessages
-from app.backend.components.prompts.prompt_config import PromptConfig
-from flask                                        import flash, redirect, request, url_for, render_template
+from app                          import app
+from app.forms                    import PromptForm
+from app.backend.database.prompts import DBPrompts
+from app.backend.errors           import ErrorMessages
+from flask                        import flash, redirect, request, url_for, render_template
 
 
 @app.route('/prompts', methods=['GET'])
@@ -28,8 +27,7 @@ def prompts():
     try:
         project          = request.cookies.get('project')
         form_for_prompts = PromptForm(request.form)
-        default_prompts  = PromptConfig.get_default_prompts()
-        custom_prompts   = PromptConfig.get_custom_prompts(project)
+        default_prompts, custom_prompts = DBPrompts.get_configs(project)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00016.value, "error")
@@ -39,27 +37,51 @@ def prompts():
 @app.route('/save-prompt', methods=['POST'])
 def save_prompt():
     try:
-        project    = request.cookies.get('project')
-        if request.method == "POST":
-            original_prompt_id = request.form.to_dict().get("id")
-            prompt_id          = PromptConfig.save_custom_prompt(project, request.form.to_dict())
-        if original_prompt_id == prompt_id:
+        project_id = request.cookies.get('project')
+        form_data  = request.form.to_dict()
+
+        original_prompt_id = form_data.get("id")
+        prompt_name        = form_data.get("name")
+        prompt_type        = form_data.get("type")
+        prompt_place       = form_data.get("place")
+        prompt_text        = form_data.get("prompt")
+        scope              = form_data.get("project_id")
+
+        prompt_project_id = project_id if scope == "project" else None
+        if original_prompt_id:
+            DBPrompts.update(
+                id          = original_prompt_id,
+                name        = prompt_name,
+                type        = prompt_type,
+                place       = prompt_place,
+                prompt_text = prompt_text,
+                project_id  = prompt_project_id
+            )
             flash("Custom prompt updated.", "info")
         else:
+            prompt_obj = DBPrompts(
+                name       = prompt_name,
+                type       = prompt_type,
+                place      = prompt_place,
+                prompt     = prompt_text,
+                project_id = prompt_project_id
+            )
+            prompt_obj.save()
             flash("Custom prompt added.", "info")
+
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00017.value, "error")
         return redirect(url_for("index"))
+
     return redirect(url_for('prompts', type='custom'))
 
 @app.route('/delete-prompt', methods=['GET'])
 def delete_prompt():
     try:
-        project    = request.cookies.get('project')
         prompt_id  = request.args.get('prompt_id')
         if prompt_id is not None:
-            PromptConfig.delete_custom_prompt(project, prompt_id)
+            DBPrompts.delete(prompt_id)
             flash("Custom prompt deleted", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

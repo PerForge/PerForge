@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Atlassian Jira {% endblock %} 
+{% block title %} Atlassian Jira {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -55,7 +55,12 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    {{ form.token(class="form-control") }}
+                                    <select class="form-control" name="token" id="token">
+                                        <option value="" {% if form.token.data is none or form.token.data == '' %} selected {% endif %}>Select the secret</option>
+                                        {% for secret in secret_configs %}
+                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                        {% endfor %}
+                                    </select>
                                     <label for="org_url" class="mt-2">Jira organization url:</label>
                                     {{ form.org_url(class="form-control") }}
                                     <label for="project_id" class="mt-2">Project:</label>

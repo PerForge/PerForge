@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from app.backend                 import pkg
-from app.backend.pydantic_models import AtlassianConfluenceModel
 from werkzeug.datastructures     import MultiDict
 
 
@@ -23,14 +22,6 @@ class AtlassianConfluenceConfig:
         data = pkg.get_integration_values(project, "atlassian_confluence", atlassian_confluence_config, is_internal)
         return MultiDict(data)
 
-    def save_atlassian_confluence_config(project, data):
-        validated_data = AtlassianConfluenceModel.model_validate(data).model_dump()
-        id             = pkg.save_integration(project, validated_data, "atlassian_confluence")
-        return id
-
     def get_default_atlassian_confluence_config_id(project):
         id = pkg.get_default_integration(project, "atlassian_confluence")
         return id
-
-    def delete_atlassian_confluence_config(project, config):
-        pkg.delete_config(project, config, "integrations", "atlassian_confluence")

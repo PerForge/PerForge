@@ -15,49 +15,78 @@
 import traceback
 import logging
 
-from app                                    import app
-from app.backend.errors                     import ErrorMessages
-from app.backend.components.nfrs.nfr_config import NFRConfig
-from flask                                  import render_template, request, url_for, redirect, flash, jsonify
+from app                           import app
+from app.backend.errors            import ErrorMessages
+from app.backend.database.nfrs     import DBNFRs
+from app.backend.database.nfrs     import DBNFRRows
+from app.backend.database.projects import DBProjects
+from flask                         import render_template, request, url_for, redirect, flash, jsonify
 
 
 @app.route('/nfrs', methods=['GET'])
 def get_nfrs():
     try:
-        project   = request.cookies.get('project')
-        nfrs_list = NFRConfig.get_all_nfrs(project)
+        project_id   = request.cookies.get('project')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        nfrs_list    = DBNFRs.get_configs(schema_name=project_data['name'])
         return render_template('home/nfrs.html', nfrs_list=nfrs_list)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00019.value, "error")
+
     return redirect(url_for('get_nfrs'))
 
 @app.route('/nfr', methods=['GET', 'POST'])
 def get_nfr():
     try:
-        nfr_data   = {}
-        project    = request.cookies.get('project')
-        nfr_config = request.args.get('nfr_config')
-        if nfr_config is not None:
-            nfr_data = NFRConfig.get_nfr_values_by_id(project, nfr_config)
+        project_id   = request.cookies.get('project')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        nfr_id       = request.args.get('nfr_config')
+        nfr_data     = {}
+        if nfr_id:
+            nfr_data = DBNFRs.get_config_by_id(schema_name=project_data['name'], id=nfr_id)
+
         if request.method == "POST":
-            original_nfr_config = request.get_json().get("id")
-            nfr_config          = NFRConfig.save_nfr_config(project, request.get_json())
-            if original_nfr_config == nfr_config:
+            nfr_data = request.get_json()
+            if nfr_data['id']:
+                DBNFRs.update(
+                    schema_name = project_data['name'],
+                    id          = nfr_data['id'],
+                    name        = nfr_data['name'],
+                    rows        = nfr_data['rows']
+                )
                 flash("NFR updated.", "info")
             else:
+                nfr_obj = DBNFRs(
+                    name = nfr_data['name'],
+                    rows = []
+                )
+                for row_data in nfr_data['rows']:
+                    row = DBNFRRows(
+                        regex     = row_data['regex'],
+                        scope     = row_data['scope'],
+                        metric    = row_data['metric'],
+                        operation = row_data['operation'],
+                        threshold = row_data['threshold'],
+                        weight    = row_data['weight'] if row_data['weight'] else None,
+                        nfr_id    = None
+                    )
+                    nfr_obj.rows.append(row)
+                nfr_id = nfr_obj.save(schema_name = project_data['name'])
                 flash("NFR added.", "info")
             return jsonify({'redirect_url': 'nfrs'})
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00020.value, "error")
-    return render_template('home/nfr.html', nfr_config=nfr_config,nfr_data=nfr_data)
+    return render_template('home/nfr.html', nfr_config=nfr_id,nfr_data=nfr_data)
 
 @app.route('/delete/nfr', methods=['GET'])
 def delete_nfrs():
     try:
-        project = request.cookies.get('project')
-        NFRConfig.delete_nfr_config(project, request.args.get('nfr_config'))
+        project_id   = request.cookies.get('project')
+        nfr_id       = request.args.get('nfr_config')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        DBNFRs.delete(schema_name=project_data['name'], id=nfr_id)
         flash("NFR deleted.", "info")
         return redirect(url_for('get_nfrs'))
     except Exception as er:

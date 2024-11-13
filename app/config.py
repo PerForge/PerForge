@@ -14,11 +14,13 @@
 
 import os
 
-from decouple import config
+from decouple         import config
+from flask_sqlalchemy import SQLAlchemy
 
 
 basedir     = os.path.abspath(os.path.dirname(__file__))
 config_path = "./app/data/config.json"
+db = SQLAlchemy()
 
 class Config:
 
