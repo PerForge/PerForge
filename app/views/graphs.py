@@ -15,14 +15,14 @@
 import traceback
 import logging
 
-from app                           import app
-from app.forms                     import GraphForm
-from app.backend.errors            import ErrorMessages
-from app.backend.database.projects import DBProjects
-from app.backend.database.prompts  import DBPrompts
-from app.backend.database.graphs   import DBGraphs
-from app.backend.database.grafana  import DBGrafana
-from flask                         import render_template, request, url_for, redirect, flash
+from app                                         import app
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.components.prompts.prompts_db   import DBPrompts
+from app.backend.components.graphs.graphs_db     import DBGraphs
+from app.backend.integrations.grafana.grafana_db import DBGrafana
+from app.backend.errors                          import ErrorMessages
+from app.forms                                   import GraphForm
+from flask                                       import render_template, request, url_for, redirect, flash
 
 
 @app.route('/graphs', methods=['GET'])

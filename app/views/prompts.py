@@ -15,11 +15,11 @@
 import logging
 import traceback
 
-from app                          import app
-from app.forms                    import PromptForm
-from app.backend.database.prompts import DBPrompts
-from app.backend.errors           import ErrorMessages
-from flask                        import flash, redirect, request, url_for, render_template
+from app                                       import app
+from app.backend.components.prompts.prompts_db import DBPrompts
+from app.backend.errors                        import ErrorMessages
+from app.forms                                 import PromptForm
+from flask                                     import flash, redirect, request, url_for, render_template
 
 
 @app.route('/prompts', methods=['GET'])

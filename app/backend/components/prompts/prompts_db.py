@@ -14,9 +14,11 @@
 
 import yaml
 import os
+import traceback
+import logging
 
 from app.config     import db
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy     import or_
 
 
@@ -48,51 +50,81 @@ class DBPrompts(db.Model):
         }
 
     def save(self):
-        db.session.add(self)
         try:
+            db.session.add(self)
             db.session.commit()
-        except IntegrityError:
+            return self.id
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
-        return self.id
 
     @classmethod
     def get_configs(cls, project_id):
-        default_query = db.session.query(cls).filter(cls.type == "default").all()
-        custom_query  = db.session.query(cls).filter(
-            cls.type == "custom",
-            or_(cls.project_id == project_id, cls.project_id.is_(None))
-        ).all()
+        try:
+            default_query = db.session.query(cls).filter(cls.type == "default").all()
+            custom_query  = db.session.query(cls).filter(
+                cls.type == "custom",
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).all()
 
-        default_list = [config.to_dict() for config in default_query]
-        custom_list  = [config.to_dict() for config in custom_query]
+            default_list = [config.to_dict() for config in default_query]
+            custom_list  = [config.to_dict() for config in custom_query]
 
-        return default_list, custom_list
+            return default_list, custom_list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_configs_by_place(cls, project_id, place):
-        query  = db.session.query(cls).filter(
-            cls.place == place,
-            or_(cls.project_id == project_id, cls.project_id.is_(None))
-        ).all()
+        try:
+            query  = db.session.query(cls).filter(
+                cls.place == place,
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).all()
 
-        list = [config.to_dict() for config in query]
-        return list
+            list = [config.to_dict() for config in query]
+            return list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def get_config_by_id(cls, id):
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def update(cls, id, name, type, place, prompt_text, project_id):
-        config = db.session.query(cls).filter_by(id=id).one_or_none()
-        if config:
-            config.name       = name
-            config.type       = type
-            config.place      = place
-            config.prompt     = prompt_text
-            config.project_id = project_id
-            try:
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                config.name       = name
+                config.type       = type
+                config.place      = place
+                config.prompt     = prompt_text
+                config.project_id = project_id
                 db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
-                raise
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def count(cls, project_id):
+        try:
+            count = db.session.query(cls).filter(
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).count()
+            return count
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def delete(cls, id):
@@ -101,18 +133,10 @@ class DBPrompts(db.Model):
             if config:
                 db.session.delete(config)
                 db.session.commit()
-                return True
-            return False
-        except Exception as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            raise e
-
-    @classmethod
-    def count(cls, project_id):
-        count = db.session.query(cls).filter(
-            or_(cls.project_id == project_id, cls.project_id.is_(None))
-        ).count()
-        return count
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def load_default_prompts_from_yaml(cls):
@@ -139,6 +163,7 @@ class DBPrompts(db.Model):
 
         try:
             db.session.commit()
-        except IntegrityError:
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise

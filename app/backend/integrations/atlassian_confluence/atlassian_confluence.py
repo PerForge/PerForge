@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import logging
 import uuid
 import traceback
 import time
 
-from app.backend.integrations.integration                                      import Integration
-from app.backend.integrations.atlassian_confluence.atlassian_confluence_config import AtlassianConfluenceConfig
-from atlassian                                                                 import Confluence
-from os                                                                        import path
+from app.backend.integrations.integration                                  import Integration
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_db import DBAtlassianConfluence
+from app.backend.components.secrets.secrets_db                             import DBSecrets
+from atlassian                                                             import Confluence
 
 
 class AtlassianConfluence(Integration):
@@ -34,33 +33,29 @@ class AtlassianConfluence(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
-            logging.warning("There is no config file.")
+        id     = id if id else DBAtlassianConfluence.get_default_config(schema_name=self.schema_name)["id"]
+        config = DBAtlassianConfluence.get_config_by_id(schema_name=self.schema_name, id=id)
+        if config['id']:
+            self.id        = config["id"]
+            self.name      = config["name"]
+            self.email     = config["email"]
+            self.token     = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.org_url   = config["org_url"]
+            self.space_key = config["space_key"]
+            self.parent_id = config["parent_id"]
+            if config["token_type"] == "api_token":
+                self.confluence_auth = Confluence(
+                    url      = self.org_url,
+                    username = self.email,
+                    password = self.token
+                )
+            else:
+                self.confluence_auth = Confluence(
+                    url   = self.org_url,
+                    token = self.token
+                )
         else:
-            id = id if id else AtlassianConfluenceConfig.get_default_atlassian_confluence_config_id(self.project)
-            config = AtlassianConfluenceConfig.get_atlassian_confluence_config_values(self.project, id, is_internal=True)
-            if "id" in config:
-                if config['id'] == id:
-                    self.id        = config["id"]
-                    self.name      = config["name"]
-                    self.email     = config["email"]
-                    self.token     = config["token"]
-                    self.org_url   = config["org_url"]
-                    self.space_key = config["space_key"]
-                    self.parent_id = config["parent_id"]
-                    if config["token_type"] == "api_token":
-                        self.confluence_auth = Confluence(
-                            url      = self.org_url,
-                            username = self.email,
-                            password = self.token
-                        )
-                    else:
-                        self.confluence_auth = Confluence(
-                            url   = self.org_url,
-                            token = self.token
-                        )
-                else:
-                    return {"status":"error", "message":"No such config name"}
+            logging.warning("There's no Confluence integration configured, or you're attempting to send a request from an unsupported location.")
 
     def put_page(self, title, content):
         try:

@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
+import logging
+
 from app.config     import db
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 
@@ -38,12 +41,14 @@ class DBNFRs(db.Model):
         self.__table__.schema = schema_name
         for row in self.rows:
             row.__table__.schema = schema_name
+
         try:
             db.session.add(self)
             db.session.commit()
             return self.id
-        except IntegrityError:
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
@@ -51,51 +56,64 @@ class DBNFRs(db.Model):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
 
-        query = db.session.query(cls).options(joinedload(cls.rows)).all()
-        list  = [config.to_dict() for config in query]
-        return list
+        try:
+            query = db.session.query(cls).options(joinedload(cls.rows)).all()
+            list  = [config.to_dict() for config in query]
+            return list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
 
-        config = db.session.query(cls).options(joinedload(cls.rows)).filter_by(id=id).one_or_none().to_dict()
-        return config
+        try:
+            config = db.session.query(cls).options(joinedload(cls.rows)).filter_by(id=id).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def update(cls, schema_name, id, name, rows):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
 
-        config = db.session.query(cls).filter_by(id=id).one_or_none()
-        if config:
-            config.name = name
-            config.rows.clear()
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                config.name = name
+                config.rows.clear()
 
-            for row_data in rows:
-                row = DBNFRRows(
-                    regex     = row_data['regex'],
-                    scope     = row_data['scope'],
-                    metric    = row_data['metric'],
-                    operation = row_data['operation'],
-                    threshold = row_data['threshold'],
-                    weight    = row_data['weight'] if row_data['weight'] else None,
-                    nfr_id    = config.id
-                )
-                config.rows.append(row)
+                for row_data in rows:
+                    row = DBNFRRows(
+                        regex     = row_data['regex'],
+                        scope     = row_data['scope'],
+                        metric    = row_data['metric'],
+                        operation = row_data['operation'],
+                        threshold = row_data['threshold'],
+                        weight    = row_data['weight'] if row_data['weight'] else None,
+                        nfr_id    = config.id
+                    )
+                    config.rows.append(row)
 
-            try:
-                db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
-                raise
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-        count                = db.session.query(cls).count()
-        return count
+
+        try:
+            count = db.session.query(cls).count()
+            return count
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def delete(cls, schema_name, id):
@@ -107,11 +125,10 @@ class DBNFRs(db.Model):
             if config:
                 db.session.delete(config)
                 db.session.commit()
-                return True
-            return False
-        except Exception as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            raise e
+            logging.warning(str(traceback.format_exc()))
+            raise
 
 
 class DBNFRRows(db.Model):

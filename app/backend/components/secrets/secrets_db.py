@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
+import logging
+
 from app.config     import db
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy     import or_
 
 
@@ -43,52 +46,70 @@ class DBSecrets(db.Model):
         }
 
     def save(self):
-        db.session.add(self)
         try:
+            db.session.add(self)
             db.session.commit()
             return self.key
-        except IntegrityError:
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_configs(cls, project_id):
-        query = db.session.query(cls).filter(
-            or_(cls.project_id == project_id, cls.project_id.is_(None))
-        ).all()
-        list = [config.to_dict() for config in query]
-        return list
+        try:
+            query = db.session.query(cls).filter(
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).all()
+            list = [config.to_dict() for config in query]
+            return list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_id(cls, id):
-        config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-        return config
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_key(cls, key):
-        config = db.session.query(cls).filter_by(key=key).one_or_none().to_dict()
-        return config
+        try:
+            config = db.session.query(cls).filter_by(key=key).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def update(cls, id, key, type, value, project_id):
-        config = db.session.query(cls).filter_by(id=id).one_or_none()
-        if config:
-            config.key        = key
-            config.type       = type
-            config.value      = value
-            config.project_id = project_id
-            try:
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                config.key        = key
+                config.type       = type
+                config.value      = value
+                config.project_id = project_id
                 db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
-                raise
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def count(cls, project_id):
-        count = db.session.query(cls).filter(
-            or_(cls.project_id == project_id, cls.project_id.is_(None))
-        ).count()
-        return count
+        try:
+            count = db.session.query(cls).filter(
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).count()
+            return count
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def delete(cls, id):
@@ -97,8 +118,7 @@ class DBSecrets(db.Model):
             if config:
                 db.session.delete(config)
                 db.session.commit()
-                return True
-            return False
-        except Exception as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            raise e
+            logging.warning(str(traceback.format_exc()))
+            raise

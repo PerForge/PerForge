@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
+import logging
+
 from app.config     import db
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 
@@ -68,12 +71,14 @@ class DBTemplates(db.Model):
         self.__table__.schema = schema_name
         for record in self.data:
             record.__table__.schema = schema_name
+
         try:
             db.session.add(self)
             db.session.commit()
             return self.id
-        except IntegrityError:
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
@@ -81,58 +86,72 @@ class DBTemplates(db.Model):
         cls.__table__.schema            = schema_name
         DBTemplateData.__table__.schema = schema_name
 
-        query = db.session.query(cls).options(joinedload(cls.data)).all()
-        list  = [config.to_dict() for config in query]
-        return list
+        try:
+            query = db.session.query(cls).options(joinedload(cls.data)).all()
+            list  = [config.to_dict() for config in query]
+            return list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema            = schema_name
         DBTemplateData.__table__.schema = schema_name
 
-        config = db.session.query(cls).options(joinedload(cls.data)).filter_by(id=id).one_or_none().to_dict()
-        return config
+        try:
+            config = db.session.query(cls).options(joinedload(cls.data)).filter_by(id=id).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def update(cls, schema_name, id, name, nfr, title, ai_switch, ai_aggregated_data_switch, ai_graph_switch, ai_to_graphs_switch, nfrs_switch, template_prompt_id, aggregated_prompt_id, system_prompt_id, data):
         cls.__table__.schema            = schema_name
         DBTemplateData.__table__.schema = schema_name
 
-        config = db.session.query(cls).filter_by(id=id).one_or_none()
-        if config:
-            config.name                      = name
-            config.nfr                       = nfr
-            config.title                     = title
-            config.ai_switch                 = ai_switch
-            config.ai_aggregated_data_switch = ai_aggregated_data_switch
-            config.ai_graph_switch           = ai_graph_switch
-            config.ai_to_graphs_switch       = ai_to_graphs_switch
-            config.nfrs_switch               = nfrs_switch
-            config.template_prompt_id        = template_prompt_id
-            config.aggregated_prompt_id      = aggregated_prompt_id
-            config.system_prompt_id          = system_prompt_id
-            config.data.clear()
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                config.name                      = name
+                config.nfr                       = nfr
+                config.title                     = title
+                config.ai_switch                 = ai_switch
+                config.ai_aggregated_data_switch = ai_aggregated_data_switch
+                config.ai_graph_switch           = ai_graph_switch
+                config.ai_to_graphs_switch       = ai_to_graphs_switch
+                config.nfrs_switch               = nfrs_switch
+                config.template_prompt_id        = template_prompt_id
+                config.aggregated_prompt_id      = aggregated_prompt_id
+                config.system_prompt_id          = system_prompt_id
+                config.data.clear()
 
-            for records_data in data:
-                record = DBTemplateData(
-                    type        = records_data['type'],
-                    content     = records_data['content'],
-                    graph_id    = records_data['graph_id'],
-                    template_id = config.id
-                )
-                config.data.append(record)
+                for records_data in data:
+                    record = DBTemplateData(
+                        type        = records_data['type'],
+                        content     = records_data['content'],
+                        graph_id    = records_data['graph_id'],
+                        template_id = config.id
+                    )
+                    config.data.append(record)
 
-            try:
                 db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
-                raise
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-        count                = db.session.query(cls).count()
-        return count
+
+        try:
+            count = db.session.query(cls).count()
+            return count
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def delete(cls, schema_name, id):
@@ -144,11 +163,10 @@ class DBTemplates(db.Model):
             if config:
                 db.session.delete(config)
                 db.session.commit()
-                return True
-            return False
-        except Exception as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            raise e
+            logging.warning(str(traceback.format_exc()))
+            raise
 
 
 class DBTemplateData(db.Model):

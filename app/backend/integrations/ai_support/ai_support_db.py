@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
+import logging
+
 from app.config     import db
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class DBAISupport(db.Model):
@@ -56,63 +59,117 @@ class DBAISupport(db.Model):
 
     def save(self, schema_name):
         self.__table__.schema = schema_name
-        db.session.add(self)
+
+        if self.is_default:
+            self.reset_default_config(schema_name)
+        elif not self.get_default_config(schema_name):
+            self.is_default = True
+
         try:
+            db.session.add(self)
             db.session.commit()
-        except IntegrityError:
+            return self.id
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_configs(cls, schema_name):
         cls.__table__.schema = schema_name
-        query                = db.session.query(cls).all()
-        list                 = [config.to_dict() for config in query]
-        return list
+
+        try:
+            query = db.session.query(cls).all()
+            list  = [config.to_dict() for config in query]
+            return list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema = schema_name
-        config               = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-        return config
+
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def get_default_config(cls, schema_name):
+        cls.__table__.schema = schema_name
+        try:
+            config = db.session.query(cls).filter_by(is_default=True).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def reset_default_config(cls, schema_name):
+        cls.__table__.schema = schema_name
+
+        try:
+            db.session.query(cls).update({cls.is_default: False})
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def update(cls, schema_name, id, name, ai_provider, azure_url, api_version, ai_text_model, ai_image_model, token, temperature, is_default):
         cls.__table__.schema = schema_name
-        config               = db.session.query(cls).filter_by(id=id).one_or_none()
-        if config:
-            config.name           = name
-            config.ai_provider    = ai_provider
-            config.azure_url      = azure_url
-            config.api_version    = api_version
-            config.ai_text_model  = ai_text_model
-            config.ai_image_model = ai_image_model
-            config.token          = token
-            config.temperature    = temperature
-            config.is_default     = is_default
 
-            try:
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                if is_default:
+                    cls.reset_default_config(schema_name)
+
+                config.name           = name
+                config.ai_provider    = ai_provider
+                config.azure_url      = azure_url
+                config.api_version    = api_version
+                config.ai_text_model  = ai_text_model
+                config.ai_image_model = ai_image_model
+                config.token          = token
+                config.temperature    = temperature
+                config.is_default     = is_default
+
                 db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
-                raise
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-        count                = db.session.query(cls).count()
-        return count
+
+        try:
+            count = db.session.query(cls).count()
+            return count
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def delete(cls, schema_name, id):
         cls.__table__.schema = schema_name
+
         try:
-            record = db.session.query(cls).filter_by(id=id).one_or_none()
-            if record:
-                db.session.delete(record)
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                db.session.delete(config)
                 db.session.commit()
-                return True
-            return False
-        except Exception as e:
+                if config.is_default:
+                    new_default_config = db.session.query(cls).first()
+                    if new_default_config:
+                        new_default_config.is_default = True
+                        db.session.commit()
+        except SQLAlchemyError:
             db.session.rollback()
-            raise e
+            logging.warning(str(traceback.format_exc()))
+            raise

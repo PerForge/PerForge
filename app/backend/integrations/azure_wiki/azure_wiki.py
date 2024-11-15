@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import requests
 import base64
 import logging
@@ -20,9 +19,9 @@ import random
 import traceback
 import time
 
-from app.backend.integrations.integration                  import Integration
-from app.backend.integrations.azure_wiki.azure_wiki_config import AzureWikiConfig
-from os                                                    import path
+from app.backend.integrations.integration              import Integration
+from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
+from app.backend.components.secrets.secrets_db         import DBSecrets
 
 class AzureWiki(Integration):
 
@@ -34,31 +33,27 @@ class AzureWiki(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
-            logging.warning("There is no config file.")
+        id = id if id else DBAzureWiki.get_default_config(schema_name=self.schema_name)["id"]
+        config = DBAzureWiki.get_config_by_id(schema_name=self.schema_name, id=id)
+        if config['id']:
+            self.id                        = config["id"]
+            self.name                      = config["name"]
+            self.token                     = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.org_url                   = config["org_url"]
+            self.project_id                = config["project_id"]
+            self.identifier                = config["identifier"]
+            self.path_to_report            = config["path_to_report"]
+            self.azure_headers_attachments = {
+                    'Accept'       : 'application/json',
+                    'Authorization': 'Basic ' + str(base64.b64encode(bytes(':'+ self.token, 'ascii')), 'ascii'),
+                    'Content-Type' : 'application/octet-stream'
+                }
+            self.azure_authorization_headers = {
+                    'Accept'       : 'application/json',
+                    'Authorization': 'Basic ' + str(base64.b64encode(bytes(':'+ self.token, 'ascii')), 'ascii')
+                }
         else:
-            id = id if id else AzureWikiConfig.get_default_azure_wiki_config_id(self.project)
-            config = AzureWikiConfig.get_azure_wiki_config_values(self.project, id, is_internal = True)
-            if "id" in config:
-                if config['id'] == id:
-                    self.id                        = config["id"]
-                    self.name                      = config["name"]
-                    self.token                     = config["token"]
-                    self.org_url                   = config["org_url"]
-                    self.project_id                = config["project_id"]
-                    self.identifier                = config["identifier"]
-                    self.path_to_report            = config["path_to_report"]
-                    self.azure_headers_attachments = {
-                            'Accept'       : 'application/json',
-                            'Authorization': 'Basic ' + str(base64.b64encode(bytes(':'+ self.token, 'ascii')), 'ascii'),
-                            'Content-Type' : 'application/octet-stream'
-                        }
-                    self.azure_authorization_headers = {
-                            'Accept'       : 'application/json',
-                            'Authorization': 'Basic ' + str(base64.b64encode(bytes(':'+ self.token, 'ascii')), 'ascii')
-                        }
-                else:
-                    return {"status":"error", "message":"No such config name"}
+            logging.warning("There's no Azure integration configured, or you're attempting to send a request from an unsupported location.")
 
     def get_path(self):
         return self.path_to_report

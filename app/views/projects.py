@@ -15,10 +15,10 @@
 import traceback
 import logging
 
-from app                           import app
-from app.backend.database.projects import DBProjects
-from app.backend.errors            import ErrorMessages
-from flask                         import render_template, request, url_for, redirect, flash
+from app                                         import app
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.errors                          import ErrorMessages
+from flask                                       import render_template, request, url_for, redirect, flash, jsonify
 
 
 @app.route('/choose-project', methods=['GET'])
@@ -53,11 +53,11 @@ def set_project():
 @app.route('/get-projects', methods=['GET'])
 def get_projects():
     try:
-        projects = DBProjects.get_configs()
+        project_configs = DBProjects.get_configs()
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00013.value, "error")
-    return {'projects': projects}
+    return jsonify({'projects': project_configs})
 
 @app.route('/save-project', methods=['GET'])
 def save_project():

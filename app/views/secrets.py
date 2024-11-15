@@ -15,12 +15,12 @@
 import traceback
 import logging
 
-from app                          import app
-from app.backend.database.secrets import DBSecrets
-from app.forms                    import SecretForm
-from app.backend.errors           import ErrorMessages
-from flask                        import render_template, request, url_for, redirect, flash
-from flask_login                  import current_user
+from app                                       import app
+from app.backend.components.secrets.secrets_db import DBSecrets
+from app.backend.errors                        import ErrorMessages
+from app.forms                                 import SecretForm
+from flask                                     import render_template, request, url_for, redirect, flash
+from flask_login                               import current_user
 
 
 @app.route('/secrets', methods=['get'])

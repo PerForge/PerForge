@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pydantic import BaseModel, Field, model_validator
-from typing   import List
+
 
 # Cleaning functions
 def ensure_leading_slash(url: str) -> str:
@@ -200,25 +200,6 @@ class TemplateGroupModel(BaseModelWithStripping):
     data      : list[TemplateObjectModel]
 
 
-class IntegrationsModel(BaseModelWithStripping):
-    influxdb            : List[InfluxdbModel] = Field(default_factory=list)
-    grafana             : List[GrafanaModel] = Field(default_factory=list)
-    azure               : List[AzureWikiModel] = Field(default_factory=list)
-    atlassian_confluence: List[AtlassianConfluenceModel] = Field(default_factory=list)
-    atlassian_jira      : List[AtlassianJiraModel] = Field(default_factory=list)
-    smtp_mail           : List[SmtpMailModel] = Field(default_factory=list)
-    ai_support          : List[AISupportModel] = Field(default_factory=list)
-
-
-class ProjectObjectModel(BaseModelWithStripping):
-    integrations   : IntegrationsModel = Field(default_factory=IntegrationsModel)
-    graphs         : List[GraphModel] = Field(default_factory=list)
-    templates      : List[TemplateModel] = Field(default_factory=list)
-    nfrs           : List[NFRsModel] = Field(default_factory=list)
-    prompts        : List[PromptModel] = Field(default_factory=list)
-    template_groups: List[TemplateGroupModel] = Field(default_factory=list)
-
 class ProjectModel(BaseModelWithStripping):
     id  : str
     name: str
-    data: ProjectObjectModel = Field(default_factory=ProjectObjectModel)

@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
+import logging
+
 from app.config     import db
 from flask_login    import UserMixin
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class DBUsers(db.Model, UserMixin):
@@ -40,28 +43,41 @@ class DBUsers(db.Model, UserMixin):
         }
 
     def save(self):
-        db.session.add(self)
         try:
+            db.session.add(self)
             db.session.commit()
             return self
-        except IntegrityError:
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def check_admin_exists(cls):
-        admin_user = db.session.query(cls).filter_by(is_admin=True).one_or_none()
-        if admin_user:
-            return True
-        else:
-            return False
+        try:
+            admin_user = db.session.query(cls).filter_by(is_admin=True).one_or_none()
+            if admin_user:
+                return True
+            else:
+                return False
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_id(cls, id):
-        config = db.session.query(cls).filter_by(id=id).one_or_none()
-        return config
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_username(cls, user):
-        config = db.session.query(cls).filter_by(user=user).one_or_none()
-        return config
+        try:
+            config = db.session.query(cls).filter_by(user=user).one_or_none()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise

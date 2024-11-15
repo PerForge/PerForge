@@ -15,16 +15,16 @@
 import traceback
 import logging
 
-from app                           import app, login_manager, bc
-from app.backend                   import pkg
-from app.backend.database.users    import DBUsers
-from app.backend.database.projects import DBProjects
-from app.forms                     import LoginForm, RegisterForm
-from app.backend.errors            import ErrorMessages
-from flask                         import g, render_template, request, url_for, redirect, flash
-from flask_login                   import login_user, logout_user, current_user
-from jinja2                        import TemplateNotFound
-from functools                     import wraps
+from app                                         import app, login_manager, bc
+from app.backend                                 import pkg
+from app.backend.components.users.users_db       import DBUsers
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.errors                          import ErrorMessages
+from app.forms                                   import LoginForm, RegisterForm
+from flask                                       import g, render_template, request, url_for, redirect, flash
+from flask_login                                 import login_user, logout_user, current_user
+from jinja2                                      import TemplateNotFound
+from functools                                   import wraps
 
 
 # List of routes that do not require authentication

@@ -18,18 +18,18 @@ import logging
 
 from app                                                                       import app
 from app.backend                                                               import pkg
-from app.backend.errors                                                        import ErrorMessages
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction     import InfluxdbV2
-from app.backend.data_provider.data_provider                                   import DataProvider
 from app.backend.integrations.azure_wiki.azure_wiki_report                     import AzureWikiReport
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
 from app.backend.integrations.pdf.pdf_report                                   import PdfReport
-from app.backend.database.projects                                             import DBProjects
-from app.backend.database.influxdb                                             import DBInfluxdb
-from app.backend.database.templates                                            import DBTemplates
-from app.backend.database.template_groups                                      import DBTemplateGroups
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db             import DBInfluxdb
+from app.backend.components.projects.projects_db                               import DBProjects
+from app.backend.components.templates.templates_db                             import DBTemplates
+from app.backend.components.templates.template_groups_db                       import DBTemplateGroups
+from app.backend.data_provider.data_provider                                   import DataProvider
+from app.backend.errors                                                        import ErrorMessages
 from flask                                                                     import render_template, request, url_for, redirect, flash, jsonify, send_file
 
 
@@ -51,10 +51,10 @@ def get_tests():
 @app.route('/load_tests', methods=['GET'])
 def load_tests():
     try:
-        project      = request.cookies.get('project')
-        influxdb     = request.args.get('influxdb')
-        ds_obj       = DataProvider(project=project, id=influxdb)
-        tests        = ds_obj.get_test_log()
+        project  = request.cookies.get('project')
+        influxdb = request.args.get('influxdb')
+        ds_obj   = DataProvider(project=project, id=influxdb)
+        tests    = ds_obj.get_test_log()
         return jsonify(status="success", tests=tests)
     except Exception:
         logging.warning(str(traceback.format_exc()))

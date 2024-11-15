@@ -15,12 +15,12 @@
 import traceback
 import logging
 
-from app                           import app
-from app.backend.errors            import ErrorMessages
-from app.backend.database.nfrs     import DBNFRs
-from app.backend.database.nfrs     import DBNFRRows
-from app.backend.database.projects import DBProjects
-from flask                         import render_template, request, url_for, redirect, flash, jsonify
+from app                                         import app
+from app.backend.components.nfrs.nfrs_db         import DBNFRs
+from app.backend.components.nfrs.nfrs_db         import DBNFRRows
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.errors                          import ErrorMessages
+from flask                                       import render_template, request, url_for, redirect, flash, jsonify
 
 
 @app.route('/nfrs', methods=['GET'])

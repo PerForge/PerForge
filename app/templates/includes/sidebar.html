@@ -151,14 +151,15 @@
         } else {
             $.get('/get-projects')
             .done(function(response) {
-                var arrayLength = response['projects'].length;
+                const projects = response['projects'];
+                var arrayLength = projects.length;
                 for (var i = 0; i < arrayLength; i++) {
-                    const projectName = response['projects'][i]['name'];
-                    const projectId = response['projects'][i]['id'];
-                    const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="/set-project?project='+projectId+'">'+projectName+'</a>'
+                    const projectName = projects[i]['name'];
+                    const projectId = projects[i]['id'];
+                    const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="/set-project?project=' + projectId + '">' + projectName + '</a>'
                     wrapper.insertAdjacentHTML("afterbegin", projectElement);
 
-                    if (projectIdFromCookie === projectId) {
+                    if (projectIdFromCookie == projectId) {
                         var currentProject = document.getElementById('projects-dropdown');
                         currentProject.textContent += projectName;
                     }

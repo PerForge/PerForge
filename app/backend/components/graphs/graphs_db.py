@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
+import logging
+
 from app.config     import db
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class DBGraphs(db.Model):
@@ -53,63 +56,82 @@ class DBGraphs(db.Model):
 
     def save(self, schema_name):
         self.__table__.schema = schema_name
-        db.session.add(self)
+
         try:
+            db.session.add(self)
             db.session.commit()
             return self.id
-        except IntegrityError:
+        except SQLAlchemyError:
             db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_configs(cls, schema_name):
         cls.__table__.schema = schema_name
-        query                = db.session.query(cls).all()
-        list                 = [config.to_dict() for config in query]
-        return list
+
+        try:
+            query = db.session.query(cls).all()
+            list  = [config.to_dict() for config in query]
+            return list
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema = schema_name
-        config               = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-        return config
+
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
+            return config
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def update(cls, schema_name, id, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id):
         cls.__table__.schema = schema_name
-        config               = db.session.query(cls).filter_by(id=id).one_or_none()
-        if config:
-            config.name        = name
-            config.grafana_id  = grafana_id
-            config.dash_id     = dash_id
-            config.view_panel  = view_panel
-            config.width       = width
-            config.height      = height
-            config.custom_vars = custom_vars
-            config.prompt_id   = prompt_id
 
-            try:
+        try:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                config.name        = name
+                config.grafana_id  = grafana_id
+                config.dash_id     = dash_id
+                config.view_panel  = view_panel
+                config.width       = width
+                config.height      = height
+                config.custom_vars = custom_vars
+                config.prompt_id   = prompt_id
+
                 db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
-                raise
+        except SQLAlchemyError:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-        count                = db.session.query(cls).count()
-        return count
+
+        try:
+            count = db.session.query(cls).count()
+            return count
+        except SQLAlchemyError:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
     @classmethod
     def delete(cls, schema_name, id):
         cls.__table__.schema = schema_name
+
         try:
             record = db.session.query(cls).filter_by(id=id).one_or_none()
             if record:
                 db.session.delete(record)
                 db.session.commit()
-                return True
-            return False
-        except Exception as e:
+        except SQLAlchemyError:
             db.session.rollback()
-            raise e
+            logging.warning(str(traceback.format_exc()))
+            raise

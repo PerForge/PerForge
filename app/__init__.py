@@ -15,16 +15,16 @@
 import os
 import logging
 
-from app.config                    import db
-from app.backend.database.users    import DBUsers
-from app.backend.database.secrets  import DBSecrets
-from app.backend.database.projects import DBProjects
-from app.backend.database.prompts  import DBPrompts
-from logging.handlers              import RotatingFileHandler
-from flask                         import Flask
-from flask_login                   import LoginManager
-from flask_bcrypt                  import Bcrypt
-from flask_compress                import Compress
+from app.config                                  import db
+from app.backend.components.users.users_db       import DBUsers
+from app.backend.components.secrets.secrets_db   import DBSecrets
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.components.prompts.prompts_db   import DBPrompts
+from logging.handlers                            import RotatingFileHandler
+from flask                                       import Flask
+from flask_login                                 import LoginManager
+from flask_bcrypt                                import Bcrypt
+from flask_compress                              import Compress
 
 
 # Grabs the folder where the script runs.

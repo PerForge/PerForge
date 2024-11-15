@@ -15,19 +15,19 @@
 import traceback
 import logging
 
-from app                                       import app
-from app.forms                                 import InfluxDBForm, GrafanaForm, AzureWikiForm, AtlassianConfluenceForm, AtlassianJiraForm, SMTPMailForm, AISupportForm
-from app.backend.errors                        import ErrorMessages
-from app.backend.database.projects             import DBProjects
-from app.backend.database.influxdb             import DBInfluxdb
-from app.backend.database.grafana              import DBGrafana, DBGrafanaDashboards
-from app.backend.database.azure_wiki           import DBAzureWiki
-from app.backend.database.atlassian_confluence import DBAtlassianConfluence
-from app.backend.database.atlassian_jira       import DBAtlassianJira
-from app.backend.database.smtp_mail            import DBSMTPMail, DBSMTPMailRecipient
-from app.backend.database.ai_support           import DBAISupport
-from app.backend.database.secrets              import DBSecrets
-from flask                                     import render_template, request, url_for, redirect, flash
+from app                                                                   import app
+from app.backend.components.projects.projects_db                           import DBProjects
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db         import DBInfluxdb
+from app.backend.integrations.grafana.grafana_db                           import DBGrafana, DBGrafanaDashboards
+from app.backend.integrations.azure_wiki.azure_wiki_db                     import DBAzureWiki
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_db import DBAtlassianConfluence
+from app.backend.integrations.atlassian_jira.atlassian_jira_db             import DBAtlassianJira
+from app.backend.integrations.smtp_mail.smtp_mail_db                       import DBSMTPMail, DBSMTPMailRecipient
+from app.backend.integrations.ai_support.ai_support_db                     import DBAISupport
+from app.backend.components.secrets.secrets_db                             import DBSecrets
+from app.backend.errors                                                    import ErrorMessages
+from app.forms                                                             import InfluxDBForm, GrafanaForm, AzureWikiForm, AtlassianConfluenceForm, AtlassianJiraForm, SMTPMailForm, AISupportForm
+from flask                                                                 import render_template, request, url_for, redirect, flash
 
 
 @app.route('/integrations')
