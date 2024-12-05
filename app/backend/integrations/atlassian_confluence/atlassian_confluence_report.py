@@ -16,7 +16,7 @@ from datetime                                                           import d
 from app.backend.integrations.reporting_base                            import ReportingBase
 from app.backend.integrations.atlassian_confluence.atlassian_confluence import AtlassianConfluence
 from app.backend.integrations.grafana.grafana                           import Grafana
-from app.backend.components.graphs.graph_config                         import GraphConfig
+from app.backend.components.graphs.graphs_db                            import DBGraphs
 
 
 class AtlassianConfluenceReport(ReportingBase):
@@ -47,7 +47,7 @@ class AtlassianConfluenceReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_run_id, baseline_run_id):
-        image = self.grafana_obj.render_image(graph_data["id"], self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
+        image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
         fileName = self.output_obj.put_image_to_confl(image, graph_data["id"], self.page_id)
         if(fileName):
             graph = f'<br/><ac:image ac:align="center" ac:layout="center" ac:original-height="500" ac:original-width="1000"><ri:attachment ri:filename="{str(fileName)}" /></ac:image><br/>'
@@ -128,7 +128,7 @@ class AtlassianConfluenceReport(ReportingBase):
             if obj["type"] == "text":
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = GraphConfig.get_graph_value_by_id(self.project, obj["id"])
+                graph_data       = DBGraphs.get_config_by_id(schema_name=self.schema_name, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_run_id, baseline_run_id)
                 report_body += graph

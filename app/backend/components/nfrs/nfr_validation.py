@@ -15,8 +15,8 @@
 import re
 import logging
 
-from app.config                             import config_path
-from app.backend.components.nfrs.nfr_config import NFRConfig
+from app.backend.components.nfrs.nfrs_db         import DBNFRs
+from app.backend.components.projects.projects_db import DBProjects
 
 
 class Nfr:
@@ -46,28 +46,9 @@ class DataRow:
 class NFRValidation:
     def __init__(self, project):
         self.project            = project
-        self.path_to_nfrs       = config_path
+        self.schema_name        = DBProjects.get_config_by_id(id=self.project)['name']
         self.nfr_result         = []
         self.transaction_result = []
-
-    def delete_nfrs(self, name):
-        NFRConfig.delete_nfr_config(self.project, name)
-
-    # Method returns NFRs for specific application
-    def get_nfr(self, name):
-        return NFRConfig.get_nfr_values_by_id(self.project, name)
-
-    def get_human_nfr(self, name):
-        result = []
-        nfrs   = NFRConfig.get_nfr_values_by_id(self.project, name)
-        for nfr_row in nfrs["rows"]:
-            result.append(self.generate_name(nfr_row))
-        return result
-
-    # Method reqturns all NFRs for all applications
-    def get_nfrs(self):
-        return NFRConfig.get_all_nfrs(self.project)
-
 
     # Method accepts test value, operation and threshold
     # Compares value with treshold using specified operation
@@ -136,7 +117,7 @@ class NFRValidation:
     # Method takes a list of NFRs
     # Constructs a flux request to the InfluxDB based on the NFRs
     # Takes test data and compares it with the NFRs
-    def compare_with_nfrs(self, nfrs, data):
+    def compare_with_nfrs(self, nfr_config, data):
         # try:
         nfr_result = {}
         # Initialize flags and variables
@@ -145,9 +126,9 @@ class NFRValidation:
         # Calculate total weight and count NFRs without weights
         total_weight = 0
         nfrs_without_weight = 0
-        
-        for nfr in nfrs["rows"]:
-            if nfr["weight"] != '':
+
+        for nfr in nfr_config["rows"]:
+            if nfr["weight"]:
                 total_weight += int(nfr["weight"])
             else:
                 nfrs_without_weight += 1
@@ -156,19 +137,19 @@ class NFRValidation:
         if total_weight < 100 and nfrs_without_weight > 0:
             distribute_weight = (100 - total_weight) / nfrs_without_weight
         else:
-            distribute_weight = 100 / len(nfrs["rows"])
+            distribute_weight = 100 / len(nfr_config["rows"])
             bad_weight = True
             logging.warning("The total weight of your NFRs exceeds 100, so all NFRs will be considered equal.")
-            
+
         # Iterate through NFRs
-        for nfr_row in nfrs["rows"]:
+        for nfr_row in nfr_config["rows"]:
             nfr = Nfr(nfr_row, self.generate_name(nfr_row))
             if nfr.scope == 'each' or nfr.scope in [item['transaction'] for item in data] or nfr.regex:
                 # Iterate through Data for validation
                 for row in data:
                     data_row = DataRow(row)
                     # Applying NFRs weights
-                    if nfr.weight == '' or bad_weight:
+                    if nfr.weight is None or bad_weight:
                         nfr.weight = distribute_weight
                     # Check if the regex matches the transaction
                     is_regex_match = self.is_match(regex=nfr.scope, string=data_row.transaction) if nfr.regex else False
@@ -208,9 +189,9 @@ class NFRValidation:
 
     def create_summary(self, id, data):
         # Get NFRs for the specific application
-        nfrs = self.get_nfr(id)
-        if nfrs:
-            self.compare_with_nfrs(nfrs, data)
+        nfr_config = DBNFRs.get_config_by_id(schema_name=self.schema_name, id=id)
+        if nfr_config:
+            self.compare_with_nfrs(nfr_config, data)
             self.calculate_apdex()
             summary = 'Overall performance based on NFRs:\n'
             if self.apdex >= 80 : result = "acceptable"

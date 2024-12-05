@@ -11,24 +11,20 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header flex-center-center">
-                    <div id="version-info"></div>
+                <div class="main-body-header">
+                    <h4 class="mb-0">Test log
+                        <div class="tooltip-container">
+                          <a href="https://perforge.app/docs/tutorial-extras/reporting-ui" target="_blank">
+                              <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                          </a>
+                          <div class="tooltip-content" style="font-size: 16px;">
+                              Click to learn more
+                          </div>
+                        </div>
+                        <a id="version-info"></a>
+                    </h4>
                 </div>
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-                    <div class="card-header">
-                      <div class="justify-content-between align-items-center">
-                        <h4 class="mb-0">Test log
-                            <div class="tooltip-container">
-                              <a href="https://perforge.app/docs/tutorial-extras/reporting-ui" target="_blank">
-                                  <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                              </a>
-                              <div class="tooltip-content" style="font-size: 16px;">
-                                  Click to learn more
-                              </div>
-                            </div>
-                        </h4>
-                      </div>
-                    </div>
                     <div class="card-body">
                         <div id="table-id">
                             <div class="d-flex align-items-center justify-content-end mb-3">
@@ -84,6 +80,7 @@
                                             <th class="sort" data-sort="startTime">Start time</th>
                                             <th class="sort" data-sort="endTime">End time</th>
                                             <th>Compare</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="list" id="bulk-select-body">
@@ -293,8 +290,8 @@
 
                 if (data.new_version_released) {
                     versionInfo.innerHTML = `
-                        New version is available:<span class="text-primary fw-bold ms-2">${data.new_version}</span>
-                        Check out the <a href="https://github.com/PerForge/PerForge/releases/tag/${data.new_version}" class="text-primary fw-bold" target="_blank">release notes</a> and update.
+                        New<span class="text-primary fw-bold ms-2">${data.new_version}</span> version is available!
+                        <a href="https://github.com/PerForge/PerForge/releases/tag/${data.new_version}" class="text-primary fw-bold" target="_blank">Click to check out the release notes and update.</a>
                     `;
                 }
             }

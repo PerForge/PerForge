@@ -28,13 +28,22 @@
             projectName_value = projectName_value.replace(/[^\w\s]/gi, '');
             
             if (projectName_value.length > 0) {
-                $.get('/save-project?project_name='+projectName_value)
-                .done(function(response) {
-                    document.getElementById("project_name").value = "Saved.";
-                    window.location.replace("/");
-                }).fail(function() {
-                    document.getElementById("project_name").value = "Failed to save the project name.";
-                });  
+                $.ajax({
+                    url: '/save-project',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        id: null,
+                        name: projectName_value
+                    }),
+                    success: function(response) {
+                        document.getElementById("project_name").value = "Saved.";
+                        window.location.replace("/");
+                    },
+                    error: function() {
+                        document.getElementById("project_name").value = "Failed to save the project name.";
+                    }
+                });
             }
         });
     });

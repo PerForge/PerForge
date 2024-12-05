@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Graphs {% endblock %} 
+{% block title %} Graphs {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,22 +11,18 @@
       {% include 'includes/sidebar.html' %}
       <div class="main-body">
         <div class="main-body-header">
-        </div> 
-        <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-          <div class="card-header">
-            <div class="justify-content-between align-items-center">
-              <h4 class="mb-0">Graphs
-                  <div class="tooltip-container">
-                    <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
-                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                    </a>
-                    <div class="tooltip-content" style="font-size: 16px;">
-                        Click to learn more
-                    </div>
+            <h4 class="mb-0">Graphs
+                <div class="tooltip-container">
+                  <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
+                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                  </a>
+                  <div class="tooltip-content" style="font-size: 16px;">
+                      Click to learn more
                   </div>
-              </h4>
-            </div>
-          </div>
+                </div>
+            </h4>
+        </div>
+        <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
           <div class="card-body">
               <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
@@ -51,7 +47,7 @@
                                   <th class="sort" data-sort="height">Height</th>
                                   <th class="sort" data-sort="width">Width</th>
                                   <th class="sort" data-sort="prompt_id">Prompt</th>
-                                  <th class="sort" data-sort="actions">Actions</th>
+                                  <th>Actions</th>
                               </tr>
                           </thead>
                           <tbody class="list">
@@ -122,6 +118,7 @@
       <div class="modal-dialog">
           <div class="modal-content">
             <form method="POST" action="/save-graph">
+              {{ form_for_graphs.hidden_tag() }}
               <input type="hidden" name="id" id="graph_id">
               <div class="modal-header">
                   <h2 class="modal-title" id="addnewgraphLabel">Add graph</h2>
@@ -151,10 +148,10 @@
                 <div class="mt-3">
                     <label>Panel width</label>
                     {{ form_for_graphs.width(class="form-control") }}
-                </div> 
+                </div>
                 <div class="mt-3">
                     <label class="mt-3">Panel height</label>
-                    {{ form_for_graphs.height(class="form-control") }} 
+                    {{ form_for_graphs.height(class="form-control") }}
                 </div>
                 <div class="mt-3">
                     <label class="mt-3">Custom vars (optional)</label>
@@ -164,7 +161,7 @@
                             You can add additional custom variables to draw graphs with these variables. For example, use the following format: &var-varname=varvalue
                         </div>
                     </div>
-                    {{ form_for_graphs.custom_vars(class="form-control") }} 
+                    {{ form_for_graphs.custom_vars(class="form-control") }}
                 </div>
                 <div class="mt-3">
                     <label>Prompt (optional)</label>
@@ -192,9 +189,9 @@
     <script>
       $(document).ready(function() {
           var grafanaConfigs = {{ grafana_configs | tojson | safe }};
-  
+
           $('#grafana_id').change(function() {
-              var selectedGrafanaId = $(this).val();
+              var selectedGrafanaId = parseInt($(this).val());
               var selectedGrafana = grafanaConfigs.find(function(grafana) {
                   return grafana.id === selectedGrafanaId;
               });
@@ -205,35 +202,35 @@
                   dashIdSelect.append('<option value="' + dashboard.id + '">' + dashboard.content + '</option>');
               });
           });
-  
+
           $('#grafana_id').change();
-  
+
           var modal = $('#graphModal');
           var form = modal.find('form');
-  
+
           $('button[data-bs-toggle="modal"][data-bs-target="#graphModal"]').click(function() {
               var graph = $(this).data('graph');
-  
+
               $.each(graph, function(key, value) {
                   form.find('[name="' + key + '"]').val(value);
                   if (key == "prompt_id" && value == ""){
                       form.find('[name="prompt_id"]').val(`{{ form_for_graphs.prompt_id.default }}`);
                   }
               });
-  
+
               $('#grafana_id').val(graph.grafana_id).change();
               $('#dash_id').val(graph.dash_id);
-  
+
               // Trigger change event to update the textarea with the selected prompt's value
               $('#prompt_id').change();
           });
-  
+
           modal.on('hidden.bs.modal', function() {
               form[0].reset();
               $('#graph_id').val('');
               $('#prompt_value').val(''); // Clear the textarea when the modal is closed
           });
-  
+
           // Update the prompt value textarea when a prompt is selected
           $('#prompt_id').change(function() {
               var selectedPrompt = $(this).find('option:selected').data('prompt');

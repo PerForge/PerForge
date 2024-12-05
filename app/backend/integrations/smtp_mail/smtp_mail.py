@@ -15,12 +15,12 @@
 import os
 import logging
 
-from app                                                 import app
-from app.backend.integrations.integration                import Integration
-from app.backend.integrations.smtp_mail.smtp_mail_config import SmtpMailConfig
-from flask                                               import render_template
-from flask_mail                                          import Mail, Message
-from os                                                  import path
+from app                                             import app
+from app.backend.integrations.integration            import Integration
+from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
+from app.backend.components.secrets.secrets_db       import DBSecrets
+from flask                                           import render_template
+from flask_mail                                      import Mail, Message
 
 
 class SmtpMail(Integration):
@@ -33,24 +33,20 @@ class SmtpMail(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
-            logging.warning("There is no config file.")
+        id     = id if id else DBSMTPMail.get_default_config(schema_name=self.schema_name)["id"]
+        config = DBSMTPMail.get_config_by_id(schema_name=self.schema_name, id=id)
+        if config['id']:
+            self.id         = config["id"]
+            self.name       = config["name"]
+            self.server     = config["server"]
+            self.port       = config["port"]
+            self.use_ssl    = config["use_ssl"]
+            self.use_tls    = config["use_tls"]
+            self.username   = config["username"]
+            self.password   = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.recipients = [value for key, value in config.items() if key.startswith("recipients-")]
         else:
-            id     = id if id else SmtpMailConfig.get_default_smtp_mail_config_id(self.project)
-            config = SmtpMailConfig.get_smtp_mail_config_values(self.project, id, is_internal=True)
-            if "id" in config:
-                if config['id'] == id:
-                    self.id         = config["id"]
-                    self.name       = config["name"]
-                    self.server     = config["server"]
-                    self.port       = config["port"]
-                    self.use_ssl    = config["use_ssl"]
-                    self.use_tls    = config["use_tls"]
-                    self.username   = config["username"]
-                    self.password   = config["token"]
-                    self.recipients = [value for key, value in config.items() if key.startswith("recipients-")]
-                else:
-                    return {"status":"error", "message":"No such config name"}
+            logging.warning("There's no SMTP Mail integration configured, or you're attempting to send a request from an unsupported location.")
 
     def put_page_to_mail(self, subject, report_body, report_images):
         mail_settings = {

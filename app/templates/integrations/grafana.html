@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Grafana {% endblock %} 
+{% block title %} Grafana {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -29,20 +29,18 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="/grafana">
+                            <form method="POST" action="/grafana" id="grafanaForm" onsubmit="return validateForm()">
                                 <div class="center-section">
                                     {{ form.hidden_tag() }}
                                     {% if grafana_config %}
                                         <input type="hidden" name="id" id="config_id" value="{{ grafana_config }}">
-                                    {% else %}
-                                        <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name" class="input-label mt-2">Name:</label>
                                     {{ form.name(id='name', class_='form-control') }}
 
                                     <label for="server" class="input-label mt-2">Server:</label>
                                     {{ form.server(id='server', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -50,11 +48,19 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    {{ form.token(class="form-control") }}
-                                    
+                                    <select class="form-control" name="token" id="token" required>
+                                        <option value="">Select the secret</option>
+                                        {% for secret in secret_configs %}
+                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                        Please select a token
+                                    </div>
+
                                     <label for="org_id" class="input-label mt-2">Organization ID:</label>
                                     {{ form.org_id(id='org_id', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -63,7 +69,7 @@
                                     </div>
                                     <label for="test_title" class="input-label mt-2">Test title tag:</label>
                                     {{ form.test_title(id='test_title', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -72,7 +78,7 @@
                                     </div>
                                     <label for="app" class="input-label mt-2">App name tag:</label>
                                     {{ form.app(id='app', class_='form-control') }}
-                                    
+
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -160,7 +166,7 @@
               container.innerHTML = html;
               document.getElementById('dashboards-container').appendChild(container.firstChild);
             };
-        
+
             window.removeDashboard = function(e) {
               var dashboardId = e.parentNode.querySelector('[name$="-id"]').value;
               if (dashboardId) {
@@ -173,13 +179,13 @@
                 removeDashboardElement(e);
               }
             };
-            
+
             function removeDashboardElement(e) {
               var dashboardsContainer = document.getElementById('dashboards-container');
               dashboardsContainer.removeChild(e.parentNode);
               updateDashboardInputs();
             }
-            
+
             function updateDashboardInputs() {
               var dashboardInputs = document.querySelectorAll('.dashboardInput');
               var dashboardIds = document.querySelectorAll('[name^="dashboards-"][name$="-id"]');
@@ -192,10 +198,34 @@
             }
         });
 
+        function validateForm() {
+            const tokenSelect = document.getElementById('token');
+            const tokenError = document.getElementById('tokenError');
+
+            if (!tokenSelect.value) {
+                tokenSelect.classList.add('is-invalid');
+                tokenError.style.display = 'block';
+                return false;
+            }
+
+            tokenSelect.classList.remove('is-invalid');
+            tokenError.style.display = 'none';
+            return true;
+        }
+
+        // Add event listener to token select for real-time validation
+        document.getElementById('token').addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                document.getElementById('tokenError').style.display = 'none';
+            }
+        });
+
         $("form").submit(function(event){
           event.preventDefault();
+          var id = $('#config_id').val();
           var formData = {
-              id: $('#config_id').val(),
+              id: id ? id : null,
               name: $('#name').val(),
               server: $('#server').val(),
               token: $('#token').val(),
@@ -203,13 +233,16 @@
               test_title: $('#test_title').val(),
               app: $('#app').val(),
               baseline_test_title: $('#baseline_test_title').val(),
-              is_default: $('#is_default').val(),
+              is_default: $('#is_default').val() === 'True',
               dashboards: []
           };
+          var grafanaId = formData.id;
           $('.dashboardInput').each(function(index) {
+              var dashboardId = $(`input[name='dashboards-${index}-id']`).val();
               formData.dashboards.push({
-                  id: $(`input[name='dashboards-${index}-id']`).val(),
-                  content: $(`input[name='dashboards-${index}-content']`).val()
+                  id: dashboardId ? dashboardId : null,
+                  content: $(`input[name='dashboards-${index}-content']`).val(),
+                  grafana_id: grafanaId
               });
           });
           $.ajax({
@@ -217,8 +250,8 @@
               url: "/grafana",
               contentType: "application/json",
               data: JSON.stringify(formData),
-              success: function(response) {
-                  window.location.replace("/grafana?" + response);
+              success: function() {
+                  window.location.replace("/integrations?tab=grafana");
               },
               error: function(err){
                   console.error('Error saving configuration:', err);

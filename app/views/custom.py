@@ -21,7 +21,7 @@ from app.backend.integrations.azure_wiki.azure_wiki_report                     i
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
-from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction                                import InfluxdbV2
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction     import InfluxdbV2
 from app.backend.integrations.grafana.grafana                                  import Grafana
 from flask                                                                     import request, redirect, make_response
 

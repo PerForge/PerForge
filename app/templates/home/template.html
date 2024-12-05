@@ -48,7 +48,7 @@
                                         </div>
                                         <div v-else-if="element.type === 'graph'" class="template-group">
                                             <span class="badge badge-success">GRAPH</span>
-                                            <div class="template-el-label">Name: {{ element.content }}</div>
+                                            <div class="template-el-label">Name: {{ getGraphNameById(element.graph_id) }}</div>
                                             <div class="flex-end">
                                                 <button class='btn-close-id btn-close' @click="removeElement(element)" type="button"></button>
                                             </div>
@@ -259,11 +259,19 @@
             },
             methods: {
                 addTextElement() {
-                    this.template.push({ id: '', type: 'text', content: '' });
+                    this.template.push({
+                        graph_id  : null,
+                        type      : 'text',
+                        content   : null
+                    });
                 },
                 addGraphElement(element) {
                     if (element !== null) {
-                        this.template.push({ id: element.id, type: 'graph', content: element.name });
+                        this.template.push({
+                            graph_id  : element.id,
+                            type      : 'graph',
+                            content   : null
+                        });
                     }
                 },
                 removeElement(element) {
@@ -285,16 +293,16 @@
                             const results = {
                                 "id": '{{ "" if template_config is none else template_config }}',
                                 "name": this.name,
-                                "nfr": this.nfr.id ? this.nfr.id : '',
+                                "nfr": this.nfr.id ? this.nfr.id : null,
                                 "title": this.title,
                                 "ai_switch": this.ai_switch,
                                 ai_aggregated_data_switch: this.ai_aggregated_data_switch,
                                 "ai_graph_switch": this.ai_graph_switch,
                                 "ai_to_graphs_switch": this.ai_to_graphs_switch,
                                 "nfrs_switch": this.nfrs_switch,
-                                "template_prompt_id": this.template_prompt_id,
-                                "aggregated_prompt_id": this.aggregated_prompt_id,
-                                "system_prompt_id": this.system_prompt_id,
+                                "template_prompt_id": this.template_prompt_id || null,
+                                "aggregated_prompt_id": this.aggregated_prompt_id || null,
+                                "system_prompt_id": this.system_prompt_id || null,
                                 "data": plainTemplate
                             }
                             perforge.utils
@@ -319,7 +327,11 @@
                 updateSystemPrompt(selectedOption) {
                   this.system_prompt_id = selectedOption.id;
                   this.selectedSystemPrompt = selectedOption; // Ensure the selected option is updated
-              },
+                },
+                getGraphNameById(graph_id) {
+                    const graph = this.graphs.find(graph => graph.id === graph_id);
+                    return graph ? graph.name : '';
+                }
             },
             created() {
                 function addTypeToName(prompts) {

@@ -48,7 +48,7 @@
                                                 <th class="sort" data-sort="template_prompt_id">Template prompt</th>
                                                 <th class="sort" data-sort="aggregated_prompt_id">Aggregated data prompt</th>
                                                 <th class="sort" data-sort="ai-switch">AI Switch</th>
-                                                <th class="sort" data-sort="actions">Actions</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="list">
@@ -151,7 +151,7 @@
                                                 <th class="sort" data-sort="template">Templates</th>
                                                 <th class="sort" data-sort="prompt_id">Prompt</th>
                                                 <th class="sort" data-sort="ai_summary">AI Switch</th>
-                                                <th class="sort" data-sort="actions">Actions</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="list">
@@ -163,8 +163,12 @@
                                                 <td class="template list">
                                                     {% for element in template_group.data %}
                                                         {% if element.type == "template" %}
-                                                            {% set counter.value = counter.value + 1 %}
-                                                            {{ counter.value }}. {{ element.content }}<br>
+                                                            {% for template in templates %}
+                                                                {% if element.template_id == template.id %}
+                                                                    {% set counter.value = counter.value + 1 %}
+                                                                    {{ counter.value }}. {{ template.name }}<br>
+                                                                {% endif %}
+                                                            {% endfor %}
                                                         {% endif %}
                                                     {% endfor %}
                                                 </td>

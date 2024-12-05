@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Prompts {% endblock %} 
+{% block title %} Prompts {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,22 +11,18 @@
       {% include 'includes/sidebar.html' %}
       <div class="main-body">
         <div class="main-body-header">
-        </div> 
-        <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-          <div class="card-header">
-            <div class="justify-content-between align-items-center">
-              <h4 class="mb-0">Prompts
-                <div class="tooltip-container">
-                  <a href="https://perforge.app/docs/configuration/prompts" target="_blank">
-                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                  </a>
-                  <div class="tooltip-content" style="font-size: 16px;">
-                      Click to learn more
-                  </div>
-                </div>
-              </h4>
+          <h4 class="mb-0">Prompts
+            <div class="tooltip-container">
+              <a href="https://perforge.app/docs/configuration/prompts" target="_blank">
+                  <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+              </a>
+              <div class="tooltip-content" style="font-size: 16px;">
+                  Click to learn more
+              </div>
             </div>
-          </div>
+          </h4>
+        </div>
+        <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
           <div class="card-body">
               <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
@@ -51,7 +47,8 @@
                                   <th class="sort" data-sort="prompt">Prompt</th>
                                   <th class="sort" data-sort="place">Place</th>
                                   <th class="sort" data-sort="type">Type</th>
-                                  <th class="sort" data-sort="actions">Actions</th>
+                                  <th class="sort" data-sort="project_id">Scope</th>
+                                  <th>Actions</th>
                               </tr>
                           </thead>
                           <tbody class="list">
@@ -61,6 +58,15 @@
                                 <td class="prompt"><div style="display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prompt.prompt }}</div></td>
                                 <td class="place"><div class="badge badge-primary">{{ prompt.place }}</div></td>
                                 <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
+                                <td class="project_id">
+                                    <div class="badge badge-primary">
+                                        {% if prompt.project_id %}
+                                            PROJECT
+                                        {% else %}
+                                            ALL
+                                        {% endif %}
+                                    </div>
+                                </td>
                                 <td class="actions">
                                     <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#viewPromptModal" data-prompt='{{ prompt | tojson | safe }}'>View</button>
                                 </td>
@@ -89,6 +95,15 @@
                                 <td class="prompt"><div style="display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prompt.prompt }}</div></td>
                                 <td class="place"><div class="badge badge-primary">{{ prompt.place }}</div></td>
                                 <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
+                                <td class="project_id">
+                                    <div class="badge badge-primary">
+                                        {% if prompt.project_id %}
+                                            PROJECT
+                                        {% else %}
+                                            ALL
+                                        {% endif %}
+                                    </div>
+                                </td>
                                 <td class="actions">
                                     <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" data-prompt='{{ prompt | tojson | safe }}'>Edit</button>
                                     <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ prompt.id }}">Delete</a>
@@ -142,6 +157,10 @@
                   {{ form_for_prompts.place(class="form-control") }}
                 </div>
                 <div class="mt-3">
+                  <label>Scope</label>
+                  {{ form_for_prompts.project_id(class="form-control") }}
+                </div>
+                <div class="mt-3">
                   <label>Prompt</label>
                   {{ form_for_prompts.prompt(class="form-control") }}
                 </div>
@@ -187,7 +206,7 @@
         var modal = $('#promptModal');
         var viewModal = $('#viewPromptModal');
         var form = modal.find('form');
-    
+
         // Function to show/hide the template info div
         function toggleTemplateInfo() {
           var placeValue = form.find('[name="place"]').val();
@@ -197,24 +216,29 @@
             $('#template-info').hide();
           }
         }
-    
+
         // Listen for the modal open event for editing
         $('button[data-bs-toggle="modal"][data-bs-target="#promptModal"]').click(function() {
           var prompt = $(this).data('prompt');
-    
+
           $.each(prompt, function(key, value) {
-            form.find('[name="' + key + '"]').val(value.toString());
+              form.find('[name="' + key + '"]').val(value);
           });
-    
-          // Call the function to show/hide the template info div
+
+          if (prompt.project_id) {
+              form.find('[name="project_id"]').val('project');
+          } else {
+              form.find('[name="project_id"]').val('all');
+          }
+
           toggleTemplateInfo();
         });
-    
+
         // Listen for changes in the place field
         form.find('[name="place"]').change(function() {
           toggleTemplateInfo();
         });
-    
+
         // Listen for the modal close event for editing
         modal.on('hidden.bs.modal', function() {
           form[0].reset();
@@ -222,19 +246,19 @@
           $('#prompt_type').val('custom');
           $('#template-info').hide(); // Hide the template info div
         });
-    
+
         // Listen for the modal open event for viewing
         $('button[data-bs-toggle="modal"][data-bs-target="#viewPromptModal"]').click(function() {
           var prompt = $(this).data('prompt');
-    
+
           $('#view_prompt').val(prompt.prompt);
         });
-    
+
         // Listen for the modal close event for viewing
         viewModal.on('hidden.bs.modal', function() {
           $('#view_prompt').val('');
         });
-    
+
         // Handle the switch change event
         $('#selectedTypeSwitch').change(function() {
           if ($(this).is(':checked')) {
@@ -249,14 +273,14 @@
             updateURL('default');
           }
         });
-    
+
         // Update the URL with the selected type
         function updateURL(type) {
           var currentURL = new URL(window.location.href);
           currentURL.searchParams.set('type', type);
           window.history.replaceState({}, '', currentURL);
         }
-    
+
         // Read the switcher state from the URL on page load
         function initializeSwitcher() {
           var currentURL = new URL(window.location.href);
@@ -267,7 +291,7 @@
             $('#selectedTypeSwitch').prop('checked', false).trigger('change');
           }
         }
-    
+
         // Initialize the switcher based on the URL
         initializeSwitcher();
       });

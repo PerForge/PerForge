@@ -1,12 +1,27 @@
-from abc import ABC, abstractmethod
-from app.config import config_path
-from typing import List, Dict, Any, Callable
-from functools import wraps
+# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
-from app.backend.errors import ErrorMessages
-import functools
-from datetime import datetime
 import pandas as pd
+
+
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.errors                          import ErrorMessages
+from abc                                         import ABC, abstractmethod
+from typing                                      import List, Dict, Any, Callable
+from functools                                   import wraps
+from datetime                                    import datetime
 
 
 def validate_output(expected_keys: set):
@@ -32,17 +47,17 @@ def validate_time_format(func):
             'iso': lambda r: isinstance(r, str) and datetime.strptime(r, "%Y-%m-%dT%H:%M:%SZ"),
             'timestamp': lambda r: isinstance(r, int)
         }
-        
+
         if time_format not in valid_formats:
             raise ValueError(f"Invalid time format: {time_format}. Valid formats: {list(valid_formats.keys())}")
-        
+
         result = func(self, *args, **kwargs)
-        
+
         try:
             valid_formats[time_format](result)
         except (ValueError, TypeError):
             raise ValueError(f"Invalid return format for {time_format} time: {result}")
-        
+
         return result
     return wrapper
 
@@ -108,9 +123,9 @@ def validate_float_output(func: Callable):
 
 class DataExtractionBase(ABC):
 
-    required_metrics = ['overal_throughput', 
-                        'overal_users', 
-                        'overal_avg_response_time', 
+    required_metrics = ['overal_throughput',
+                        'overal_users',
+                        'overal_avg_response_time',
                         'overal_median_response_time',
                         'overal_90_pct_response_time',
                         'overal_errors']
@@ -122,8 +137,8 @@ class DataExtractionBase(ABC):
         """
         self.metric_map  = {}
         self.project     = project
-        self.config_path = config_path
-        
+        self.schema_name = DBProjects.get_config_by_id(id=self.project)['name']
+
     @abstractmethod
     def set_config(self):
         """
@@ -131,7 +146,7 @@ class DataExtractionBase(ABC):
         This method should be implemented by child classes.
         """
         raise NotImplementedError("Child classes must implement this method.")
-        
+
     @abstractmethod
     def _initialize_client(self):
         """
@@ -139,7 +154,7 @@ class DataExtractionBase(ABC):
         This method should be implemented by child classes.
         """
         raise NotImplementedError("Child classes must implement this method.")
-    
+
     @abstractmethod
     def _close_client(self):
         """
@@ -147,7 +162,7 @@ class DataExtractionBase(ABC):
         This method should be implemented by child classes.
         """
         raise NotImplementedError("Child classes must implement this method.")
-    
+
     @abstractmethod
     def _fetch_test_log(self) -> List[Dict[str, Any]]:
         """
@@ -166,7 +181,7 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries containing aggregated table data.
         """
         pass
-    
+
     @abstractmethod
     def _fetch_start_time(self, test_title: str, time_format: str) -> Any:
         """
@@ -176,7 +191,7 @@ class DataExtractionBase(ABC):
         :return: The start time in the specified format.
         """
         pass
-    
+
     @abstractmethod
     def _fetch_end_time(self, test_title: str, time_format: str) -> Any:
         """
@@ -215,7 +230,7 @@ class DataExtractionBase(ABC):
         :return: The start time in the specified format.
         """
         return self._fetch_start_time(test_title, **kwargs)
-    
+
     @validate_time_format
     def get_end_time(self, test_title: str, **kwargs) -> Any:
         """
@@ -225,7 +240,7 @@ class DataExtractionBase(ABC):
         :return: The end time in the specified format.
         """
         return self._fetch_end_time(test_title, **kwargs)
-    
+
     @abstractmethod
     def _fetch_test_name(self, test_title: str, start: str, end: str) -> str:
         """
@@ -247,7 +262,7 @@ class DataExtractionBase(ABC):
         :return: The application name.
         """
         return self._fetch_test_name(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_rps(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         """
@@ -269,7 +284,7 @@ class DataExtractionBase(ABC):
         :return: The RPS data as a pandas DataFrame with columns 'timestamp' and 'value'.
         """
         return self._fetch_rps(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_active_threads(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         """
@@ -291,7 +306,7 @@ class DataExtractionBase(ABC):
         :return: The active threads data as a pandas DataFrame with columns 'timestamp' and 'value'.
         """
         return self._fetch_active_threads(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_average_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         """
@@ -313,7 +328,7 @@ class DataExtractionBase(ABC):
         :return: The average response time data as a pandas DataFrame with columns 'timestamp' and 'value'.
         """
         return self._fetch_average_response_time(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_median_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         """
@@ -379,7 +394,7 @@ class DataExtractionBase(ABC):
         :return: The error count data as a pandas DataFrame with columns 'timestamp' and 'value'.
         """
         return self._fetch_error_count(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_average_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         """
@@ -390,7 +405,7 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
         """
         pass
-    
+
     @validate_dict_output
     def get_average_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         """
@@ -401,7 +416,7 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
         """
         return self._fetch_average_response_time_per_req(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_median_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         """
@@ -412,7 +427,7 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
         """
         pass
-    
+
     @validate_dict_output
     def get_median_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         """
@@ -435,7 +450,7 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
         """
         pass
-    
+
     @validate_dict_output
     def get_pct90_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         """
@@ -447,7 +462,7 @@ class DataExtractionBase(ABC):
         :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
         """
         return self._fetch_pct90_response_time_per_req(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
         """
@@ -469,7 +484,7 @@ class DataExtractionBase(ABC):
         :return: The maximum number of active users.
         """
         return self._fetch_max_active_users_stats(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
         """
@@ -491,7 +506,7 @@ class DataExtractionBase(ABC):
         :return: The median throughput stats as an integer.
         """
         return self._fetch_median_throughput_stats(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
         """
@@ -513,7 +528,7 @@ class DataExtractionBase(ABC):
         :return: The median response time stats as a float.
         """
         return self._fetch_median_response_time_stats(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
         """
@@ -535,7 +550,7 @@ class DataExtractionBase(ABC):
         :return: The 90th percentile response time stats as a float.
         """
         return self._fetch_pct90_response_time_stats(test_title, start, end)
-    
+
     @abstractmethod
     def _fetch_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
         """

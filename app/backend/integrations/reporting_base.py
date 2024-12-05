@@ -15,27 +15,29 @@
 import re
 import logging
 
-from app.backend.integrations.ai_support.ai_support   import AISupport
-from app.backend.integrations.grafana.grafana         import Grafana
-from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction       import InfluxdbV2
-from app.backend.integrations.grafana.grafana_config  import GrafanaConfig
-from app.backend.components.nfrs.nfr_validation       import NFRValidation
-from app.backend.components.templates.template_config import TemplateConfig
+from app.backend.integrations.ai_support.ai_support                        import AISupport
+from app.backend.integrations.grafana.grafana                              import Grafana
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
+from app.backend.integrations.grafana.grafana_db                           import DBGrafana
+from app.backend.components.nfrs.nfr_validation                            import NFRValidation
+from app.backend.components.projects.projects_db                           import DBProjects
+from app.backend.components.templates.templates_db                         import DBTemplates
+from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
+
 
 
 class ReportingBase:
 
     def __init__(self, project):
         self.project        = project
-        self.progress       = 0
-        self.status         = "Not started"
-        self.validation_obj = NFRValidation(project)
+        self.schema_name    = DBProjects.get_config_by_id(id=self.project)['name']
+        self.validation_obj = NFRValidation(project=self.project)
 
     def __del__(self):
         self.influxdb_obj._close_client()
 
     def set_template(self, template, influxdb):
-        template_obj                   = TemplateConfig.get_template_config_values(self.project, template)
+        template_obj                   = DBTemplates.get_config_by_id(schema_name=self.schema_name, id=template)
         self.nfr                       = template_obj["nfr"]
         self.title                     = template_obj["title"]
         self.data                      = template_obj["data"]
@@ -52,15 +54,11 @@ class ReportingBase:
             self.ai_support_obj = AISupport(project=self.project, system_prompt=self.system_prompt_id)
 
     def set_template_group(self, template_group):
-        template_group_obj            = TemplateConfig.get_template_group_config_values(self.project, template_group)
+        template_group_obj            = DBTemplateGroups.get_config_by_id(schema_name=self.schema_name, id=template_group)
         self.group_title              = template_group_obj["title"]
         self.template_order           = template_group_obj["data"]
         self.template_group_prompt_id = template_group_obj["prompt_id"]
         self.ai_summary               = template_group_obj["ai_summary"]
-
-    def get_template_data(self, template):
-        template_obj = TemplateConfig.get_template_config_values(self.project, template)
-        return template_obj["data"]
 
     def replace_variables(self, text):
         variables = re.findall(r"\$\{(.*?)\}", text)
@@ -104,8 +102,8 @@ class ReportingBase:
         return response
 
     def collect_data(self, current_run_id, baseline_run_id = None):
-        default_grafana              = GrafanaConfig.get_default_grafana_config_id(self.project)
-        default_grafana_obj          = Grafana(project=self.project, id=default_grafana)
+        default_grafana_id              = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
+        default_grafana_obj          = Grafana(project=self.project, id=default_grafana_id)
         self.current_run_id          = current_run_id
         self.baseline_run_id         = baseline_run_id
         self.current_start_time      = self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'iso')
@@ -134,5 +132,3 @@ class ReportingBase:
                 "baseline_duration"    : str(int((self.baseline_end_timestamp - self.baseline_start_timestamp) / 1000)),
                 "baseline_vusers"      : self.influxdb_obj.get_max_active_users_stats(baseline_run_id, self.baseline_start_time, self.baseline_end_time)
             })
-        self.status = "Collected data from InfluxDB"
-        self.progress = 25

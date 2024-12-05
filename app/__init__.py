@@ -15,12 +15,16 @@
 import os
 import logging
 
-from app.models       import db, DBMigrations
-from logging.handlers import RotatingFileHandler
-from flask            import Flask
-from flask_login      import LoginManager
-from flask_bcrypt     import Bcrypt
-from flask_compress   import Compress
+from app.config                                  import db
+from app.backend.components.users.users_db       import DBUsers
+from app.backend.components.secrets.secrets_db   import DBSecrets
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.components.prompts.prompts_db   import DBPrompts
+from logging.handlers                            import RotatingFileHandler
+from flask                                       import Flask
+from flask_login                                 import LoginManager
+from flask_bcrypt                                import Bcrypt
+from flask_compress                              import Compress
 
 
 # Grabs the folder where the script runs.
@@ -34,8 +38,9 @@ app.config['COMPRESS_MIN_SIZE'] = 500
 
 # Setup database
 database_directory = os.path.join(basedir, "data")
-app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'/database.db'
+app.config['SQLALCHEMY_DATABASE_URI']        = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db.init_app(app)
 
 class IgnoreStaticRequests(logging.Filter):
@@ -70,8 +75,13 @@ app.config.from_object('app.config.Config')
 bc = Bcrypt(app)  # flask-bcrypt
 
 with app.app_context():
-    db.create_all()
-    DBMigrations.migration_1()
+    db.metadata.create_all(bind=db.engine, tables=[
+        DBUsers.__table__,
+        DBSecrets.__table__,
+        DBProjects.__table__,
+        DBPrompts.__table__
+        ], checkfirst=True)
+    DBPrompts.load_default_prompts_from_yaml()
 
 login_manager = LoginManager()
 login_manager.init_app(app)

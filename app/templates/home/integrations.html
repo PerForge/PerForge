@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Integrations {% endblock %} 
+{% block title %} Integrations {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,9 +11,7 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header">
-                </div>
-                <div class="center-section">
+                <div class="main-body-header flex-center-center">
                     <ul class="nav nav-underline" id="tabs-text" role="tablist">
                         <li class="nav-item nav-integrations">
                             <a class="nav-link active" id="influxdb" data-bs-toggle="tab"
@@ -200,7 +198,6 @@
               window.history.pushState({path: url.href}, '', url.href);
           }
 
-          // Получаем все вкладки
           const tabs = document.querySelectorAll('.nav-link');
 
           tabs.forEach(tab => {

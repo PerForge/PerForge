@@ -48,7 +48,7 @@
                                         </div>
                                         <div v-else-if="element.type === 'template'" class="template-group">
                                             <span class="badge badge-primary">TEMPLATE</span>
-                                            <div class="template-el-label">Name: {{ element.content }}</div>
+                                            <div class="template-el-label">Name: {{ getTemplateNameById(element.template_id) }}</div>
                                             <div class="flex-end">
                                                 <button class='btn-close-id btn-close' @click="removeElement(element)" type="button"></button>
                                             </div>
@@ -141,11 +141,19 @@
                 },
                 methods: {
                     addTextElement() {
-                        this.template.push({ id: "", type: 'text', content: '' });
+                        this.template.push({
+                            template_id: null,
+                            type: 'text',
+                            content: null
+                        });
                     },
                     addTemplateElement(element) {
                         if (element !== null) {
-                            this.template.push({ id: element.id, type: 'template', content: element.name });
+                            this.template.push({
+                                template_id: element.id,
+                                type: 'template',
+                                content: null
+                            });
                         }
                     },
                     removeElement(element) {
@@ -169,7 +177,7 @@
                                     "name": this.name,
                                     "title": this.title,
                                     "data": plainTemplate,
-                                    "prompt_id": this.prompt_id,
+                                    "prompt_id": this.prompt_id || null,
                                     "ai_summary": this.ai_summary
                                 }
                                 perforge.utils
@@ -187,6 +195,10 @@
                         this.prompt_id = selectedOption.id;
                         this.selectedTemplateGroupPrompt = selectedOption; // Ensure the selected option is updated
                     },
+                    getTemplateNameById(template_id) {
+                        const template = this.templates.find(template => template.id === template_id);
+                        return template ? template.name : '';
+                    }
                 },
                 created() {
                     function addTypeToName(prompts) {
