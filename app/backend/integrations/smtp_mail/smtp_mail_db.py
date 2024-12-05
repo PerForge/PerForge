@@ -16,7 +16,7 @@ import traceback
 import logging
 
 from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
+from app.backend.pydantic_models import SmtpMailModel
 from sqlalchemy.orm import joinedload
 
 
@@ -33,46 +33,30 @@ class DBSMTPMail(db.Model):
     is_default    = db.Column(db.Boolean, default=False)
     recipients    = db.relationship('DBSMTPMailRecipient', backref='smtp_mail', cascade='all, delete-orphan', lazy=True)
 
-    def __init__(self, name, server, port, use_ssl, use_tls, username, token, is_default, recipients):
-        self.name       = name
-        self.server     = server
-        self.port       = port
-        self.use_ssl    = use_ssl
-        self.use_tls    = use_tls
-        self.username   = username
-        self.token      = token
-        self.is_default = is_default
-        self.recipients = recipients
-
     def to_dict(self):
-        return {
-            'id'        : self.id,
-            'name'      : self.name,
-            'server'    : self.server,
-            'port'      : self.port,
-            'use_ssl'   : self.use_ssl,
-            'use_tls'   : self.use_tls,
-            'username'  : self.username,
-            'token'     : self.token,
-            'is_default': self.is_default,
-            'recipients': [recipient.to_dict() for recipient in self.recipients]
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-        for recipient in self.recipients:
-            recipient.__table__.schema = schema_name
-
-        if self.is_default:
-            self.reset_default_config(schema_name)
-        elif not self.get_default_config(schema_name):
-            self.is_default = True
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            validated_data            = SmtpMailModel(**data)
+            instance                  = cls(**validated_data.model_dump(exclude={'recipients'}))
+            instance.__table__.schema = schema_name
+
+            for recipient_data in validated_data.recipients:
+                recipient_dict             = recipient_data.model_dump()
+                recipient                  = DBSMTPMailRecipient(**recipient_dict)
+                instance.recipients.append(recipient)
+
+            if instance.is_default:
+                cls.reset_default_config(schema_name)
+            elif not cls.get_default_config(schema_name):
+                instance.is_default = True
+
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -83,10 +67,15 @@ class DBSMTPMail(db.Model):
         DBSMTPMailRecipient.__table__.schema = schema_name
 
         try:
-            query = db.session.query(cls).options(joinedload(cls.recipients)).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            query   = db.session.query(cls).options(joinedload(cls.recipients)).all()
+            configs = []
+            for config in query:
+                config_dict               = config.to_dict()
+                config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
+                validated_data            = SmtpMailModel(**config_dict)
+                configs.append(validated_data.model_dump())
+            return configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -96,9 +85,14 @@ class DBSMTPMail(db.Model):
         DBSMTPMailRecipient.__table__.schema = schema_name
 
         try:
-            config = db.session.query(cls).options(joinedload(cls.recipients)).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).options(joinedload(cls.recipients)).filter_by(id=id).one_or_none()
+            if config:
+                config_dict               = config.to_dict()
+                config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
+                validated_data            = SmtpMailModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -108,9 +102,14 @@ class DBSMTPMail(db.Model):
         DBSMTPMailRecipient.__table__.schema = schema_name
 
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).options(joinedload(cls.recipients)).filter_by(is_default=True).one_or_none()
+            if config:
+                config_dict               = config.to_dict()
+                config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
+                validated_data            = SmtpMailModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -121,41 +120,33 @@ class DBSMTPMail(db.Model):
 
         try:
             db.session.query(cls).update({cls.is_default: False})
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, id, name, server, port, use_ssl, use_tls, username, token, is_default, recipients):
+    def update(cls, schema_name, data):
         cls.__table__.schema                 = schema_name
         DBSMTPMailRecipient.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                if is_default:
-                    cls.reset_default_config(schema_name)
+            validated_data = SmtpMailModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            if validated_data.is_default:
+                cls.reset_default_config(schema_name)
 
-                config.name       = name
-                config.server     = server
-                config.port       = port
-                config.use_ssl    = use_ssl
-                config.use_tls    = use_tls
-                config.username   = username
-                config.token      = token
-                config.is_default = is_default
-                config.recipients.clear()
+            exclude_fields = {'recipients'}
+            for field, value in validated_data.model_dump().items():
+                if field not in exclude_fields:
+                    setattr(config, field, value)
 
-                for recipients_data in recipients:
-                    recipient = DBSMTPMailRecipient(
-                        email        = recipients_data,
-                        smtp_mail_id = config.id
-                    )
-                    config.recipients.append(recipient)
-
-                db.session.commit()
-        except SQLAlchemyError:
+            config.recipients.clear()
+            for recipient_data in validated_data.recipients:
+                recipient_dict = recipient_data.model_dump()
+                recipient      = DBSMTPMailRecipient(**recipient_dict)
+                config.recipients.append(recipient)
+            db.session.commit()
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -167,7 +158,7 @@ class DBSMTPMail(db.Model):
         try:
             count = db.session.query(cls).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -186,7 +177,7 @@ class DBSMTPMail(db.Model):
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -198,13 +189,5 @@ class DBSMTPMailRecipient(db.Model):
     email         = db.Column(db.String(120), nullable=False)
     smtp_mail_id  = db.Column(db.Integer, db.ForeignKey('smtp_mail.id', ondelete='CASCADE'), nullable=False)
 
-    def __init__(self, email, smtp_mail_id):
-        self.email        = email
-        self.smtp_mail_id = smtp_mail_id
-
     def to_dict(self):
-        return {
-            'id'          : self.id,
-            'email'       : self.email,
-            'smtp_mail_id': self.smtp_mail_id
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}

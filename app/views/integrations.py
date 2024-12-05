@@ -38,18 +38,18 @@ def integrations():
 
         influxdb_configs             = DBInfluxdb.get_configs(schema_name=project_data['name'])
         grafana_configs              = DBGrafana.get_configs(schema_name=project_data['name'])
-        azure_configs                = DBAzureWiki.get_configs(schema_name=project_data['name'])
+        smtp_mail_configs            = DBSMTPMail.get_configs(schema_name=project_data['name'])
         atlassian_confluence_configs = DBAtlassianConfluence.get_configs(schema_name=project_data['name'])
         atlassian_jira_configs       = DBAtlassianJira.get_configs(schema_name=project_data['name'])
-        smtp_mail_configs            = DBSMTPMail.get_configs(schema_name=project_data['name'])
+        azure_configs                = DBAzureWiki.get_configs(schema_name=project_data['name'])
         ai_support_configs           = DBAISupport.get_configs(schema_name=project_data['name'])
         return render_template('home/integrations.html',
                                influxdb_configs             = influxdb_configs,
                                grafana_configs              = grafana_configs,
-                               azure_configs                = azure_configs,
+                               smtp_mail_configs            = smtp_mail_configs,
                                atlassian_confluence_configs = atlassian_confluence_configs,
                                atlassian_jira_configs       = atlassian_jira_configs,
-                               smtp_mail_configs            = smtp_mail_configs,
+                               azure_configs                = azure_configs,
                                ai_support_configs           = ai_support_configs
                                )
     except Exception:
@@ -64,7 +64,7 @@ def add_influxdb():
         project_id      = request.cookies.get('project')
         project_data    = DBProjects.get_config_by_id(id=project_id)
         influxdb_config = request.args.get('influxdb_config')
-        secret_configs  = DBSecrets.get_configs(project_id=project_id)
+        secret_configs  = DBSecrets.get_configs(id=project_id)
         if influxdb_config is not None:
             output = DBInfluxdb.get_config_by_id(schema_name=project_data['name'], id=influxdb_config)
             form   = InfluxDBForm(data=output)
@@ -74,31 +74,14 @@ def add_influxdb():
                 if influxdb_data['id']:
                     DBInfluxdb.update(
                         schema_name = project_data['name'],
-                        id          = influxdb_data['id'],
-                        name        = influxdb_data['name'],
-                        url         = influxdb_data['url'],
-                        org_id      = influxdb_data['org_id'],
-                        token       = influxdb_data['token'],
-                        timeout     = influxdb_data['timeout'],
-                        bucket      = influxdb_data['bucket'],
-                        listener    = influxdb_data['listener'],
-                        tmz         = influxdb_data['tmz'],
-                        is_default  = influxdb_data['is_default']
+                        data        = influxdb_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    influxdb_obj = DBInfluxdb(
-                        name        = influxdb_data['name'],
-                        url         = influxdb_data['url'],
-                        org_id      = influxdb_data['org_id'],
-                        token       = influxdb_data['token'],
-                        timeout     = influxdb_data['timeout'],
-                        bucket      = influxdb_data['bucket'],
-                        listener    = influxdb_data['listener'],
-                        tmz         = influxdb_data['tmz'],
-                        is_default  = influxdb_data['is_default']
+                    DBInfluxdb.save(
+                        schema_name = project_data['name'],
+                        data        = influxdb_data
                     )
-                    influxdb_config = influxdb_obj.save(schema_name=project_data['name'])
                     flash("Integration added.", "info")
                 return redirect(url_for('integrations',tab='influxdb'))
             except Exception:
@@ -132,7 +115,7 @@ def add_grafana():
         project_id     = request.cookies.get('project')
         project_data   = DBProjects.get_config_by_id(id=project_id)
         grafana_config = request.args.get('grafana_config')
-        secret_configs = DBSecrets.get_configs(project_id=project_id)
+        secret_configs = DBSecrets.get_configs(id=project_id)
         if grafana_config is not None:
             output = DBGrafana.get_config_by_id(schema_name=project_data['name'], id=grafana_config)
             form   = GrafanaForm(data=output)
@@ -141,38 +124,15 @@ def add_grafana():
                 grafana_data = request.get_json()
                 if grafana_data["id"]:
                     DBGrafana.update(
-                        schema_name         = project_data['name'],
-                        id                  = grafana_data['id'],
-                        name                = grafana_data['name'],
-                        server              = grafana_data['server'],
-                        org_id              = grafana_data['org_id'],
-                        token               = grafana_data['token'],
-                        test_title          = grafana_data['test_title'],
-                        app                 = grafana_data['app'],
-                        baseline_test_title = grafana_data['baseline_test_title'],
-                        is_default          = grafana_data['is_default'],
-                        dashboards          = grafana_data['dashboards']
+                        schema_name = project_data['name'],
+                        data        = grafana_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    grafana_obj = DBGrafana(
-                        name                = grafana_data['name'],
-                        server              = grafana_data['server'],
-                        org_id              = grafana_data['org_id'],
-                        token               = grafana_data['token'],
-                        test_title          = grafana_data['test_title'],
-                        app                 = grafana_data['app'],
-                        baseline_test_title = grafana_data['baseline_test_title'],
-                        is_default          = grafana_data['is_default'],
-                        dashboards          = []
+                    DBGrafana.save(
+                        schema_name = project_data['name'],
+                        data        = grafana_data
                     )
-                    for dashboards_data in grafana_data['dashboards']:
-                        dashboard = DBGrafanaDashboards(
-                            content    = dashboards_data['content'],
-                            grafana_id = None
-                        )
-                        grafana_obj.dashboards.append(dashboard)
-                    grafana_config = grafana_obj.save(schema_name = project_data['name'])
                     flash("Integration added.", "info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
@@ -198,69 +158,55 @@ def delete_grafana_config():
         flash(ErrorMessages.ER00032.value, "error")
     return redirect(url_for('integrations',tab='grafana'))
 
-@app.route('/azure', methods=['GET', 'POST'])
-def add_azure():
+@app.route('/smtp-mail', methods=['GET', 'POST'])
+def add_smtp_mail():
     try:
-        form           = AzureWikiForm(request.form)
-        project_id     = request.cookies.get('project')
-        project_data   = DBProjects.get_config_by_id(id=project_id)
-        azure_config   = request.args.get('azure_config')
-        secret_configs = DBSecrets.get_configs(project_id=project_id)
-        if azure_config is not None:
-            output = DBAzureWiki.get_config_by_id(schema_name=project_data['name'], id=azure_config)
-            form   = AzureWikiForm(data=output)
-        if form.validate_on_submit():
+        form             = SMTPMailForm(request.form)
+        project_id       = request.cookies.get('project')
+        project_data     = DBProjects.get_config_by_id(id=project_id)
+        smtp_mail_config = request.args.get('smtp_mail_config')
+        secret_configs   = DBSecrets.get_configs(id=project_id)
+        if smtp_mail_config is not None:
+            output = DBSMTPMail.get_config_by_id(schema_name=project_data['name'], id=smtp_mail_config)
+            form   = SMTPMailForm(data=output)
+        if request.method == 'POST':
             try:
-                azure_data = form.data
-                if azure_data['id']:
-                    DBAzureWiki.update(
-                        schema_name    = project_data['name'],
-                        id             = azure_data['id'],
-                        name           = azure_data['name'],
-                        token          = azure_data['token'],
-                        org_url        = azure_data['org_url'],
-                        project_id     = azure_data['project_id'],
-                        identifier     = azure_data['identifier'],
-                        path_to_report = azure_data['path_to_report'],
-                        is_default     = azure_data['is_default']
+                smtp_mail_data = request.get_json()
+                if smtp_mail_data["id"]:
+                    DBSMTPMail.update(
+                        schema_name = project_data['name'],
+                        data        = smtp_mail_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    azure_obj = DBAzureWiki(
-                        name           = azure_data['name'],
-                        token          = azure_data['token'],
-                        org_url        = azure_data['org_url'],
-                        project_id     = azure_data['project_id'],
-                        identifier     = azure_data['identifier'],
-                        path_to_report = azure_data['path_to_report'],
-                        is_default     = azure_data['is_default']
+                    DBSMTPMail.save(
+                        schema_name = project_data['name'],
+                        data        = smtp_mail_data
                     )
-                    azure_config = azure_obj.save(schema_name=project_data['name'])
                     flash("Integration added.", "info")
-                return redirect(url_for('integrations',tab='azure'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.ER00034.value, "error")
+                flash(ErrorMessages.ER00043.value, "error")
                 return redirect(url_for('integrations'))
-        return render_template('integrations/azure.html', form=form, azure_config=azure_config, secret_configs=secret_configs)
+        return render_template('integrations/smtp-mail.html', form=form, smtp_mail_config=smtp_mail_config, secret_configs=secret_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.ER00036.value, "error")
+        flash(ErrorMessages.ER00045.value, "error")
         return redirect(url_for('integrations'))
 
-@app.route('/delete/azure', methods=['GET'])
-def delete_azure_config():
+@app.route('/delete/smtp-mail', methods=['GET'])
+def delete_smtp_mail_config():
     try:
-        azure_config = request.args.get('azure_config')
-        project_id   = request.cookies.get('project')
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        if azure_config is not None:
-            DBAzureWiki.delete(schema_name=project_data['name'], id=azure_config)
+        smtp_mail_config = request.args.get('smtp_mail_config')
+        project_id       = request.cookies.get('project')
+        project_data     = DBProjects.get_config_by_id(id=project_id)
+        if smtp_mail_config is not None:
+            DBSMTPMail.delete(schema_name=project_data['name'], id=smtp_mail_config)
             flash("Integration deleted.", "info")
-    except Exception as er:
+    except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.ER00035.value, "error")
-    return redirect(url_for('integrations',tab='azure'))
+        flash(ErrorMessages.ER00044.value, "error")
+    return redirect(url_for('integrations',tab='smtp-mail'))
 
 @app.route('/atlassian-confluence', methods=['GET', 'POST'])
 def add_atlassian_confluence():
@@ -269,39 +215,29 @@ def add_atlassian_confluence():
         project_id                  = request.cookies.get('project')
         project_data                = DBProjects.get_config_by_id(id=project_id)
         atlassian_confluence_config = request.args.get('atlassian_confluence_config')
-        secret_configs              = DBSecrets.get_configs(project_id=project_id)
+        secret_configs              = DBSecrets.get_configs(id=project_id)
         if atlassian_confluence_config is not None:
             output = DBAtlassianConfluence.get_config_by_id(schema_name=project_data['name'], id=atlassian_confluence_config)
             form   = AtlassianConfluenceForm(data=output)
         if form.validate_on_submit():
             try:
                 atlassian_confluence_data = form.data
+
+                for key, value in atlassian_confluence_data.items():
+                    if value == '':
+                        atlassian_confluence_data[key] = None
+
                 if atlassian_confluence_data['id']:
                     DBAtlassianConfluence.update(
                         schema_name = project_data['name'],
-                        id          = atlassian_confluence_data['id'],
-                        name        = atlassian_confluence_data['name'],
-                        email       = atlassian_confluence_data['email'],
-                        token       = atlassian_confluence_data['token'],
-                        token_type  = atlassian_confluence_data['token_type'],
-                        org_url     = atlassian_confluence_data['org_url'],
-                        space_key   = atlassian_confluence_data['space_key'],
-                        parent_id   = atlassian_confluence_data['parent_id'],
-                        is_default  = atlassian_confluence_data['is_default']
+                        data        = atlassian_confluence_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    atlassian_confluence_obj = DBAtlassianConfluence(
-                        name       = atlassian_confluence_data['name'],
-                        email      = atlassian_confluence_data['email'],
-                        token      = atlassian_confluence_data['token'],
-                        token_type = atlassian_confluence_data['token_type'],
-                        org_url    = atlassian_confluence_data['org_url'],
-                        space_key  = atlassian_confluence_data['space_key'],
-                        parent_id  = atlassian_confluence_data['parent_id'],
-                        is_default = atlassian_confluence_data['is_default']
+                    DBAtlassianConfluence.save(
+                        schema_name = project_data['name'],
+                        data        = atlassian_confluence_data
                     )
-                    atlassian_confluence_config = atlassian_confluence_obj.save(schema_name=project_data['name'])
                     flash("Integration added.", "info")
                 return redirect(url_for('integrations',tab='confluence'))
             except Exception:
@@ -335,41 +271,29 @@ def add_atlassian_jira():
         project_id            = request.cookies.get('project')
         project_data          = DBProjects.get_config_by_id(id=project_id)
         atlassian_jira_config = request.args.get('atlassian_jira_config')
-        secret_configs        = DBSecrets.get_configs(project_id=project_id)
+        secret_configs        = DBSecrets.get_configs(id=project_id)
         if atlassian_jira_config is not None:
             output = DBAtlassianJira.get_config_by_id(schema_name=project_data['name'], id=atlassian_jira_config)
             form   = AtlassianJiraForm(data=output)
         if form.validate_on_submit():
             try:
                 atlassian_jira_data = form.data
+
+                for key, value in atlassian_jira_data.items():
+                    if value == '':
+                        atlassian_jira_data[key] = None
+
                 if atlassian_jira_data['id']:
                     DBAtlassianJira.update(
                         schema_name = project_data['name'],
-                        id          = atlassian_jira_data['id'],
-                        name        = atlassian_jira_data['name'],
-                        email       = atlassian_jira_data['email'],
-                        token       = atlassian_jira_data['token'],
-                        token_type  = atlassian_jira_data['token_type'],
-                        org_url     = atlassian_jira_data['org_url'],
-                        project_id  = atlassian_jira_data['project_id'],
-                        epic_field  = atlassian_jira_data['epic_field'],
-                        epic_name   = atlassian_jira_data['epic_name'],
-                        is_default  = atlassian_jira_data['is_default']
+                        data        = atlassian_jira_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    atlassian_jira_obj = DBAtlassianJira(
-                        name        = atlassian_jira_data['name'],
-                        email       = atlassian_jira_data['email'],
-                        token       = atlassian_jira_data['token'],
-                        token_type  = atlassian_jira_data['token_type'],
-                        org_url     = atlassian_jira_data['org_url'],
-                        project_id  = atlassian_jira_data['project_id'],
-                        epic_field  = atlassian_jira_data['epic_field'],
-                        epic_name   = atlassian_jira_data['epic_name'],
-                        is_default  = atlassian_jira_data['is_default']
+                    DBAtlassianJira.save(
+                        schema_name = project_data['name'],
+                        data        = atlassian_jira_data
                     )
-                    atlassian_jira_config = atlassian_jira_obj.save(schema_name=project_data['name'])
                     flash("Integration added.", "info")
                 return redirect(url_for('integrations',tab='jira'))
             except Exception:
@@ -396,78 +320,61 @@ def delete_atlassian_jira():
         flash(ErrorMessages.ER00041.value, "error")
     return redirect(url_for('integrations',tab='jira'))
 
-@app.route('/smtp-mail', methods=['GET', 'POST'])
-def add_smtp_mail():
+@app.route('/azure', methods=['GET', 'POST'])
+def add_azure():
     try:
-        form             = SMTPMailForm(request.form)
-        project_id       = request.cookies.get('project')
-        project_data     = DBProjects.get_config_by_id(id=project_id)
-        smtp_mail_config = request.args.get('smtp_mail_config')
-        secret_configs   = DBSecrets.get_configs(project_id=project_id)
-        if smtp_mail_config is not None:
-            output = DBSMTPMail.get_config_by_id(schema_name=project_data['name'], id=smtp_mail_config)
-            form   = SMTPMailForm(data=output)
-        if request.method == 'POST':
+        form           = AzureWikiForm(request.form)
+        project_id     = request.cookies.get('project')
+        project_data   = DBProjects.get_config_by_id(id=project_id)
+        azure_config   = request.args.get('azure_config')
+        secret_configs = DBSecrets.get_configs(id=project_id)
+        if azure_config is not None:
+            output = DBAzureWiki.get_config_by_id(schema_name=project_data['name'], id=azure_config)
+            form   = AzureWikiForm(data=output)
+        if form.validate_on_submit():
             try:
-                smtp_mail_data = request.get_json()
-                if smtp_mail_data["id"]:
-                    DBSMTPMail.update(
+                azure_data = form.data
+
+                for key, value in azure_data.items():
+                    if value == '':
+                        azure_data[key] = None
+
+                if azure_data['id']:
+                    DBAzureWiki.update(
                         schema_name = project_data['name'],
-                        id          = smtp_mail_data['id'],
-                        name        = smtp_mail_data['name'],
-                        server      = smtp_mail_data['server'],
-                        port        = smtp_mail_data['port'],
-                        use_ssl     = smtp_mail_data['use_ssl'],
-                        use_tls     = smtp_mail_data['use_tls'],
-                        username    = smtp_mail_data['username'],
-                        token       = smtp_mail_data['token'],
-                        is_default  = smtp_mail_data['is_default'],
-                        recipients  = smtp_mail_data['recipients']
+                        data        = azure_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    smtp_mail_obj = DBSMTPMail(
-                        name        = smtp_mail_data['name'],
-                        server      = smtp_mail_data['server'],
-                        port        = smtp_mail_data['port'],
-                        use_ssl     = smtp_mail_data['use_ssl'],
-                        use_tls     = smtp_mail_data['use_tls'],
-                        username    = smtp_mail_data['username'],
-                        token       = smtp_mail_data['token'],
-                        is_default  = smtp_mail_data['is_default'],
-                        recipients  = []
+                    DBAzureWiki.save(
+                        schema_name = project_data['name'],
+                        data        = azure_data
                     )
-                    for recipients_data in smtp_mail_data['recipients']:
-                        recipient = DBSMTPMailRecipient(
-                            email        = recipients_data,
-                            smtp_mail_id = None
-                        )
-                        smtp_mail_obj.recipients.append(recipient)
-                    smtp_mail_config = smtp_mail_obj.save(schema_name = project_data['name'])
                     flash("Integration added.", "info")
+                return redirect(url_for('integrations',tab='azure'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
-                flash(ErrorMessages.ER00043.value, "error")
+                flash(ErrorMessages.ER00034.value, "error")
                 return redirect(url_for('integrations'))
-        return render_template('integrations/smtp-mail.html', form=form, smtp_mail_config=smtp_mail_config, secret_configs=secret_configs)
+        return render_template('integrations/azure.html', form=form, azure_config=azure_config, secret_configs=secret_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.ER00045.value, "error")
+        flash(ErrorMessages.ER00036.value, "error")
         return redirect(url_for('integrations'))
 
-@app.route('/delete/smtp-mail', methods=['GET'])
-def delete_smtp_mail_config():
+@app.route('/delete/azure', methods=['GET'])
+def delete_azure_config():
     try:
-        smtp_mail_config = request.args.get('smtp_mail_config')
-        project_id       = request.cookies.get('project')
-        project_data     = DBProjects.get_config_by_id(id=project_id)
-        if smtp_mail_config is not None:
-            DBSMTPMail.delete(schema_name=project_data['name'], id=smtp_mail_config)
+        azure_config = request.args.get('azure_config')
+        project_id   = request.cookies.get('project')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        if azure_config is not None:
+            DBAzureWiki.delete(schema_name=project_data['name'], id=azure_config)
             flash("Integration deleted.", "info")
-    except Exception:
+    except Exception as er:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.ER00044.value, "error")
-    return redirect(url_for('integrations',tab='smtp-mail'))
+        flash(ErrorMessages.ER00035.value, "error")
+    return redirect(url_for('integrations',tab='azure'))
 
 @app.route('/ai-support', methods=['GET', 'POST'])
 def add_ai_support():
@@ -476,41 +383,30 @@ def add_ai_support():
         project_id        = request.cookies.get('project')
         project_data      = DBProjects.get_config_by_id(id=project_id)
         ai_support_config = request.args.get('ai_support_config')
-        secret_configs    = DBSecrets.get_configs(project_id=project_id)
+        secret_configs    = DBSecrets.get_configs(id=project_id)
         if ai_support_config is not None:
             output = DBAISupport.get_config_by_id(schema_name=project_data['name'], id=ai_support_config)
             form   = AISupportForm(data=output)
         if form.validate_on_submit():
             try:
                 ai_support_data = form.data
+
+                for key, value in ai_support_data.items():
+                    if value == '':
+                        ai_support_data[key] = None
+
+                print(ai_support_data)
                 if ai_support_data['id']:
                     DBAISupport.update(
-                        schema_name    = project_data['name'],
-                        id             = ai_support_data['id'],
-                        name           = ai_support_data['name'],
-                        ai_provider    = ai_support_data['ai_provider'],
-                        azure_url      = ai_support_data['azure_url'],
-                        api_version    = ai_support_data['api_version'],
-                        ai_text_model  = ai_support_data['ai_text_model'],
-                        ai_image_model = ai_support_data['ai_image_model'],
-                        token          = ai_support_data['token'],
-                        temperature    = ai_support_data['temperature'],
-                        is_default     = ai_support_data['is_default']
+                        schema_name = project_data['name'],
+                        data        = ai_support_data
                     )
                     flash("Integration updated.", "info")
                 else:
-                    ai_support_obj = DBAISupport(
-                        name           = ai_support_data['name'],
-                        ai_provider    = ai_support_data['ai_provider'],
-                        azure_url      = ai_support_data['azure_url'],
-                        api_version    = ai_support_data['api_version'],
-                        ai_text_model  = ai_support_data['ai_text_model'],
-                        ai_image_model = ai_support_data['ai_image_model'],
-                        token          = ai_support_data['token'],
-                        temperature    = ai_support_data['temperature'],
-                        is_default     = ai_support_data['is_default']
+                    DBAISupport.save(
+                        schema_name = project_data['name'],
+                        data        = ai_support_data
                     )
-                    ai_support_config = ai_support_obj.save(schema_name=project_data['name'])
                     flash("Integration added.", "info")
                 return redirect(url_for('integrations',tab='ai-support'))
             except Exception:

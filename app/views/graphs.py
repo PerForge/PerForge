@@ -48,32 +48,22 @@ def save_graph():
             project_id   = request.cookies.get('project')
             project_data = DBProjects.get_config_by_id(id=project_id)
             graph_data   = form.data
+
+            for key, value in graph_data.items():
+                if value == '':
+                    graph_data[key] = None
+
             if graph_data['id']:
                 DBGraphs.update(
                     schema_name = project_data['name'],
-                    id          = graph_data['id'],
-                    name        = graph_data['name'],
-                    grafana_id  = graph_data['grafana_id'],
-                    dash_id     = graph_data['dash_id'],
-                    view_panel  = graph_data['view_panel'],
-                    width       = graph_data['width'],
-                    height      = graph_data['height'],
-                    custom_vars = graph_data['custom_vars'] if graph_data['custom_vars'] else None,
-                    prompt_id   = graph_data['prompt_id'] if graph_data['prompt_id'] else None
+                    data        = graph_data
                 )
                 flash("Graph updated.", "info")
             else:
-                graph_obj = DBGraphs(
-                    name        = graph_data['name'],
-                    grafana_id  = graph_data['grafana_id'],
-                    dash_id     = graph_data['dash_id'],
-                    view_panel  = graph_data['view_panel'],
-                    width       = graph_data['width'],
-                    height      = graph_data['height'],
-                    custom_vars = graph_data['custom_vars'] if graph_data['custom_vars'] else None,
-                    prompt_id   = graph_data['prompt_id'] if graph_data['prompt_id'] else None
+                DBGraphs.save(
+                    schema_name = project_data['name'],
+                    data        = graph_data
                 )
-                graph_obj.save(schema_name=project_data['name'])
                 flash("Graph added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

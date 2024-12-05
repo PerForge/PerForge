@@ -27,7 +27,7 @@ from flask_login                               import current_user
 def get_secrets():
     try:
         project_id = request.cookies.get('project')
-        secrets    = DBSecrets.get_configs(project_id)
+        secrets    = DBSecrets.get_configs(id=project_id)
         return render_template('home/secrets.html', secrets=secrets)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -40,23 +40,20 @@ def add_secret():
         form = SecretForm(request.form)
         if form.validate_on_submit():
             try:
-                project_id   = request.cookies.get('project')
-                secret       = request.form.to_dict()
-                secret_key   = secret.get("key")
-                secret_value = secret.get("value")
-                scope        = secret.get("project_id")
+                project_id                = request.cookies.get('project')
+                secret_data               = form.data
+                secret_data['project_id'] = project_id if secret_data['project_id'] == "project" else None
+                secret_data['type']       = "admin" if current_user.is_admin else "general"
 
-                secret_type = "admin" if current_user.is_admin else "general"
-                secret_project_id = project_id if scope == "project" else None
+                for key, value in secret_data.items():
+                    if value == '':
+                        secret_data[key] = None
 
-                new_secret  = DBSecrets(
-                    key=secret_key,
-                    type=secret_type,
-                    value=secret_value,
-                    project_id=secret_project_id
-                )
-                new_secret.save()
-                flash("Secret added.", "info")
+                if DBSecrets.get_config_by_key(key=secret_data['key']):
+                    flash("Secret with this key already exists.", "error")
+                else:
+                    DBSecrets.save(data = secret_data)
+                    flash("Secret added.", "info")
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
@@ -93,27 +90,23 @@ def edit_secret():
 @app.route('/update_secret', methods=['POST'])
 def update_secret():
     try:
-        project_id = request.cookies.get('project')
         form       = SecretForm(request.form)
-        secret_id  = request.args.get('secret_id')
         if form.validate_on_submit():
             try:
-                secret_data  = request.form.to_dict()
-                secret_id    = secret_data.get("id")
-                secret_key   = secret_data.get("key")
-                secret_type  = secret_data.get("type")
-                secret_value = secret_data.get("value")
-                scope        = secret_data.get("project_id")
+                project_id                = request.cookies.get('project')
+                secret_data               = form.data
+                secret_data['project_id'] = project_id if secret_data['project_id'] == "project" else None
+                secret_data['type']       = "admin" if current_user.is_admin else "general"
 
-                secret_project_id = project_id if scope == "project" else None
-                if secret_type == "None":
-                    if current_user.is_admin:
-                        secret_type = "admin"
-                    else:
-                        secret_type = "general"
+                for key, value in secret_data.items():
+                    if value == '':
+                        secret_data[key] = None
 
-                DBSecrets.update(id=secret_id, key=secret_key, type=secret_type, value=secret_value, project_id=secret_project_id)
-                flash("Secret updated.", "info")
+                if DBSecrets.get_config_by_key(key=secret_data['key']):
+                    flash("Secret with this key already exists.", "error")
+                else:
+                    DBSecrets.update(data=secret_data)
+                    flash("Secret updated.", "info")
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))

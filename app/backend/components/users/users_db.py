@@ -16,8 +16,8 @@ import traceback
 import logging
 
 from app.config     import db
+from app.backend.pydantic_models import UsersModel
 from flask_login    import UserMixin
-from sqlalchemy.exc import SQLAlchemyError
 
 
 class DBUsers(db.Model, UserMixin):
@@ -29,25 +29,18 @@ class DBUsers(db.Model, UserMixin):
     password       = db.Column(db.String(500), nullable=False)
     is_admin       = db.Column(db.Boolean, default=False)
 
-    def __init__(self, user, password, is_admin):
-        self.user     = user
-        self.password = password
-        self.is_admin = is_admin
-
     def to_dict(self):
-        return {
-            'id'      : self.id,
-            'user'    : self.user,
-            'password': self.password,
-            'is_admin': self.is_admin
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self):
+    @classmethod
+    def save(cls, data):
         try:
-            db.session.add(self)
+            validated_data = UsersModel(**data)
+            instance = cls(**validated_data.model_dump())
+            db.session.add(instance)
             db.session.commit()
-            return self
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -60,7 +53,7 @@ class DBUsers(db.Model, UserMixin):
                 return True
             else:
                 return False
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -68,8 +61,12 @@ class DBUsers(db.Model, UserMixin):
     def get_config_by_id(cls, id):
         try:
             config = db.session.query(cls).filter_by(id=id).one_or_none()
-            return config
-        except SQLAlchemyError:
+            if config:
+                config_dict = config.to_dict()
+                validated_data = UsersModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -77,7 +74,11 @@ class DBUsers(db.Model, UserMixin):
     def get_config_by_username(cls, user):
         try:
             config = db.session.query(cls).filter_by(user=user).one_or_none()
-            return config
-        except SQLAlchemyError:
+            if config:
+                config_dict = config.to_dict()
+                validated_data = UsersModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise

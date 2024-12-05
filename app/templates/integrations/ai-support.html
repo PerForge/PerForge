@@ -29,7 +29,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="/ai-support">
+                            <form method="POST" action="/ai-support" onsubmit="return validateForm()">
                                 {{ form.hidden_tag() }}
                                 <div class="center-section">
                                     {% if ai_support_config %}
@@ -72,12 +72,15 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    <select class="form-control" name="token" id="token">
-                                        <option value="" {% if form.token.data is none or form.token.data == '' %} selected {% endif %}>Select the secret</option>
+                                    <select class="form-control" name="token" id="token" required>
+                                        <option value="">Select the secret</option>
                                         {% for secret in secret_configs %}
                                             <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                        Please select a token
+                                    </div>
                                     <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
                                     {{ form.temperature(class="form-control") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
@@ -115,6 +118,29 @@
         </div>
     </main>
     <script>
+        function validateForm() {
+            const tokenSelect = document.getElementById('token');
+            const tokenError = document.getElementById('tokenError');
+
+            if (!tokenSelect.value) {
+                tokenSelect.classList.add('is-invalid');
+                tokenError.style.display = 'block';
+                return false;
+            }
+
+            tokenSelect.classList.remove('is-invalid');
+            tokenError.style.display = 'none';
+            return true;
+        }
+
+        // Add event listener to token select for real-time validation
+        document.getElementById('token').addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                document.getElementById('tokenError').style.display = 'none';
+            }
+        });
+
         window.onload = function() {
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

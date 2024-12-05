@@ -16,7 +16,7 @@ import traceback
 import logging
 
 from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
+from app.backend.pydantic_models import TemplateModel
 from sqlalchemy.orm import joinedload
 
 
@@ -36,47 +36,25 @@ class DBTemplates(db.Model):
     system_prompt_id          = db.Column(db.Integer, db.ForeignKey('public.prompts.id', ondelete='SET NULL'))
     data                      = db.relationship('DBTemplateData', backref='templates', cascade='all, delete-orphan', lazy=True)
 
-    def __init__(self, name, nfr, title, ai_switch, ai_aggregated_data_switch, ai_graph_switch, ai_to_graphs_switch, nfrs_switch, template_prompt_id, aggregated_prompt_id, system_prompt_id, data):
-        self.name                      = name
-        self.nfr                       = nfr
-        self.title                     = title
-        self.ai_switch                 = ai_switch
-        self.ai_aggregated_data_switch = ai_aggregated_data_switch
-        self.ai_graph_switch           = ai_graph_switch
-        self.ai_to_graphs_switch       = ai_to_graphs_switch
-        self.nfrs_switch               = nfrs_switch
-        self.template_prompt_id        = template_prompt_id
-        self.aggregated_prompt_id      = aggregated_prompt_id
-        self.system_prompt_id          = system_prompt_id
-        self.data                      = data
-
     def to_dict(self):
-        return {
-            'id'                       : self.id,
-            'name'                     : self.name,
-            'nfr'                      : self.nfr,
-            'title'                    : self.title,
-            'ai_switch'                : self.ai_switch,
-            'ai_aggregated_data_switch': self.ai_aggregated_data_switch,
-            'ai_graph_switch'          : self.ai_graph_switch,
-            'ai_to_graphs_switch'      : self.ai_to_graphs_switch,
-            'nfrs_switch'              : self.nfrs_switch,
-            'template_prompt_id'       : self.template_prompt_id,
-            'aggregated_prompt_id'     : self.aggregated_prompt_id,
-            'system_prompt_id'         : self.system_prompt_id,
-            'data'                     : [record.to_dict() for record in self.data]
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-        for record in self.data:
-            record.__table__.schema = schema_name
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            validated_data            = TemplateModel(**data)
+            instance                  = cls(**validated_data.model_dump(exclude={'data'}))
+            instance.__table__.schema = schema_name
+
+            for data_record in validated_data.data:
+                data_dict = data_record.model_dump()
+                record    = DBTemplateData(**data_dict)
+                instance.data.append(record)
+
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -88,9 +66,14 @@ class DBTemplates(db.Model):
 
         try:
             query = db.session.query(cls).options(joinedload(cls.data)).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            valid_configs = []
+            for config in query:
+                config_dict         = config.to_dict()
+                config_dict['data'] = [row.to_dict() for row in config.data]
+                validated_data      = TemplateModel(**config_dict)
+                valid_configs.append(validated_data.model_dump())
+            return valid_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -100,44 +83,37 @@ class DBTemplates(db.Model):
         DBTemplateData.__table__.schema = schema_name
 
         try:
-            config = db.session.query(cls).options(joinedload(cls.data)).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).options(joinedload(cls.data)).filter_by(id=id).one_or_none()
+            if config:
+                config_dict         = config.to_dict()
+                config_dict['data'] = [row.to_dict() for row in config.data]
+                validated_data      = TemplateModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, id, name, nfr, title, ai_switch, ai_aggregated_data_switch, ai_graph_switch, ai_to_graphs_switch, nfrs_switch, template_prompt_id, aggregated_prompt_id, system_prompt_id, data):
+    def update(cls, schema_name, data):
         cls.__table__.schema            = schema_name
         DBTemplateData.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                config.name                      = name
-                config.nfr                       = nfr
-                config.title                     = title
-                config.ai_switch                 = ai_switch
-                config.ai_aggregated_data_switch = ai_aggregated_data_switch
-                config.ai_graph_switch           = ai_graph_switch
-                config.ai_to_graphs_switch       = ai_to_graphs_switch
-                config.nfrs_switch               = nfrs_switch
-                config.template_prompt_id        = template_prompt_id
-                config.aggregated_prompt_id      = aggregated_prompt_id
-                config.system_prompt_id          = system_prompt_id
-                config.data.clear()
+            validated_data = TemplateModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            exclude_fields = {'data'}
 
-                for records_data in data:
-                    record = DBTemplateData(
-                        type        = records_data['type'],
-                        content     = records_data['content'],
-                        graph_id    = records_data['graph_id'],
-                        template_id = config.id
-                    )
-                    config.data.append(record)
+            for field, value in validated_data.model_dump().items():
+                if field not in exclude_fields:
+                    setattr(config, field, value)
 
-                db.session.commit()
-        except SQLAlchemyError:
+            config.data.clear()
+            for data_record in validated_data.data:
+                data_dict = data_record.model_dump()
+                record    = DBTemplateData(**data_dict)
+                config.data.append(record)
+            db.session.commit()
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -149,7 +125,7 @@ class DBTemplates(db.Model):
         try:
             count = db.session.query(cls).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -163,7 +139,7 @@ class DBTemplates(db.Model):
             if config:
                 db.session.delete(config)
                 db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -177,17 +153,5 @@ class DBTemplateData(db.Model):
     graph_id      = db.Column(db.Integer, db.ForeignKey('graphs.id', ondelete='CASCADE'))
     template_id   = db.Column(db.Integer, db.ForeignKey('templates.id', ondelete='CASCADE'), nullable=False)
 
-    def __init__(self, type, content, graph_id, template_id):
-        self.type        = type
-        self.content     = content
-        self.graph_id    = graph_id
-        self.template_id = template_id
-
     def to_dict(self):
-        return {
-            'id'         : self.id,
-            'type'       : self.type,
-            'content'    : self.content,
-            'graph_id'   : self.graph_id,
-            'template_id': self.template_id
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}

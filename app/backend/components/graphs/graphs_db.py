@@ -15,8 +15,8 @@
 import traceback
 import logging
 
-from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
+from app.config                  import db
+from app.backend.pydantic_models import GraphModel
 
 
 class DBGraphs(db.Model):
@@ -31,37 +31,18 @@ class DBGraphs(db.Model):
     custom_vars   = db.Column(db.String(500))
     prompt_id     = db.Column(db.Integer, db.ForeignKey('public.prompts.id', ondelete='SET NULL'))
 
-    def __init__(self, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id):
-        self.name        = name
-        self.grafana_id  = grafana_id
-        self.dash_id     = dash_id
-        self.view_panel  = view_panel
-        self.width       = width
-        self.height      = height
-        self.custom_vars = custom_vars
-        self.prompt_id   = prompt_id
-
     def to_dict(self):
-        return {
-            'id'         : self.id,
-            'name'       : self.name,
-            'grafana_id' : self.grafana_id,
-            'dash_id'    : self.dash_id,
-            'view_panel' : self.view_panel,
-            'width'      : self.width,
-            'height'     : self.height,
-            'custom_vars': self.custom_vars,
-            'prompt_id'  : self.prompt_id
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            instance = cls(**GraphModel(**data).model_dump())
+            instance.__table__.schema = schema_name
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -69,44 +50,35 @@ class DBGraphs(db.Model):
     @classmethod
     def get_configs(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
             query = db.session.query(cls).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            return [GraphModel(**config.to_dict()).model_dump() for config in query]
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            return GraphModel.model_validate(config.to_dict()).model_dump()
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, id, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id):
+    def update(cls, schema_name, data):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            validated_data = GraphModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
             if config:
-                config.name        = name
-                config.grafana_id  = grafana_id
-                config.dash_id     = dash_id
-                config.view_panel  = view_panel
-                config.width       = width
-                config.height      = height
-                config.custom_vars = custom_vars
-                config.prompt_id   = prompt_id
+                for key, value in validated_data.model_dump().items():
+                    setattr(config, key, value)
 
                 db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -114,24 +86,21 @@ class DBGraphs(db.Model):
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
-            count = db.session.query(cls).count()
-            return count
-        except SQLAlchemyError:
+            return db.session.query(cls).count()
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def delete(cls, schema_name, id):
         cls.__table__.schema = schema_name
-
         try:
-            record = db.session.query(cls).filter_by(id=id).one_or_none()
-            if record:
-                db.session.delete(record)
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                db.session.delete(config)
                 db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise

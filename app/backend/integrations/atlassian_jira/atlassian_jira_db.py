@@ -16,7 +16,7 @@ import traceback
 import logging
 
 from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
+from app.backend.pydantic_models import AtlassianJiraModel
 
 
 class DBAtlassianJira(db.Model):
@@ -32,44 +32,25 @@ class DBAtlassianJira(db.Model):
     epic_name     = db.Column(db.String(120))
     is_default    = db.Column(db.Boolean, default=False)
 
-    def __init__(self, name, email, token, token_type, org_url, project_id, epic_field, epic_name, is_default):
-        self.name       = name
-        self.email      = email
-        self.token      = token
-        self.token_type = token_type
-        self.org_url    = org_url
-        self.project_id = project_id
-        self.epic_field = epic_field
-        self.epic_name  = epic_name
-        self.is_default = is_default
-
     def to_dict(self):
-        return {
-            'id'        : self.id,
-            'name'      : self.name,
-            'email'     : self.email,
-            'token'     : self.token,
-            'token_type': self.token_type,
-            'org_url'   : self.org_url,
-            'project_id': self.project_id,
-            'epic_field': self.epic_field,
-            'epic_name' : self.epic_name,
-            'is_default': self.is_default
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-
-        if self.is_default:
-            self.reset_default_config(schema_name)
-        elif not self.get_default_config(schema_name):
-            self.is_default = True
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            validated_data            = AtlassianJiraModel(**data)
+            instance                  = cls(**validated_data.model_dump())
+            instance.__table__.schema = schema_name
+
+            if instance.is_default:
+                instance.reset_default_config(schema_name)
+            elif not instance.get_default_config(schema_name):
+                instance.is_default = True
+
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -80,9 +61,9 @@ class DBAtlassianJira(db.Model):
 
         try:
             query = db.session.query(cls).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            configs = [config.to_dict() for config in query]
+            return [AtlassianJiraModel(**config).model_dump() for config in configs]
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -91,9 +72,12 @@ class DBAtlassianJira(db.Model):
         cls.__table__.schema = schema_name
 
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                validated_data = AtlassianJiraModel(**config.to_dict())
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -102,9 +86,12 @@ class DBAtlassianJira(db.Model):
         cls.__table__.schema = schema_name
 
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(is_default=True).one_or_none()
+            if config:
+                validated_data = AtlassianJiraModel(**config.to_dict())
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -114,32 +101,24 @@ class DBAtlassianJira(db.Model):
 
         try:
             db.session.query(cls).update({cls.is_default: False})
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, id, name, email, token, token_type, org_url, project_id, epic_field, epic_name, is_default):
+    def update(cls, schema_name, data):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                if is_default:
-                    cls.reset_default_config(schema_name)
+            validated_data = AtlassianJiraModel(**data)
+            config = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            if validated_data.is_default:
+                cls.reset_default_config(schema_name)
 
-                config.name       = name
-                config.email      = email
-                config.token      = token
-                config.token_type = token_type
-                config.org_url    = org_url
-                config.project_id = project_id
-                config.epic_field = epic_field
-                config.epic_name  = epic_name
-                config.is_default = is_default
+            for key, value in validated_data.model_dump().items():
+                setattr(config, key, value)
 
-                db.session.commit()
-        except SQLAlchemyError:
+            db.session.commit()
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -151,7 +130,7 @@ class DBAtlassianJira(db.Model):
         try:
             count = db.session.query(cls).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -169,7 +148,7 @@ class DBAtlassianJira(db.Model):
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise

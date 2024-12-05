@@ -16,7 +16,7 @@ import traceback
 import logging
 
 from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
+from app.backend.pydantic_models import AISupportModel
 
 
 class DBAISupport(db.Model):
@@ -32,44 +32,25 @@ class DBAISupport(db.Model):
     temperature    = db.Column(db.Float, nullable=False)
     is_default     = db.Column(db.Boolean, default=False)
 
-    def __init__(self, name, ai_provider, azure_url, api_version, ai_text_model, ai_image_model, token, temperature, is_default):
-        self.name           = name
-        self.ai_provider    = ai_provider
-        self.azure_url      = azure_url
-        self.api_version    = api_version
-        self.ai_text_model  = ai_text_model
-        self.ai_image_model = ai_image_model
-        self.token          = token
-        self.temperature    = temperature
-        self.is_default     = is_default
-
     def to_dict(self):
-        return {
-            'id'            : self.id,
-            'name'          : self.name,
-            'ai_provider'   : self.ai_provider,
-            'azure_url'     : self.azure_url,
-            'api_version'   : self.api_version,
-            'ai_text_model' : self.ai_text_model,
-            'ai_image_model': self.ai_image_model,
-            'token'         : self.token,
-            'temperature'   : self.temperature,
-            'is_default'    : self.is_default
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-
-        if self.is_default:
-            self.reset_default_config(schema_name)
-        elif not self.get_default_config(schema_name):
-            self.is_default = True
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            validated_data = AISupportModel(**data)
+            instance = cls(**validated_data.model_dump())
+            instance.__table__.schema = schema_name
+
+            if instance.is_default:
+                cls.reset_default_config(schema_name)
+            elif not cls.get_default_config(schema_name):
+                instance.is_default = True
+
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -77,23 +58,29 @@ class DBAISupport(db.Model):
     @classmethod
     def get_configs(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
             query = db.session.query(cls).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            valid_configs = []
+            for config in query:
+                config_dict    = config.to_dict()
+                validated_data = AISupportModel(**config_dict)
+                valid_configs.append(validated_data.model_dump())
+            return valid_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                config_dict    = config.to_dict()
+                validated_data = AISupportModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -101,9 +88,13 @@ class DBAISupport(db.Model):
     def get_default_config(cls, schema_name):
         cls.__table__.schema = schema_name
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(is_default=True).one_or_none()
+            if config:
+                config_dict    = config.to_dict()
+                validated_data = AISupportModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -113,33 +104,25 @@ class DBAISupport(db.Model):
 
         try:
             db.session.query(cls).update({cls.is_default: False})
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, id, name, ai_provider, azure_url, api_version, ai_text_model, ai_image_model, token, temperature, is_default):
+    def update(cls, schema_name, data):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                if is_default:
-                    cls.reset_default_config(schema_name)
+            validated_data = AISupportModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            if validated_data.is_default:
+                cls.reset_default_config(schema_name)
 
-                config.name           = name
-                config.ai_provider    = ai_provider
-                config.azure_url      = azure_url
-                config.api_version    = api_version
-                config.ai_text_model  = ai_text_model
-                config.ai_image_model = ai_image_model
-                config.token          = token
-                config.temperature    = temperature
-                config.is_default     = is_default
+            for key, value in validated_data.model_dump().items():
+                setattr(config, key, value)
 
-                db.session.commit()
-        except SQLAlchemyError:
+            db.session.commit()
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -151,7 +134,7 @@ class DBAISupport(db.Model):
         try:
             count = db.session.query(cls).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -169,7 +152,7 @@ class DBAISupport(db.Model):
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise

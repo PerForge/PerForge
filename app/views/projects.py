@@ -59,14 +59,13 @@ def get_projects():
         flash(ErrorMessages.ER00013.value, "error")
     return jsonify({'projects': project_configs})
 
-@app.route('/save-project', methods=['GET'])
+@app.route('/save-project', methods=['POST'])
 def save_project():
     try:
-        project_name   = request.args.get('project_name')
-        project_obj    = DBProjects(name=project_name)
-        new_project_id = str(project_obj.save())
+        project_data   = request.get_json()
+        new_project_id = DBProjects.save(data=project_data)
         res            = redirect(url_for('index'))
-        res.set_cookie(key='project', value=new_project_id, max_age=None)
+        res.set_cookie(key='project', value=str(new_project_id), max_age=None)
         flash("The project was successfully added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

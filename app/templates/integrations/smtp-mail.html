@@ -29,7 +29,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="/grafana">
+                            <form method="POST" action="/smtp-mail" onsubmit="return validateForm()">
                                 <div class="center-section">
                                     {{ form.hidden_tag() }}
                                     {% if smtp_mail_config %}
@@ -62,30 +62,36 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    <select class="form-control" name="token" id="token">
-                                        <option value="" {% if form.token.data is none or form.token.data == '' %} selected {% endif %}>Select the secret</option>
+                                    <select class="form-control" name="token" id="token" required>
+                                        <option value="">Select the secret</option>
                                         {% for secret in secret_configs %}
                                             <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                        Please select a token
+                                    </div>
 
                                     <label for="is_default" class="input-label mt-2">Is Default:</label>
                                     {{ form.is_default(id='is_default', class_='form-control') }}
 
-                                    <label for="dashboards" class="input-label mt-2">Recipients:</label>
-                                    <div id="dashboards-container" style="width: 100%;">
+                                    <label for="recipients" class="input-label mt-2">Recipients:</label>
+                                    <div id="recipients-container" style="width: 100%;">
                                         {% for recipient in form.recipients %}
                                         <div class="flex m10-top">
+                                            <input type="hidden" name="recipients-{{ loop.index0 }}-id" value="{{ recipient.data.id if recipient.data else '' }}">
                                             <input type="text"
-                                                class="form-control dashboardInput"
+                                                class="form-control recipientInput"
                                                 required
-                                                value="{{ recipient.data.email }}">
-                                            <button type="button" class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
+                                                name="recipients-{{ loop.index0 }}-email"
+                                                id="recipients-{{ loop.index0 }}-email"
+                                                value="{{ recipient.data.email if recipient.data else '' }}">
+                                            <button type="button" class="btn btn-secondary ms-2 deleteRecipient" onclick="removeRecipient(this)">Delete</button>
                                         </div>
                                         {% endfor %}
                                     </div>
                                     <div>
-                                        <button class="btn btn-primary mt-5" type="button" id="addDashboardButton" onclick="addDashboard()">Add Recipient</button>
+                                        <button class="btn btn-primary mt-5" type="button" id="addRecipientButton" onclick="addRecipient()">Add Recipient</button>
                                         <button class="btn btn-primary ms-2 mt-5" type="submit">Save</button>
                                         {% if smtp_mail_config %}
                                             <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
@@ -121,60 +127,89 @@
     </main>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            window.addDashboard = function() {
-                var count = document.querySelectorAll('.dashboardInput').length;
+            window.addRecipient = function() {
+                var count = document.querySelectorAll('.recipientInput').length;
                 var html = `<div class="flex m10-top">
-                                <input type="text" class="form-control dashboardInput" required="" name="dashboards-${count}" id="dashboards-${count}">
-                                <button type="button"class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
+                                <input type="hidden" name="recipients-${count}-id" id="recipients-${count}-id" value="">
+                                <input type="text"
+                                    class="form-control recipientInput"
+                                    required
+                                    name="recipients-${count}-email"
+                                    id="recipients-${count}-email"
+                                    value="">
+                                <button type="button" class="btn btn-secondary ms-2 deleteRecipient" onclick="removeRecipient(this)">Delete</button>
                             </div>`;
                 var container = document.createElement('div');
                 container.innerHTML = html;
-                document.getElementById('dashboards-container').appendChild(container.firstChild);
+                document.getElementById('recipients-container').appendChild(container.firstChild);
             };
 
-            window.removeDashboard = function(e) {
-                var dashboardsContainer = document.getElementById('dashboards-container');
-                dashboardsContainer.removeChild(e.parentNode);
+            window.removeRecipient = function(e) {
+                var recipientsContainer = document.getElementById('recipients-container');
+                recipientsContainer.removeChild(e.parentNode);
+                updateRecipientInputs();
+            };
 
-                // After removing an input field, update all name and id attributes
-                var dashboardInputs = document.querySelectorAll('.dashboardInput');
-                for (var i = 0, len = dashboardInputs.length; i < len; i++) {
-                    dashboardInputs[i].name = "dashboards-" + i;
-                    dashboardInputs[i].id = "dashboards-" + i;
+            function updateRecipientInputs() {
+                var recipientInputs = document.querySelectorAll('.recipientInput');
+                var recipientIds = document.querySelectorAll('[name^="recipients-"][name$="-id"]');
+                for (var i = 0; i < recipientInputs.length; i++) {
+                    recipientInputs[i].name = `recipients-${i}-email`;
+                    recipientInputs[i].id = `recipients-${i}-email`;
+                    recipientIds[i].name = `recipients-${i}-id`;
+                    recipientIds[i].id = `recipients-${i}-id`;
                 }
-            };
+            }
+        });
+
+        function validateForm() {
+            const tokenSelect = document.getElementById('token');
+            const tokenError = document.getElementById('tokenError');
+
+            if (!tokenSelect.value) {
+                tokenSelect.classList.add('is-invalid');
+                tokenError.style.display = 'block';
+                return false;
+            }
+
+            tokenSelect.classList.remove('is-invalid');
+            tokenError.style.display = 'none';
+            return true;
+        }
+
+        // Add event listener to token select for real-time validation
+        document.getElementById('token').addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                document.getElementById('tokenError').style.display = 'none';
+            }
         });
 
         $("form").submit(function(event){
-            event.preventDefault(); // prevent form from doing its default action (submitting)
-            // get values of all inputs
-            var id         = $('#config_id').val();
-            var name       = $('#name').val();
-            var server     = $('#server').val();
-            var port       = $('#port').val();
-            var use_ssl    = $('#use_ssl').val() === 'True';
-            var use_tls    = $('#use_tls').val() === 'True';
-            var username   = $('#username').val();
-            var token      = $('#token').val();
-            var is_default = $('#is_default').val() === 'True';
-            var recipients = [];
-            $('.dashboardInput').each(function() {
-              recipients.push($(this).val());
-            });
+            event.preventDefault();
+            var id = $('#config_id').val();
             var formData = {
-                id        : id,
-                name      : name,
-                server    : server,
-                port      : port,
-                use_ssl   : use_ssl,
-                use_tls   : use_tls,
-                username  : username,
-                token     : token,
-                is_default: is_default,
-                recipients: recipients
+                id: id ? id : null,
+                name: $('#name').val(),
+                server: $('#server').val(),
+                port: parseInt($('#port').val()),
+                use_ssl: $('#use_ssl').val() === 'True',
+                use_tls: $('#use_tls').val() === 'True',
+                username: $('#username').val(),
+                token: $('#token').val(),
+                is_default: $('#is_default').val() === 'True',
+                recipients: []
             };
+            var smtpMailId = formData.id;
+            $('.recipientInput').each(function(index) {
+                var recipientId = $(`input[name='recipients-${index}-id']`).val();
+                formData.recipients.push({
+                    id: recipientId ? recipientId : null,
+                    email: $(`input[name='recipients-${index}-email']`).val(),
+                    smtp_mail_id: smtpMailId
+                });
+            });
 
-            // send a POST request with the gathered data
             $.ajax({
                 type: "POST",
                 url: "/smtp-mail",
@@ -184,13 +219,14 @@
                     window.location.replace("/integrations?tab=smtp-mail");
                 },
                 error: function(err){
-                    // If request resulted in error, handle it here
+                    console.error('Error saving configuration:', err);
                 }
             });
         });
 
-        $(document).ready(function(){
-          $('[data-toggle="tooltip"]').tooltip();
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-        </script>
+    </script>
 {% endblock content %}

@@ -18,12 +18,12 @@ from wtforms.validators import Email, DataRequired, NumberRange, Email
 
 
 class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    user     = StringField('User', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
 
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    user     = StringField('User', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
 
 

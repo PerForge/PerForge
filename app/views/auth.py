@@ -31,6 +31,29 @@ from functools                                   import wraps
 no_auth_required_routes = ['login', 'register', 'static','register_admin', 'generate', 'generate_report','delete-influxdata','gen-report']
 need_admin_routes = ['static','register_admin']
 
+class User:
+    def __init__(self, user_data):
+        self.user_data = user_data
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_admin(self):
+        return bool(self.user_data.get('is_admin', False))
+
+    def get_id(self):
+        return str(self.user_data.get('id'))
+
 @app.before_request
 def check_authentication():
     g.user = current_user
@@ -44,12 +67,14 @@ def check_authentication():
 @login_manager.user_loader
 def load_user(user_id):
     config = DBUsers.get_config_by_id(user_id)
-    return config
+    if config:
+        return User(config)
+    return None
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
+        if not current_user.is_authenticated or not current_user.user_data.get('is_admin'):
             flash("You do not have permission to access this page.", "error")
             return redirect(url_for('index'))
         return f(*args, **kwargs)
@@ -73,18 +98,15 @@ def register():
             return render_template( 'accounts/register.html', form=form)
         # check if both http method is POST and form is valid on submit
         if form.validate_on_submit():
-            # assign form data to variables
-            username = request.form.get('username', '', type=str)
-            password = request.form.get('password', '', type=str)
+            user_data = form.data
             # filter User out of database through username
-            user = DBUsers.get_config_by_username(user=username)
-            # filter User out of database through username
-            if user :
+            if DBUsers.get_config_by_username(user=user_data['user']):
                 flash("User exists!", "info")
             else:
-                pw_hash = bc.generate_password_hash(password).decode('utf-8')
-                user    = DBUsers(username, pw_hash, is_admin=False)
-                user.save()
+                user_data['id'] = None
+                user_data['password'] = bc.generate_password_hash(user_data['password']).decode('utf-8')
+                user_data['is_admin'] = False
+                DBUsers.save(data=user_data)
                 return redirect(url_for('login')), flash("User created", "info")
         else:
             flash("Input error.", "info")
@@ -107,15 +129,11 @@ def register_admin():
             return render_template( 'accounts/register.html', form=form, admin=True)
         # check if both http method is POST and form is valid on submit
         if form.validate_on_submit():
-            # assign form data to variables
-            username = request.form.get('username', '', type=str)
-            password = request.form.get('password', '', type=str)
-            # filter User out of database through username
-            user = DBUsers.get_config_by_username(user=username)
-            # filter User out of database through username
-            pw_hash = bc.generate_password_hash(password).decode('utf-8')
-            user    = DBUsers(username, pw_hash, is_admin=True)
-            user.save()
+            user_data = form.data
+            user_data['id'] = None
+            user_data['password'] = bc.generate_password_hash(user_data['password']).decode('utf-8')
+            user_data['is_admin'] = True
+            DBUsers.save(data=user_data)
             return redirect(url_for('login')), flash("Admin user created", "info")
         else:
             flash("Input error.", "info")
@@ -129,24 +147,23 @@ def register_admin():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     try:
-        # Declare the login form
+        if current_user.is_authenticated:
+            return redirect(url_for('choose_project'))
+
         form = LoginForm(request.form)
-        # check if both http method is POST and form is valid on submit
         if form.validate_on_submit():
-            # assign form data to variables
-            username = request.form.get('username', '', type=str)
-            password = request.form.get('password', '', type=str)
-            # filter User out of database through username
+            username = request.form['user']
+            password = request.form['password']
             user = DBUsers.get_config_by_username(user=username)
             if user:
-                if bc.check_password_hash(user.password, password):
-                    login_user(user)
+                if bc.check_password_hash(user['password'], password):
+                    login_user(User(user))
                     return redirect(url_for('choose_project'))
                 else:
                     flash("Wrong password. Please try again.", "info")
             else:
                 flash("Unknown user.", "info")
-        admin = getattr(current_user, 'is_admin', False)
+        admin = getattr(current_user, 'user_data', {}).get('is_admin', False)
         return render_template('accounts/login.html', form=form, admin=admin)
     except Exception:
         logging.warning(str(traceback.format_exc()))

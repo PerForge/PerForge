@@ -37,36 +37,19 @@ def prompts():
 @app.route('/save-prompt', methods=['POST'])
 def save_prompt():
     try:
-        project_id = request.cookies.get('project')
-        form_data  = request.form.to_dict()
+        project_id                = request.cookies.get('project')
+        prompt_data               = request.form.to_dict()
+        prompt_data['project_id'] = project_id if prompt_data['project_id'] == "project" else None
 
-        original_prompt_id = form_data.get("id")
-        prompt_name        = form_data.get("name")
-        prompt_type        = form_data.get("type")
-        prompt_place       = form_data.get("place")
-        prompt_text        = form_data.get("prompt")
-        scope              = form_data.get("project_id")
+        for key, value in prompt_data.items():
+            if value == '':
+                prompt_data[key] = None
 
-        prompt_project_id = project_id if scope == "project" else None
-        if original_prompt_id:
-            DBPrompts.update(
-                id          = original_prompt_id,
-                name        = prompt_name,
-                type        = prompt_type,
-                place       = prompt_place,
-                prompt_text = prompt_text,
-                project_id  = prompt_project_id
-            )
+        if prompt_data['id']:
+            DBPrompts.update(data = prompt_data)
             flash("Custom prompt updated.", "info")
         else:
-            prompt_obj = DBPrompts(
-                name       = prompt_name,
-                type       = prompt_type,
-                place      = prompt_place,
-                prompt     = prompt_text,
-                project_id = prompt_project_id
-            )
-            prompt_obj.save()
+            DBPrompts.save(data = prompt_data)
             flash("Custom prompt added.", "info")
 
     except Exception:

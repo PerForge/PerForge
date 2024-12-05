@@ -17,9 +17,9 @@ import os
 import traceback
 import logging
 
-from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy     import or_
+from app.config                  import db
+from app.backend.pydantic_models import PromptModel
+from sqlalchemy                  import or_
 
 
 class DBPrompts(db.Model):
@@ -32,47 +32,34 @@ class DBPrompts(db.Model):
     prompt         = db.Column(db.Text, nullable=False)
     project_id     = db.Column(db.Integer, db.ForeignKey('public.projects.id', ondelete='CASCADE'))
 
-    def __init__(self, name, type, place, prompt, project_id):
-        self.name       = name
-        self.type       = type
-        self.place      = place
-        self.prompt     = prompt
-        self.project_id = project_id
-
     def to_dict(self):
-        return {
-            'id'        : self.id,
-            'name'      : self.name,
-            'type'      : self.type,
-            'place'     : self.place,
-            'prompt'    : self.prompt,
-            'project_id': self.project_id
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self):
+    @classmethod
+    def save(cls, data):
         try:
-            db.session.add(self)
+            validated_data = PromptModel(**data)
+            instance       = cls(**validated_data.model_dump())
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def get_configs(cls, project_id):
+    def get_configs(cls, id):
         try:
             default_query = db.session.query(cls).filter(cls.type == "default").all()
             custom_query  = db.session.query(cls).filter(
                 cls.type == "custom",
-                or_(cls.project_id == project_id, cls.project_id.is_(None))
+                or_(cls.project_id == id, cls.project_id.is_(None))
             ).all()
-
-            default_list = [config.to_dict() for config in default_query]
-            custom_list  = [config.to_dict() for config in custom_query]
-
-            return default_list, custom_list
-        except SQLAlchemyError:
+            default_configs = [PromptModel(**config.to_dict()).model_dump() for config in default_query]
+            custom_configs  = [PromptModel(**config.to_dict()).model_dump() for config in custom_query]
+            return default_configs, custom_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -84,45 +71,48 @@ class DBPrompts(db.Model):
                 or_(cls.project_id == project_id, cls.project_id.is_(None))
             ).all()
 
-            list = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            valid_configs = []
+            for config in query:
+                config_dict    = config.to_dict()
+                validated_data = PromptModel(**config_dict)
+                valid_configs.append(validated_data.model_dump())
+            return valid_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_config_by_id(cls, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config         = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
+            validated_data = PromptModel(**config)
+            return validated_data.model_dump()
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, id, name, type, place, prompt_text, project_id):
+    def update(cls, data):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                config.name       = name
-                config.type       = type
-                config.place      = place
-                config.prompt     = prompt_text
-                config.project_id = project_id
-                db.session.commit()
-        except SQLAlchemyError:
+            validated_data = PromptModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            for key, value in validated_data.model_dump().items():
+                setattr(config, key, value)
+
+            db.session.commit()
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def count(cls, project_id):
+    def count(cls, id):
         try:
             count = db.session.query(cls).filter(
-                or_(cls.project_id == project_id, cls.project_id.is_(None))
+                or_(cls.project_id == id, cls.project_id.is_(None))
             ).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -133,7 +123,7 @@ class DBPrompts(db.Model):
             if config:
                 db.session.delete(config)
                 db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -163,7 +153,7 @@ class DBPrompts(db.Model):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise

@@ -15,8 +15,8 @@
 import traceback
 import logging
 
-from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
+from app.config                  import db
+from app.backend.pydantic_models import InfluxdbModel
 
 
 class DBInfluxdb(db.Model):
@@ -32,44 +32,25 @@ class DBInfluxdb(db.Model):
     tmz           = db.Column(db.String(120), nullable=False)
     is_default    = db.Column(db.Boolean, default=False)
 
-    def __init__(self, name, url, org_id, token, timeout, bucket, listener, tmz, is_default):
-        self.name       = name
-        self.url        = url
-        self.org_id     = org_id
-        self.token      = token
-        self.timeout    = timeout
-        self.bucket     = bucket
-        self.listener   = listener
-        self.tmz        = tmz
-        self.is_default = is_default
-
     def to_dict(self):
-        return {
-            'id'        : self.id,
-            'name'      : self.name,
-            'url'       : self.url,
-            'org_id'    : self.org_id,
-            'token'     : self.token,
-            'timeout'   : self.timeout,
-            'bucket'    : self.bucket,
-            'listener'  : self.listener,
-            'tmz'       : self.tmz,
-            'is_default': self.is_default
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-
-        if self.is_default:
-            self.reset_default_config(schema_name)
-        elif not self.get_default_config(schema_name):
-            self.is_default = True
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            validated_data            = InfluxdbModel(**data)
+            instance                  = cls(**validated_data.model_dump())
+            instance.__table__.schema = schema_name
+
+            if instance.is_default:
+                instance.reset_default_config(schema_name)
+            elif not instance.get_default_config(schema_name):
+                instance.is_default = True
+
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -77,70 +58,67 @@ class DBInfluxdb(db.Model):
     @classmethod
     def get_configs(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
-            query = db.session.query(cls).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            query         = db.session.query(cls).all()
+            valid_configs = []
+            for config in query:
+                validated_data = InfluxdbModel(**config.to_dict())
+                valid_configs.append(validated_data.model_dump())
+            return valid_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            if config:
+                validated_data = InfluxdbModel(**config.to_dict())
+                return validated_data.model_dump()
+            return None
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_default_config(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config = db.session.query(cls).filter_by(is_default=True).one_or_none()
+            if config:
+                validated_data = InfluxdbModel(**config.to_dict())
+                return validated_data.model_dump()
+            return None
+        except Exception:
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def update(cls, schema_name, data):
+        cls.__table__.schema = schema_name
+        try:
+            validated_data = InfluxdbModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            if validated_data.is_default:
+                cls.reset_default_config(schema_name)
+
+            for key, value in validated_data.model_dump().items():
+                setattr(config, key, value)
+
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def reset_default_config(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
             db.session.query(cls).update({cls.is_default: False})
-        except SQLAlchemyError:
-            db.session.rollback()
-            logging.warning(str(traceback.format_exc()))
-            raise
-
-    @classmethod
-    def update(cls, schema_name, id, name, url, org_id, token, timeout, bucket, listener, tmz, is_default):
-        cls.__table__.schema = schema_name
-
-        try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                if is_default:
-                    cls.reset_default_config(schema_name)
-
-                config.name       = name
-                config.url        = url
-                config.org_id     = org_id
-                config.token      = token
-                config.timeout    = timeout
-                config.bucket     = bucket
-                config.listener   = listener
-                config.tmz        = tmz
-                config.is_default = is_default
-
-                db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -148,18 +126,16 @@ class DBInfluxdb(db.Model):
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
             count = db.session.query(cls).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def delete(cls, schema_name, id):
         cls.__table__.schema = schema_name
-
         try:
             config = db.session.query(cls).filter_by(id=id).one_or_none()
             if config:
@@ -170,7 +146,7 @@ class DBInfluxdb(db.Model):
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise

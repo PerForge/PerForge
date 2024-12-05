@@ -48,31 +48,28 @@ def get_nfr():
 
         if request.method == "POST":
             nfr_data = request.get_json()
+
+            for key, value in nfr_data.items():
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            for k, v in item.items():
+                                if v == '':
+                                    item[k] = None
+                elif value == '':
+                    nfr_data[key] = None
+
             if nfr_data['id']:
                 DBNFRs.update(
                     schema_name = project_data['name'],
-                    id          = nfr_data['id'],
-                    name        = nfr_data['name'],
-                    rows        = nfr_data['rows']
+                    data        = nfr_data
                 )
                 flash("NFR updated.", "info")
             else:
-                nfr_obj = DBNFRs(
-                    name = nfr_data['name'],
-                    rows = []
+                DBNFRs.save(
+                    schema_name = project_data['name'],
+                    data        = nfr_data
                 )
-                for row_data in nfr_data['rows']:
-                    row = DBNFRRows(
-                        regex     = row_data['regex'],
-                        scope     = row_data['scope'],
-                        metric    = row_data['metric'],
-                        operation = row_data['operation'],
-                        threshold = row_data['threshold'],
-                        weight    = row_data['weight'] if row_data['weight'] else None,
-                        nfr_id    = None
-                    )
-                    nfr_obj.rows.append(row)
-                nfr_id = nfr_obj.save(schema_name = project_data['name'])
                 flash("NFR added.", "info")
             return jsonify({'redirect_url': 'nfrs'})
     except Exception:

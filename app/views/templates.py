@@ -62,46 +62,15 @@ def template():
                 template_data = request.get_json()
                 if template_data["id"]:
                     DBTemplates.update(
-                        schema_name               = project_data['name'],
-                        id                        = template_data['id'],
-                        name                      = template_data['name'],
-                        nfr                       = template_data['nfr'],
-                        title                     = template_data['title'],
-                        ai_switch                 = template_data['ai_switch'],
-                        ai_aggregated_data_switch = template_data['ai_aggregated_data_switch'],
-                        ai_graph_switch           = template_data['ai_graph_switch'],
-                        ai_to_graphs_switch       = template_data['ai_to_graphs_switch'],
-                        nfrs_switch               = template_data['nfrs_switch'],
-                        template_prompt_id        = template_data['template_prompt_id'],
-                        aggregated_prompt_id      = template_data['aggregated_prompt_id'],
-                        system_prompt_id          = template_data['system_prompt_id'],
-                        data                      = template_data['data']
+                        schema_name = project_data['name'],
+                        data        = template_data
                     )
                     flash("Template updated.","info")
                 else:
-                    template_obj = DBTemplates(
-                        name                      = template_data['name'],
-                        nfr                       = template_data['nfr'],
-                        title                     = template_data['title'],
-                        ai_switch                 = template_data['ai_switch'],
-                        ai_aggregated_data_switch = template_data['ai_aggregated_data_switch'],
-                        ai_graph_switch           = template_data['ai_graph_switch'],
-                        ai_to_graphs_switch       = template_data['ai_to_graphs_switch'],
-                        nfrs_switch               = template_data['nfrs_switch'],
-                        template_prompt_id        = template_data['template_prompt_id'],
-                        aggregated_prompt_id      = template_data['aggregated_prompt_id'],
-                        system_prompt_id          = template_data['system_prompt_id'],
-                        data                      = []
+                    DBTemplates.save(
+                        schema_name = project_data['name'],
+                        data        = template_data
                     )
-                    for records_data in template_data['data']:
-                        record = DBTemplateData(
-                            type        = records_data['type'],
-                            content     = records_data['content'],
-                            graph_id    = records_data['graph_id'],
-                            template_id = None
-                        )
-                        template_obj.data.append(record)
-                    template_config = template_obj.save(schema_name = project_data['name'])
                     flash("Template added.","info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))
@@ -144,31 +113,14 @@ def template_group():
                 if template_group_data["id"]:
                     DBTemplateGroups.update(
                         schema_name = project_data['name'],
-                        id          = template_group_data['id'],
-                        name        = template_group_data['name'],
-                        title       = template_group_data['title'],
-                        ai_summary  = template_group_data['ai_summary'],
-                        prompt_id   = template_group_data['prompt_id'],
-                        data        = template_group_data['data']
+                        data        = template_group_data
                     )
                     flash("Template group updated.","info")
                 else:
-                    template_group_obj = DBTemplateGroups(
-                        name        = template_group_data['name'],
-                        title       = template_group_data['title'],
-                        ai_summary  = template_group_data['ai_summary'],
-                        prompt_id   = template_group_data['prompt_id'],
-                        data        = []
+                    DBTemplateGroups.save(
+                        schema_name = project_data['name'],
+                        data        = template_group_data
                     )
-                    for records_data in template_group_data['data']:
-                        record = DBTemplateGroupData(
-                            type              = records_data['type'],
-                            content           = records_data['content'],
-                            template_id       = records_data['template_id'],
-                            template_group_id = None
-                        )
-                        template_group_obj.data.append(record)
-                    template_group_config = template_group_obj.save(schema_name = project_data['name'])
                     flash("Template added.","info")
             except Exception:
                 logging.warning(str(traceback.format_exc()))

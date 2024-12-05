@@ -15,9 +15,9 @@
 import traceback
 import logging
 
-from app.config     import db
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload
+from app.config                  import db
+from app.backend.pydantic_models import NFRsModel
+from sqlalchemy.orm              import joinedload
 
 
 class DBNFRs(db.Model):
@@ -26,27 +26,25 @@ class DBNFRs(db.Model):
     name          = db.Column(db.String(120), nullable=False)
     rows          = db.relationship('DBNFRRows', backref='nfrs', cascade='all, delete-orphan', lazy=True)
 
-    def __init__(self, name, rows):
-        self.name = name
-        self.rows = rows
-
     def to_dict(self):
-        return {
-            'id'  : self.id,
-            'name': self.name,
-            'rows': [row.to_dict() for row in self.rows]
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self, schema_name):
-        self.__table__.schema = schema_name
-        for row in self.rows:
-            row.__table__.schema = schema_name
-
+    @classmethod
+    def save(cls, schema_name, data):
         try:
-            db.session.add(self)
+            validated_data            = NFRsModel(**data)
+            instance                  = cls(**validated_data.model_dump(exclude={'rows'}))
+            instance.__table__.schema = schema_name
+
+            for row_data in validated_data.rows:
+                row_dict = row_data.model_dump()
+                row      = DBNFRRows(**row_dict)
+                instance.rows.append(row)
+
+            db.session.add(instance)
             db.session.commit()
-            return self.id
-        except SQLAlchemyError:
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -55,12 +53,17 @@ class DBNFRs(db.Model):
     def get_configs(cls, schema_name):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
-
         try:
-            query = db.session.query(cls).options(joinedload(cls.rows)).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            query         = db.session.query(cls).options(joinedload(cls.rows)).all()
+            valid_configs = []
+
+            for config in query:
+                config_dict         = config.to_dict()
+                config_dict['rows'] = [row.to_dict() for row in config.rows]
+                validated_data      = NFRsModel(**config_dict)
+                valid_configs.append(validated_data.model_dump())
+            return valid_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -68,38 +71,36 @@ class DBNFRs(db.Model):
     def get_config_by_id(cls, schema_name, id):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).options(joinedload(cls.rows)).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config              = db.session.query(cls).options(joinedload(cls.rows)).filter_by(id=id).one_or_none()
+            config_dict         = config.to_dict()
+            config_dict['rows'] = [row.to_dict() for row in config.rows]
+            validated_data      = NFRsModel(**config_dict)
+            return validated_data.model_dump()
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, id, name, rows):
+    def update(cls, schema_name, data):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
-
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
-            if config:
-                config.name = name
-                config.rows.clear()
+            validated_data = NFRsModel(**data)
+            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            exclude_fields = {'rows'}
 
-                for row_data in rows:
-                    row = DBNFRRows(
-                        regex     = row_data['regex'],
-                        scope     = row_data['scope'],
-                        metric    = row_data['metric'],
-                        operation = row_data['operation'],
-                        threshold = row_data['threshold'],
-                        weight    = row_data['weight'] if row_data['weight'] else None,
-                        nfr_id    = config.id
-                    )
-                    config.rows.append(row)
+            for field, value in validated_data.model_dump().items():
+                if field not in exclude_fields:
+                    setattr(config, field, value)
 
-        except SQLAlchemyError:
+            config.rows.clear()
+            for row_data in validated_data.rows:
+                row_dict = row_data.model_dump()
+                row      = DBNFRRows(**row_dict)
+                config.rows.append(row)
+            db.session.commit()
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -107,11 +108,10 @@ class DBNFRs(db.Model):
     @classmethod
     def count(cls, schema_name):
         cls.__table__.schema = schema_name
-
         try:
             count = db.session.query(cls).count()
             return count
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -119,13 +119,12 @@ class DBNFRs(db.Model):
     def delete(cls, schema_name, id):
         cls.__table__.schema       = schema_name
         DBNFRRows.__table__.schema = schema_name
-
         try:
             config = db.session.query(cls).filter_by(id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -142,23 +141,5 @@ class DBNFRRows(db.Model):
     weight        = db.Column(db.Integer)
     nfr_id        = db.Column(db.Integer, db.ForeignKey('nfrs.id', ondelete='CASCADE'), nullable=False)
 
-    def __init__(self, regex, scope, metric, operation, threshold, weight, nfr_id):
-        self.regex     = regex
-        self.scope     = scope
-        self.metric    = metric
-        self.operation = operation
-        self.threshold = threshold
-        self.weight    = weight
-        self.nfr_id    = nfr_id
-
     def to_dict(self):
-        return {
-            'id'       : self.id,
-            'regex'    : self.regex,
-            'scope'    : self.scope,
-            'metric'   : self.metric,
-            'operation': self.operation,
-            'threshold': self.threshold,
-            'weight'   : self.weight,
-            'nfr_id'   : self.nfr_id
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}

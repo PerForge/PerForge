@@ -29,8 +29,8 @@ from app.backend.integrations.atlassian_confluence.atlassian_confluence_db impor
 from app.backend.integrations.atlassian_jira.atlassian_jira_db             import DBAtlassianJira
 from app.backend.integrations.azure_wiki.azure_wiki_db                     import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db                           import DBGrafana, DBGrafanaDashboards
+from app.backend.pydantic_models                                           import ProjectModel
 from sqlalchemy                                                            import text, MetaData
-from sqlalchemy.exc                                                        import SQLAlchemyError
 from itertools                                                             import chain
 
 
@@ -41,40 +41,41 @@ class DBProjects(db.Model):
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name           = db.Column(db.String(120), unique=True, nullable=False)
 
-    def __init__(self, name):
-        self.name = name
-
     def to_dict(self):
-        return {
-            'id'  : self.id,
-            'name': self.name
-        }
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    def save(self):
+    @classmethod
+    def save(cls, data):
         try:
-            db.session.add(self)
+            validated_data = ProjectModel(**data)
+            instance       = cls(**validated_data.model_dump())
+            db.session.add(instance)
             db.session.commit()
-            self.create_schema()
-            self.create_all_tables()
-            return self.id
-        except SQLAlchemyError:
+            DBProjects.create_schema(instance)
+            DBProjects.create_all_tables(instance)
+            return instance.id
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
-    def create_schema(self):
-        create_schema_query = text(f'CREATE SCHEMA IF NOT EXISTS "{self.name}"')
+    @classmethod
+    def create_schema(cls, instance):
+        schema_name         = getattr(instance, 'name')
+        create_schema_query = text(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"')
         try:
             db.session.execute(create_schema_query)
             db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
-    def create_all_tables(self):
-        metadata = MetaData(schema=self.name)
-        tables = [
+    @classmethod
+    def create_all_tables(cls, instance):
+        schema_name = getattr(instance, 'name')
+        metadata    = MetaData(schema=schema_name)
+        tables      = [
             DBAISupport.__table__,
             DBAtlassianConfluence.__table__,
             DBAtlassianJira.__table__,
@@ -94,12 +95,12 @@ class DBProjects(db.Model):
         ]
 
         for table in tables:
-            table.schema   = self.name
+            table.schema   = schema_name
             table.metadata = metadata
 
         try:
             metadata.create_all(bind=db.engine, tables=tables, checkfirst=True)
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -107,19 +108,26 @@ class DBProjects(db.Model):
     @classmethod
     def get_configs(cls):
         try:
-            query = db.session.query(cls).all()
-            list  = [config.to_dict() for config in query]
-            return list
-        except SQLAlchemyError:
+            query         = db.session.query(cls).all()
+            valid_configs = []
+
+            for config in query:
+                config_dict    = config.to_dict()
+                validated_data = ProjectModel(**config_dict)
+                valid_configs.append(validated_data.model_dump())
+            return valid_configs
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
     def get_config_by_id(cls, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none().to_dict()
-            return config
-        except SQLAlchemyError:
+            config         = db.session.query(cls).filter_by(id=id).one_or_none()
+            config_dict    = config.to_dict()
+            validated_data = ProjectModel(**config_dict)
+            return validated_data.model_dump()
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -142,7 +150,7 @@ class DBProjects(db.Model):
                 "prompts"     : DBPrompts.count(id)
             }
             return project_stats
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -159,7 +167,7 @@ class DBProjects(db.Model):
                 model.get_configs(schema_name) for model in integration_models
             ))
             return output_configs
-        except SQLAlchemyError:
+        except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
@@ -172,7 +180,7 @@ class DBProjects(db.Model):
                 db.session.delete(config)
                 db.session.commit()
                 cls.drop_schema(schema_name)
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
@@ -183,7 +191,7 @@ class DBProjects(db.Model):
         try:
             db.session.execute(drop_schema_query)
             db.session.commit()
-        except SQLAlchemyError:
+        except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
