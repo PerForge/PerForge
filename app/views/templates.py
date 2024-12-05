@@ -17,8 +17,8 @@ import logging
 
 from app                                                 import app
 from app.backend.components.projects.projects_db         import DBProjects
-from app.backend.components.templates.templates_db       import DBTemplates, DBTemplateData
-from app.backend.components.templates.template_groups_db import DBTemplateGroups, DBTemplateGroupData
+from app.backend.components.templates.templates_db       import DBTemplates
+from app.backend.components.templates.template_groups_db import DBTemplateGroups
 from app.backend.components.nfrs.nfrs_db                 import DBNFRs
 from app.backend.components.prompts.prompts_db           import DBPrompts
 from app.backend.components.graphs.graphs_db             import DBGraphs

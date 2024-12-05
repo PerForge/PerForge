@@ -15,9 +15,9 @@
 import traceback
 import logging
 
-from app.config     import db
+from app.config                  import db
 from app.backend.pydantic_models import UsersModel
-from flask_login    import UserMixin
+from flask_login                 import UserMixin
 
 
 class DBUsers(db.Model, UserMixin):

@@ -15,9 +15,9 @@
 import traceback
 import logging
 
-from app.config     import db
+from app.config                  import db
 from app.backend.pydantic_models import GrafanaModel
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm              import joinedload
 
 
 class DBGrafana(db.Model):

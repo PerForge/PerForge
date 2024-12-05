@@ -15,7 +15,7 @@
 import traceback
 import logging
 
-from app.config     import db
+from app.config                  import db
 from app.backend.pydantic_models import AtlassianJiraModel
 
 

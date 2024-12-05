@@ -17,7 +17,6 @@ import logging
 
 from app                                         import app
 from app.backend.components.nfrs.nfrs_db         import DBNFRs
-from app.backend.components.nfrs.nfrs_db         import DBNFRRows
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.errors                          import ErrorMessages
 from flask                                       import render_template, request, url_for, redirect, flash, jsonify
