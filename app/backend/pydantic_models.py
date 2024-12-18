@@ -155,11 +155,11 @@ class GraphModel(BaseModelWithStripping):
 
 
 class TemplateObjectModel(BaseModelWithStripping):
-    id         : Optional[int]
+    id         : Optional[int] = Field(default=None)
     type       : str
-    content    : str
+    content    : Optional[str]
     graph_id   : Optional[int]
-    template_id: Optional[int]
+    template_id: Optional[int] = Field(default=None)
 
 
 class TemplateModel(BaseModelWithStripping):
@@ -179,11 +179,11 @@ class TemplateModel(BaseModelWithStripping):
 
 
 class TemplateGroupObjectModel(BaseModelWithStripping):
-    id               : Optional[int]
+    id               : Optional[int] = Field(default=None)
     type             : str
-    content          : str
+    content          : Optional[str]
     template_id      : Optional[int]
-    template_group_id: Optional[int]
+    template_group_id: Optional[int] = Field(default=None)
 
 
 class TemplateGroupModel(BaseModelWithStripping):

@@ -395,7 +395,6 @@ def add_ai_support():
                     if value == '':
                         ai_support_data[key] = None
 
-                print(ai_support_data)
                 if ai_support_data['id']:
                     DBAISupport.update(
                         schema_name = project_data['name'],

@@ -102,11 +102,8 @@ def update_secret():
                     if value == '':
                         secret_data[key] = None
 
-                if DBSecrets.get_config_by_key(key=secret_data['key']):
-                    flash("Secret with this key already exists.", "error")
-                else:
-                    DBSecrets.update(data=secret_data)
-                    flash("Secret updated.", "info")
+                DBSecrets.update(data=secret_data)
+                flash("Secret updated.", "info")
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))

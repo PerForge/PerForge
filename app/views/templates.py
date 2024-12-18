@@ -60,6 +60,17 @@ def template():
         if request.method == "POST":
             try:
                 template_data = request.get_json()
+
+                for key, value in template_data.items():
+                    if isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict):
+                                for k, v in item.items():
+                                    if v == '':
+                                        item[k] = None
+                    elif value == '':
+                        template_data[key] = None
+
                 if template_data["id"]:
                     DBTemplates.update(
                         schema_name = project_data['name'],
@@ -110,6 +121,17 @@ def template_group():
         if request.method == "POST":
             try:
                 template_group_data = request.get_json()
+
+                for key, value in template_group_data.items():
+                    if isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, dict):
+                                for k, v in item.items():
+                                    if v == '':
+                                        item[k] = None
+                    elif value == '':
+                        template_group_data[key] = None
+
                 if template_group_data["id"]:
                     DBTemplateGroups.update(
                         schema_name = project_data['name'],
