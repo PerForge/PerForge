@@ -15,21 +15,21 @@
 import os
 import ast
 
-from app.backend.integrations.reporting_base    import ReportingBase
-from app.backend.integrations.grafana.grafana   import Grafana
-from app.backend.components.graphs.graph_config import GraphConfig
-from io                                         import BytesIO
-from PIL                                        import Image as PILImage
-from reportlab.lib.colors                       import Color
-from reportlab.lib.enums                        import TA_LEFT
-from reportlab.lib.pagesizes                    import A4
-from reportlab.lib.styles                       import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units                        import inch
-from reportlab.lib.utils                        import ImageReader
-from reportlab.pdfbase                          import ttfonts
-from reportlab.pdfbase.pdfmetrics               import registerFont, registerFontFamily
-from reportlab.platypus                         import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
-from datetime                                   import datetime
+from app.backend.integrations.reporting_base  import ReportingBase
+from app.backend.integrations.grafana.grafana import Grafana
+from app.backend.components.graphs.graphs_db  import DBGraphs
+from io                                       import BytesIO
+from PIL                                      import Image as PILImage
+from reportlab.lib.colors                     import Color
+from reportlab.lib.enums                      import TA_LEFT
+from reportlab.lib.pagesizes                  import A4
+from reportlab.lib.styles                     import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units                      import inch
+from reportlab.lib.utils                      import ImageReader
+from reportlab.pdfbase                        import ttfonts
+from reportlab.pdfbase.pdfmetrics             import registerFont, registerFontFamily
+from reportlab.platypus                       import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
+from datetime                                 import datetime
 
 
 class Pdf:
@@ -200,7 +200,7 @@ class PdfReport(ReportingBase):
         super().set_template(template, influxdb)
 
     def add_graph(self, graph_data, current_run_id, baseline_run_id):
-        image = self.grafana_obj.render_image(graph_data["id"], self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
+        image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
         self.pdf_creator.add_image(image)
         if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
@@ -285,7 +285,7 @@ class PdfReport(ReportingBase):
             if obj["type"] == "text":
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = GraphConfig.get_graph_value_by_id(self.project, obj["id"])
+                graph_data       = DBGraphs.get_config_by_id(schema_name=self.schema_name, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 self.add_graph(graph_data, current_run_id, baseline_run_id)
         if self.nfrs_switch or self.ai_switch:

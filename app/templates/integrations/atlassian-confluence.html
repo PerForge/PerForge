@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Atlassian Confluence {% endblock %} 
+{% block title %} Atlassian Confluence {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -29,7 +29,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="/atlassian-confluence">
+                            <form method="POST" action="/atlassian-confluence" onsubmit="return validateForm()">
                                 {{ form.hidden_tag() }}
                                 <div class="center-section">
                                     {% if atlassian_confluence_config %}
@@ -56,7 +56,15 @@
                                       </div>
                                     </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
-                                    {{ form.token(class="form-control") }}
+                                    <select class="form-control" name="token" id="token" required>
+                                        <option value="">Select the secret</option>
+                                        {% for secret in secret_configs %}
+                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                        Please select a token
+                                    </div>
                                     <label for="org_url" class="mt-2">Organization url:</label>
                                     {{ form.org_url(class="form-control") }}
                                     <label for="space_key" class="mt-2">Space key:</label>
@@ -101,6 +109,29 @@
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+
+      function validateForm() {
+          const tokenSelect = document.getElementById('token');
+          const tokenError = document.getElementById('tokenError');
+
+          if (!tokenSelect.value) {
+              tokenSelect.classList.add('is-invalid');
+              tokenError.style.display = 'block';
+              return false;
+          }
+
+          tokenSelect.classList.remove('is-invalid');
+          tokenError.style.display = 'none';
+          return true;
+      }
+
+      // Add event listener to token select for real-time validation
+      document.getElementById('token').addEventListener('change', function() {
+          if (this.value) {
+              this.classList.remove('is-invalid');
+              document.getElementById('tokenError').style.display = 'none';
+          }
       });
     </script>
 {% endblock content %}

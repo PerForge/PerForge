@@ -18,27 +18,31 @@ import logging
 
 from app                                                                       import app
 from app.backend                                                               import pkg
-from app.backend.errors                                                        import ErrorMessages
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction     import InfluxdbV2
-from app.backend.data_provider.data_provider                                   import DataProvider
 from app.backend.integrations.azure_wiki.azure_wiki_report                     import AzureWikiReport
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
 from app.backend.integrations.pdf.pdf_report                                   import PdfReport
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db             import DBInfluxdb
+from app.backend.components.projects.projects_db                               import DBProjects
+from app.backend.components.templates.templates_db                             import DBTemplates
+from app.backend.components.templates.template_groups_db                       import DBTemplateGroups
+from app.backend.data_provider.data_provider                                   import DataProvider
+from app.backend.errors                                                        import ErrorMessages
 from flask                                                                     import render_template, request, url_for, redirect, flash, jsonify, send_file
 
 
 @app.route('/tests', methods=['GET'])
 def get_tests():
     try:
-        # Get current project
-        project          = request.cookies.get('project')
-        influxdb_configs = pkg.get_integration_config_names_and_ids(project, "influxdb")
-        templates        = pkg.get_config_names_and_ids(project, "templates")
-        template_groups  = pkg.get_config_names_and_ids(project, "template_groups")
-        output_configs   = pkg.get_output_integration_configs(project)
-        return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = templates, template_groups = template_groups, output_configs=output_configs)
+        project_id             = request.cookies.get('project')
+        project_data           = DBProjects.get_config_by_id(id=project_id)
+        influxdb_configs       = DBInfluxdb.get_configs(schema_name=project_data['name'])
+        template_configs       = DBTemplates.get_configs(schema_name=project_data['name'])
+        template_group_configs = DBTemplateGroups.get_configs(schema_name=project_data['name'])
+        output_configs         = DBProjects.get_project_output_configs(id=project_id)
+        return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = template_configs, template_groups = template_group_configs, output_configs=output_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00009.value, "error")
@@ -47,10 +51,10 @@ def get_tests():
 @app.route('/load_tests', methods=['GET'])
 def load_tests():
     try:
-        project      = request.cookies.get('project')
-        influxdb     = request.args.get('influxdb')
-        ds_obj       = DataProvider(project=project, id=influxdb)
-        tests        = ds_obj.get_test_log()
+        project  = request.cookies.get('project')
+        influxdb = request.args.get('influxdb')
+        ds_obj   = DataProvider(project=project, id=influxdb)
+        tests    = ds_obj.get_test_log()
         return jsonify(status="success", tests=tests)
     except Exception:
         logging.warning(str(traceback.format_exc()))

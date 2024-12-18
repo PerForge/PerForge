@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Logs {% endblock %} 
+{% block title %} Logs {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,9 +11,16 @@
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
                <div class="main-body-header">
-               </div>
-               <div class="start-section ms-4 mt-3">
-                  <h2 class="mb-2 lh-sm">PerForge logs</h2>
+                  <h4 class="mb-0">Logs
+                     <div class="tooltip-container">
+                       <a href="https://perforge.app/docs/category/configuration" target="_blank">
+                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                       </a>
+                       <div class="tooltip-content" style="font-size: 16px;">
+                           Click to learn more
+                       </div>
+                     </div>
+                   </h4>
                </div>
                <pre class="ms-4">{{ logs }}</pre>
             </div>

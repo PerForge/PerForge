@@ -1,56 +1,29 @@
 version: '3'
 services:
-  influxdb:
-    image: influxdb:2.7.6-alpine
-    container_name: influxdb
-    volumes:
-      - influxdb-data:/var/lib/influxdb2
-      - influxdb-config:/etc/influxdb2
-    ports:
-      - "8086:8086"
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpass
-      - DOCKER_INFLUXDB_INIT_ORG=perforge
-      - DOCKER_INFLUXDB_INIT_BUCKET=jmeter
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=DqwGq5e7Avv9gKYi2NtRtRenOxbvEqXMtg-r4WjNxYlerHMfikeLtCTJwSTzk-5NheVXTOFi0qug5jRGuh8-mw==
-      - DOCKER_INFLUXDB_INIT_RETENTION=180d
-    restart: always
-
-  grafana:
-    image: grafana/grafana:10.0.2
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=adminpass
-      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
-      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
-    volumes:
-      - grafana-home:/var/lib/grafana/
-      - grafana-conf:/etc/grafana/
-    restart: always
-
-  renderer:
-    image: grafana/grafana-image-renderer:latest
-    ports:
-      - 8081
-    restart: always
-
   perforge:
     image: perforge/perforge-app:latest
     container_name: perforge
+    environment:
+      DATABASE_URL: postgresql+psycopg2://perforgedbuser:perforgedbpass@timescaledb:5432/perforge
     ports:
       - "7878:7878"
     volumes:
       - perforge-conf:/app/app/data/
     restart: always
 
+  timescaledb:
+    image: timescale/timescaledb:2.17.0-pg16
+    container_name: timescaledb
+    environment:
+      POSTGRES_DB: perforge
+      POSTGRES_USER: perforgedbuser
+      POSTGRES_PASSWORD: perforgedbpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+    restart: always
+
 volumes:
-  influxdb-data:
-  influxdb-config:
-  grafana-home:
-  grafana-conf:
   perforge-conf:
+  timescaledb-data:

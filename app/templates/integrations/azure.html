@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Azure {% endblock %} 
+{% block title %} Azure {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -29,7 +29,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="/azure">
+                        <form method="POST" action="/azure" onsubmit="return validateForm()">
                             {{ form.hidden_tag() }}
                             <div class="center-section width-500">
                                 {% if azure_config %}
@@ -46,7 +46,15 @@
                                   </div>
                                 </div>
                                 <label for="token" class="input-label mt-2">Token:</label>
-                                {{ form.token(class="form-control") }}
+                                <select class="form-control" name="token" id="token" required>
+                                    <option value="">Select the secret</option>
+                                    {% for secret in secret_configs %}
+                                        <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                    Please select a token
+                                </div>
                                 <label for="org_url" class="mt-2">Wiki Organization Url:</label>
                                 {{ form.org_url(class="form-control") }}
                                 <label for="project_id" class="mt-2">Wiki Project:</label>
@@ -93,5 +101,29 @@
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
       });
+    </script>
+    <script>
+        function validateForm() {
+            const tokenSelect = document.getElementById('token');
+            const tokenError = document.getElementById('tokenError');
+
+            if (!tokenSelect.value) {
+                tokenSelect.classList.add('is-invalid');
+                tokenError.style.display = 'block';
+                return false;
+            }
+
+            tokenSelect.classList.remove('is-invalid');
+            tokenError.style.display = 'none';
+            return true;
+        }
+
+        // Add event listener to token select for real-time validation
+        document.getElementById('token').addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('is-invalid');
+                document.getElementById('tokenError').style.display = 'none';
+            }
+        });
     </script>
 {% endblock content %}

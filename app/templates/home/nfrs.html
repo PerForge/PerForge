@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} NFRs {% endblock %} 
+{% block title %} NFRs {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,22 +11,18 @@
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
               <div class="main-body-header">
-              </div> 
+                <h4 class="mb-0">NFRs
+                    <div class="tooltip-container">
+                      <a href="https://perforge.app/docs/configuration/nfrs" target="_blank">
+                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                      </a>
+                      <div class="tooltip-content" style="font-size: 16px;">
+                          Click to learn more
+                      </div>
+                    </div>
+                </h4>
+              </div>
               <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-                <div class="card-header">
-                  <div class="justify-content-between align-items-center">
-                    <h4 class="mb-0">NFRS
-                        <div class="tooltip-container">
-                          <a href="https://perforge.app/docs/configuration/nfrs" target="_blank">
-                              <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                          </a>
-                          <div class="tooltip-content" style="font-size: 16px;">
-                              Click to learn more
-                          </div>
-                        </div>
-                    </h4>
-                  </div>
-                </div>
                 <div class="card-body">
                     <div id="table-id">
                         <div class="d-flex align-items-center justify-content-end mb-3">
@@ -46,7 +42,7 @@
                                     <tr>
                                         <th class="sort" data-sort="name">Name</th>
                                         <th class="sort" data-sort="nfrs">NFRS</th>
-                                        <th class="sort" data-sort="actions">Actions</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="list">

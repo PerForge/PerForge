@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} NFR {% endblock %} 
+{% block title %} NFR {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -12,22 +12,18 @@
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
                 <div class="main-body-header">
-                </div> 
-                <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-                    <div class="card-header">
-                      <div class="justify-content-between align-items-center">
-                        <h4 class="mb-0">NFR
-                            <div class="tooltip-container">
-                              <a href="https://perforge.app/docs/configuration/nfrs" target="_blank">
-                                  <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                              </a>
-                              <div class="tooltip-content" style="font-size: 16px;">
-                                  Click to learn more
-                              </div>
-                            </div>
-                        </h4>
+                  <h4 class="mb-0">NFR
+                    <div class="tooltip-container">
+                      <a href="https://perforge.app/docs/configuration/nfrs" target="_blank">
+                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                      </a>
+                      <div class="tooltip-content" style="font-size: 16px;">
+                          Click to learn more
                       </div>
                     </div>
+                  </h4>
+                </div>
+                <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
                     <div class="card-body">
                         <form class="needs-validation" novalidate="">
                             <div class="flex-direction-column" id="nfrs-container">
@@ -137,19 +133,20 @@
                 </div>
               </div>
             `;
-          
+
             function addNfrRow() {
               const container = document.getElementById("nfrs-container");
               container.insertAdjacentHTML("beforeend", rowTemplate);
             }
-          
+
             function deleteNfrRow(elem) {
               elem.parentNode.parentNode.remove();
             }
-          
+
             function getNFRs() {
               const formData = {};
-              formData.id = '{{ nfr_config }}' ? '{{ nfr_config }}' : '';
+              const nfrConfig = '{{ nfr_config }}';
+              formData.id = nfrConfig && nfrConfig !== 'None' ? nfrConfig : '';
               formData.name = document.querySelector('[name="test_name"]').value;
               const nfrs = document.querySelectorAll('.nfr-row');
               const data = Array.from(nfrs).map(element => ({
@@ -160,11 +157,11 @@
                 threshold: parseInt(element.querySelector('.threshold-nfr-field').value),
                 weight: element.querySelector('.weight-nfr-field').value
               }));
-          
+
               formData.rows = data;
               return JSON.stringify(formData);
             }
-          
+
             const nfrsPanel = document.getElementById("nfrs-panel");
             const name = document.getElementById("test_name");
             const nfrsJson = JSON.parse('{{ nfr_data | tojson }}');
@@ -182,7 +179,7 @@
                     newRow.querySelector('.weight-nfr-field').value = row.weight;
                 }
             }
-          
+
             const container = document.getElementById("nfrs-container");
             const nfRows = container.getElementsByClassName("nfr-row");
             if (nfRows.length === 0) {

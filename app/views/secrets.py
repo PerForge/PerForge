@@ -15,18 +15,19 @@
 import traceback
 import logging
 
-from app                import app
-from app.models         import Secret
-from app.forms          import SecretForm
-from app.backend.errors import ErrorMessages
-from flask              import render_template, request, url_for, redirect, flash
-from flask_login        import current_user
+from app                                       import app
+from app.backend.components.secrets.secrets_db import DBSecrets
+from app.backend.errors                        import ErrorMessages
+from app.forms                                 import SecretForm
+from flask                                     import render_template, request, url_for, redirect, flash
+from flask_login                               import current_user
 
 
 @app.route('/secrets', methods=['get'])
 def get_secrets():
     try:
-        secrets = Secret.get_secrets()
+        project_id = request.cookies.get('project')
+        secrets    = DBSecrets.get_configs(id=project_id)
         return render_template('home/secrets.html', secrets=secrets)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -39,11 +40,20 @@ def add_secret():
         form = SecretForm(request.form)
         if form.validate_on_submit():
             try:
-                secret      = request.form.to_dict()
-                secret_type = "admin" if current_user.is_admin else "general"
-                new_secret  = Secret(type=secret_type, value=secret.get("value"), key=secret.get("key"))
-                new_secret.save()
-                flash("Secret added.", "info")
+                project_id                = request.cookies.get('project')
+                secret_data               = form.data
+                secret_data['project_id'] = project_id if secret_data['project_id'] == "project" else None
+                secret_data['type']       = "admin" if current_user.is_admin else "general"
+
+                for key, value in secret_data.items():
+                    if value == '':
+                        secret_data[key] = None
+
+                if DBSecrets.get_config_by_key(key=secret_data['key']):
+                    flash("Secret with this key already exists.", "error")
+                else:
+                    DBSecrets.save(data = secret_data)
+                    flash("Secret added.", "info")
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
@@ -69,8 +79,8 @@ def edit_secret():
             flash("You do not have permission to access this page.", "error")
             return redirect(url_for('get_secrets'))
 
-        output = Secret.get(id=secret_id)
-        form   = SecretForm(output)
+        output = DBSecrets.get_config_by_id(id=secret_id)
+        form   = SecretForm(data=output)
         return render_template('home/secret.html', form=form, secret_id=secret_id, secret_type=secret_type)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -80,21 +90,20 @@ def edit_secret():
 @app.route('/update_secret', methods=['POST'])
 def update_secret():
     try:
-        form      = SecretForm(request.form)
-        secret_id = request.args.get('secret_id')
+        form       = SecretForm(request.form)
         if form.validate_on_submit():
             try:
-                secret_data = request.form.to_dict()
-                secret_id   = secret_data.get("id")
-                secret_type = secret_data.get("type")
-                if secret_type == "None":
-                    if current_user.is_admin:
-                        secret_type = "admin"
-                    else:
-                        secret_type = "general"
-                if Secret.if_exists(id=secret_id):
-                    Secret.update(id=secret_id, new_type=secret_type, new_value=secret_data.get("value"), new_key=secret_data.get("key"))
-                    flash("Secret updated.", "info")
+                project_id                = request.cookies.get('project')
+                secret_data               = form.data
+                secret_data['project_id'] = project_id if secret_data['project_id'] == "project" else None
+                secret_data['type']       = "admin" if current_user.is_admin else "general"
+
+                for key, value in secret_data.items():
+                    if value == '':
+                        secret_data[key] = None
+
+                DBSecrets.update(data=secret_data)
+                flash("Secret updated.", "info")
                 return redirect(url_for('get_secrets'))
             except Exception:
                 logging.warning(str(traceback.format_exc()))
@@ -120,7 +129,7 @@ def delete_secret():
             flash("You do not have permission to access this page.", "error")
             return redirect(url_for('get_secrets'))
 
-        Secret.delete(id=secret_id)
+        DBSecrets.delete(id=secret_id)
         flash("Secret deleted.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))

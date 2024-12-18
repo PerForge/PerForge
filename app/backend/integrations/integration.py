@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc        import ABC, abstractmethod
-from app.config import config_path
+
+from app.backend.components.projects.projects_db import DBProjects
+from abc                                         import ABC, abstractmethod
 
 
 class Integration(ABC):
 
     def __init__(self, project):
         self.project     = project
-        self.config_path = config_path
+        self.schema_name = DBProjects.get_config_by_id(id=self.project)['name']
 
     @abstractmethod
     def set_config(self):

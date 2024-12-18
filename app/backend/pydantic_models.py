@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from pydantic import BaseModel, Field, model_validator
-from typing   import List
+from typing   import Optional
+
 
 # Cleaning functions
 def ensure_leading_slash(url: str) -> str:
@@ -31,21 +32,22 @@ class BaseModelWithStripping(BaseModel):
         return values
 
 class InfluxdbModel(BaseModelWithStripping):
-    id        : str
+    id        : Optional[int]
     name      : str
     url       : str
     org_id    : str
-    token     : str
-    timeout   : str
+    token     : Optional[int]
+    timeout   : int
     bucket    : str
     listener  : str
     tmz       : str = Field(default="UTC")
-    is_default: str
+    is_default: bool
 
 
 class GrafanaObjectModel(BaseModelWithStripping):
-    id     : str
-    content: str
+    id        : Optional[int]
+    content   : str
+    grafana_id: Optional[int]
 
     @model_validator(mode='before')
     def validate_content(cls, values):
@@ -54,90 +56,96 @@ class GrafanaObjectModel(BaseModelWithStripping):
         return values
 
 class GrafanaModel(BaseModelWithStripping):
-    id                 : str
+    id                 : Optional[int]
     name               : str
     server             : str
     org_id             : str
-    token              : str
+    token              : Optional[int]
     test_title         : str
     app                : str
     baseline_test_title: str
-    is_default         : str
+    is_default         : bool
     dashboards         : list[GrafanaObjectModel]
 
 
 class AzureWikiModel(BaseModelWithStripping):
-    id            : str
+    id            : Optional[int]
     name          : str
-    token         : str
+    token         : Optional[int]
     org_url       : str
     project_id    : str
     identifier    : str
     path_to_report: str
-    is_default    : str
+    is_default    : bool
 
 
 class AtlassianConfluenceModel(BaseModelWithStripping):
-    id        : str
+    id        : Optional[int]
     name      : str
     email     : str
-    token     : str
+    token     : Optional[int]
     token_type: str
     org_url   : str
     space_key : str
     parent_id : str
-    is_default: str
+    is_default: bool
 
 
 class AtlassianJiraModel(BaseModelWithStripping):
-    id        : str
+    id        : Optional[int]
     name      : str
     email     : str
-    token     : str
+    token     : Optional[int]
     token_type: str
     org_url   : str
     project_id: str
-    epic_field: str
-    epic_name : str
-    is_default: str
+    epic_field: Optional[str]
+    epic_name : Optional[str]
+    is_default: bool
+
+
+class SmtpMailObjectModel(BaseModelWithStripping):
+    id          : Optional[int]
+    email       : str
+    smtp_mail_id: Optional[int]
 
 
 class SmtpMailModel(BaseModelWithStripping):
-    id        : str
+    id        : Optional[int]
     name      : str
     server    : str
     port      : int
-    use_ssl   : str
-    use_tls   : str
+    use_ssl   : bool
+    use_tls   : bool
     username  : str
-    token     : str
-    is_default: str
-    recipients: list
+    token     : Optional[int]
+    is_default: bool
+    recipients: list[SmtpMailObjectModel]
 
 
 class AISupportModel(BaseModelWithStripping):
-    id            : str
+    id            : Optional[int]
     name          : str
     ai_provider   : str
-    azure_url     : str
-    api_version   : str
+    azure_url     : Optional[str]
+    api_version   : Optional[str]
     ai_text_model : str
     ai_image_model: str
-    token         : str
+    token         : Optional[int]
     temperature   : float
-    is_default    : str
+    is_default    : bool
 
 
 class GraphModel(BaseModelWithStripping):
-    id         : str
+    id         : Optional[int]
     name       : str
-    grafana_id : str
-    dash_id    : str
-    view_panel : str
-    width      : str
-    height     : str
-    custom_vars: str = Field(default="") ## This field should be added to all new fields
-    prompt_id  : str = Field(default="") ## This field should be added to all new fields
+    grafana_id : int
+    dash_id    : int
+    view_panel : int
+    width      : int
+    height     : int
+    custom_vars: Optional[str]
+    prompt_id  : Optional[int]
 
     @model_validator(mode='before')
     def migration(cls, values):
@@ -147,78 +155,87 @@ class GraphModel(BaseModelWithStripping):
 
 
 class TemplateObjectModel(BaseModelWithStripping):
-    id     : str
-    type   : str
-    content: str
+    id         : Optional[int] = Field(default=None)
+    type       : str
+    content    : Optional[str]
+    graph_id   : Optional[int]
+    template_id: Optional[int] = Field(default=None)
 
 
 class TemplateModel(BaseModelWithStripping):
-    id                       : str
+    id                       : Optional[int]
     name                     : str
-    nfr                      : str
+    nfr                      : Optional[int]
     title                    : str
     ai_switch                : bool
     ai_aggregated_data_switch: bool = Field(default=False)
     ai_graph_switch          : bool
     ai_to_graphs_switch      : bool
     nfrs_switch              : bool
-    template_prompt_id       : str
-    aggregated_prompt_id     : str
-    system_prompt_id         : str = Field(default="system_message") ## This field should be added to all new fields
+    template_prompt_id       : Optional[int]
+    aggregated_prompt_id     : Optional[int]
+    system_prompt_id         : Optional[int]
     data                     : list[TemplateObjectModel]
 
 
+class TemplateGroupObjectModel(BaseModelWithStripping):
+    id               : Optional[int] = Field(default=None)
+    type             : str
+    content          : Optional[str]
+    template_id      : Optional[int]
+    template_group_id: Optional[int] = Field(default=None)
+
+
+class TemplateGroupModel(BaseModelWithStripping):
+    id        : Optional[int]
+    name      : str
+    title     : str
+    ai_summary: bool
+    prompt_id : Optional[int]
+    data      : list[TemplateGroupObjectModel]
+
+
 class NFRObjectModel(BaseModelWithStripping):
+    id       : Optional[int] = Field(default=None)
     regex    : bool
     scope    : str
     metric   : str
     operation: str
     threshold: int
-    weight   : str
+    weight   : Optional[int]
+    nfr_id   : Optional[int] = Field(default=None)
 
 
 class NFRsModel(BaseModelWithStripping):
-    id  : str
+    id  : Optional[int]
     name: str
     rows: list[NFRObjectModel]
 
 
 class PromptModel(BaseModelWithStripping):
-    id    : str
-    type  : str
-    name  : str
-    place : str
-    prompt: str
-
-
-class TemplateGroupModel(BaseModelWithStripping):
-    id        : str
+    id        : Optional[int]
     name      : str
-    title     : str
-    ai_summary: bool
-    prompt_id : str
-    data      : list[TemplateObjectModel]
+    type      : str
+    place     : str
+    prompt    : str
+    project_id: Optional[int]
 
 
-class IntegrationsModel(BaseModelWithStripping):
-    influxdb            : List[InfluxdbModel] = Field(default_factory=list)
-    grafana             : List[GrafanaModel] = Field(default_factory=list)
-    azure               : List[AzureWikiModel] = Field(default_factory=list)
-    atlassian_confluence: List[AtlassianConfluenceModel] = Field(default_factory=list)
-    atlassian_jira      : List[AtlassianJiraModel] = Field(default_factory=list)
-    smtp_mail           : List[SmtpMailModel] = Field(default_factory=list)
-    ai_support          : List[AISupportModel] = Field(default_factory=list)
+class SecretsModel(BaseModelWithStripping):
+    id        : Optional[int]
+    key       : str
+    type      : str
+    value     : str
+    project_id: Optional[int]
 
 
-class ProjectObjectModel(BaseModelWithStripping):
-    integrations   : IntegrationsModel = Field(default_factory=IntegrationsModel)
-    graphs         : List[GraphModel] = Field(default_factory=list)
-    templates      : List[TemplateModel] = Field(default_factory=list)
-    nfrs           : List[NFRsModel] = Field(default_factory=list)
-    prompts        : List[PromptModel] = Field(default_factory=list)
-    template_groups: List[TemplateGroupModel] = Field(default_factory=list)
+class UsersModel(BaseModelWithStripping):
+    id      : Optional[int]
+    user    : str
+    password: str
+    is_admin: bool
+
 
 class ProjectModel(BaseModelWithStripping):
-    id  : str
+    id  : Optional[int]
     name: str
-    data: ProjectObjectModel = Field(default_factory=ProjectObjectModel)

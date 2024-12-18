@@ -15,16 +15,16 @@
 import traceback
 import logging
 
-from app                import app
-from app.backend        import pkg
-from app.backend.errors import ErrorMessages
-from flask              import render_template, request, url_for, redirect, flash
+from app                                         import app
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.errors                          import ErrorMessages
+from flask                                       import render_template, request, url_for, redirect, flash, jsonify
 
 
 @app.route('/choose-project', methods=['GET'])
 def choose_project():
     try:
-        projects = pkg.get_all_projects()
+        projects = DBProjects.get_configs()
         return render_template('home/choose-project.html', projects=projects)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -35,12 +35,14 @@ def choose_project():
 def set_project():
     try:
         project = request.args.get('project')
+
         if project is None:
-            projects = pkg.get_all_projects()
+            projects = DBProjects.get_configs()
             if projects:
                 project = projects[0]['id']
             else:
                 return redirect(url_for('choose_project'))
+
         res = redirect(url_for('index'))
         res.set_cookie(key='project', value=project, max_age=None)
     except Exception:
@@ -51,20 +53,19 @@ def set_project():
 @app.route('/get-projects', methods=['GET'])
 def get_projects():
     try:
-        projects = []
-        projects = pkg.get_all_projects()
+        project_configs = DBProjects.get_configs()
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00013.value, "error")
-    return {'projects': projects}
+    return jsonify({'projects': project_configs})
 
-@app.route('/save-project', methods=['GET'])
+@app.route('/save-project', methods=['POST'])
 def save_project():
     try:
-        project_name = request.args.get('project_name')
-        project      = pkg.save_new_project_config(project_name)
-        res          = redirect(url_for('index'))
-        res.set_cookie(key='project', value=project, max_age=None)
+        project_data   = request.get_json()
+        new_project_id = DBProjects.save(data=project_data)
+        res            = redirect(url_for('index'))
+        res.set_cookie(key='project', value=str(new_project_id), max_age=None)
         flash("The project was successfully added.", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -75,12 +76,14 @@ def save_project():
 def delete_project():
     try:
         project = request.args.get('project')
-        pkg.delete_project_config(project)
-        projects = pkg.get_all_projects()
+
+        DBProjects.delete(id=project)
+        projects = DBProjects.get_configs()
         if projects:
-            project = projects[0]['id']
+            project = str(projects[0]['id'])
         else:
             return redirect(url_for('choose_project'))
+
         res = redirect(url_for('index'))
         res.set_cookie(key='project', value=project, max_age=None)
     except Exception:

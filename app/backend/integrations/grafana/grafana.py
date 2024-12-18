@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import requests
 import logging
 import base64
 import traceback
 
-from app.backend.integrations.integration            import Integration
-from app.backend.integrations.grafana.grafana_config import GrafanaConfig
-from app.backend.components.graphs.graph_config      import GraphConfig
-from os                                              import path
+from app.backend.integrations.integration        import Integration
+from app.backend.integrations.grafana.grafana_db import DBGrafana
+from app.backend.components.secrets.secrets_db   import DBSecrets
 
 
 class Grafana(Integration):
@@ -34,24 +32,20 @@ class Grafana(Integration):
         return f'Integration id is {self.id}, url is {self.server}'
 
     def set_config(self, id):
-        if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
-            logging.warning("There is no config file.")
+        id     = id if id else DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
+        config = DBGrafana.get_config_by_id(schema_name=self.schema_name, id=id)
+        if config['id']:
+            self.id                  = config["id"]
+            self.name                = config["name"]
+            self.server              = config["server"]
+            self.org_id              = config["org_id"]
+            self.token               = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.test_title          = config["test_title"]
+            self.app                 = config["app"]
+            self.baseline_test_title = config["baseline_test_title"]
+            self.dashboards          = config["dashboards"]
         else:
-            id = id if id else GrafanaConfig.get_default_grafana_config_id(self.project)
-            config = GrafanaConfig.get_grafana_config_values(self.project, id, is_internal=True)
-            if "id" in config:
-                if config['id'] == id:
-                    self.id                  = config["id"]
-                    self.name                = config["name"]
-                    self.server              = config["server"]
-                    self.org_id              = config["org_id"]
-                    self.token               = config["token"]
-                    self.test_title          = config["test_title"]
-                    self.app                 = config["app"]
-                    self.baseline_test_title = config["baseline_test_title"]
-                    self.dashboards          = config["dashboards"]
-                else:
-                    raise Exception(f'No such config id: {id}')
+            logging.warning("There's no Grafana integration configured, or you're attempting to send a request from an unsupported location.")
 
     def get_grafana_link(self, start, end, test_name, dash_id = None):
         dashboard_content = next((dashboard['content'] for dashboard in self.dashboards if dashboard['id'] == dash_id), self.dashboards[0]['content'])
@@ -67,7 +61,7 @@ class Grafana(Integration):
 
     def encode_image(self, image):
         return base64.b64encode(image)
-    
+
     def add_custom_tags(self, url, graph_json):
         if "custom_vars" in graph_json:
             custom_vars = graph_json["custom_vars"]
@@ -81,25 +75,29 @@ class Grafana(Integration):
                 url += custom_vars
         return url
 
-    def render_image(self, graph_id, start, stop, test_name, run_id, baseline_run_id = None):
+    def render_image(self, graph_data, start, stop, test_name, run_id, baseline_run_id = None):
         image = None
-        if GraphConfig.check_graph_if_exist(self.project, graph_id):
-            graph_json = GraphConfig.get_graph_value_by_id(self.project, graph_id)
-            url        = self.get_grafana_link(start, stop, test_name, graph_json["dash_id"]) + "&panelId="+graph_json["view_panel"]+"&width="+graph_json["width"]+"&height="+graph_json["height"]+"&scale=3"
-            url = self.dash_id_to_render(url)
-            if baseline_run_id:
-                url = url+f'&var-{self.test_title}='+run_id+f'&var-{self.baseline_test_title}='+baseline_run_id
+        url = (
+            self.get_grafana_link(start, stop, test_name, graph_data["dash_id"])
+            + "&panelId=" + str(graph_data["view_panel"])
+            + "&width=" + str(graph_data["width"])
+            + "&height=" + str(graph_data["height"])
+            + "&scale=3"
+        )
+        url   = self.dash_id_to_render(url)
+        if baseline_run_id:
+            url = url+f'&var-{self.test_title}='+run_id+f'&var-{self.baseline_test_title}='+baseline_run_id
+        else:
+            url = url+f'&var-{self.test_title}='+run_id
+        url = self.add_custom_tags(url=url, graph_json=graph_data)
+        try:
+            response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180)
+            if response.status_code == 200:
+                image = response.content
             else:
-                url = url+f'&var-{self.test_title}='+run_id
-            url = self.add_custom_tags(url=url, graph_json=graph_json)
-            try:
-                response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180)
-                if response.status_code == 200:
-                    image = response.content
-                else:
-                    logging.info('ERROR: ' + response.content)
-            except Exception as er:
-                logging.warning("An error occurred: " + str(er))
-                err_info = traceback.format_exc()
-                logging.warning("Detailed error info: " + err_info)
+                logging.info('ERROR: ' + response.content)
+        except Exception as er:
+            logging.warning("An error occurred: " + str(er))
+            err_info = traceback.format_exc()
+            logging.warning("Detailed error info: " + err_info)
         return image

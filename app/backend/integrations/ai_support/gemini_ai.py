@@ -27,14 +27,15 @@ class GeminiAI:
             self.model_image       = genai.GenerativeModel(ai_image_model)
             self.generation_config = genai.types.GenerationConfig(
                 max_output_tokens = 2048,
-                temperature       = temperature)
+                temperature       = temperature
+            )
             self.input_tokens           = 0
             self.output_tokens          = 0
             self.list_of_graph_analysis = []
             self.models_created         = True  # Set flag to True if models are created successfully
         except Exception as er:
             logging.warning("An error occurred: " + str(er))
-            err_info = traceback.format_exc()  
+            err_info = traceback.format_exc()
             logging.warning("Detailed error info: " + err_info)
 
     def analyze_graph(self, graph, prompt):

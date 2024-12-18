@@ -12,14 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import traceback
-import logging
-
-from app                                    import app
-from app.backend.errors                     import ErrorMessages
-from app.backend.components.nfrs.nfr_config import NFRConfig
-from flask                                  import render_template, request, url_for, redirect, flash, jsonify
+from app                                     import app
 from app.backend.data_provider.data_provider import DataProvider
+from flask                                   import render_template, request, jsonify
 
 @app.route('/api/data')
 def get_data():

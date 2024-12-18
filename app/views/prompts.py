@@ -15,12 +15,11 @@
 import logging
 import traceback
 
-
-from app                                          import app
-from app.forms                                    import PromptForm
-from app.backend.errors                           import ErrorMessages
-from app.backend.components.prompts.prompt_config import PromptConfig
-from flask                                        import flash, redirect, request, url_for, render_template
+from app                                       import app
+from app.backend.components.prompts.prompts_db import DBPrompts
+from app.backend.errors                        import ErrorMessages
+from app.forms                                 import PromptForm
+from flask                                     import flash, redirect, request, url_for, render_template
 
 
 @app.route('/prompts', methods=['GET'])
@@ -28,8 +27,7 @@ def prompts():
     try:
         project          = request.cookies.get('project')
         form_for_prompts = PromptForm(request.form)
-        default_prompts  = PromptConfig.get_default_prompts()
-        custom_prompts   = PromptConfig.get_custom_prompts(project)
+        default_prompts, custom_prompts = DBPrompts.get_configs(project)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00016.value, "error")
@@ -39,27 +37,34 @@ def prompts():
 @app.route('/save-prompt', methods=['POST'])
 def save_prompt():
     try:
-        project    = request.cookies.get('project')
-        if request.method == "POST":
-            original_prompt_id = request.form.to_dict().get("id")
-            prompt_id          = PromptConfig.save_custom_prompt(project, request.form.to_dict())
-        if original_prompt_id == prompt_id:
+        project_id                = request.cookies.get('project')
+        prompt_data               = request.form.to_dict()
+        prompt_data['project_id'] = project_id if prompt_data['project_id'] == "project" else None
+
+        for key, value in prompt_data.items():
+            if value == '':
+                prompt_data[key] = None
+
+        if prompt_data['id']:
+            DBPrompts.update(data = prompt_data)
             flash("Custom prompt updated.", "info")
         else:
+            DBPrompts.save(data = prompt_data)
             flash("Custom prompt added.", "info")
+
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00017.value, "error")
         return redirect(url_for("index"))
+
     return redirect(url_for('prompts', type='custom'))
 
 @app.route('/delete-prompt', methods=['GET'])
 def delete_prompt():
     try:
-        project    = request.cookies.get('project')
         prompt_id  = request.args.get('prompt_id')
         if prompt_id is not None:
-            PromptConfig.delete_custom_prompt(project, prompt_id)
+            DBPrompts.delete(prompt_id)
             flash("Custom prompt deleted", "info")
     except Exception:
         logging.warning(str(traceback.format_exc()))
