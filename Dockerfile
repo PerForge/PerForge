@@ -1,15 +1,21 @@
 FROM python:3.10-slim
 
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Remove build dependencies
+RUN apt-get purge -y --auto-remove \
+    gcc \
+    build-essential
 
 COPY . .
 
