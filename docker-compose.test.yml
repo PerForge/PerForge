@@ -1,14 +1,17 @@
 version: '3'
 services:
   perforge:
-    image: perforge/perforge-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: perforge
     environment:
       DATABASE_URL: postgresql+psycopg2://perforgedbuser:perforgedbpass@timescaledb:5432/perforge
     ports:
       - "7878:7878"
-    volumes:
-      - perforge-conf:/app/app/data/
+    depends_on:
+      timescaledb:
+        condition: service_healthy
     networks:
       - perforge-net
     restart: always
@@ -22,15 +25,14 @@ services:
       POSTGRES_PASSWORD: perforgedbpass
     ports:
       - "5432:5432"
-    volumes:
-      - timescaledb-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "perforgedbuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - perforge-net
     restart: always
-
-volumes:
-  perforge-conf:
-  timescaledb-data:
 
 networks:
   perforge-net:
