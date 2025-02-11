@@ -73,11 +73,11 @@ jobs:
 
       - name: Shutdown Application Services
         if: always()
-        run: docker-compose -f docker-compose.app.yml down
+        run: docker compose -f docker-compose.app.yml down
 
       - name: Shutdown Integration Services
         if: always()
-        run: docker-compose -f docker-compose.integrations.yml down
+        run: docker compose -f docker-compose.integrations.yml down
 
       - name: Remove External Network
         if: always()
