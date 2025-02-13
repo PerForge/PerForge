@@ -70,13 +70,6 @@ jobs:
         run: |
           # Copy the test data into the influxdb container
           docker cp ./browser_tests/test_data/test_influxdb.lp influxdb:/tmp/test_influxdb.lp
-          
-          # Create org and bucket (if they don't exist)
-          docker exec influxdb influx org list -t $INFLUXDB_TOKEN | grep -q perforge || \ 
-          docker exec influxdb influx org create -n perforge -t $INFLUXDB_TOKEN
-
-          docker exec influxdb influx bucket list -t $INFLUXDB_TOKEN --org perforge | grep -q jmeter || \
-          docker exec influxdb influx bucket create -n jmeter --org perforge -t $INFLUXDB_TOKEN
 
           # Import data into InfluxDB
           docker exec influxdb influx write \
