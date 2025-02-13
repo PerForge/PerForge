@@ -242,7 +242,13 @@ class DataProvider:
         
         return result    
     
-    # def generate_summary(self):
+    def df_nan_to_zero(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Replace NaN values in the DataFrame with 0.
+        :param df: The input DataFrame.
+        :return: The DataFrame with NaN values replaced by 0.
+        """
+        return df.fillna(0)
         
     
     def get_test_results_and_analyze(self, test_title: str):
@@ -268,6 +274,10 @@ class DataProvider:
 
         # Fetch and merge the data for all standard metrics
         dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, current_start_time, current_end_time) for metric, details in standart_metrics.items()}
+        
+        # NaN values to 0
+        dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
+        
         merged_df = self.merge_dataframes(dataframes)
         
         # Analyze the data periods

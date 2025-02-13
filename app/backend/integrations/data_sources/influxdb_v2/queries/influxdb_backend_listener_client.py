@@ -236,9 +236,9 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "countError")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> filter(fn: (r) => r["transaction"] == "all")
+      |> filter(fn: (r) => r["transaction"] != "all")
       |> group(columns: ["_field"])
-      |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
+      |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
       |> set(key: "_field", value: "Errors Per Second")'''
 
   def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str) -> str:

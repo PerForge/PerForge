@@ -115,7 +115,7 @@ def generate_report():
                     influxdb_obj = InfluxdbV2(project=project, id=influxdb)
                     influxdb_obj._initialize_client()
                     for test in data["tests"]:
-                        result = influxdb_obj.delete_run_id(test["test_title"])
+                        result = influxdb_obj.delete_test_title(test["test_title"])
                 except:
                     logging.warning(str(traceback.format_exc()))
                     flash(ErrorMessages.ER00010.value, "error")
