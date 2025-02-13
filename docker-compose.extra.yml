@@ -15,7 +15,6 @@ services:
       - DOCKER_INFLUXDB_INIT_ORG=perforge
       - DOCKER_INFLUXDB_INIT_BUCKET=jmeter
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=DqwGq5e7Avv9gKYi2NtRtRenOxbvEqXMtg-r4WjNxYlerHMfikeLtCTJwSTzk-5NheVXTOFi0qug5jRGuh8-mw==
-      - DOCKER_INFLUXDB_INIT_RETENTION=180d
     networks:
       - perforge-net
     restart: always
