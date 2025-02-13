@@ -67,7 +67,7 @@ jobs:
           fi
 
       - name: Restore InfluxDB Test Data Set
-      - run: |
+        run: |
           # Copy the test data into the influxdb container
           docker cp ./browser_tests/test_data/test_influxdb.lp influxdb:/tmp/test_influxdb.lp
           
