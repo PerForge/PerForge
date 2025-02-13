@@ -90,11 +90,7 @@ jobs:
           docker cp ./browser_tests/test_data/test_influxdb.lp influxdb:/tmp/test_influxdb.lp
 
           # Import data into InfluxDB
-          docker exec influxdb influx write \
-            --bucket jmeter \
-            --file /tmp/test_influxdb.lp \
-            --org perforge \
-            --token $INFLUXDB_TOKEN
+          docker exec influxdb influx write --bucket jmeter --file /tmp/test_influxdb.lp --org perforge --token $INFLUXDB_TOKEN --compression gzip
 
       - name: Run Playwright Tests
         run: npx playwright test
