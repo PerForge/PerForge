@@ -65,6 +65,24 @@ jobs:
             echo "Perforge service did not start in time."
             exit 1
           fi
+ 
+          # Wait for InfluxDB service
+          for i in {1..30}; do
+            if curl -s http://localhost:8086/health; then
+              echo "InfluxDB service is up"
+              break
+            fi
+            echo "Waiting for InfluxDB service..."
+            sleep 5
+          done
+
+          if ! curl -s http://localhost:8086/health; then
+            echo "InfluxDB service did not start in time."
+            exit 1
+          fi
+
+      - name: List Running Containers
+        run: docker ps -a
 
       - name: Restore InfluxDB Test Data Set
         run: |
