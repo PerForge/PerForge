@@ -202,7 +202,7 @@ class DataProvider:
         :return: The ramp-up period, fixed-load period, and a boolean indicating if the test is a fixed load.
         """
         fixed_load_period, ramp_up_period = self.engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
-
+        
         ramp_up_period = self.engine.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
 
         is_fixed_load = self.engine.check_if_fixed_load(total_rows=len(merged_df), fixed_load_rows=len(fixed_load_period))
@@ -249,22 +249,37 @@ class DataProvider:
         :return: The DataFrame with NaN values replaced by 0.
         """
         return df.fillna(0)
-        
     
+    def df_delete_nan_rows(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Delete rows with NaN values in the DataFrame.
+        :param
+        df: The input DataFrame.
+        :return: The DataFrame with rows containing NaN values removed.
+        """
+        return df.dropna()
+        
     def get_test_results_and_analyze(self, test_title: str):
         """
         Retrieve test results from the internal database and perform analysis.
         :param test_title: The title of the test.
         :return: A tuple containing the result, analysis output, aggregated results, test details, statistics, and llm_response.
         """
-        self.engine  = AnomalyDetectionEngine(
-            {},
-            detectors=[
-                IsolationForestDetector(),
-                ZScoreDetector(),
-                MetricStabilityDetector(),
-                RampUpPeriodAnalyzer(threshold_condition=lambda x: x < self.engine.rolling_correlation_threshold, base_metric="overalUsers")
-            ]
+        # Initialize detectors with configuration
+        detectors = [
+            IsolationForestDetector(),
+            ZScoreDetector(),
+            MetricStabilityDetector(),
+            RampUpPeriodAnalyzer(
+                threshold_condition=lambda x: x < self.engine.rolling_correlation_threshold,
+                base_metric="overalUsers"
+            )
+        ]
+        
+        # Initialize engine with detectors
+        self.engine = AnomalyDetectionEngine(
+            params={},  # You can pass custom parameters here
+            detectors=detectors
         )
         
         current_start_time = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
@@ -279,6 +294,8 @@ class DataProvider:
         dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
         
         merged_df = self.merge_dataframes(dataframes)
+        
+        merged_df = self.df_delete_nan_rows(merged_df)
         
         # Analyze the data periods
         ramp_up_period, fixed_load_period, is_fixed_load = self.analyze_data_periods(merged_df, test_title, current_start_time, current_end_time)
