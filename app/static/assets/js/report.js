@@ -43,10 +43,13 @@ function handleFetchedData(data) {
         analysis: analysisData,
         aggregated_results: aggregatedResults,
         test_details: testDetails,
-        statistics
+        statistics,
+        summary,
+        performance_status
     } = data;
 
     updateTestDetails(testDetails);
+    updatePerformanceCard(summary, performance_status);
     updateCards(aggregatedResults);
     updateTable(statistics);
     updateAnalysisTable(analysisData);
@@ -61,6 +64,16 @@ function updateTestDetails(testDetails) {
     document.getElementById('startTimeDetail').innerText = testDetails.start_time;
     document.getElementById('endTimeDetail').innerText = testDetails.end_time;
     document.getElementById('durationDetail').innerText = testDetails.duration;
+}
+
+function updatePerformanceCard(summary, performanceStatus) {
+    const card = document.querySelector('.card[style*="border-left"]');
+    const summaryElement = card.querySelector('#summaryCard');
+    
+    const color = performanceStatus ? '#02d051' : '#ffc107';
+    
+    card.style.borderLeft = `4px solid ${color}`;
+    summaryElement.innerHTML = summary; // Changed from textContent to innerHTML
 }
 
 function updateCards(aggregatedResults) {

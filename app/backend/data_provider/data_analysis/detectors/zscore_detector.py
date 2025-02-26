@@ -1,10 +1,13 @@
 from .base import BaseDetector
 import pandas as pd
-import numpy as np
-from scipy import stats
 from typing import Literal
 
 class ZScoreDetector(BaseDetector):
+    """
+    Anomaly detector using Z-Score method combined with median validation.
+    Detects outliers based on both statistical deviation (Z-Score) and
+    median-based threshold validation.
+    """
     def __init__(self):
         self._type = 'fixed_load'
         self._name = 'Z-Score'
@@ -17,16 +20,72 @@ class ZScoreDetector(BaseDetector):
     def name(self) -> str:
         return self._name
 
-    def detect(self, df: pd.DataFrame, metric: str, engine) -> pd.DataFrame:
-        df = df.copy()
-        df[f'{metric}_z_score'] = (df[metric] - df[metric].mean()) / df[metric].std()
-        df[f'{metric}_anomaly_z_score'] = df[f'{metric}_z_score'].apply(lambda x: -1 if abs(x) > engine.z_score_threshold else 1)
+    def validate_with_median(self, df: pd.DataFrame, metric: str) -> pd.DataFrame:
+        """
+        Validates data points against the median value.
+        
+        Args:
+            df: Input DataFrame containing the metric
+            metric: Name of the metric column to validate
+            
+        Returns:
+            DataFrame with added median validation column
+        """
+        median = df[metric].median()
+        threshold = 0.10  # 10% threshold for median deviation
+        
+        def is_anomaly(value):
+            # Calculate percentage difference from median
+            diff_percentage = abs(value - median) / median
+            return -1 if diff_percentage > threshold else 1
+            
+        df[f'{metric}_median_valid'] = df[metric].apply(is_anomaly)
+        return df
 
-        # Ensure the first and last points are not detected as anomalies
+    def detect(self, df: pd.DataFrame, metric: str, engine) -> pd.DataFrame:
+        """
+        Detects anomalies using combined Z-Score and median validation approach.
+        
+        Args:
+            df: Input DataFrame containing the metric
+            metric: Name of the metric column to analyze
+            engine: Analysis engine providing configuration and utility methods
+            
+        Returns:
+            DataFrame with detected anomalies
+        """
+        df = df.copy()
+        
+        # Step 1: Z-Score calculation and anomaly detection
+        df[f'{metric}_z_score'] = (df[metric] - df[metric].mean()) / df[metric].std()
+        df[f'{metric}_anomaly_z_score'] = df[f'{metric}_z_score'].apply(
+            lambda x: -1 if abs(x) > engine.z_score_threshold else 1
+        )
+
+        # Step 2: Apply median-based validation
+        df = self.validate_with_median(df, metric)
+        
+        # Step 3: Combine both detection methods
+        # Point is anomalous only if both methods agree
+        df[f'{metric}_anomaly_z_score'] = df.apply(
+            lambda row: -1 if row[f'{metric}_anomaly_z_score'] == -1 and 
+                            row[f'{metric}_median_valid'] == -1 else 1,
+            axis=1
+        )
+
+        # Step 4: Ensure endpoints are not marked as anomalies
         df.iloc[0, df.columns.get_loc(f'{metric}_anomaly_z_score')] = 1
         df.iloc[-1, df.columns.get_loc(f'{metric}_anomaly_z_score')] = 1
 
-        df = engine.update_anomaly_status(df=df, metric=metric, anomaly_metric=f'{metric}_anomaly_z_score', method='z_score')
-        engine.delete_columns(df=df, columns=[f'{metric}_anomaly_z_score', f'{metric}_z_score'])
-        # engine.collect_anomalies(df=df, metric=metric, anomaly_cl=f'{metric}_anomaly', period="fixed-load", method="z_score")
+        # Step 5: Update final anomaly status and cleanup
+        df = engine.update_anomaly_status(
+            df=df, 
+            metric=metric, 
+            anomaly_metric=f'{metric}_anomaly_z_score', 
+            method='z_score'
+        )
+        engine.delete_columns(
+            df=df, 
+            columns=[f'{metric}_anomaly_z_score', f'{metric}_z_score', f'{metric}_median_valid']
+        )
         return df

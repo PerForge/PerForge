@@ -21,14 +21,15 @@ def get_data():
     project = request.cookies.get('project')
     dp = DataProvider(project=project)
     test_title = request.args.get('test_title')
-    test_data, analysis, aggregated_results, test_details, statistics, llm_response = dp.get_test_results_and_analyze(test_title=test_title)
+    test_data, analysis, aggregated_results, test_details, statistics, summary, performance_status = dp.get_test_results_and_analyze(test_title=test_title)
     response = {
         'data': test_data,
         'analysis': analysis,
         'aggregated_results': aggregated_results,
         'test_details': test_details,
         'statistics': statistics,
-        'llm_response': llm_response,
+        'summary': summary,
+        'performance_status':performance_status,
         'styling': {
             'paper_bgcolor': 'rgba(0,0,0,0)',  # Transparent background
             'plot_bgcolor': 'rgba(0,0,0,0)',   # Transparent background

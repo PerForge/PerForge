@@ -5,8 +5,15 @@ from typing import List, Dict, Any, Literal
 import logging
 from app.backend.errors import ErrorMessages
 from .detectors.base import BaseDetector
+from collections import defaultdict
 
 class AnomalyDetectionEngine:
+    """
+    A class for detecting anomalies in time-series data.
+    
+    This engine supports multiple detection methods and can process various metrics
+    to identify anomalous behavior in the data.
+    """
     def __init__(self, params: Dict[str, Any], detectors: List[BaseDetector] = None):
         """
         Initialize the Anomaly Detection Engine
@@ -23,12 +30,14 @@ class AnomalyDetectionEngine:
             'contamination': 0.001,
             'isf_threshold': 0.1,
             'isf_feature_metric': 'overalThroughput',
-            'z_score_threshold': 4,
+            'z_score_threshold': 3,
             'rolling_window': 5,
             'rolling_correlation_threshold': 0.4,
             'fixed_load_percentage': 60,
-            'slope_threshold': 0.015,
-            'p_value_threshold': 0.15
+            'slope_threshold': 1.000,
+            'p_value_threshold': 0.05,
+            'numpy_var_threshold': 0.003,
+            'cv_threshold': 0.07
         }
         
         # Validate and update parameters
@@ -81,6 +90,34 @@ class AnomalyDetectionEngine:
         scaler = MinMaxScaler()
         df[columns] = scaler.fit_transform(df[columns])
         return df
+    
+    def normalize_metric(self, df, metric: str):
+        """
+        Normalize a specific metric column by setting min=0 and max=1
+        
+        Args:
+            df: Input DataFrame or numpy array
+            metric: Name of the column (for DataFrame) or None (for numpy array)
+            
+        Returns:
+            DataFrame or numpy array with normalized values (min=0, max=1)
+        """
+        if isinstance(df, pd.DataFrame):
+            if metric not in df.columns:
+                logging.error(f"Column {metric} not found in DataFrame")
+                return df
+                
+            df = df.copy()
+            max_val = df[metric].max()
+            df[metric] = df[metric] / max_val if max_val != 0 else df[metric]
+            return df
+            
+        elif isinstance(df, np.ndarray):
+            max_val = np.max(df)
+            return df / max_val if max_val != 0 else df
+        else:
+            logging.error(f"Input type {type(df)} not supported. Must be DataFrame or numpy array")
+            return df
 
     def delete_columns(self, df, columns):
         df.drop(columns=columns, inplace=True)
@@ -97,50 +134,131 @@ class AnomalyDetectionEngine:
                     self.collect_anomalies(merged_df, metric_col, col)
 
     def collect_anomalies(self, df, metric, anomaly_cl):
-        anomaly_started = False
-        start_time = None
-        end_time = None
-        prev_normal_value = None
-        post_anomaly_value = None
-        anomalies_detected = False
-        anomaly_values = []
-        buffer_period = 5
-        buffer_counter = 0
-        current_methods = set()
+        """
+        Collect and analyze anomalies in the time series data.
+        
+        Args:
+            df (DataFrame): Input dataframe containing time series data
+            metric (str): Name of the metric column to analyze
+            anomaly_cl (str): Name of the column containing anomaly flags
+            
+        The method tracks consecutive anomalies and combines them into single events
+        when they occur close to each other (within the buffer_size window).
+        """
+        def format_time_range(start, end):
+            """Format the time range for anomaly description.
+            
+            Returns only time if start and end dates are the same,
+            otherwise returns full datetime.
+            """
+            start_date = start.strftime('%Y-%m-%d')
+            end_date = end.strftime('%Y-%m-%d')
+            
+            if start_date == end_date:
+                return (f"{start.strftime('%H:%M:%S')} to "
+                       f"{end.strftime('%H:%M:%S')}")
+            else:
+                return (f"{start.strftime('%Y-%m-%d %H:%M:%S')} to "
+                       f"{end.strftime('%Y-%m-%d %H:%M:%S')}")
 
+        # Initialize tracking variables
+        anomaly_started = False  # Flag to track if we're currently in an anomaly period
+        start_time = None        # Start time of current anomaly
+        end_time = None         # End time of current anomaly
+        baseline_value = None    # Reference value for comparison
+        anomalies_detected = False  # Flag to track if any anomalies were found
+        anomaly_values = []      # Values during anomaly period
+        buffer_size = 3         # Number of normal points needed to confirm anomaly end
+        normal_points_buffer = []  # Buffer for tracking return to normal
+        current_methods = set()   # Set of detection methods that identified the anomaly
+
+        def calculate_baseline(series, window=3):
+            """Calculate baseline value using rolling mean."""
+            return series.rolling(window=window, min_periods=1).mean().iloc[0]
+
+        # Process each data point
         for index, row in df.iterrows():
-            if 'Anomaly' in str(row[anomaly_cl]) and 'potential saturation point' not in str(row[anomaly_cl]):
+            current_value = row[metric]
+            is_anomaly = 'Anomaly' in str(row[anomaly_cl]) and 'potential saturation point' not in str(row[anomaly_cl])
+
+            if is_anomaly:
+                # Extract detection methods from anomaly flag
                 methods = set(row[anomaly_cl].replace('Anomaly: ', '').split(', '))
                 current_methods.update(methods)
+                
                 if not anomaly_started:
+                    # Start of new anomaly period
                     anomaly_started = True
                     start_time = index
-                    anomalies_detected = True
-                    anomaly_values = [row[metric]]
-                    if prev_normal_value is None and df.index.get_loc(index) > 0:
-                        prev_index = df.index[df.index.get_loc(index) - 1]
-                        prev_normal_value = df.at[prev_index, metric]
-                else:
-                    anomaly_values.append(row[metric])
+                    # Calculate baseline from previous normal points
+                    prev_idx = df.index.get_loc(index)
+                    if prev_idx > 0:
+                        prev_values = df[metric].iloc[max(0, prev_idx-3):prev_idx]
+                        baseline_value = calculate_baseline(prev_values)
+                    else:
+                        baseline_value = current_value
+                    
+                anomaly_values.append(current_value)
                 end_time = index
-                buffer_counter = 0  # Reset buffer counter when an anomaly is found
+                normal_points_buffer = []  # Reset buffer
+                anomalies_detected = True
             else:
                 if anomaly_started:
-                    buffer_counter += 1
-                    if buffer_counter > buffer_period:
-                        prev_normal_value = row[metric]
-                        self._append_anomaly_result(metric, ', '.join(current_methods), start_time, end_time, prev_normal_value, post_anomaly_value, anomaly_values)
+                    # Track potential end of anomaly period
+                    normal_points_buffer.append(current_value)
+                    if len(normal_points_buffer) >= buffer_size:
+                        # Confirm end of anomaly period
+                        if anomaly_values:
+                            # Calculate anomaly characteristics
+                            max_val = max(anomaly_values)
+                            min_val = min(anomaly_values)
+                            is_increase = max_val > baseline_value
+                            significant_value = max_val if is_increase else min_val
+                            
+                            # Generate description
+                            description = (
+                                f"An anomaly was detected in {metric} from "
+                                f"{format_time_range(start_time, end_time)}, "
+                                f"with the metric {'increasing' if is_increase else 'dropping'} "
+                                f"to {significant_value:.2f}."
+                            )
+                            
+                            # Record the anomaly
+                            self.output.append({
+                                'status': 'failed',
+                                'method': ', '.join(current_methods),
+                                'description': description,
+                                'value': significant_value
+                            })
+                            
+                        # Reset tracking variables
                         anomaly_started = False
-                        buffer_counter = 0
+                        anomaly_values = []
                         current_methods.clear()
-                    else:
-                        anomaly_values.append(row[metric])
-                else:
-                    prev_normal_value = row[metric]
+                        normal_points_buffer = []
 
-        if anomaly_started:
-            self._append_anomaly_result(metric, ', '.join(current_methods), start_time, end_time, prev_normal_value, post_anomaly_value, anomaly_values)
+        # Handle case where anomaly continues until end of data
+        if anomaly_started and anomaly_values:
+            max_val = max(anomaly_values)
+            min_val = min(anomaly_values)
+            is_increase = max_val > baseline_value
+            significant_value = max_val if is_increase else min_val
+            
+            description = (
+                f"An anomaly was detected in {metric} from "
+                f"{format_time_range(start_time, end_time)}, "
+                f"with the metric {'increasing' if is_increase else 'dropping'} "
+                f"to {significant_value:.2f}."
+            )
+            
+            self.output.append({
+                'status': 'failed',
+                'method': ', '.join(current_methods),
+                'description': description,
+                'value': significant_value
+            })
 
+        # Record if no anomalies were detected
         if not anomalies_detected:
             self.output.append({
                 'status': 'passed',
