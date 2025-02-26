@@ -35,9 +35,10 @@
                                             <span class="fas fa-search search-box-icon"></span>
                                         </div>
                                     </div>
-                                    <select class="form-select ms-2" id="influxdbId">
+                                    <select class="form-select ms-2" id="dataSourceId">
+                                        <option value='{"source_type": "timescaledb", "id": null}'>TimescaleDB</option>
                                         {% for influxdb in influxdb_configs %}
-                                            <option value="{{ influxdb.id }}">{{ influxdb.name }}</option>
+                                            <option value='{"source_type": "influxdb_v2", "id": "{{ influxdb.id }}"}'>{{ influxdb.name }}</option>
                                         {% endfor %}
                                     </select>
                                     <select class="form-select ms-2" id="selectedAction">
@@ -142,8 +143,8 @@
         <script>
             $(document).ready(function(){
 
-                const influxdb_select = document.getElementById("influxdbId");
-                influxdb_select.addEventListener("change", loadData);
+                const dataSource_select = document.getElementById("dataSourceId");
+                dataSource_select.addEventListener("change", loadData);
 
                 const templates = JSON.parse('{{ templates | tojson }}');
                 if (!templates){
@@ -153,10 +154,14 @@
                 loadData();
 
                 function loadData(){
-                    var influxdb = $("#influxdbId").val();
+                    var dataSource = $("#dataSourceId").val();
+                    const dataSourceJson = JSON.parse(dataSource);
+                    const sourceType = encodeURIComponent(dataSourceJson.source_type);
+                    const id = encodeURIComponent(dataSourceJson.id);
+                    const queryString = `source_type=${sourceType}&id=${id}`;
                     $("#spinner").show()
                     perforge.utils
-                        .sendGetRequest('/load_tests?influxdb=' + influxdb)
+                        .sendGetRequest(`/load_tests?${queryString}`)
                         .then((data) => {
                             if(data.status === 'success'){
                                 updateTable(data.tests);

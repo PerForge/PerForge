@@ -15,11 +15,12 @@
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.data_provider.data_analysis.detectors import (
-    IsolationForestDetector, 
-    ZScoreDetector, 
-    MetricStabilityDetector, 
+    IsolationForestDetector,
+    ZScoreDetector,
+    MetricStabilityDetector,
     RampUpPeriodAnalyzer
 )
+from app.backend.integrations.data_sources.timescaledb.timescaledb_extraction import TimeScaleDB
 
 import pandas as pd
 from collections import defaultdict
@@ -28,11 +29,11 @@ from typing import List, Dict, Any, Tuple, Optional
 class DataProvider:
     """
     DataProvider class manages data extraction, transformation, and analysis for performance tests.
-    
+
     This class serves as a bridge between data sources (like InfluxDB) and the application,
     providing methods to fetch, analyze, and format performance test data. It includes
     functionality for anomaly detection, trend analysis, and performance metrics aggregation.
-    
+
     Attributes:
         class_map (Dict[str, Any]): Mapping of data source types to their implementation classes
         project: Project configuration object
@@ -40,22 +41,23 @@ class DataProvider:
         test_type (Optional[str]): Type of the test (fixed load or ramp up)
         Various time and metric attributes for caching test data
     """
-    
+
     class_map = {
-        "influxdb_v2": InfluxdbV2
+        "influxdb_v2": InfluxdbV2,
+        "timescaledb": TimeScaleDB
     }
-    
-    def __init__(self, project: Any, id: Optional[str] = None) -> None:
+
+    def __init__(self, project: Any, source_type: Any, id: Optional[str] = None) -> None:
         """
         Initialize the DataProvider with project settings and optional ID.
-        
+
         Args:
             project: Project configuration object
+            source_type: Type of the data source (e.g. InfluxDB, TimeScaleDB)
             id: Optional identifier for the data source
         """
         self.project = project
-        self.ds_obj = self.class_map.get("influxdb_v2", None)(project=self.project, id=id)
-        
+        self.ds_obj = self.class_map.get(source_type, None)(project=self.project, id=id)
         # Initialize cache attributes
         self.start_time_human = None
         self.end_time_human = None
@@ -97,7 +99,7 @@ class DataProvider:
     def collect_test_data(self, test_title: str) -> None:
         """
         Collect and cache all test-related data.
-        
+
         Args:
             test_title: The title/name of the test to collect data for
         """
@@ -132,7 +134,7 @@ class DataProvider:
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:
         """
         Initialize and return the standard metrics configuration.
-        
+
         Returns:
             Dictionary containing metric configurations with their functions and analysis settings
         """
@@ -149,19 +151,19 @@ class DataProvider:
     def transform_to_json(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Transform time series data to JSON format.
-        
+
         Args:
             result: List of dictionaries with transaction data
-            
+
         Returns:
             List of dictionaries with formatted data points
         """
         grouped_records = defaultdict(list)
-        
+
         for entry in result:
             transaction = entry['transaction']
             df = entry['data']
-            
+
             for timestamp, row in df.iterrows():
                 value = row['value']
                 grouped_records[transaction].append({
@@ -169,22 +171,22 @@ class DataProvider:
                     'value': value,
                     'anomaly': 'Normal'
                 })
-        
+
         json_result = [{'name': transaction, 'data': data} for transaction, data in grouped_records.items()]
-        
+
         return json_result
 
     def fetch_metric(self, metric: str, func: Any, test_title: str, start: str, end: str) -> pd.DataFrame:
         """
         Fetch a specific metric using the provided function.
-        
+
         Args:
             metric: Name of the metric
             func: Function to fetch the data
             test_title: Test title/name
             start: Start time in ISO format
             end: End time in ISO format
-            
+
         Returns:
             DataFrame with renamed value column
         """
@@ -195,10 +197,10 @@ class DataProvider:
     def merge_dataframes(self, dataframes: Dict[str, pd.DataFrame]) -> pd.DataFrame:
         """
         Merge multiple DataFrames into a single DataFrame.
-        
+
         Args:
             dataframes: Dictionary of DataFrames to merge
-            
+
         Returns:
             Merged DataFrame sorted by index
         """
@@ -208,28 +210,28 @@ class DataProvider:
     def df_nan_to_zero(self, df: pd.DataFrame) -> pd.DataFrame:
         """Replace NaN values with 0."""
         return df.fillna(0)
-    
+
     def df_delete_nan_rows(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove rows containing NaN values."""
         return df.dropna()
 
     # Analysis methods
-    def analyze_data_periods(self, merged_df: pd.DataFrame, test_title: str, 
+    def analyze_data_periods(self, merged_df: pd.DataFrame, test_title: str,
                            start: str, end: str) -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         """
         Analyze test data periods for anomalies and patterns.
-        
+
         Args:
             merged_df: DataFrame containing all metrics
             test_title: Test title/name
             start: Start time in ISO format
             end: End time in ISO format
-            
+
         Returns:
             Tuple containing ramp-up period data, fixed-load period data, and is_fixed_load flag
         """
         fixed_load_period, ramp_up_period = self.engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
-        
+
         ramp_up_period = self.engine.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
 
         is_fixed_load = self.engine.check_if_fixed_load(total_rows=len(merged_df), fixed_load_rows=len(fixed_load_period))
@@ -242,7 +244,7 @@ class DataProvider:
             self.test_type = "ramp up"
 
         return ramp_up_period, fixed_load_period, is_fixed_load
-    
+
     def prepare_final_result(self, merged_df: pd.DataFrame, standart_metrics: Dict[str, Dict[str, Any]]):
         """
         Prepare the final result dictionary from the merged DataFrame.
@@ -255,12 +257,12 @@ class DataProvider:
         for col in merged_df.columns:
             if '_anomaly' not in col:
                 anomaly_col = col + '_anomaly'
-                
+
                 result[col] = {
                     'name': standart_metrics[col]['name'],
                     'data': []
                 }
-                
+
                 for timestamp, row in merged_df.iterrows():
                     anomaly_value = row[anomaly_col] if anomaly_col in row and pd.notna(row[anomaly_col]) else 'Normal'
                     value = row[col] if pd.notna(row[col]) else 0.0
@@ -269,17 +271,17 @@ class DataProvider:
                         'value': value,
                         'anomaly': anomaly_value
                     })
-        
-        return result    
+
+        return result
 
     def create_html_summary(self, test_type: str, analysis_output: List[Dict[str, Any]]) -> Tuple[str, bool]:
         """
         Create HTML summary of test analysis results.
-        
+
         Args:
             test_type: Type of the test (fixed load or ramp up)
             analysis_output: List of analysis results
-            
+
         Returns:
             Tuple containing HTML formatted summary and performance status
         """
@@ -290,7 +292,7 @@ class DataProvider:
         ramp_up_status = None
         saturation_point = None
         performance_status = True  # Start with assumption that performance is good
-        
+
         for check in analysis_output:
             if check['method'] == 'rolling_correlation':
                 if 'Tipping point was reached' in check.get('description', ''):
@@ -307,10 +309,10 @@ class DataProvider:
 
         # Generate HTML summary
         html_parts = []
-        
+
         # Test type and overall status
         html_parts.append(f"<p>Test type: <strong>{test_type}</strong></p>")
-        
+
         # Ramp-up analysis
         if test_type.lower() == "ramp up":
             if saturation_point:
@@ -328,7 +330,7 @@ class DataProvider:
                 html_parts.append(f"<li>{issue}</li>")
             html_parts.append("</ul>")
             html_parts.append("</div>")
-        
+
         # Anomalies summary
         if metric_anomaly_counts:
             html_parts.append("<div class='anomalies'>")
@@ -341,31 +343,31 @@ class DataProvider:
                 )
             html_parts.append("</ul>")
             html_parts.append("</div>")
-        
+
         if not failed_checks:
             html_parts.append("<p>✅ No issues were detected during the test execution.</p>")
-        
+
         return "\n".join(html_parts), performance_status
 
     def get_aggregated_metrics(self, test_title: str) -> Dict[str, Any]:
         """
         Retrieve aggregated metrics from the test data.
-        
+
         This method collects key performance metrics including:
         - Maximum number of virtual users (VU)
         - Median throughput
         - Median response time
         - 90th percentile response time
         - Error percentage
-        
+
         Args:
             test_title: The title/name of the test to analyze
-            
+
         Returns:
             Dictionary containing aggregated metrics with their values
         """
         self.collect_test_data(test_title=test_title)
-        
+
         aggregated_results = {
             "vu": self.max_active_users,
             "throughput": self.median_throughput,
@@ -374,24 +376,24 @@ class DataProvider:
             "errors": f'{str(self.errors_pct_stats)}%'
         }
         return aggregated_results
-    
+
     def get_test_details(self, test_title: str) -> Dict[str, str]:
         """
         Retrieve basic test execution details.
-        
+
         This method collects basic test information including:
         - Start time (human readable)
         - End time (human readable)
         - Test duration in seconds
-        
+
         Args:
             test_title: The title/name of the test
-            
+
         Returns:
             Dictionary containing test execution details
         """
         self.collect_test_data(test_title=test_title)
-        
+
         test_details = {
             "start_time": self.start_time_human,
             "end_time": self.end_time_human,
@@ -403,10 +405,10 @@ class DataProvider:
     def get_test_results_and_analyze(self, test_title: str) -> Tuple[Dict, List, Dict, Dict, Dict, str, bool]:
         """
         Main method to retrieve and analyze test results.
-        
+
         Args:
             test_title: The title/name of the test to analyze
-            
+
         Returns:
             Tuple containing:
             - result: Processed test data
@@ -427,13 +429,13 @@ class DataProvider:
                 base_metric="overalUsers"
             )
         ]
-        
+
         # Initialize engine with detectors
         self.engine = AnomalyDetectionEngine(
             params={},  # You can pass custom parameters here
             detectors=detectors
         )
-        
+
         current_start_time = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
         current_end_time = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
 
@@ -441,14 +443,14 @@ class DataProvider:
 
         # Fetch and merge the data for all standard metrics
         dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, current_start_time, current_end_time) for metric, details in standart_metrics.items()}
-        
+
         # NaN values to 0
         dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
-        
+
         merged_df = self.merge_dataframes(dataframes)
-        
+
         merged_df = self.df_delete_nan_rows(merged_df)
-        
+
         # Analyze the data periods
         ramp_up_period, fixed_load_period, is_fixed_load = self.analyze_data_periods(merged_df, test_title, current_start_time, current_end_time)
 
@@ -458,10 +460,10 @@ class DataProvider:
 
         # Merge ramp-up and fixed-load periods back into a single DataFrame
         merged_df = pd.concat([ramp_up_period, fixed_load_period], axis=0)
-        
+
         # Prepare the final result
         result = self.prepare_final_result(merged_df, standart_metrics)
-        
+
         # Fetch additional response time per request data
         avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
         result["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
@@ -474,7 +476,7 @@ class DataProvider:
 
         if is_fixed_load:
             self.engine.process_anomalies(merged_df)
-        
+
         # Collect the outputs
         analysis_output = self.engine.output
         aggregated_results = self.get_aggregated_metrics(test_title=test_title)

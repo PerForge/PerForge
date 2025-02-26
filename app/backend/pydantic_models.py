@@ -14,6 +14,7 @@
 
 from pydantic import BaseModel, Field, model_validator
 from typing   import Optional
+from datetime import datetime
 
 
 # Cleaning functions
@@ -30,6 +31,16 @@ class BaseModelWithStripping(BaseModel):
                     value = value.rstrip('/')
                 values[field_name] = value
         return values
+
+class TestMetadataModel(BaseModelWithStripping):
+    test_title : str
+    application: str
+    tool       : str
+    start_time : datetime
+    end_time   : datetime
+    duration   : int
+    max_threads: float
+
 
 class InfluxdbModel(BaseModelWithStripping):
     id        : Optional[int]
