@@ -29,6 +29,7 @@ from app.backend.integrations.atlassian_confluence.atlassian_confluence_db impor
 from app.backend.integrations.atlassian_jira.atlassian_jira_db             import DBAtlassianJira
 from app.backend.integrations.azure_wiki.azure_wiki_db                     import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db                           import DBGrafana, DBGrafanaDashboards
+from app.backend.integrations.data_sources.timescaledb.timescaledb_test_metadata_db         import DBTestMetadata
 from app.backend.pydantic_models                                           import ProjectModel
 from sqlalchemy                                                            import text, MetaData
 from itertools                                                             import chain
@@ -91,7 +92,8 @@ class DBProjects(db.Model):
             DBTemplateGroups.__table__,
             DBTemplateGroupData.__table__,
             DBTemplates.__table__,
-            DBTemplateData.__table__
+            DBTemplateData.__table__,
+            DBTestMetadata.__table__
         ]
 
         for table in tables:

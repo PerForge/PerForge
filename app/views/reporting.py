@@ -51,10 +51,11 @@ def get_tests():
 @app.route('/load_tests', methods=['GET'])
 def load_tests():
     try:
-        project  = request.cookies.get('project')
-        influxdb = request.args.get('influxdb')
-        ds_obj   = DataProvider(project=project, id=influxdb)
-        tests    = ds_obj.get_test_log()
+        project     = request.cookies.get('project')
+        source_type = request.args.get('source_type')
+        id          = request.args.get('id')
+        ds_obj      = DataProvider(project=project, source_type=source_type, id=id)
+        tests       = ds_obj.get_test_log()
         return jsonify(status="success", tests=tests)
     except Exception:
         logging.warning(str(traceback.format_exc()))
