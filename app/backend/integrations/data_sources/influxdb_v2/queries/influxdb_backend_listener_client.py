@@ -22,34 +22,33 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> filter(fn: (r) => r["_field"] == "maxAT")
       |> aggregateWindow(every: 1m, fn: last, createEmpty: false)
 
-    maxThreads = data
+    max_threads = data
       |> keep(columns: ["_value", "testTitle", "application"])
       |> max()
       |> group(columns: ["_value", "testTitle", "application"])
-      |> rename(columns: {{_value: "maxThreads"}})
+      |> rename(columns: {{_value: "max_threads"}})
 
-    endTime = data 
+    end_time = data 
       |> max(column: "_time")
       |> keep(columns: ["_time", "testTitle", "application"])
       |> group(columns: ["_time", "testTitle", "application"])
-      |> rename(columns: {{_time: "endTime"}})
+      |> rename(columns: {{_time: "end_time"}})
 
-    startTime = data 
+    start_time = data 
       |> min(column: "_time")
       |> keep(columns: ["_time", "testTitle", "application"])
       |> group(columns: ["_time", "testTitle", "application"])
-      |> rename(columns: {{_time: "startTime"}})
+      |> rename(columns: {{_time: "start_time"}})
 
-    join1 = join(tables: {{d1: maxThreads, d2: startTime}}, on: ["testTitle", "application"])
-      |> keep(columns: ["startTime","testTitle", "application",  "maxThreads"])
+    join1 = join(tables: {{d1: max_threads, d2: start_time}}, on: ["testTitle", "application"])
+      |> keep(columns: ["start_time","testTitle", "application",  "max_threads"])
       |> group(columns: ["testTitle", "application"])
 
-    join(tables: {{d1: join1, d2: endTime}}, on: ["testTitle", "application"])
-      |> map(fn: (r) => ({{ r with duration: (int(v: r.endTime)/1000000000 - int(v: r.startTime)/1000000000)}}))
-      |> keep(columns: ["startTime","endTime","testTitle", "application", "maxThreads", "duration"])
+    join(tables: {{d1: join1, d2: end_time}}, on: ["testTitle", "application"])
+      |> map(fn: (r) => ({{ r with duration: (int(v: r.end_time)/1000000000 - int(v: r.start_time)/1000000000)}}))
+      |> keep(columns: ["start_time","end_time","testTitle", "application", "max_threads", "duration"])
       |> group()
-      |> rename(columns: {{testTitle: "test_title"}})
-      |> rename(columns: {{application: "testName"}})'''
+      |> rename(columns: {{testTitle: "test_title"}})'''
 
   def get_start_time(self, testTitle: str, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")

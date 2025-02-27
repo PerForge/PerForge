@@ -16,6 +16,7 @@ import logging
 import pandas as pd
 
 from app.backend.integrations.data_sources.base_extraction                                      import DataExtractionBase
+from app.backend.integrations.data_sources.base_queries                                         import QueriesBase              
 from app.backend.integrations.data_sources.influxdb_v2.queries.influxdb_backend_listener_client import InfluxDBBackendListenerClientImpl
 from app.backend.integrations.data_sources.influxdb_v2.queries                                  import mderevyankoaqa
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db                              import DBInfluxdb
@@ -24,13 +25,13 @@ from app.backend.errors                                                         
 from influxdb_client                                                                            import InfluxDBClient
 from datetime                                                                                   import datetime
 from dateutil                                                                                   import tz
-from typing                                                                                     import List, Dict, Any
+from typing                                                                                     import List, Dict, Any, Type
 from collections                                                                                import defaultdict
 
 
 class InfluxdbV2(DataExtractionBase):
 
-    queries_map = {
+    queries_map: Dict[str, Type[QueriesBase]] = {
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": InfluxDBBackendListenerClientImpl,
         "mderevyankoaqa": mderevyankoaqa
     }
@@ -96,7 +97,7 @@ class InfluxdbV2(DataExtractionBase):
             records = self._execute_query(query)
 
             df = pd.DataFrame(records)
-            sorted_df = df.sort_values(by='startTime')
+            sorted_df = df.sort_values(by='start_time')
             return sorted_df.to_dict(orient='records')
         except Exception as er:
             logging.error(ErrorMessages.ER00057.value.format(self.name))
@@ -146,7 +147,7 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(er)
             return None
 
-    def _fetch_test_name(self, test_title: str, start: str, end: str) -> str:
+    def _fetch_application(self, test_title: str, start: str, end: str) -> str:
         try:
             query       = self.queries.get_app_name(test_title, start, end, self.bucket)
             flux_tables = self.influxdb_connection.query_api().query(query)

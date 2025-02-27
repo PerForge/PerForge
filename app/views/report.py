@@ -16,18 +16,21 @@ from app                                     import app
 from app.backend.data_provider.data_provider import DataProvider
 from flask                                   import render_template, request, jsonify
 
-@app.route('/api/data')
+@app.route('/api/data', methods=['POST'])
 def get_data():
     project = request.cookies.get('project')
-    dp = DataProvider(project=project)
-    test_title = request.args.get('test_title')
-    test_data, analysis, aggregated_results, test_details, statistics, summary, performance_status = dp.get_test_results_and_analyze(test_title=test_title)
+    data = request.json
+    source_type = data.get('source_type')
+    id = data.get('id')
+    test_title = data.get('test_title')
+    dp = DataProvider(project=project, source_type=source_type, id=id)
+    metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status = dp.get_test_results_and_analyze(test_title=test_title)
     response = {
-        'data': test_data,
+        'data': metrics,
         'analysis': analysis,
-        'aggregated_results': aggregated_results,
-        'test_details': test_details,
         'statistics': statistics,
+        'test_details': test_details,
+        'aggregated_table': aggregated_table,
         'summary': summary,
         'performance_status':performance_status,
         'styling': {
@@ -67,4 +70,6 @@ def get_data():
 @app.route('/report')
 def report():
     test_title = request.args.get('test_title')
-    return render_template('home/report.html',test_title=test_title)
+    source_type = request.args.get('source_type')
+    id = request.args.get('id')
+    return render_template('home/report.html',test_title=test_title, source_type=source_type, id=id)

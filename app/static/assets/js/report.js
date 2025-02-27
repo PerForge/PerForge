@@ -1,6 +1,6 @@
 // page-scripts.js
 
-async function fetchAndDisplayTestData(testTitle) {
+async function fetchAndDisplayTestData(testTitle, sourceType, id) {
     const loadingScreen = document.getElementById('loading-screen');
     const loadingMessage = document.getElementById('loading-message');
 
@@ -8,7 +8,7 @@ async function fetchAndDisplayTestData(testTitle) {
     showLoadingScreen(loadingScreen, loadingMessage);
 
     try {
-        const data = await fetchData(testTitle);
+        const data = await fetchData(testTitle, sourceType, id);
         handleFetchedData(data);
         // Hide the loading screen
         hideLoadingScreen(loadingScreen);
@@ -16,6 +16,25 @@ async function fetchAndDisplayTestData(testTitle) {
         console.error('Error fetching data:', error);
         hideLoadingScreen(loadingScreen);
     }
+}
+
+async function fetchData(testTitle, sourceType, id) {
+    const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_title: testTitle,
+            source_type: sourceType,
+            id: id
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error('Network response was not ok');
+    }
+    return response.json();
 }
 
 function showLoadingScreen(loadingScreen, loadingMessage) {
@@ -27,31 +46,23 @@ function hideLoadingScreen(loadingScreen) {
     loadingScreen.style.display = 'none';
 }
 
-async function fetchData(testTitle) {
-    const response = await fetch(`/api/data?test_title=${encodeURIComponent(testTitle)}`);
-    if (!response.ok) {
-        throw new Error('Network response was not ok');
-    }
-    return response.json();
-}
-
 function handleFetchedData(data) {
     const {
         data: chartData,
         styling,
         layout: layoutConfig,
         analysis: analysisData,
-        aggregated_results: aggregatedResults,
-        test_details: testDetails,
         statistics,
+        test_details: testDetails,
+        aggregated_table: aggregatedTable,
         summary,
         performance_status
     } = data;
 
     updateTestDetails(testDetails);
     updatePerformanceCard(summary, performance_status);
-    updateCards(aggregatedResults);
-    updateTable(statistics);
+    updateCards(statistics);
+    updateTable(aggregatedTable);
     updateAnalysisTable(analysisData);
     createGraphs(chartData, styling, layoutConfig);
 
@@ -76,19 +87,19 @@ function updatePerformanceCard(summary, performanceStatus) {
     summaryElement.innerHTML = summary; // Changed from textContent to innerHTML
 }
 
-function updateCards(aggregatedResults) {
-    document.getElementById('vuCard').innerText = aggregatedResults.vu;
-    document.getElementById('throughputCard').innerText = aggregatedResults.throughput;
-    document.getElementById('medianCard').innerText = aggregatedResults.median;
-    document.getElementById('pct90Card').innerText = aggregatedResults['90pct'];
-    document.getElementById('errorsCard').innerText = aggregatedResults.errors;
+function updateCards(statistics) {
+    document.getElementById('vuCard').innerText = statistics.vu;
+    document.getElementById('throughputCard').innerText = statistics.throughput;
+    document.getElementById('medianCard').innerText = statistics.median;
+    document.getElementById('pct90Card').innerText = statistics['90pct'];
+    document.getElementById('errorsCard').innerText = statistics.errors;
 }
 
-function updateTable(statistics) {
+function updateTable(aggregatedTable) {
     const tbody = document.querySelector('#aggregated-table .list');
     tbody.innerHTML = '';
 
-    statistics.forEach(stat => {
+    aggregatedTable.forEach(stat => {
         const row = `
         <tr class="stat-row" data-transaction="${stat.transaction}">
             <th class="label">

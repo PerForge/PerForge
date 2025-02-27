@@ -14,17 +14,13 @@
 
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
-from app.backend.data_provider.data_analysis.detectors import (
-    IsolationForestDetector,
-    ZScoreDetector,
-    MetricStabilityDetector,
-    RampUpPeriodAnalyzer
-)
+from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.integrations.data_sources.timescaledb.timescaledb_extraction import TimeScaleDB
+from app.backend.data_provider.test import Test
 
 import pandas as pd
 from collections import defaultdict
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, Type
 
 class DataProvider:
     """
@@ -42,7 +38,7 @@ class DataProvider:
         Various time and metric attributes for caching test data
     """
 
-    class_map = {
+    class_map: Dict[str, Type[DataExtractionBase]] = {
         "influxdb_v2": InfluxdbV2,
         "timescaledb": TimeScaleDB
     }
@@ -58,21 +54,7 @@ class DataProvider:
         """
         self.project = project
         self.ds_obj = self.class_map.get(source_type, None)(project=self.project, id=id)
-        # Initialize cache attributes
-        self.start_time_human = None
-        self.end_time_human = None
-        self.start_time_iso = None
-        self.end_time_iso = None
-        self.start_time_timestamp = None
-        self.end_time_timestamp = None
-        self.test_name = None
-        self.test_type = None
-        self.duration = None
-        self.max_active_users = None
-        self.median_throughput = None
-        self.median_response_time_stats = None
-        self.pct90_response_time_stats = None
-        self.errors_pct_stats = None
+        self.test_obj = Test()
 
     # Basic data retrieval methods
     def get_test_log(self) -> Dict[str, Any]:
@@ -96,39 +78,39 @@ class DataProvider:
         pass
 
     # Data collection and caching methods
-    def collect_test_data(self, test_title: str) -> None:
+    def collect_test_obj(self, test_title: str) -> None:
         """
         Collect and cache all test-related data.
 
         Args:
             test_title: The title/name of the test to collect data for
         """
-        if not self.start_time_human:
-            self.start_time_human = self.ds_obj.get_start_time(test_title=test_title, time_format='human')
-        if not self.end_time_human:
-            self.end_time_human = self.ds_obj.get_end_time(test_title=test_title, time_format='human')
-        if not self.start_time_iso:
-            self.start_time_iso = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
-        if not self.end_time_iso:
-            self.end_time_iso = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
-        if not self.start_time_timestamp:
-            self.start_time_timestamp = self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp')
-        if not self.end_time_timestamp:
-            self.end_time_timestamp = self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp')
-        if not self.test_name:
-            self.test_name = self.ds_obj.get_test_name(test_title=test_title, start=self.start_time_iso, end=self.end_time_iso)
-        if not self.duration:
-            self.duration = str(int((self.end_time_timestamp - self.start_time_timestamp) / 1000))
-        if not self.max_active_users:
-            self.max_active_users = self.ds_obj.get_max_active_users_stats(test_title=test_title, start=self.start_time_iso, end=self.end_time_iso)
-        if not self.median_throughput:
-            self.median_throughput = self.ds_obj.get_median_throughput_stats(test_title=test_title, start=self.start_time_iso, end=self.end_time_iso)
-        if not self.median_response_time_stats:
-            self.median_response_time_stats = self.ds_obj.get_median_response_time_stats(test_title=test_title, start=self.start_time_iso, end=self.end_time_iso)
-        if not self.pct90_response_time_stats:
-            self.pct90_response_time_stats = self.ds_obj.get_pct90_response_time_stats(test_title=test_title, start=self.start_time_iso, end=self.end_time_iso)
-        if not self.errors_pct_stats:
-            self.errors_pct_stats = self.ds_obj.get_errors_pct_stats(test_title=test_title, start=self.start_time_iso, end=self.end_time_iso)
+        if not self.test_obj.start_time_human:
+            self.test_obj.start_time_human = self.ds_obj.get_start_time(test_title=test_title, time_format='human')
+        if not self.test_obj.end_time_human:
+            self.test_obj.end_time_human = self.ds_obj.get_end_time(test_title=test_title, time_format='human')
+        if not self.test_obj.start_time_iso:
+            self.test_obj.start_time_iso = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
+        if not self.test_obj.end_time_iso:
+            self.test_obj.end_time_iso = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
+        if not self.test_obj.start_time_timestamp:
+            self.test_obj.start_time_timestamp = self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp')
+        if not self.test_obj.end_time_timestamp:
+            self.test_obj.end_time_timestamp = self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp')
+        if not self.test_obj.test_name:
+            self.test_obj.test_name = self.ds_obj.get_application(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        if not self.test_obj.duration:
+            self.test_obj.calculate_duration()
+        if not self.test_obj.max_active_users:
+            self.test_obj.max_active_users = self.ds_obj.get_max_active_users_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        if not self.test_obj.median_throughput:
+            self.test_obj.median_throughput = self.ds_obj.get_median_throughput_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        if not self.test_obj.median_response_time_stats:
+            self.test_obj.median_response_time_stats = self.ds_obj.get_median_response_time_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        if not self.test_obj.pct90_response_time_stats:
+            self.test_obj.pct90_response_time_stats = self.ds_obj.get_pct90_response_time_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        if not self.test_obj.errors_pct_stats:
+            self.test_obj.errors_pct_stats = self.ds_obj.get_errors_pct_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
 
     # Metric initialization and configuration
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:
@@ -215,141 +197,7 @@ class DataProvider:
         """Remove rows containing NaN values."""
         return df.dropna()
 
-    # Analysis methods
-    def analyze_data_periods(self, merged_df: pd.DataFrame, test_title: str,
-                           start: str, end: str) -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
-        """
-        Analyze test data periods for anomalies and patterns.
-
-        Args:
-            merged_df: DataFrame containing all metrics
-            test_title: Test title/name
-            start: Start time in ISO format
-            end: End time in ISO format
-
-        Returns:
-            Tuple containing ramp-up period data, fixed-load period data, and is_fixed_load flag
-        """
-        fixed_load_period, ramp_up_period = self.engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
-
-        ramp_up_period = self.engine.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
-
-        is_fixed_load = self.engine.check_if_fixed_load(total_rows=len(merged_df), fixed_load_rows=len(fixed_load_period))
-        if is_fixed_load:
-            self.test_type = "fixed load"
-            for metric in self.initialize_metrics():
-                if self.initialize_metrics()[metric]['analysis']:
-                    fixed_load_period = self.engine.detect_anomalies(fixed_load_period, metric=metric, period_type='fixed_load')
-        else:
-            self.test_type = "ramp up"
-
-        return ramp_up_period, fixed_load_period, is_fixed_load
-
-    def prepare_final_result(self, merged_df: pd.DataFrame, standart_metrics: Dict[str, Dict[str, Any]]):
-        """
-        Prepare the final result dictionary from the merged DataFrame.
-        :param merged_df: The merged DataFrame containing the data.
-        :param standart_metrics: The dictionary containing the standard metrics configuration.
-        :return: The final result dictionary.
-        """
-        result = {}
-
-        for col in merged_df.columns:
-            if '_anomaly' not in col:
-                anomaly_col = col + '_anomaly'
-
-                result[col] = {
-                    'name': standart_metrics[col]['name'],
-                    'data': []
-                }
-
-                for timestamp, row in merged_df.iterrows():
-                    anomaly_value = row[anomaly_col] if anomaly_col in row and pd.notna(row[anomaly_col]) else 'Normal'
-                    value = row[col] if pd.notna(row[col]) else 0.0
-                    result[col]['data'].append({
-                        'timestamp': timestamp.isoformat(),
-                        'value': value,
-                        'anomaly': anomaly_value
-                    })
-
-        return result
-
-    def create_html_summary(self, test_type: str, analysis_output: List[Dict[str, Any]]) -> Tuple[str, bool]:
-        """
-        Create HTML summary of test analysis results.
-
-        Args:
-            test_type: Type of the test (fixed load or ramp up)
-            analysis_output: List of analysis results
-
-        Returns:
-            Tuple containing HTML formatted summary and performance status
-        """
-        # Count failed checks and group anomalies by metric
-        failed_checks = [x for x in analysis_output if x['status'] == 'failed']
-        metric_anomaly_counts = defaultdict(int)
-        trend_issues = []
-        ramp_up_status = None
-        saturation_point = None
-        performance_status = True  # Start with assumption that performance is good
-
-        for check in analysis_output:
-            if check['method'] == 'rolling_correlation':
-                if 'Tipping point was reached' in check.get('description', ''):
-                    saturation_point = check.get('value')
-                else:
-                    ramp_up_status = check['status'] == 'passed'
-            elif check['status'] == 'failed':
-                performance_status = False  # Any failed check means we have issues
-                if check['method'] == 'TrendAnalysis':
-                    trend_issues.append(check['description'])
-                elif 'An anomaly was detected in' in check['description']:
-                    metric = check['description'].split('in ')[1].split(' from')[0]
-                    metric_anomaly_counts[metric] += 1
-
-        # Generate HTML summary
-        html_parts = []
-
-        # Test type and overall status
-        html_parts.append(f"<p>Test type: <strong>{test_type}</strong></p>")
-
-        # Ramp-up analysis
-        if test_type.lower() == "ramp up":
-            if saturation_point:
-                html_parts.append(f"<p>🎯 System saturation detected at: <strong>{saturation_point}</strong> requests per second</p>")
-        elif ramp_up_status is not None:
-            status_icon = "✅" if ramp_up_status else "❌"
-            html_parts.append(f"<p>{status_icon} Ramp-up period: {'successful' if ramp_up_status else 'issues detected'}</p>")
-
-        # Trend analysis
-        if trend_issues:
-            html_parts.append("<div class='trend-analysis'>")
-            html_parts.append("<h4>📈 Trend Analysis Issues:</h4>")
-            html_parts.append("<ul>")
-            for issue in trend_issues:
-                html_parts.append(f"<li>{issue}</li>")
-            html_parts.append("</ul>")
-            html_parts.append("</div>")
-
-        # Anomalies summary
-        if metric_anomaly_counts:
-            html_parts.append("<div class='anomalies'>")
-            html_parts.append("<h4>⚠️ Anomalies Detected:</h4>")
-            html_parts.append("<ul>")
-            for metric, count in metric_anomaly_counts.items():
-                html_parts.append(
-                    f"<li><strong>{metric}</strong>: "
-                    f"{count} {'anomaly' if count == 1 else 'anomalies'}</li>"
-                )
-            html_parts.append("</ul>")
-            html_parts.append("</div>")
-
-        if not failed_checks:
-            html_parts.append("<p>✅ No issues were detected during the test execution.</p>")
-
-        return "\n".join(html_parts), performance_status
-
-    def get_aggregated_metrics(self, test_title: str) -> Dict[str, Any]:
+    def get_statistics(self, test_title: str) -> Dict[str, Any]:
         """
         Retrieve aggregated metrics from the test data.
 
@@ -366,14 +214,14 @@ class DataProvider:
         Returns:
             Dictionary containing aggregated metrics with their values
         """
-        self.collect_test_data(test_title=test_title)
+        self.collect_test_obj(test_title=test_title)
 
         aggregated_results = {
-            "vu": self.max_active_users,
-            "throughput": self.median_throughput,
-            "median": self.median_response_time_stats,
-            "90pct": self.pct90_response_time_stats,
-            "errors": f'{str(self.errors_pct_stats)}%'
+            "vu": self.test_obj.max_active_users,
+            "throughput": self.test_obj.median_throughput,
+            "median": self.test_obj.median_response_time_stats,
+            "90pct": self.test_obj.pct90_response_time_stats,
+            "errors": f'{str(self.test_obj.errors_pct_stats)}%'
         }
         return aggregated_results
 
@@ -392,12 +240,12 @@ class DataProvider:
         Returns:
             Dictionary containing test execution details
         """
-        self.collect_test_data(test_title=test_title)
+        self.collect_test_obj(test_title=test_title)
 
         test_details = {
-            "start_time": self.start_time_human,
-            "end_time": self.end_time_human,
-            "duration": self.duration
+            "start_time": self.test_obj.start_time_human,
+            "end_time": self.test_obj.end_time_human,
+            "duration": self.test_obj.duration
         }
         return test_details
 
@@ -419,30 +267,17 @@ class DataProvider:
             - summary: HTML formatted summary
             - performance_status: Boolean indicating if there are performance issues
         """
-        # Initialize detectors with configuration
-        detectors = [
-            IsolationForestDetector(),
-            ZScoreDetector(),
-            MetricStabilityDetector(),
-            RampUpPeriodAnalyzer(
-                threshold_condition=lambda x: x < self.engine.rolling_correlation_threshold,
-                base_metric="overalUsers"
-            )
-        ]
+        self.collect_test_obj(test_title=test_title)
 
         # Initialize engine with detectors
-        self.engine = AnomalyDetectionEngine(
-            params={},  # You can pass custom parameters here
-            detectors=detectors
+        self.anomaly_detection_engine = AnomalyDetectionEngine(
+            params={}  # You can pass custom parameters here
         )
 
-        current_start_time = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
-        current_end_time = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
-
-        standart_metrics = self.initialize_metrics()
+        standard_metrics = self.initialize_metrics()
 
         # Fetch and merge the data for all standard metrics
-        dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, current_start_time, current_end_time) for metric, details in standart_metrics.items()}
+        dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, self.test_obj.start_time_iso, self.test_obj.end_time_iso) for metric, details in standard_metrics.items()}
 
         # NaN values to 0
         dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
@@ -452,35 +287,26 @@ class DataProvider:
         merged_df = self.df_delete_nan_rows(merged_df)
 
         # Analyze the data periods
-        ramp_up_period, fixed_load_period, is_fixed_load = self.analyze_data_periods(merged_df, test_title, current_start_time, current_end_time)
-
-        missing_columns = set(fixed_load_period.columns) - set(ramp_up_period.columns)
-        for col in missing_columns:
-            ramp_up_period[col] = 'Normal'
-
-        # Merge ramp-up and fixed-load periods back into a single DataFrame
-        merged_df = pd.concat([ramp_up_period, fixed_load_period], axis=0)
-
-        # Prepare the final result
-        result = self.prepare_final_result(merged_df, standart_metrics)
+        metrics, summary, performance_status, is_fixed_load = self.anomaly_detection_engine.analyze_test_data(merged_df=merged_df, standard_metrics=standard_metrics)
+        
+        if is_fixed_load:
+            self.test_obj.test_type = "fixed load"
+        else:
+            self.test_obj.test_type = "ramp up"
 
         # Fetch additional response time per request data
-        avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
-        result["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
+        avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
 
-        medianRespTimePerReq = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
-        result["medianResponseTimePerReq"] = self.transform_to_json(medianRespTimePerReq)
+        medianRespTimePerReq = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        metrics["medianResponseTimePerReq"] = self.transform_to_json(medianRespTimePerReq)
 
-        pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=current_start_time, end=current_end_time)
-        result["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
-
-        if is_fixed_load:
-            self.engine.process_anomalies(merged_df)
-
+        pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
+        
         # Collect the outputs
-        analysis_output = self.engine.output
-        aggregated_results = self.get_aggregated_metrics(test_title=test_title)
+        analysis_output = self.anomaly_detection_engine.output
+        statistics = self.get_statistics(test_title=test_title)
         test_details = self.get_test_details(test_title=test_title)
-        statistics = self.ds_obj.get_aggregated_table(test_title=test_title, start=current_start_time, end=current_end_time)
-        summary, performance_status = self.create_html_summary(self.test_type, analysis_output)
-        return result, analysis_output, aggregated_results, test_details, statistics, summary, performance_status
+        aggregated_table = self.ds_obj.get_aggregated_table(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        return metrics, analysis_output, statistics, test_details, aggregated_table, summary, performance_status

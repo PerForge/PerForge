@@ -12,9 +12,6 @@
         {% include 'includes/sidebar.html' %}
         <div class="main-body">
             <div class="main-body-header">
-                {% with msgs = get_flashed_messages() %}
-                {% include 'includes/flashed-msg.html' %}
-                {% endwith %}
             </div>
             <div id="loading-screen" class="loading-screen">
                 <div class="loading-message" id="loading-message">Preparing your tests data</div>
@@ -162,13 +159,18 @@
                 </div>
             </div>
         </div>
+        {% with msgs = get_flashed_messages() %}
+        {% include 'includes/flashed-msg.html' %}
+        {% endwith %}
     </div>
     <script src="{{ url_for('static', filename='assets/js/report.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // When the page is fully loaded, call the 'fetchAndDisplayTestData' function
             const testTitle = "{{ test_title }}"; // Pass the value from the template
-            fetchAndDisplayTestData(testTitle);
+            const source_type = "{{ source_type }}";
+            const id = "{{ id }}";
+            fetchAndDisplayTestData(testTitle, source_type, id);
         });
     </script>
 </main>

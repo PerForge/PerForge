@@ -36,9 +36,8 @@
                                         </div>
                                     </div>
                                     <select class="form-select ms-2" id="dataSourceId">
-                                        <option value='{"source_type": "timescaledb", "id": null}'>TimescaleDB</option>
-                                        {% for influxdb in influxdb_configs %}
-                                            <option value='{"source_type": "influxdb_v2", "id": "{{ influxdb.id }}"}'>{{ influxdb.name }}</option>
+                                        {% for db in db_configs %}
+                                            <option value='{"source_type": "{{ db.source_type }}", "id": "{{ db.id }}"}'>{{ db.name }}</option>
                                         {% endfor %}
                                     </select>
                                     <select class="form-select ms-2" id="selectedAction">
@@ -75,11 +74,11 @@
                                             </th>
                                             <th class="sort" data-sort="test_title">Test title</th>
                                             <th>Template</th>
-                                            <th class="sort" data-sort="testName">Application</th>
+                                            <th class="sort" data-sort="application">Application</th>
                                             <th class="sort" data-sort="duration">Duration (sec)</th>
-                                            <th class="sort" data-sort="maxThreads">Users</th>
-                                            <th class="sort" data-sort="startTime">Start time</th>
-                                            <th class="sort" data-sort="endTime">End time</th>
+                                            <th class="sort" data-sort="max_threads">Users</th>
+                                            <th class="sort" data-sort="start_time">Start time</th>
+                                            <th class="sort" data-sort="end_time">End time</th>
                                             <th>Compare</th>
                                             <th>Actions</th>
                                         </tr>
@@ -142,15 +141,48 @@
         <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
             $(document).ready(function(){
+                // Cookie handling functions
+                function setCookie(name, value, days) {
+                    let expires = "";
+                    if (days) {
+                        const date = new Date();
+                        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                        expires = "; expires=" + date.toUTCString();
+                    }
+                    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+                }
+
+                function getCookie(name) {
+                    const nameEQ = name + "=";
+                    const ca = document.cookie.split(';');
+                    for(let i = 0; i < ca.length; i++) {
+                        let c = ca[i];
+                        while (c.charAt(0) === ' ') c = c.substring(1);
+                        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                    }
+                    return null;
+                }
 
                 const dataSource_select = document.getElementById("dataSourceId");
-                dataSource_select.addEventListener("change", loadData);
+                
+                // Initialize from cookie if exists
+                const savedDataSource = getCookie("selectedDataSource");
+                if (savedDataSource) {
+                    dataSource_select.value = savedDataSource;
+                }
+
+                // Update cookie when selection changes
+                dataSource_select.addEventListener("change", function() {
+                    setCookie("selectedDataSource", this.value, 7);
+                    loadData();
+                });
 
                 const templates = JSON.parse('{{ templates | tojson }}');
                 if (!templates){
                     templates = []
                 }
 
+                // Initial load after everything is initialized
                 loadData();
 
                 function loadData(){
@@ -166,6 +198,8 @@
                             if(data.status === 'success'){
                                 updateTable(data.tests);
                             }else{
+                                var tableBody = document.getElementById("bulk-select-body");
+                                tableBody.innerHTML = ''; // Clear the table body
                                 const badmsg = document.getElementById("bad-msg");
                                 badmsg.style.display = "flex";
                                 const msg = badmsg.querySelector("#msg");
@@ -174,16 +208,14 @@
                             $("#spinner").hide();
                         })
                         .catch((error) => {
-                            const badmsg = document.getElementById("bad-msg");
-                            badmsg.style.display = "flex";
-                            const msg = badmsg.querySelector("#msg");
-                            msg.textContent = error;
+                            var tableBody = document.getElementById("bulk-select-body");
+                            tableBody.innerHTML = ''; // Clear the table body
                             $("#spinner").hide();
                         });
                 }
 
                 function updateTable(tests) {
-                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 10, "pagination": true}');
+                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "application", "duration", "max_threads", "start_time", "end_time"], "page": 10, "pagination": true}');
 
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body
@@ -195,7 +227,7 @@
                         const checkboxCell = row.insertCell();
                         const checkboxDiv = document.createElement("div");
                         checkboxDiv.className = "form-check fs-0";
-                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","testName":"${test.testName}","duration":"${test.duration}","maxThreads":"${test.maxThreads}","startTime":"${test.startTime}","endTime":"${test.endTime}"}' />`;
+                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","application":"${test.application}","duration":"${test.duration}","max_threads":"${test.max_threads}","start_time":"${test.start_time}","end_time":"${test.end_time}"}' />`;
                         checkboxCell.appendChild(checkboxDiv);
 
                         // Insert cells for each column based on your data structure
@@ -230,24 +262,24 @@
                         });
 
                         // Insert Test Name (modify as needed)
-                        const testNameCell = row.insertCell();
-                        testNameCell.textContent = test.testName;
+                        const applicationCell = row.insertCell();
+                        applicationCell.textContent = test.application;
 
                         // Insert Duration (modify as needed)
                         const durationCell = row.insertCell();
                         durationCell.textContent = test.duration;
 
                         // Insert Max Threads (modify as needed)
-                        const maxThreadsCell = row.insertCell();
-                        maxThreadsCell.textContent = test.maxThreads;
+                        const max_threadsCell = row.insertCell();
+                        max_threadsCell.textContent = test.max_threads;
 
                         // Insert Start Time (modify as needed)
-                        const startTimeCell = row.insertCell();
-                        startTimeCell.textContent = test.startTime;
+                        const start_timeCell = row.insertCell();
+                        start_timeCell.textContent = test.start_time;
 
                         // Insert End Time (modify as needed)
-                        const endTimeCell = row.insertCell();
-                        endTimeCell.textContent = test.endTime;
+                        const end_timeCell = row.insertCell();
+                        end_timeCell.textContent = test.end_time;
 
                         // Create and insert the Test ID dropdown
                         const testIdCell = row.insertCell();
@@ -279,7 +311,9 @@
                         const reportCell = row.insertCell();
                         const btn = document.createElement('a');
                         btn.className = 'btn btn-danger';
-                        btn.href = `/report?test_title=${test.test_title}`;
+                        const dataSource = document.getElementById('dataSourceId').value;
+                        const dataSourceJson = JSON.parse(dataSource);
+                        btn.href = `/report?test_title=${test.test_title}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}`;
                         btn.textContent = 'Report';
                         reportCell.appendChild(btn);
                     });

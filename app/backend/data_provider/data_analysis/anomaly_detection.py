@@ -1,11 +1,17 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from typing import List, Dict, Any, Literal
+from typing import List, Dict, Any, Literal, Tuple
 import logging
 from app.backend.errors import ErrorMessages
 from .detectors.base import BaseDetector
 from collections import defaultdict
+from app.backend.data_provider.data_analysis.detectors import (
+    IsolationForestDetector,
+    ZScoreDetector,
+    MetricStabilityDetector,
+    RampUpPeriodAnalyzer
+)
 
 class AnomalyDetectionEngine:
     """
@@ -14,7 +20,7 @@ class AnomalyDetectionEngine:
     This engine supports multiple detection methods and can process various metrics
     to identify anomalous behavior in the data.
     """
-    def __init__(self, params: Dict[str, Any], detectors: List[BaseDetector] = None):
+    def __init__(self, params: Dict[str, Any]):
         """
         Initialize the Anomaly Detection Engine
         
@@ -22,9 +28,7 @@ class AnomalyDetectionEngine:
             params: Configuration parameters for the engine
             detectors: List of detector instances to use
         """
-        self.output = []
-        self.anomaly_detectors = detectors if detectors is not None else []
-        
+        self.output = []       
         # Define default parameters
         default_params = {
             'contamination': 0.001,
@@ -42,6 +46,17 @@ class AnomalyDetectionEngine:
         
         # Validate and update parameters
         self._validate_and_set_params(params, default_params)
+        
+        self.detectors = [
+            IsolationForestDetector(),
+            ZScoreDetector(),
+            MetricStabilityDetector(),
+            RampUpPeriodAnalyzer(
+                threshold_condition=lambda x: x < self.rolling_correlation_threshold,
+                base_metric="overalUsers"
+            )
+        ]
+        self.anomaly_detectors = self.detectors if self.detectors is not None else [] 
 
     def _validate_and_set_params(self, params: Dict[str, Any], default_params: Dict[str, Any]):
         if not isinstance(params, dict):
@@ -326,8 +341,143 @@ class AnomalyDetectionEngine:
         fixed_load_period = self.delete_columns(df=fixed_load_period.copy(), columns=["is_ramp_up_down"])
         ramp_up_period = df[df['is_ramp_up_down'] == 'Ramp-up']
         ramp_up_period = self.delete_columns(df=ramp_up_period.copy(), columns=["is_ramp_up_down"])
-        return fixed_load_period, ramp_up_period
+        is_fixed_load = self.check_if_fixed_load(total_rows=len(df), fixed_load_rows=len(fixed_load_period))
+        return fixed_load_period, ramp_up_period, is_fixed_load
 
     def check_if_fixed_load(self, total_rows, fixed_load_rows):
         fixed_load_percentage = (fixed_load_rows / total_rows) * 100
         return fixed_load_percentage >= self.fixed_load_percentage
+
+    def prepare_final_metrics(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Prepare the final result dictionary from the merged DataFrame.
+        """
+        metrics = {}
+
+        for col in merged_df.columns:
+            if '_anomaly' not in col:
+                anomaly_col = col + '_anomaly'
+
+                metrics[col] = {
+                    'name': standard_metrics[col]['name'],
+                    'data': []
+                }
+
+                for timestamp, row in merged_df.iterrows():
+                    anomaly_value = row[anomaly_col] if anomaly_col in row and pd.notna(row[anomaly_col]) else 'Normal'
+                    value = row[col] if pd.notna(row[col]) else 0.0
+                    metrics[col]['data'].append({
+                        'timestamp': timestamp.isoformat(),
+                        'value': value,
+                        'anomaly': anomaly_value
+                    })
+
+        return metrics
+
+    def create_html_summary(self, test_type: str, analysis_output: List[Dict[str, Any]]) -> Tuple[str, bool]:
+        """
+        Create HTML summary of test analysis results.
+        """
+        failed_checks = [x for x in analysis_output if x['status'] == 'failed']
+        metric_anomaly_counts = defaultdict(int)
+        trend_issues = []
+        ramp_up_status = None
+        saturation_point = None
+        performance_status = True
+
+        for check in analysis_output:
+            if check['method'] == 'rolling_correlation':
+                if 'Tipping point was reached' in check.get('description', ''):
+                    saturation_point = check.get('value')
+                else:
+                    ramp_up_status = check['status'] == 'passed'
+            elif check['status'] == 'failed':
+                performance_status = False
+                if check['method'] == 'TrendAnalysis':
+                    trend_issues.append(check['description'])
+                elif 'An anomaly was detected in' in check['description']:
+                    metric = check['description'].split('in ')[1].split(' from')[0]
+                    metric_anomaly_counts[metric] += 1
+
+        html_parts = []
+        html_parts.append(f"<p>Test type: <strong>{test_type}</strong></p>")
+
+        if test_type.lower() == "ramp up":
+            if saturation_point:
+                html_parts.append(f"<p>🎯 System saturation detected at: <strong>{saturation_point}</strong> requests per second</p>")
+        elif ramp_up_status is not None:
+            status_icon = "✅" if ramp_up_status else "❌"
+            html_parts.append(f"<p>{status_icon} Ramp-up period: {'successful' if ramp_up_status else 'issues detected'}</p>")
+
+        if trend_issues:
+            html_parts.extend([
+                "<div class='trend-analysis'>",
+                "<h4>📈 Trend Analysis Issues:</h4>",
+                "<ul>",
+                *[f"<li>{issue}</li>" for issue in trend_issues],
+                "</ul>",
+                "</div>"
+            ])
+
+        if metric_anomaly_counts:
+            html_parts.extend([
+                "<div class='anomalies'>",
+                "<h4>⚠️ Anomalies Detected:</h4>",
+                "<ul>",
+                *[f"<li><strong>{metric}</strong>: {count} {'anomaly' if count == 1 else 'anomalies'}</li>"
+                  for metric, count in metric_anomaly_counts.items()],
+                "</ul>",
+                "</div>"
+            ])
+
+        if not failed_checks:
+            html_parts.append("<p>✅ No issues were detected during the test execution.</p>")
+
+        return "\n".join(html_parts), performance_status
+
+    def analyze_test_data(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]]) -> Tuple[Dict, List, str, bool]:
+        """
+        Analyze test data and prepare results.
+        
+        Args:
+            merged_df: DataFrame containing all metrics
+            standard_metrics: Dictionary of standard metrics configuration
+
+        Returns:
+            Tuple containing:
+            - Processed test data
+            - Analysis output
+            - HTML summary
+            - Performance status
+        """
+        # Analyze data periods
+        fixed_load_period, ramp_up_period, is_fixed_load = self.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
+
+        ramp_up_period = self.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
+
+        test_type = "fixed load" if is_fixed_load else "ramp up"
+
+        if is_fixed_load:
+            for metric in standard_metrics:
+                if standard_metrics[metric]['analysis']:
+                    fixed_load_period = self.detect_anomalies(
+                        fixed_load_period,
+                        metric=metric,
+                        period_type='fixed_load'
+                    )
+
+        # Ensure columns match between periods
+        missing_columns = set(fixed_load_period.columns) - set(ramp_up_period.columns)
+        for col in missing_columns:
+            ramp_up_period[col] = 'Normal'
+
+        # Merge periods and prepare results
+        merged_df = pd.concat([ramp_up_period, fixed_load_period], axis=0)
+        metrics = self.prepare_final_metrics(merged_df, standard_metrics)
+
+        if is_fixed_load:
+            self.process_anomalies(merged_df)
+
+        summary, performance_status = self.create_html_summary(test_type, self.output)
+
+        return metrics, summary, performance_status, is_fixed_load

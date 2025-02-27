@@ -8,7 +8,7 @@ class ErrorMessages(Enum):
     ER00005 = 'An error occurred while retrieving the Template Group configuration. For more detailed information, please refer to the logs.'
     ER00006 = 'An error occurred while deleting the template group. For more detailed information, please refer to the logs.'
     ER00007 = 'An error occurred while loading templates and template groups. For more detailed information, please refer to the logs.'
-    ER00008 = 'An error occurred while loading tests from InfluxDB. For more detailed information, please refer to the logs.'
+    ER00008 = 'An error occurred while loading tests from {}. For more detailed information, please refer to the logs.'
     ER00009 = 'An error occurred while loading integrations. For more detailed information, please refer to the logs.'
     ER00010 = 'An error occurred while deleting the test in InfluxDB. For more detailed information, please refer to the logs.'
     ER00011 = 'An error occurred while generating the report. For more detailed information, please refer to the logs.'

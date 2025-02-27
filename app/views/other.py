@@ -46,4 +46,6 @@ def check_version():
             "new_version_released": False
         })
     except Exception:
-        logging.warning(str(traceback.format_exc()))
+        return jsonify({
+            "new_version_released": False
+        })

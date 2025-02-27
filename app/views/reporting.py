@@ -39,10 +39,14 @@ def get_tests():
         project_id             = request.cookies.get('project')
         project_data           = DBProjects.get_config_by_id(id=project_id)
         influxdb_configs       = DBInfluxdb.get_configs(schema_name=project_data['name'])
+        db_configs = []
+        for config in influxdb_configs:
+            db_configs.append({ "id": config["id"], "name": config["name"], "source_type": "influxdb_v2"})
+        db_configs.append({ "id": None, "name": "TimescaleDB", "source_type": "timescaledb"})
         template_configs       = DBTemplates.get_configs(schema_name=project_data['name'])
         template_group_configs = DBTemplateGroups.get_configs(schema_name=project_data['name'])
         output_configs         = DBProjects.get_project_output_configs(id=project_id)
-        return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = template_configs, template_groups = template_group_configs, output_configs=output_configs)
+        return render_template('home/tests.html', db_configs=db_configs, templates = template_configs, template_groups = template_group_configs, output_configs=output_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00009.value, "error")
@@ -60,7 +64,7 @@ def load_tests():
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00008.value, "error")
-        return jsonify(status="error", message=ErrorMessages.ER00008.value)
+        return jsonify(status="error", message=ErrorMessages.ER00008.value.format(source_type))
 
 @app.route('/generate', methods=['GET','POST'])
 def generate_report():

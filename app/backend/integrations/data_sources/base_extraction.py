@@ -202,7 +202,7 @@ class DataExtractionBase(ABC):
         """
         pass
 
-    @validate_output(expected_keys={'testName', 'duration', 'endTime', 'maxThreads', 'startTime', 'test_title'})
+    @validate_output(expected_keys={'application', 'duration', 'end_time', 'max_threads', 'start_time', 'test_title'})
     def get_test_log(self) -> List[Dict[str, Any]]:
         """
         Retrieve the test log data, validated to ensure required fields are present.
@@ -242,7 +242,7 @@ class DataExtractionBase(ABC):
         return self._fetch_end_time(test_title, **kwargs)
 
     @abstractmethod
-    def _fetch_test_name(self, test_title: str, start: str, end: str) -> str:
+    def _fetch_application(self, test_title: str, start: str, end: str) -> str:
         """
         Fetch the application name for a specific test.
         :param test_title: The title of the test.
@@ -253,7 +253,7 @@ class DataExtractionBase(ABC):
         pass
 
     @validate_string_output
-    def get_test_name(self, test_title: str, start: str, end: str) -> str:
+    def get_application(self, test_title: str, start: str, end: str) -> str:
         """
         Retrieve the application name for the specified test.
         :param test_title: The title of the test.
@@ -261,7 +261,7 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The application name.
         """
-        return self._fetch_test_name(test_title, start, end)
+        return self._fetch_application(test_title, start, end)
 
     @abstractmethod
     def _fetch_rps(self, test_title: str, start: str, end: str) -> pd.DataFrame:
