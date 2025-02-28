@@ -19,7 +19,6 @@ from app.config                  import db
 from app.backend.pydantic_models import TemplateModel
 from sqlalchemy.orm              import joinedload
 
-
 class DBTemplates(db.Model):
     __tablename__             = 'templates'
     id                        = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -73,6 +72,31 @@ class DBTemplates(db.Model):
                 validated_data      = TemplateModel(**config_dict)
                 valid_configs.append(validated_data.model_dump())
             return valid_configs
+        except Exception:
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def get_configs_brief(cls, schema_name, fields=None):
+        """
+        Get a list of templates with specified fields only.
+        
+        Args:
+            schema_name (str): Database schema name
+            fields (list): List of field names to return. Defaults to ['id', 'name'] if None
+            
+        Returns:
+            list: List of dictionaries containing specified template fields
+        """
+        if fields is None:
+            fields = ['id', 'name']
+            
+        cls.__table__.schema = schema_name
+
+        try:
+            templates = db.session.query(cls).all()
+            return [{field: getattr(template, field) for field in fields} 
+                    for template in templates]
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise

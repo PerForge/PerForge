@@ -54,12 +54,14 @@ class DataProvider:
         """
         self.project = project
         self.ds_obj = self.class_map.get(source_type, None)(project=self.project, id=id)
-        self.test_obj = Test()
 
     # Basic data retrieval methods
     def get_test_log(self) -> Dict[str, Any]:
         """Retrieve test log data from the database."""
         return self.ds_obj.get_test_log()
+    
+    def get_aggregated_table(self, test_title: str, start_time: str, end_time: str):
+        return self.ds_obj.get_aggregated_table(test_title, start_time, end_time)
 
     def get_response_time_data(self) -> None:
         """Retrieve response time data (placeholder)."""
@@ -85,32 +87,38 @@ class DataProvider:
         Args:
             test_title: The title/name of the test to collect data for
         """
-        if not self.test_obj.start_time_human:
-            self.test_obj.start_time_human = self.ds_obj.get_start_time(test_title=test_title, time_format='human')
-        if not self.test_obj.end_time_human:
-            self.test_obj.end_time_human = self.ds_obj.get_end_time(test_title=test_title, time_format='human')
-        if not self.test_obj.start_time_iso:
-            self.test_obj.start_time_iso = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
-        if not self.test_obj.end_time_iso:
-            self.test_obj.end_time_iso = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
-        if not self.test_obj.start_time_timestamp:
-            self.test_obj.start_time_timestamp = self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp')
-        if not self.test_obj.end_time_timestamp:
-            self.test_obj.end_time_timestamp = self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp')
-        if not self.test_obj.test_name:
-            self.test_obj.test_name = self.ds_obj.get_application(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
-        if not self.test_obj.duration:
-            self.test_obj.calculate_duration()
-        if not self.test_obj.max_active_users:
-            self.test_obj.max_active_users = self.ds_obj.get_max_active_users_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
-        if not self.test_obj.median_throughput:
-            self.test_obj.median_throughput = self.ds_obj.get_median_throughput_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
-        if not self.test_obj.median_response_time_stats:
-            self.test_obj.median_response_time_stats = self.ds_obj.get_median_response_time_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
-        if not self.test_obj.pct90_response_time_stats:
-            self.test_obj.pct90_response_time_stats = self.ds_obj.get_pct90_response_time_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
-        if not self.test_obj.errors_pct_stats:
-            self.test_obj.errors_pct_stats = self.ds_obj.get_errors_pct_stats(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        test_obj = Test()
+        
+        if not test_obj.test_title:
+            test_obj.test_title = test_title      
+        if not test_obj.start_time_human:
+            test_obj.start_time_human = self.ds_obj.get_start_time(test_title=test_title, time_format='human')
+        if not test_obj.end_time_human:
+            test_obj.end_time_human = self.ds_obj.get_end_time(test_title=test_title, time_format='human')
+        if not test_obj.start_time_iso:
+            test_obj.start_time_iso = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
+        if not test_obj.end_time_iso:
+            test_obj.end_time_iso = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
+        if not test_obj.start_time_timestamp:
+            test_obj.start_time_timestamp = self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp')
+        if not test_obj.end_time_timestamp:
+            test_obj.end_time_timestamp = self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp')
+        if not test_obj.application:
+            test_obj.application = self.ds_obj.get_application(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        if not test_obj.duration:
+            test_obj.calculate_duration()
+        if not test_obj.max_active_users:
+            test_obj.max_active_users = self.ds_obj.get_max_active_users_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        if not test_obj.median_throughput:
+            test_obj.median_throughput = self.ds_obj.get_median_throughput_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        if not test_obj.median_response_time_stats:
+            test_obj.median_response_time_stats = self.ds_obj.get_median_response_time_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        if not test_obj.pct90_response_time_stats:
+            test_obj.pct90_response_time_stats = self.ds_obj.get_pct90_response_time_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        if not test_obj.errors_pct_stats:
+            test_obj.errors_pct_stats = self.ds_obj.get_errors_pct_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+            
+        return test_obj
 
     # Metric initialization and configuration
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:
@@ -197,7 +205,7 @@ class DataProvider:
         """Remove rows containing NaN values."""
         return df.dropna()
 
-    def get_statistics(self, test_title: str) -> Dict[str, Any]:
+    def get_statistics(self, test_title: str, test_obj: Test = None) -> Dict[str, Any]:
         """
         Retrieve aggregated metrics from the test data.
 
@@ -214,18 +222,19 @@ class DataProvider:
         Returns:
             Dictionary containing aggregated metrics with their values
         """
-        self.collect_test_obj(test_title=test_title)
+        if not test_obj:
+            test_obj: Test = self.collect_test_obj(test_title=test_title)
 
         aggregated_results = {
-            "vu": self.test_obj.max_active_users,
-            "throughput": self.test_obj.median_throughput,
-            "median": self.test_obj.median_response_time_stats,
-            "90pct": self.test_obj.pct90_response_time_stats,
-            "errors": f'{str(self.test_obj.errors_pct_stats)}%'
+            "vu": test_obj.max_active_users,
+            "throughput": test_obj.median_throughput,
+            "median": test_obj.median_response_time_stats,
+            "90pct": test_obj.pct90_response_time_stats,
+            "errors": f'{str(test_obj.errors_pct_stats)}%'
         }
         return aggregated_results
 
-    def get_test_details(self, test_title: str) -> Dict[str, str]:
+    def get_test_details(self, test_title: str, test_obj: Test = None ) -> Dict[str, str]:
         """
         Retrieve basic test execution details.
 
@@ -240,12 +249,13 @@ class DataProvider:
         Returns:
             Dictionary containing test execution details
         """
-        self.collect_test_obj(test_title=test_title)
+        if not test_obj:
+            test_obj: Test = self.collect_test_obj(test_title=test_title)
 
         test_details = {
-            "start_time": self.test_obj.start_time_human,
-            "end_time": self.test_obj.end_time_human,
-            "duration": self.test_obj.duration
+            "start_time": test_obj.start_time_human,
+            "end_time": test_obj.end_time_human,
+            "duration": test_obj.duration
         }
         return test_details
 
@@ -267,7 +277,7 @@ class DataProvider:
             - summary: HTML formatted summary
             - performance_status: Boolean indicating if there are performance issues
         """
-        self.collect_test_obj(test_title=test_title)
+        test_obj: Test = self.collect_test_obj(test_title=test_title)
 
         # Initialize engine with detectors
         self.anomaly_detection_engine = AnomalyDetectionEngine(
@@ -277,7 +287,7 @@ class DataProvider:
         standard_metrics = self.initialize_metrics()
 
         # Fetch and merge the data for all standard metrics
-        dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, self.test_obj.start_time_iso, self.test_obj.end_time_iso) for metric, details in standard_metrics.items()}
+        dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, test_obj.start_time_iso, test_obj.end_time_iso) for metric, details in standard_metrics.items()}
 
         # NaN values to 0
         dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
@@ -290,23 +300,23 @@ class DataProvider:
         metrics, summary, performance_status, is_fixed_load = self.anomaly_detection_engine.analyze_test_data(merged_df=merged_df, standard_metrics=standard_metrics)
         
         if is_fixed_load:
-            self.test_obj.test_type = "fixed load"
+            test_obj.test_type = "fixed load"
         else:
-            self.test_obj.test_type = "ramp up"
+            test_obj.test_type = "ramp up"
 
         # Fetch additional response time per request data
-        avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
 
-        medianRespTimePerReq = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        medianRespTimePerReq = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["medianResponseTimePerReq"] = self.transform_to_json(medianRespTimePerReq)
 
-        pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
         
         # Collect the outputs
         analysis_output = self.anomaly_detection_engine.output
-        statistics = self.get_statistics(test_title=test_title)
-        test_details = self.get_test_details(test_title=test_title)
-        aggregated_table = self.ds_obj.get_aggregated_table(test_title=test_title, start=self.test_obj.start_time_iso, end=self.test_obj.end_time_iso)
+        statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)
+        test_details = self.get_test_details(test_title=test_title, test_obj=test_obj)
+        aggregated_table = self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         return metrics, analysis_output, statistics, test_details, aggregated_table, summary, performance_status

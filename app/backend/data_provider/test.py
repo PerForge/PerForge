@@ -11,13 +11,14 @@ class Test:
     """
 
     def __init__(self) -> None:
+        self.test_title: Optional[str] = None
         self.start_time_human: Optional[str] = None
         self.end_time_human: Optional[str] = None
         self.start_time_iso: Optional[str] = None
         self.end_time_iso: Optional[str] = None
         self.start_time_timestamp: Optional[float] = None
         self.end_time_timestamp: Optional[float] = None
-        self.test_name: Optional[str] = None
+        self.application: Optional[str] = None
         self.test_type: Optional[str] = None
         self.duration: Optional[str] = None
         self.max_active_users: Optional[int] = None

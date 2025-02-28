@@ -66,6 +66,7 @@
           resolve();
         },
         error: function (jqXHR, textStatus, errorThrown) {
+          showResultModal("Failed!", jqXHR.responseText);
           reject({ jqXHR, textStatus, errorThrown });
         },
       });
@@ -574,7 +575,7 @@
     const selectedRowsBtn = document.querySelector('[data-selected-rows]');
     const selectedAction = document.getElementById('selectedAction');
     const showApiBtn = document.getElementById('show-api');
-    const selectedInfluxdb = document.getElementById('influxdbId');
+    const selectedDb = document.getElementById('dataSourceId');
     const selectedTemplateGroup = document.getElementById('templateGroupName');
     const spinner = document.getElementById("spinner-apply");
     const spinnerText = document.getElementById("spinner-apply-text");
@@ -619,9 +620,9 @@
       }
   
       selectedRows["tests"] = transformedList;
-      selectedRows["influxdb_id"] = selectedInfluxdb.value;
+      selectedRows["db_id"] = JSON.parse(selectedDb.value);
   
-      if (output.type === undefined || output.type === "none") {
+      if (output.type === "none") {
         showResultModal("Please choose an output.");
         return null;
       }

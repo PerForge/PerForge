@@ -23,20 +23,23 @@ from app.backend.components.nfrs.nfr_validation                            impor
 from app.backend.components.projects.projects_db                           import DBProjects
 from app.backend.components.templates.templates_db                         import DBTemplates
 from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
+from app.backend.data_provider.data_provider                               import DataProvider
+from app.backend.data_provider.test                                        import Test
+
+from typing import Dict, Any
 
 
 
 class ReportingBase:
 
     def __init__(self, project):
-        self.project        = project
-        self.schema_name    = DBProjects.get_config_by_id(id=self.project)['name']
-        self.validation_obj = NFRValidation(project=self.project)
+        self.project                   = project
+        self.schema_name               = DBProjects.get_config_by_id(id=self.project)['name']
+        self.validation_obj            = NFRValidation(project=self.project)
+        self.current_test: Test        = None
+        self.baseline_test: Test       = None
 
-    def __del__(self):
-        self.influxdb_obj._close_client()
-
-    def set_template(self, template, influxdb):
+    def set_template(self, template, db_id: Dict[str, str]):
         template_obj                   = DBTemplates.get_config_by_id(schema_name=self.schema_name, id=template)
         self.nfr                       = template_obj["nfr"]
         self.title                     = template_obj["title"]
@@ -44,21 +47,21 @@ class ReportingBase:
         self.template_prompt_id        = template_obj["template_prompt_id"]
         self.aggregated_prompt_id      = template_obj["aggregated_prompt_id"]
         self.system_prompt_id          = template_obj["system_prompt_id"]
-        self.influxdb_obj              = InfluxdbV2(project=self.project, id=influxdb)
+        self.dp_obj                    = DataProvider(project=self.project, source_type=db_id.get("source_type"), id=db_id.get("id"))
         self.ai_switch                 = template_obj["ai_switch"]
         self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
         self.nfrs_switch               = template_obj["nfrs_switch"]
         self.ai_graph_switch           = template_obj["ai_graph_switch"]
         self.ai_to_graphs_switch       = template_obj["ai_to_graphs_switch"]
         if self.ai_switch:
-            self.ai_support_obj = AISupport(project=self.project, system_prompt=self.system_prompt_id)
+            self.ai_support_obj        = AISupport(project=self.project, system_prompt=self.system_prompt_id)
 
     def set_template_group(self, template_group):
-        template_group_obj            = DBTemplateGroups.get_config_by_id(schema_name=self.schema_name, id=template_group)
-        self.group_title              = template_group_obj["title"]
-        self.template_order           = template_group_obj["data"]
-        self.template_group_prompt_id = template_group_obj["prompt_id"]
-        self.ai_summary               = template_group_obj["ai_summary"]
+        template_group_obj             = DBTemplateGroups.get_config_by_id(schema_name=self.schema_name, id=template_group)
+        self.group_title               = template_group_obj["title"]
+        self.template_order            = template_group_obj["data"]
+        self.template_group_prompt_id  = template_group_obj["prompt_id"]
+        self.ai_summary                = template_group_obj["ai_summary"]
 
     def replace_variables(self, text):
         variables = re.findall(r"\$\{(.*?)\}", text)
@@ -74,7 +77,7 @@ class ReportingBase:
         nfr_summary     = ""
         data            = []
         if self.nfrs_switch or self.ai_aggregated_data_switch:
-            data = self.influxdb_obj.get_aggregated_table(self.current_run_id, self.current_start_time, self.current_end_time)
+            data = self.dp_obj.get_aggregated_table(self.current_test.test_title, self.current_test.start_time_iso, self.current_test.end_time_iso)
         if self.nfrs_switch:
             nfr_summary = self.validation_obj.create_summary(self.nfr, data)
         if self.ai_switch:
@@ -101,34 +104,61 @@ class ReportingBase:
             response["Output tokens"] = 0
         return response
 
-    def collect_data(self, current_run_id, baseline_run_id = None):
-        default_grafana_id              = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
+    def collect_data(self, current_test_title, baseline_test_title = None):
+        default_grafana_id           = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
         default_grafana_obj          = Grafana(project=self.project, id=default_grafana_id)
-        self.current_run_id          = current_run_id
-        self.baseline_run_id         = baseline_run_id
-        self.current_start_time      = self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'iso')
-        self.current_end_time        = self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'iso')
-        self.current_start_timestamp = self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'timestamp')
-        self.current_end_timestamp   = self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'timestamp')
-        self.test_name               = self.influxdb_obj.get_test_name(current_run_id, self.current_start_time, self.current_end_time)
-        self.parameters              = {
-            "test_name"           : self.test_name,
-            "current_start_time"  : self.influxdb_obj.get_start_time(test_title = current_run_id, time_format = 'human'),
-            "current_end_time"    : self.influxdb_obj.get_end_time(test_title = current_run_id, time_format = 'human'),
-            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id),
-            "current_duration"    : str(int((self.current_end_timestamp - self.current_start_timestamp) / 1000)),
-            "current_vusers"      : self.influxdb_obj.get_max_active_users_stats(current_run_id, self.current_start_time, self.current_end_time)
-        }
-        if baseline_run_id is not None:
-            self.baseline_start_time      = self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'iso')
-            self.baseline_end_time        = self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'iso')
-            self.baseline_start_timestamp = self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'timestamp')
-            self.baseline_end_timestamp   = self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'timestamp')
+        self.current_test: Test      = self.dp_obj.collect_test_obj(test_title=current_test_title)
 
+        self.parameters              = {
+            "test_name"           : self.current_test.application,
+            "current_start_time"  : self.current_test.start_time_human,
+            "current_end_time"    : self.current_test.end_time_human,
+            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_test.start_time_timestamp, self.current_test.end_time_timestamp, self.current_test.application, current_test_title),
+            "current_duration"    : self.current_test.duration,
+            "current_vusers"      : self.current_test.max_active_users
+        }
+        if baseline_test_title is not None:
+            self.baseline_test: Test      = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
+            
             self.parameters.update({
-                "baseline_start_time"  : self.influxdb_obj.get_start_time(test_title = baseline_run_id, time_format = 'human'),
-                "baseline_end_time"    : self.influxdb_obj.get_end_time(test_title = baseline_run_id, time_format = 'human'),
-                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_start_timestamp, self.baseline_end_timestamp, self.test_name, baseline_run_id),
-                "baseline_duration"    : str(int((self.baseline_end_timestamp - self.baseline_start_timestamp) / 1000)),
-                "baseline_vusers"      : self.influxdb_obj.get_max_active_users_stats(baseline_run_id, self.baseline_start_time, self.baseline_end_time)
+                "baseline_start_time"  : self.baseline_test.start_time_human,
+                "baseline_end_time"    : self.baseline_test.end_time_human,
+                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_test.start_time_timestamp, self.baseline_test.end_time_timestamp, self.baseline_test.application, baseline_test_title),
+                "baseline_duration"    : self.baseline_test.duration,
+                "baseline_vusers"      : self.baseline_test.max_active_users
             })
+           
+           
+            
+    # def collect_data(self, current_test_title, baseline_test_title = None):
+    #     default_grafana_id           = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
+    #     default_grafana_obj          = Grafana(project=self.project, id=default_grafana_id)
+    #     self.current_test: Test      = self.dp_obj.collect_test_obj(test_title=current_test_title)
+    #     self.current_start_time      = self.influxdb_obj.get_start_time(test_title = current_test_title, time_format = 'iso')
+    #     self.current_end_time        = self.influxdb_obj.get_end_time(test_title = current_test_title, time_format = 'iso')
+    #     self.current_start_timestamp = self.influxdb_obj.get_start_time(test_title = current_test_title, time_format = 'timestamp')
+    #     self.current_end_timestamp   = self.influxdb_obj.get_end_time(test_title = current_test_title, time_format = 'timestamp')
+    #     self.test_name               = self.influxdb_obj.get_test_name(current_test_title, self.current_start_time, self.current_end_time)
+    #     self.parameters              = {
+    #         "test_name"           : self.test_name,
+    #         "current_start_time"  : self.influxdb_obj.get_start_time(test_title = current_test_title, time_format = 'human'),
+    #         "current_end_time"    : self.influxdb_obj.get_end_time(test_title = current_test_title, time_format = 'human'),
+    #         "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_test_title),
+    #         "current_duration"    : str(int((self.current_end_timestamp - self.current_start_timestamp) / 1000)),
+    #         "current_vusers"      : self.influxdb_obj.get_max_active_users_stats(current_test_title, self.current_start_time, self.current_end_time)
+    #     }
+    #     if baseline_test_title is not None:
+    #         self.baseline_test: Test      = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
+
+    #         self.baseline_start_time      = self.influxdb_obj.get_start_time(test_title = baseline_test_title, time_format = 'iso')
+    #         self.baseline_end_time        = self.influxdb_obj.get_end_time(test_title = baseline_test_title, time_format = 'iso')
+    #         self.baseline_start_timestamp = self.influxdb_obj.get_start_time(test_title = baseline_test_title, time_format = 'timestamp')
+    #         self.baseline_end_timestamp   = self.influxdb_obj.get_end_time(test_title = baseline_test_title, time_format = 'timestamp')
+
+    #         self.parameters.update({
+    #             "baseline_start_time"  : self.influxdb_obj.get_start_time(test_title = baseline_test_title, time_format = 'human'),
+    #             "baseline_end_time"    : self.influxdb_obj.get_end_time(test_title = baseline_test_title, time_format = 'human'),
+    #             "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_start_timestamp, self.baseline_end_timestamp, self.test_name, baseline_test_title),
+    #             "baseline_duration"    : str(int((self.baseline_end_timestamp - self.baseline_start_timestamp) / 1000)),
+    #             "baseline_vusers"      : self.influxdb_obj.get_max_active_users_stats(baseline_test_title, self.baseline_start_time, self.baseline_end_time)
+    #         })

@@ -24,8 +24,8 @@ class AzureWikiReport(ReportingBase):
         super().__init__(project)
         self.report_body = ""
 
-    def set_template(self, template, influxdb, action_id):
-        super().set_template(template, influxdb)
+    def set_template(self, template, db_id, action_id):
+        super().set_template(template, db_id)
         self.output_obj = AzureWiki(project=self.project, id=action_id)
 
     def add_group_text(self, text):
@@ -37,8 +37,8 @@ class AzureWikiReport(ReportingBase):
         text += f'\n\n'
         return text
 
-    def add_graph(self, graph_data, current_run_id, baseline_run_id):
-        image         = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
+    def add_graph(self, graph_data, current_test_title, baseline_test_title):
+        image         = self.grafana_obj.render_image(graph_data, self.current_test.start_time_timestamp, self.current_test.end_time_timestamp, self.current_test.application, current_test_title, baseline_test_title)
         encoded_image = self.grafana_obj.encode_image(image)
         fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["id"])
         if(fileName):
@@ -55,17 +55,17 @@ class AzureWikiReport(ReportingBase):
         title = self.output_obj.get_path() + (self.group_title if isgroup else self.replace_variables(self.title))
         return title
 
-    def generate_report(self, tests, influxdb, action_id, template_group=None):
+    def generate_report(self, tests, db_id, action_id, template_group=None):
         path = None
         def process_test(test, isgroup):
             nonlocal path
             template_id = test.get('template_id')
             if template_id:
-                self.set_template(template_id, influxdb, action_id)
-                run_id            = test.get('test_title')
-                baseline_run_id   = test.get('baseline_test_title')
-                self.collect_data(run_id, baseline_run_id)
-                self.report_body += self.generate(run_id, baseline_run_id)
+                self.set_template(template_id, db_id, action_id)
+                test_title            = test.get('test_title')
+                baseline_test_title   = test.get('baseline_test_title')
+                self.collect_data(test_title, baseline_test_title)
+                self.report_body += self.generate_content(test_title, baseline_test_title)
                 if not path:
                     path = self.generate_path(isgroup)
         if template_group:
@@ -86,7 +86,7 @@ class AzureWikiReport(ReportingBase):
         response = self.generate_response()
         return response
 
-    def generate(self, current_run_id, baseline_run_id = None):
+    def generate_content(self, current_test_title, baseline_test_title = None):
         report_body = ""
         for obj in self.data:
             if obj["type"] == "text":
@@ -94,7 +94,7 @@ class AzureWikiReport(ReportingBase):
             elif obj["type"] == "graph":
                 graph_data       = DBGraphs.get_config_by_id(schema_name=self.schema_name, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                graph, ai_support_response = self.add_graph(graph_data, current_run_id, baseline_run_id)
+                graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)

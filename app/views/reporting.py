@@ -43,7 +43,7 @@ def get_tests():
         for config in influxdb_configs:
             db_configs.append({ "id": config["id"], "name": config["name"], "source_type": "influxdb_v2"})
         db_configs.append({ "id": None, "name": "TimescaleDB", "source_type": "timescaledb"})
-        template_configs       = DBTemplates.get_configs(schema_name=project_data['name'])
+        template_configs       = DBTemplates.get_configs_brief(schema_name=project_data['name'])
         template_group_configs = DBTemplateGroups.get_configs(schema_name=project_data['name'])
         output_configs         = DBProjects.get_project_output_configs(id=project_id)
         return render_template('home/tests.html', db_configs=db_configs, templates = template_configs, template_groups = template_group_configs, output_configs=output_configs)
@@ -73,7 +73,7 @@ def generate_report():
         if request.method == "POST":
             data = request.get_json()
             if "output_id" in data:
-                influxdb       = data.get("influxdb_id")
+                db_id          = data.get("db_id")
                 template_group = data.get("template_group")
                 action_id      = data.get("output_id")
                 if action_id == "pdf_report":
@@ -86,23 +86,23 @@ def generate_report():
                 action_type = None
             if action_type == "azure":
                 az     = AzureWikiReport(project)
-                result = az.generate_report(data["tests"], influxdb, action_id, template_group)
+                result = az.generate_report(data["tests"], db_id, action_id, template_group)
                 result = json.dumps(result)
             elif action_type == "atlassian_confluence":
                 awr    = AtlassianConfluenceReport(project)
-                result = awr.generate_report(data["tests"], influxdb, action_id, template_group)
+                result = awr.generate_report(data["tests"], db_id, action_id, template_group)
                 result = json.dumps(result)
             elif action_type == "atlassian_jira":
                 ajr    = AtlassianJiraReport(project)
-                result = ajr.generate_report(data["tests"], influxdb, action_id, template_group)
+                result = ajr.generate_report(data["tests"], db_id, action_id, template_group)
                 result = json.dumps(result)
             elif action_type == "smtp_mail":
                 smr    = SmtpMailReport(project)
-                result = smr.generate_report(data["tests"], influxdb, action_id, template_group)
+                result = smr.generate_report(data["tests"], db_id, action_id, template_group)
                 result = json.dumps(result)
             elif action_type == "pdf_report":
                 pdf      = PdfReport(project)
-                result = pdf.generate_report(data["tests"], influxdb, template_group)
+                result = pdf.generate_report(data["tests"], db_id, template_group)
                 pdf.pdf_io.seek(0)
                 # Convert the result to a JSON string and include it in the headers
                 result_json = json.dumps(result)
@@ -117,7 +117,7 @@ def generate_report():
                 return response
             elif action_type == "delete":
                 try:
-                    influxdb_obj = InfluxdbV2(project=project, id=influxdb)
+                    influxdb_obj = InfluxdbV2(project=project, id=db_id)
                     influxdb_obj._initialize_client()
                     for test in data["tests"]:
                         result = influxdb_obj.delete_test_title(test["test_title"])
@@ -130,5 +130,4 @@ def generate_report():
             return result
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.ER00011.value, "error")
-        return redirect(url_for("index"))
+        return jsonify({"status": "error", "message": ErrorMessages.ER00011.value}), 500

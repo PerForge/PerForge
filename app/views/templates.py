@@ -113,7 +113,7 @@ def template_group():
         project_id                    = request.cookies.get('project')
         project_data                  = DBProjects.get_config_by_id(id=project_id)
         template_group_config         = request.args.get('template_group_config')
-        template_configs              = DBTemplates.get_configs(schema_name=project_data['name'])
+        template_configs              = DBTemplates.get_configs_brief(schema_name=project_data['name'])
         template_group_prompt_configs = DBPrompts.get_configs_by_place(project_id=project_id, place="template_group")
         template_group_data           = []
         if template_group_config is not None:
