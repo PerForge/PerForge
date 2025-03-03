@@ -24,6 +24,7 @@ from app.backend.integrations.atlassian_confluence.atlassian_confluence_report i
 from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
 from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
 from app.backend.integrations.pdf.pdf_report                                   import PdfReport
+from app.backend.integrations.report_registry                                  import ReportRegistry
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db             import DBInfluxdb
 from app.backend.components.projects.projects_db                               import DBProjects
 from app.backend.components.templates.templates_db                             import DBTemplates
@@ -73,35 +74,21 @@ def generate_report():
         if request.method == "POST":
             data = request.get_json()
             if "output_id" in data:
-                db_id          = data.get("db_id")
-                template_group = data.get("template_group")
-                action_id      = data.get("output_id")
-                if action_id == "pdf_report":
+                db_id            = data.get("db_id")
+                template_group   = data.get("template_group")
+                action_id        = data.get("output_id")
+                integration_type = data.get("integration_type")  # Get the integration type from the request
+
+                # Special cases that need different handling
+                if action_id == "pdf_report" or action_id == "delete":
                     action_type = action_id
-                elif action_id == "delete":
-                    action_type = action_id
-                else:
-                    action_type = pkg.get_output_integration_type_by_id(project, action_id)
-            else:
-                action_type = None
-            if action_type == "azure":
-                az     = AzureWikiReport(project)
-                result = az.generate_report(data["tests"], db_id, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "atlassian_confluence":
-                awr    = AtlassianConfluenceReport(project)
-                result = awr.generate_report(data["tests"], db_id, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "atlassian_jira":
-                ajr    = AtlassianJiraReport(project)
-                result = ajr.generate_report(data["tests"], db_id, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "smtp_mail":
-                smr    = SmtpMailReport(project)
-                result = smr.generate_report(data["tests"], db_id, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "pdf_report":
-                pdf      = PdfReport(project)
+                elif integration_type:
+                    # If integration_type is provided, use it directly as the action_type
+                    action_type = integration_type
+
+            # Handle PDF report (special case)
+            if action_type == "pdf_report":
+                pdf = ReportRegistry.get_report_instance(action_type, project)
                 result = pdf.generate_report(data["tests"], db_id, template_group)
                 pdf.pdf_io.seek(0)
                 # Convert the result to a JSON string and include it in the headers
@@ -115,16 +102,22 @@ def generate_report():
                 )
                 response.headers['X-Result-Data'] = result_json
                 return response
-            elif action_type == "delete":
-                try:
-                    influxdb_obj = InfluxdbV2(project=project, id=db_id)
-                    influxdb_obj._initialize_client()
-                    for test in data["tests"]:
-                        result = influxdb_obj.delete_test_title(test["test_title"])
-                except:
-                    logging.warning(str(traceback.format_exc()))
-                    flash(ErrorMessages.ER00010.value, "error")
-                    return redirect(url_for("index"))
+            # Handle delete action (special case) TBD DATA PROVIDER
+            # elif action_type == "delete":
+            #     try:
+            #         influxdb_obj = InfluxdbV2(project=project, id=db_id)
+            #         influxdb_obj._initialize_client()
+            #         for test in data["tests"]:
+            #             result = influxdb_obj.delete_test_title(test["test_title"])
+            #     except:
+            #         logging.warning(str(traceback.format_exc()))
+            #         flash(ErrorMessages.ER00010.value, "error")
+            #         return redirect(url_for("index"))
+            # Handle standard report generation using the registry
+            elif action_type and ReportRegistry.is_valid_report_type(action_type):
+                report_instance = ReportRegistry.get_report_instance(action_type, project)
+                result = report_instance.generate_report(data["tests"], db_id, action_id, template_group)
+                result = json.dumps(result)
             else:
                 result = f"Wrong action: {str(action_type)}"
             return result

@@ -13,16 +13,20 @@
 # limitations under the License.
 
 from app.backend.integrations.reporting_base        import ReportingBase
+from app.backend.integrations.report_registry       import ReportRegistry
 from app.backend.integrations.azure_wiki.azure_wiki import AzureWiki
 from app.backend.integrations.grafana.grafana       import Grafana
 from app.backend.components.graphs.graphs_db        import DBGraphs
+from datetime                                       import datetime
 
 
+@ReportRegistry.register("azure_wiki")
 class AzureWikiReport(ReportingBase):
 
     def __init__(self, project):
         super().__init__(project)
         self.report_body = ""
+        self.page_id     = None
 
     def set_template(self, template, db_id, action_id):
         super().set_template(template, db_id)
@@ -38,9 +42,9 @@ class AzureWikiReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        image         = self.grafana_obj.render_image(graph_data, self.current_test.start_time_timestamp, self.current_test.end_time_timestamp, self.current_test.application, current_test_title, baseline_test_title)
+        image         = self.grafana_obj.render_image(graph_data, self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, self.current_test_obj.application, current_test_title, baseline_test_title)
         encoded_image = self.grafana_obj.encode_image(image)
-        fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["id"])
+        fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["name"])
         if(fileName):
             graph = f'![image.png](/.attachments/{str(fileName)})\n\n'
         else:

@@ -613,21 +613,26 @@
       const transformedList = bulkSelectInstance.getSelectedRows();
       const selectedRows = {};
       const output = JSON.parse(selectedAction.value.toString());
-  
+
       if (transformedList.length === 0) {
         showResultModal("Please choose at least one test.");
         return null;
       }
-  
+
       selectedRows["tests"] = transformedList;
       selectedRows["db_id"] = JSON.parse(selectedDb.value);
-  
+
       if (output.type === "none") {
         showResultModal("Please choose an output.");
         return null;
       }
-  
+
       selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
+      
+      // Add integration_type to the request data if it exists in the output object
+      if (output.integration_type) {
+        selectedRows["integration_type"] = output.integration_type;
+      }
       
       if(output.type !== "delete"){
         for (const item of selectedRows["tests"]) {
@@ -641,7 +646,7 @@
       if (selectedTemplateGroup.value !== "") {
         selectedRows["template_group"] = selectedTemplateGroup.value;
       }
-  
+
       return selectedRows;
     };
   

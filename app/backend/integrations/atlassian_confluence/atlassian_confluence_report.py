@@ -14,11 +14,13 @@
 
 from datetime                                                           import datetime
 from app.backend.integrations.reporting_base                            import ReportingBase
+from app.backend.integrations.report_registry                           import ReportRegistry
 from app.backend.integrations.atlassian_confluence.atlassian_confluence import AtlassianConfluence
 from app.backend.integrations.grafana.grafana                           import Grafana
 from app.backend.components.graphs.graphs_db                            import DBGraphs
 
 
+@ReportRegistry.register("atlassian_confluence")
 class AtlassianConfluenceReport(ReportingBase):
 
     def __init__(self, project):

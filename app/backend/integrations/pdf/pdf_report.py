@@ -15,9 +15,10 @@
 import os
 import ast
 
-from app.backend.integrations.reporting_base  import ReportingBase
-from app.backend.integrations.grafana.grafana import Grafana
-from app.backend.components.graphs.graphs_db  import DBGraphs
+from app.backend.integrations.reporting_base   import ReportingBase
+from app.backend.integrations.report_registry  import ReportRegistry
+from app.backend.integrations.grafana.grafana  import Grafana
+from app.backend.components.graphs.graphs_db   import DBGraphs
 from io                                       import BytesIO
 from PIL                                      import Image as PILImage
 from reportlab.lib.colors                     import Color
@@ -188,6 +189,7 @@ class RoundedImage(Image):
             super().draw()
             self.canv.restoreState()
 
+@ReportRegistry.register("pdf_report")
 class PdfReport(ReportingBase):
 
     def __init__(self, project):

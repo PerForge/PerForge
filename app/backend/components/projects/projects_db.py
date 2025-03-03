@@ -165,9 +165,24 @@ class DBProjects(db.Model):
                 DBAtlassianConfluence, DBAtlassianJira,
                 DBAzureWiki, DBSMTPMail
             ]
-            output_configs = list(chain.from_iterable(
-                model.get_configs(schema_name) for model in integration_models
-            ))
+
+            # Map each model to its integration type
+            # SHOULD BE THE SAME AS REPORT REGISTRY!!!!!!!!!
+            integration_types = {
+                DBAtlassianConfluence: 'atlassian_confluence',
+                DBAtlassianJira: 'atlassian_jira',
+                DBAzureWiki: 'azure_wiki',
+                DBSMTPMail: 'smtp_mail'
+            }
+
+            output_configs = []
+            for model in integration_models:
+                configs = model.get_configs(schema_name)
+                for config in configs:
+                    # Add integration_type to each config
+                    config['integration_type'] = integration_types[model]
+                output_configs.extend(configs)
+
             return output_configs
         except Exception:
             logging.warning(str(traceback.format_exc()))

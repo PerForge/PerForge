@@ -12,30 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Standard library imports
+from collections import defaultdict
+from typing import List, Dict, Any, Tuple, Optional, Type
+
+# Third-party imports
+import pandas as pd
+
+# Local application imports
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.integrations.data_sources.timescaledb.timescaledb_extraction import TimeScaleDB
-from app.backend.data_provider.test import Test
-
-import pandas as pd
-from collections import defaultdict
-from typing import List, Dict, Any, Tuple, Optional, Type
+from app.backend.data_provider.test_data import TestData
 
 class DataProvider:
     """
     DataProvider class manages data extraction, transformation, and analysis for performance tests.
 
-    This class serves as a bridge between data sources (like InfluxDB) and the application,
-    providing methods to fetch, analyze, and format performance test data. It includes
-    functionality for anomaly detection, trend analysis, and performance metrics aggregation.
-
-    Attributes:
-        class_map (Dict[str, Any]): Mapping of data source types to their implementation classes
-        project: Project configuration object
-        ds_obj: Data source object instance
-        test_type (Optional[str]): Type of the test (fixed load or ramp up)
-        Various time and metric attributes for caching test data
+    This class serves as a central hub for handling performance test data, providing:
+    - Data extraction from various sources (InfluxDB, TimeScaleDB)
+    - Data transformation and preprocessing
+    - Performance metrics calculation and aggregation
     """
 
     class_map: Dict[str, Type[DataExtractionBase]] = {
@@ -45,12 +43,12 @@ class DataProvider:
 
     def __init__(self, project: Any, source_type: Any, id: Optional[str] = None) -> None:
         """
-        Initialize the DataProvider with project settings and optional ID.
+        Initialize DataProvider with project settings and data source configuration.
 
         Args:
-            project: Project configuration object
-            source_type: Type of the data source (e.g. InfluxDB, TimeScaleDB)
-            id: Optional identifier for the data source
+            project: Project configuration object with settings
+            source_type: Data source type identifier (e.g., "influxdb_v2", "timescaledb")
+            id: Optional identifier for specific data source instance
         """
         self.project = project
         self.ds_obj = self.class_map.get(source_type, None)(project=self.project, id=id)
@@ -59,7 +57,7 @@ class DataProvider:
     def get_test_log(self) -> Dict[str, Any]:
         """Retrieve test log data from the database."""
         return self.ds_obj.get_test_log()
-    
+
     def get_aggregated_table(self, test_title: str, start_time: str, end_time: str):
         return self.ds_obj.get_aggregated_table(test_title, start_time, end_time)
 
@@ -87,10 +85,10 @@ class DataProvider:
         Args:
             test_title: The title/name of the test to collect data for
         """
-        test_obj = Test()
-        
+        test_obj = TestData()
+
         if not test_obj.test_title:
-            test_obj.test_title = test_title      
+            test_obj.test_title = test_title
         if not test_obj.start_time_human:
             test_obj.start_time_human = self.ds_obj.get_start_time(test_title=test_title, time_format='human')
         if not test_obj.end_time_human:
@@ -117,7 +115,9 @@ class DataProvider:
             test_obj.pct90_response_time_stats = self.ds_obj.get_pct90_response_time_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         if not test_obj.errors_pct_stats:
             test_obj.errors_pct_stats = self.ds_obj.get_errors_pct_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-            
+        if not test_obj.aggregated_table:
+            test_obj.aggregated_table = self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+
         return test_obj
 
     # Metric initialization and configuration
@@ -205,7 +205,7 @@ class DataProvider:
         """Remove rows containing NaN values."""
         return df.dropna()
 
-    def get_statistics(self, test_title: str, test_obj: Test = None) -> Dict[str, Any]:
+    def get_statistics(self, test_title: str, test_obj: TestData = None) -> Dict[str, Any]:
         """
         Retrieve aggregated metrics from the test data.
 
@@ -223,7 +223,7 @@ class DataProvider:
             Dictionary containing aggregated metrics with their values
         """
         if not test_obj:
-            test_obj: Test = self.collect_test_obj(test_title=test_title)
+            test_obj: TestData = self.collect_test_obj(test_title=test_title)
 
         aggregated_results = {
             "vu": test_obj.max_active_users,
@@ -234,7 +234,7 @@ class DataProvider:
         }
         return aggregated_results
 
-    def get_test_details(self, test_title: str, test_obj: Test = None ) -> Dict[str, str]:
+    def get_test_details(self, test_title: str, test_obj: TestData = None ) -> Dict[str, str]:
         """
         Retrieve basic test execution details.
 
@@ -250,7 +250,7 @@ class DataProvider:
             Dictionary containing test execution details
         """
         if not test_obj:
-            test_obj: Test = self.collect_test_obj(test_title=test_title)
+            test_obj: TestData = self.collect_test_obj(test_title=test_title)
 
         test_details = {
             "start_time": test_obj.start_time_human,
@@ -259,35 +259,11 @@ class DataProvider:
         }
         return test_details
 
-    # Main analysis method
-    def get_test_results_and_analyze(self, test_title: str) -> Tuple[Dict, List, Dict, Dict, Dict, str, bool]:
-        """
-        Main method to retrieve and analyze test results.
-
-        Args:
-            test_title: The title/name of the test to analyze
-
-        Returns:
-            Tuple containing:
-            - result: Processed test data
-            - analysis_output: Raw analysis results
-            - aggregated_results: Aggregated metrics
-            - test_details: Basic test information
-            - statistics: Statistical analysis
-            - summary: HTML formatted summary
-            - performance_status: Boolean indicating if there are performance issues
-        """
-        test_obj: Test = self.collect_test_obj(test_title=test_title)
-
-        # Initialize engine with detectors
-        self.anomaly_detection_engine = AnomalyDetectionEngine(
-            params={}  # You can pass custom parameters here
-        )
-
+    def _get_test_results(self, test_obj: TestData):
         standard_metrics = self.initialize_metrics()
 
         # Fetch and merge the data for all standard metrics
-        dataframes = {metric: self.fetch_metric(metric, details["func"], test_title, test_obj.start_time_iso, test_obj.end_time_iso) for metric, details in standard_metrics.items()}
+        dataframes = {metric: self.fetch_metric(metric, details["func"], test_obj.test_title, test_obj.start_time_iso, test_obj.end_time_iso) for metric, details in standard_metrics.items()}
 
         # NaN values to 0
         dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
@@ -295,14 +271,59 @@ class DataProvider:
         merged_df = self.merge_dataframes(dataframes)
 
         merged_df = self.df_delete_nan_rows(merged_df)
+        return merged_df, standard_metrics
+
+    def get_ml_analysis_to_test_obj(self, test_obj: TestData):
+        """
+        Perform machine learning analysis on test data to detect anomalies and patterns.
+
+        Args:
+            test_obj: TestData object containing test information and metrics
+
+        Returns:
+            metrics: Dictionary containing analyzed metrics and their characteristics
+        """
+        merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
+
+        # Initialize engine with detectors
+        self.anomaly_detection_engine = AnomalyDetectionEngine(
+            params={}  # You can pass custom parameters here
+        )
 
         # Analyze the data periods
-        metrics, summary, performance_status, is_fixed_load = self.anomaly_detection_engine.analyze_test_data(merged_df=merged_df, standard_metrics=standard_metrics)
-        
+        metrics, is_fixed_load, analysis_output = self.anomaly_detection_engine.analyze_test_data(merged_df=merged_df, standard_metrics=standard_metrics)
+
         if is_fixed_load:
             test_obj.test_type = "fixed load"
         else:
             test_obj.test_type = "ramp up"
+
+        ml_html_summary, performance_status = self.anomaly_detection_engine.create_html_summary(test_obj.test_type, analysis_output)
+
+        test_obj.ml_anomalies = analysis_output
+        test_obj.ml_html_summary = ml_html_summary
+        test_obj.performance_status = performance_status
+
+        return metrics
+
+
+    # Main analysis method
+    def collect_test_data_for_report_page(self, test_title: str) -> Tuple[Dict, List, Dict, Dict, Dict, str, bool]:
+        """
+        Comprehensive test data collection and analysis for report generation.
+
+        This method orchestrates the entire data collection and analysis process:
+        1. Collects basic test information and metrics
+        2. Performs ML analysis for anomaly detection
+        3. Gathers detailed response time metrics per request
+        4. Compiles statistics and test details
+
+        Args:
+            test_title: Name/identifier of the test to analyze
+        """
+        test_obj: TestData = self.collect_test_obj(test_title=test_title)
+
+        metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
 
         # Fetch additional response time per request data
         avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
@@ -313,10 +334,8 @@ class DataProvider:
 
         pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
-        
+
         # Collect the outputs
-        analysis_output = self.anomaly_detection_engine.output
         statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)
         test_details = self.get_test_details(test_title=test_title, test_obj=test_obj)
-        aggregated_table = self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        return metrics, analysis_output, statistics, test_details, aggregated_table, summary, performance_status
+        return metrics, test_obj.ml_anomalies, statistics, test_details, test_obj.aggregated_table, test_obj.ml_html_summary, test_obj.performance_status

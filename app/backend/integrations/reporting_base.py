@@ -24,7 +24,7 @@ from app.backend.components.projects.projects_db                           impor
 from app.backend.components.templates.templates_db                         import DBTemplates
 from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
 from app.backend.data_provider.data_provider                               import DataProvider
-from app.backend.data_provider.test                                        import Test
+from app.backend.data_provider.test_data                                        import TestData
 
 from typing import Dict, Any
 
@@ -36,8 +36,8 @@ class ReportingBase:
         self.project                   = project
         self.schema_name               = DBProjects.get_config_by_id(id=self.project)['name']
         self.validation_obj            = NFRValidation(project=self.project)
-        self.current_test: Test        = None
-        self.baseline_test: Test       = None
+        self.current_test_obj: TestData        = None
+        self.baseline_test_obj: TestData       = None
 
     def set_template(self, template, db_id: Dict[str, str]):
         template_obj                   = DBTemplates.get_config_by_id(schema_name=self.schema_name, id=template)
@@ -49,6 +49,7 @@ class ReportingBase:
         self.system_prompt_id          = template_obj["system_prompt_id"]
         self.dp_obj                    = DataProvider(project=self.project, source_type=db_id.get("source_type"), id=db_id.get("id"))
         self.ai_switch                 = template_obj["ai_switch"]
+        self.ml_switch                 = True # Temporary fix for ML switch
         self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
         self.nfrs_switch               = template_obj["nfrs_switch"]
         self.ai_graph_switch           = template_obj["ai_graph_switch"]
@@ -75,15 +76,18 @@ class ReportingBase:
     def analyze_template(self):
         overall_summary = ""
         nfr_summary     = ""
-        data            = []
-        if self.nfrs_switch or self.ai_aggregated_data_switch:
-            data = self.dp_obj.get_aggregated_table(self.current_test.test_title, self.current_test.start_time_iso, self.current_test.end_time_iso)
+        data            = self.current_test_obj.aggregated_table
         if self.nfrs_switch:
             nfr_summary = self.validation_obj.create_summary(self.nfr, data)
+        if self.ml_switch:
+            self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj) # Update ML analysis in TestData object
         if self.ai_switch:
             if self.ai_aggregated_data_switch:
                 self.ai_support_obj.analyze_aggregated_data(data, self.aggregated_prompt_id)
-            overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
+            if self.ml_switch:
+                overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary, self.current_test_obj.ml_anomalies)
+            else:
+                overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
         else:
             overall_summary += f"\n\n {nfr_summary}"
         return overall_summary
@@ -107,25 +111,25 @@ class ReportingBase:
     def collect_data(self, current_test_title, baseline_test_title = None):
         default_grafana_id           = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
         default_grafana_obj          = Grafana(project=self.project, id=default_grafana_id)
-        self.current_test: Test      = self.dp_obj.collect_test_obj(test_title=current_test_title)
+        self.current_test_obj: TestData      = self.dp_obj.collect_test_obj(test_title=current_test_title)
 
         self.parameters              = {
-            "test_name"           : self.current_test.application,
-            "current_start_time"  : self.current_test.start_time_human,
-            "current_end_time"    : self.current_test.end_time_human,
-            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_test.start_time_timestamp, self.current_test.end_time_timestamp, self.current_test.application, current_test_title),
-            "current_duration"    : self.current_test.duration,
-            "current_vusers"      : self.current_test.max_active_users
+            "test_name"           : self.current_test_obj.application,
+            "current_start_time"  : self.current_test_obj.start_time_human,
+            "current_end_time"    : self.current_test_obj.end_time_human,
+            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, self.current_test_obj.application, current_test_title),
+            "current_duration"    : self.current_test_obj.duration,
+            "current_vusers"      : self.current_test_obj.max_active_users
         }
         if baseline_test_title is not None:
-            self.baseline_test: Test      = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
+            self.baseline_test_obj: TestData      = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
             
             self.parameters.update({
-                "baseline_start_time"  : self.baseline_test.start_time_human,
-                "baseline_end_time"    : self.baseline_test.end_time_human,
-                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_test.start_time_timestamp, self.baseline_test.end_time_timestamp, self.baseline_test.application, baseline_test_title),
-                "baseline_duration"    : self.baseline_test.duration,
-                "baseline_vusers"      : self.baseline_test.max_active_users
+                "baseline_start_time"  : self.baseline_test_obj.start_time_human,
+                "baseline_end_time"    : self.baseline_test_obj.end_time_human,
+                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_test_obj.start_time_timestamp, self.baseline_test_obj.end_time_timestamp, self.baseline_test_obj.application, baseline_test_title),
+                "baseline_duration"    : self.baseline_test_obj.duration,
+                "baseline_vusers"      : self.baseline_test_obj.max_active_users
             })
            
            

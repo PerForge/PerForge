@@ -435,7 +435,7 @@ class AnomalyDetectionEngine:
 
         return "\n".join(html_parts), performance_status
 
-    def analyze_test_data(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]]) -> Tuple[Dict, List, str, bool]:
+    def analyze_test_data(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]]):
         """
         Analyze test data and prepare results.
         
@@ -454,8 +454,6 @@ class AnomalyDetectionEngine:
         fixed_load_period, ramp_up_period, is_fixed_load = self.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
 
         ramp_up_period = self.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
-
-        test_type = "fixed load" if is_fixed_load else "ramp up"
 
         if is_fixed_load:
             for metric in standard_metrics:
@@ -477,7 +475,5 @@ class AnomalyDetectionEngine:
 
         if is_fixed_load:
             self.process_anomalies(merged_df)
-
-        summary, performance_status = self.create_html_summary(test_type, self.output)
-
-        return metrics, summary, performance_status, is_fixed_load
+            
+        return metrics, is_fixed_load, self.output

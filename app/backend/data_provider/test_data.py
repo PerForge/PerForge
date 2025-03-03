@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-class Test:
+class TestData:
     """
     Test class represents a performance test and its attributes.
 
@@ -26,6 +26,11 @@ class Test:
         self.median_response_time_stats: Optional[float] = None
         self.pct90_response_time_stats: Optional[float] = None
         self.errors_pct_stats: Optional[float] = None
+        self.aggregated_table: Optional[list] = None
+
+        self.ml_anomalies: Optional[dict] = None
+        self.ml_html_summary: Optional[str] = None
+        self.performance_status: Optional[bool] = None
 
     def calculate_duration(self) -> None:
         """Calculate test duration from start and end timestamps."""

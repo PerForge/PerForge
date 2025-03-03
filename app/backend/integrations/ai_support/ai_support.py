@@ -89,13 +89,15 @@ class AISupport(Integration):
             result += "\n\n"
         return str(result)
 
-    def create_template_summary(self, prompt_id, nfr_summary):
+    def create_template_summary(self, prompt_id, nfr_summary, ml_anomalies = None):
         if not self.models_created:
             return "Error: AI failed to initialize."
         prompt_value = DBPrompts.get_config_by_id(id=prompt_id)["prompt"]
         prompt_value = prompt_value.replace("[aggregated_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
         prompt_value = prompt_value.replace("[graphs_analysis]", self.prepare_list_of_analysis(self.graph_analysis))
         prompt_value = prompt_value.replace("[nfr_summary]", nfr_summary)
+        if ml_anomalies:
+            prompt_value = prompt_value.replace("[ml_anomalies]", str(ml_anomalies))
         result       = self.ai_obj.send_prompt(prompt_value)
         self.summary.append(result)
         return result

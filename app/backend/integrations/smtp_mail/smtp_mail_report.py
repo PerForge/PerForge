@@ -16,12 +16,14 @@ import time
 
 
 from app.backend.integrations.reporting_base      import ReportingBase
+from app.backend.integrations.report_registry     import ReportRegistry
 from app.backend.integrations.smtp_mail.smtp_mail import SmtpMail
 from app.backend.integrations.grafana.grafana     import Grafana
 from app.backend.components.graphs.graphs_db      import DBGraphs
 from datetime                                     import datetime
 
 
+@ReportRegistry.register("smtp_mail")
 class SmtpMailReport(ReportingBase):
 
     def __init__(self, project):

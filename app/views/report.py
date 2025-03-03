@@ -24,7 +24,7 @@ def get_data():
     id = data.get('id')
     test_title = data.get('test_title')
     dp = DataProvider(project=project, source_type=source_type, id=id)
-    metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status = dp.get_test_results_and_analyze(test_title=test_title)
+    metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status = dp.collect_test_data_for_report_page(test_title=test_title)
     response = {
         'data': metrics,
         'analysis': analysis,

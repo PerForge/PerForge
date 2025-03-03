@@ -14,12 +14,14 @@
 
 
 from app.backend.integrations.reporting_base                import ReportingBase
+from app.backend.integrations.report_registry               import ReportRegistry
 from app.backend.integrations.atlassian_jira.atlassian_jira import AtlassianJira
 from app.backend.integrations.grafana.grafana               import Grafana
 from app.backend.components.graphs.graphs_db                import DBGraphs
 from datetime                                               import datetime
 
 
+@ReportRegistry.register("atlassian_jira")
 class AtlassianJiraReport(ReportingBase):
 
     def __init__(self, project):
