@@ -3,48 +3,114 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="addnewgraphLabel">Add project</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <div class="mt-3">
                 <label>Project name</label>
-                <input class="form-control" id="project_name" name="project_name" type="text" value="">  
+                <input class="form-control" id="project_name" name="project_name" type="text" value="">
+                <small class="form-text text-muted">Project name will be used as a database schema name. Only alphanumeric characters and underscores are allowed.</small>
               </div>
+              <div class="alert alert-danger mt-3" id="project_error" style="display: none;"></div>
             </div>
             <div class="modal-footer">
-                <div class="status-place" style="float: left;"></div>
                 <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
-                <button class="btn btn-primary" id="saveProject" type="submit">Save</button>
+                <button class="btn btn-primary" id="saveProject" type="button">Save</button>
             </div>
         </div>
     </div>
 </div>
 <script>
     $(document).ready(function() {
-        var modal = $('#projectModal');
-        const saveProject = document.getElementById("saveProject");
-        saveProject.addEventListener('click', (event) => {
-            let projectName_value = document.getElementById("project_name").value;
-            projectName_value = projectName_value.replace(/\s/g, '');
-            projectName_value = projectName_value.replace(/[^\w\s]/gi, '');
+        // Check if event listener is already attached to avoid duplicates
+        if (!window.projectModalInitialized) {
+            window.projectModalInitialized = true;
             
-            if (projectName_value.length > 0) {
-                $.ajax({
-                    url: '/save-project',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
+            var modal = $('#projectModal');
+            const saveProject = document.getElementById("saveProject");
+            const projectError = document.getElementById("project_error");
+            
+            // Remove any existing event listeners
+            saveProject.replaceWith(saveProject.cloneNode(true));
+            
+            // Get the fresh reference after replacement
+            const newSaveProject = document.getElementById("saveProject");
+            
+            // Reset error message when modal is opened
+            modal.on('show.bs.modal', function() {
+                document.getElementById("project_name").value = "";
+                projectError.style.display = "none";
+                projectError.textContent = "";
+            });
+            
+            // Add the event listener
+            newSaveProject.addEventListener('click', (event) => {
+                console.log("Save project button clicked");
+                let projectName_value = document.getElementById("project_name").value;
+                
+                // Validate project name - only allow alphanumeric and underscore
+                if (!/^[a-zA-Z0-9_]+$/.test(projectName_value)) {
+                    projectError.style.display = "block";
+                    projectError.textContent = "Project name can only contain letters, numbers, and underscores.";
+                    return;
+                }
+                
+                // Show loading state
+                newSaveProject.disabled = true;
+                newSaveProject.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+                
+                if (projectName_value.length > 0) {
+                    // Use the API client instead of direct AJAX call
+                    apiClient.projects.create({
                         id: null,
                         name: projectName_value
-                    }),
-                    success: function(response) {
-                        document.getElementById("project_name").value = "Saved.";
-                        window.location.replace("/");
-                    },
-                    error: function() {
-                        document.getElementById("project_name").value = "Failed to save the project name.";
-                    }
-                });
-            }
-        });
+                    })
+                    .then(response => {
+                        console.log("Project created successfully:", response);
+                        
+                        // Hide the modal
+                        modal.modal('hide');
+                        
+                        // Show success message using showFlashMessage
+                        showFlashMessage("Project created successfully", "success");
+                        
+                        // Redirect after a short delay to allow the message to be seen
+                        setTimeout(() => {
+                            window.location.replace("/");
+                        }, 1000);
+                    })
+                    .catch(error => {
+                        console.error("Request failed:", error);
+                        
+                        // Reset button state
+                        newSaveProject.disabled = false;
+                        newSaveProject.innerHTML = 'Save';
+                        
+                        // Get error message
+                        let errorMessage = 'Failed to create project. Please try again.';
+                        if (error.errors && error.errors.length > 0) {
+                            errorMessage = error.errors[0].message;
+                        } else if (error.message) {
+                            errorMessage = error.message;
+                        }
+                        
+                        // Show error in the modal
+                        projectError.style.display = "block";
+                        projectError.textContent = errorMessage;
+                        
+                        // Also show error using showFlashMessage
+                        showFlashMessage(errorMessage, "error");
+                    });
+                } else {
+                    // Reset button state
+                    newSaveProject.disabled = false;
+                    newSaveProject.innerHTML = 'Save';
+                    
+                    // Show error for empty name
+                    projectError.style.display = "block";
+                    projectError.textContent = "Project name cannot be empty.";
+                }
+            });
+        }
     });
 </script>

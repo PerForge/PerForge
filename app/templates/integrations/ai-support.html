@@ -29,7 +29,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="/ai-support" onsubmit="return validateForm()">
+                            <form id="aiSupportForm" onsubmit="return handleFormSubmit(event)">
                                 {{ form.hidden_tag() }}
                                 <div class="center-section">
                                     {% if ai_support_config %}
@@ -103,7 +103,7 @@
                                   </div>
                                   <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <a class="btn btn-danger" href="/delete/ai-support?ai_support_config={{ ai_support_config }}">Confirm Delete</a>
+                                    <button type="button" class="btn btn-danger" id="confirmDelete">Confirm Delete</button>
                                   </div>
                                 </div>
                               </div>
@@ -132,6 +132,87 @@
             tokenError.style.display = 'none';
             return true;
         }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            if (!validateForm()) {
+                return false;
+            }
+
+            // Get form data
+            const form = document.getElementById('aiSupportForm');
+            const formData = new FormData(form);
+            const data = {};
+
+            // Convert FormData to JSON object
+            formData.forEach((value, key) => {
+                // Handle empty values
+                if (key !== "csrf_token"){
+                    // Special handling for is_default to ensure it's a boolean
+                    if (key === "is_default") {
+                        data[key] = value === '' ? false : value === 'True';
+                    } else {
+                        data[key] = value === '' ? null : value;
+                    }
+                }
+            });
+
+            // Handle the API call based on whether we're creating or updating
+            const integrationId = document.getElementById('config_id').value;
+
+            let apiPromise;
+            if (integrationId) {
+                // Update existing integration
+                apiPromise = apiClient.integrations.update(integrationId, data, 'ai_support');
+            } else {
+                // Create new integration
+                apiPromise = apiClient.integrations.create(data, 'ai_support');
+            }
+
+            // Handle the response
+            apiPromise
+                .then(response => {
+                    // Show success message
+                    const message = integrationId ? "Integration updated successfully." : "Integration added successfully.";
+                    showFlashMessage(message, "success");
+
+                    // Redirect to integrations page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/integrations?tab=ai-support';
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
+                });
+
+            return false;
+        }
+
+        // Handle delete confirmation
+        document.getElementById('confirmDelete').addEventListener('click', function() {
+            const integrationId = document.getElementById('config_id').value;
+
+            apiClient.integrations.delete(integrationId, 'ai_support')
+                .then(response => {
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+                    modal.hide();
+
+                    // Show success message
+                    showFlashMessage("Integration deleted successfully.", "success");
+
+                    // Redirect to integrations page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/integrations?tab=ai-support';
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showFlashMessage(error.message || "An error occurred while deleting the integration.", "error");
+                });
+        });
 
         // Add event listener to token select for real-time validation
         document.getElementById('token').addEventListener('change', function() {

@@ -24,6 +24,12 @@ from flask                                       import render_template, request
 
 @app.route('/nfrs', methods=['GET'])
 def get_nfrs():
+    """
+    Render the NFRs list page.
+    
+    Returns:
+        Rendered template for the NFRs list page
+    """
     try:
         project_id   = request.cookies.get('project')
         project_data = DBProjects.get_config_by_id(id=project_id)
@@ -32,11 +38,16 @@ def get_nfrs():
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00019.value, "error")
+        return redirect(url_for('get_nfrs'))
 
-    return redirect(url_for('get_nfrs'))
-
-@app.route('/nfr', methods=['GET', 'POST'])
+@app.route('/nfr', methods=['GET'])
 def get_nfr():
+    """
+    Render the NFR edit/create page.
+    
+    Returns:
+        Rendered template for the NFR edit/create page
+    """
     try:
         project_id   = request.cookies.get('project')
         project_data = DBProjects.get_config_by_id(id=project_id)
@@ -44,48 +55,7 @@ def get_nfr():
         nfr_data     = {}
         if nfr_id:
             nfr_data = DBNFRs.get_config_by_id(schema_name=project_data['name'], id=nfr_id)
-
-        if request.method == "POST":
-            nfr_data = request.get_json()
-
-            for key, value in nfr_data.items():
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            for k, v in item.items():
-                                if v == '':
-                                    item[k] = None
-                elif value == '':
-                    nfr_data[key] = None
-
-            if nfr_data['id']:
-                DBNFRs.update(
-                    schema_name = project_data['name'],
-                    data        = nfr_data
-                )
-                flash("NFR updated.", "info")
-            else:
-                DBNFRs.save(
-                    schema_name = project_data['name'],
-                    data        = nfr_data
-                )
-                flash("NFR added.", "info")
-            return jsonify({'redirect_url': 'nfrs'})
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00020.value, "error")
-    return render_template('home/nfr.html', nfr_config=nfr_id,nfr_data=nfr_data)
-
-@app.route('/delete/nfr', methods=['GET'])
-def delete_nfrs():
-    try:
-        project_id   = request.cookies.get('project')
-        nfr_id       = request.args.get('nfr_config')
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        DBNFRs.delete(schema_name=project_data['name'], id=nfr_id)
-        flash("NFR deleted.", "info")
-        return redirect(url_for('get_nfrs'))
-    except Exception as er:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.ER00021.value, "error")
-        return redirect(url_for('get_nfrs'))
+    return render_template('home/nfr.html', nfr_config=nfr_id, nfr_data=nfr_data)

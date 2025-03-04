@@ -49,11 +49,83 @@ class DBProjects(db.Model):
     def save(cls, data):
         try:
             validated_data = ProjectModel(**data)
-            instance       = cls(**validated_data.model_dump())
+
+            # Sanitize the schema name to ensure it's valid for PostgreSQL
+            # PostgreSQL identifiers are limited to alphanumeric characters and underscores
+            schema_name = validated_data.name
+            schema_name = ''.join(c if c.isalnum() else '_' for c in schema_name)
+
+            # Check if schema already exists
+            schema_exists_query = text("SELECT schema_name FROM information_schema.schemata WHERE schema_name = :schema_name")
+            result = db.session.execute(schema_exists_query, {"schema_name": schema_name}).fetchone()
+
+            if result:
+                raise ValueError(f"A project with name '{validated_data.name}' already exists or was previously deleted. Please use a different name.")
+
+            # Update the name with sanitized version
+            validated_data.name = schema_name
+
+            instance = cls(**validated_data.model_dump())
             db.session.add(instance)
             db.session.commit()
-            DBProjects.create_schema(instance)
-            DBProjects.create_all_tables(instance)
+
+            # Store the schema name before closing the session
+            schema_name = instance.name
+            project_id = instance.id
+
+            # Close all existing connections to ensure clean schema creation
+            db.session.close()
+            db.engine.dispose()
+
+            # Create a new session for schema operations
+            try:
+                # Get a fresh instance that's attached to a new session
+                fresh_instance = db.session.query(cls).filter_by(id=project_id).one()
+                DBProjects.create_schema(fresh_instance)
+                DBProjects.create_all_tables(fresh_instance)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                logging.warning(str(traceback.format_exc()))
+                raise
+            finally:
+                db.session.close()
+            
+            return project_id
+        except Exception:
+            db.session.rollback()
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
+    def update(cls, data):
+        try:
+            validated_data = ProjectModel(**data)
+            instance = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+
+            if not instance:
+                raise ValueError(f"Project with ID {validated_data.id} not found")
+
+            # Store the old schema name before updating
+            old_schema_name = instance.name
+
+            # Update only the allowed fields (currently just name)
+            instance.name = validated_data.name
+
+            # Commit the changes to the projects table
+            db.session.commit()
+
+            # If the schema name changed, we need to rename the schema
+            if old_schema_name != instance.name:
+                # Close all existing connections
+                db.session.close()
+                db.engine.dispose()
+
+                # Rename the schema
+                rename_schema_query = text(f'ALTER SCHEMA "{old_schema_name}" RENAME TO "{instance.name}"')
+                db.session.execute(rename_schema_query)
+                db.session.commit()
+
             return instance.id
         except Exception:
             db.session.rollback()
@@ -136,12 +208,38 @@ class DBProjects(db.Model):
     @classmethod
     def get_project_stats(cls, id):
         try:
-            config             = cls.get_config_by_id(id)
-            schema_name        = config['name']
+            # Close all existing database connections to ensure schema changes take effect immediately
+            db.session.close()
+            db.engine.dispose()
+
+            # Use the existing session instead of creating a scoped session
+            # Flask-SQLAlchemy 3.x handles sessions differently
+            
+            config = cls.get_config_by_id(id)
+            schema_name = config['name']
+
+            # Reset schema contexts for all models
             integration_models = [
                 DBAISupport, DBAtlassianConfluence, DBAtlassianJira,
                 DBAzureWiki, DBGrafana, DBInfluxdb, DBSMTPMail
             ]
+
+            # Reset schema for all models that use schema_name
+            for model in integration_models:
+                model.__table__.schema = None
+                model.__table__.schema = schema_name
+
+            # Reset schema for other models
+            DBGraphs.__table__.schema = None
+            DBGraphs.__table__.schema = schema_name
+
+            DBNFRs.__table__.schema = None
+            DBNFRs.__table__.schema = schema_name
+
+            DBTemplates.__table__.schema = None
+            DBTemplates.__table__.schema = schema_name
+
+            # Count items
             integrations_count = sum(model.count(schema_name) for model in integration_models)
             project_stats = {
                 "integrations": integrations_count,
@@ -151,6 +249,7 @@ class DBProjects(db.Model):
                 "secrets"     : DBSecrets.count(id),
                 "prompts"     : DBPrompts.count(id)
             }
+
             return project_stats
         except Exception:
             logging.warning(str(traceback.format_exc()))

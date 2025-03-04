@@ -6,6 +6,29 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/report.css" rel="stylesheet">
+<style>
+    .drag-handle {
+        cursor: move;
+        padding: 10px;
+        border-radius: 3px;
+        text-align: center;
+    }
+    .template-group {
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .template-item {
+        transition: all 0.3s;
+    }
+    .sortable-ghost {
+        opacity: 0.5;
+        background-color: #f0f8ff;
+    }
+    .sortable-chosen {
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+</style>
 {% endblock stylesheets %}
 {% block content %}
     <main>
@@ -40,13 +63,15 @@
                                 <h4 class="mb-3">Report title</h4>
                                 <input v-model="title" id="template-title" class="form-control mb-5" type="text" placeholder="Write title here..." required>
                                 <h4 class="mb-3">Report template group</h4>
-                                <draggable v-model="template" :element="'div'">
+                                <div class="sortable-container">
                                     <div v-for="element in template" :key="element.id">
                                         <div v-if="element.type === 'text'" class="template-group">
+                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
                                             <textarea v-model="element.content" required></textarea>
                                             <button class='btn-close-id btn-close ms-2' @click="removeElement(element)" type="button"></button>
                                         </div>
                                         <div v-else-if="element.type === 'template'" class="template-group">
+                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
                                             <span class="badge badge-primary">TEMPLATE</span>
                                             <div class="template-el-label">Name: {{ getTemplateNameById(element.template_id) }}</div>
                                             <div class="flex-end">
@@ -54,7 +79,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                </draggable>
+                                </div>
                                 <button class="btn btn-primary mt-3" @click="addTextElement" type="button">Add Text</button>
                                 <div class="d-flex mt-3">
                                     <div class="form-check form-switch min-h-auto mb-0">
@@ -116,115 +141,217 @@
         <link rel="stylesheet" href="https://unpkg.com/vue-select@latest/dist/vue-select.css">
 
         <script>
-            Vue.component('v-select', {
-            extends: VueSelect.VueSelect,
-            props: ['attrs'],
-            });
+            document.addEventListener('DOMContentLoaded', function() {
+                Vue.component('v-select', {
+                extends: VueSelect.VueSelect,
+                props: ['attrs'],
+                });
 
-            const app = new Vue({
-                el: '#app',
-                data() {
-                    return {
-                        templates: [],
-                        name: "",
-                        title: "",
-                        template: [],
-                        ai_summary: false,
-                        prompt_id: "",
-                        selectedTemplateGroupPrompt: null,
-                    };
-                },
-                computed: {
-                    templateGroupPromptText() {
-                        return this.selectedTemplateGroupPrompt ? this.selectedTemplateGroupPrompt.prompt : '';
-                    }
-                },
-                methods: {
-                    addTextElement() {
-                        this.template.push({
-                            template_id: null,
-                            type: 'text',
-                            content: null
-                        });
+                const app = new Vue({
+                    el: '#app',
+                    data() {
+                        return {
+                            templates: [],
+                            name: "",
+                            title: "",
+                            template: [],
+                            ai_summary: false,
+                            prompt_id: "",
+                            selectedTemplateGroupPrompt: null,
+                            template_group_prompts: [],
+                            idCounter: 1 // Add a counter for generating IDs
+                        };
                     },
-                    addTemplateElement(element) {
-                        if (element !== null) {
+                    computed: {
+                        templateGroupPromptText() {
+                            return this.selectedTemplateGroupPrompt ? this.selectedTemplateGroupPrompt.prompt : '';
+                        }
+                    },
+                    methods: {
+                        addTextElement() {
                             this.template.push({
-                                template_id: element.id,
-                                type: 'template',
-                                content: null
+                                id: this.idCounter,
+                                template_id: null,
+                                type: 'text',
+                                content: ''
                             });
-                        }
-                    },
-                    removeElement(element) {
-                        const index = this.template.indexOf(element);
-                        if (index !== -1) {
-                            this.template.splice(index, 1);
-                        }
-                    },
-                    checkForm() {
-                        const form = document.querySelector(".needs-validation");
-                        perforge.utils.validateForm(form, event, (result) => {
-                            if (result) {
-                                let plainTemplate = JSON.parse(JSON.stringify(this.template));
-                                for (const item of plainTemplate) {
-                                    if (item.type === 'text') {
-                                        item.content = item.content.replace(/"/g, '\\\"');
+                            this.idCounter++;
+                        },
+                        addTemplateElement(element) {
+                            if (element !== null) {
+                                this.template.push({
+                                    id: this.idCounter,
+                                    template_id: element.id,
+                                    type: 'template',
+                                    content: ''
+                                });
+                                this.idCounter++;
+                            }
+                        },
+                        removeElement(element) {
+                            const index = this.template.indexOf(element);
+                            if (index !== -1) {
+                                this.template.splice(index, 1);
+                            }
+                        },
+                        updateTemplateOrder(newOrder) {
+                            // This method is called from the Sortable onEnd handler
+                            console.log("Updating template order to:", newOrder);
+
+                            // Ensure all items have the required content field
+                            newOrder.forEach(item => {
+                                if (!item.hasOwnProperty('content')) {
+                                    item.content = '';
+                                }
+                            });
+
+                            // Update the template array with the new order
+                            this.template = newOrder;
+                        },
+                        checkForm() {
+                            const form = document.querySelector(".needs-validation");
+                            perforge.utils.validateForm(form, event, (result) => {
+                                if (result) {
+                                    let plainTemplate = JSON.parse(JSON.stringify(this.template));
+                                    for (const item of plainTemplate) {
+                                        if (item.type === 'text') {
+                                            item.content = item.content.replace(/"/g, '\\\"');
+                                        }
+                                    }
+                                    const results = {
+                                        "id": '{{ "" if template_group_config is none else template_group_config }}',
+                                        "name": this.name,
+                                        "title": this.title,
+                                        "data": plainTemplate,
+                                        "prompt_id": this.prompt_id || null,
+                                        "ai_summary": this.ai_summary
+                                    }
+
+                                    const templateGroupId = results.id;
+                                    if (templateGroupId && templateGroupId !== 'None') {
+                                        apiClient.templateGroups.update(templateGroupId, results)
+                                            .then(response => {
+                                                console.log("Template group updated successfully:", response);
+                                                showFlashMessage("Template group updated successfully", "success");
+                                                window.location.href = "/templates";
+                                            })
+                                            .catch(error => {
+                                                console.error("Error updating template group:", error);
+                                                showFlashMessage(error.message || "Error updating template group", "error");
+                                            });
+                                    } else {
+                                        apiClient.templateGroups.create(results)
+                                            .then(response => {
+                                                console.log("Template group created successfully:", response);
+                                                showFlashMessage("Template group created successfully", "success");
+                                                window.location.href = "/templates";
+                                            })
+                                            .catch(error => {
+                                                console.error("Error creating template group:", error);
+                                                showFlashMessage(error.message || "Error creating template group", "error");
+                                            });
                                     }
                                 }
-                                const results = {
-                                    "id": '{{ "" if template_group_config is none else template_group_config }}',
-                                    "name": this.name,
-                                    "title": this.title,
-                                    "data": plainTemplate,
-                                    "prompt_id": this.prompt_id || null,
-                                    "ai_summary": this.ai_summary
-                                }
-                                perforge.utils
-                                .sendPostRequest("/template-group", JSON.stringify(results))
-                                .then((redirectUrl) => {
-                                    window.location.replace(redirectUrl);
-                                })
-                                .catch((error) => {
-                                    console.error("Request failed:", error);
-                                });
+                            });
+                        },
+                        updateTemplateGroupPrompt(selectedOption) {
+                            this.prompt_id = selectedOption.id;
+                            this.selectedTemplateGroupPrompt = selectedOption;
+                        },
+                        getTemplateNameById(template_id) {
+                            const template = this.templates.find(template => template.id === template_id);
+                            return template ? template.name : '';
+                        }
+                    },
+                    created() {
+                        function addTypeToName(prompts) {
+                            prompts.forEach(prompt => { prompt.name = `${prompt.name} (${prompt.type})`; });
+                            return prompts;
+                        }
+
+                        Promise.all([
+                            apiClient.templates.getAll(),
+                            apiClient.prompts.getAll({ place: 'template_group' })
+                        ])
+                        .then(([templatesResponse, templateGroupPromptsResponse]) => {
+                            this.templates = templatesResponse.data.templates || [];
+                            this.template_group_prompts = addTypeToName(templateGroupPromptsResponse.data.prompts || []);
+
+                            const templateGroupId = '{{ template_group_config }}';
+                            if (templateGroupId && templateGroupId !== 'None') {
+                                apiClient.templateGroups.getById(templateGroupId)
+                                    .then(response => {
+                                        const templateGroupData = response.data.template_group;
+                                        if (templateGroupData && templateGroupData.name != null) {
+                                            this.title = templateGroupData.title;
+                                            this.name = templateGroupData.name;
+                                            this.template = templateGroupData.data;
+                                            this.ai_summary = templateGroupData.ai_summary;
+                                            this.prompt_id = templateGroupData.prompt_id;
+
+                                            if (this.template_group_prompts.length) {
+                                                this.selectedTemplateGroupPrompt = this.template_group_prompts.find(prompt => prompt.id === this.prompt_id);
+                                            }
+
+                                            if (this.template && this.template.length > 0) {
+                                                this.template.forEach(item => {
+                                                    if (!item.hasOwnProperty('content')) {
+                                                        item.content = '';
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    })
+                                    .catch(error => {
+                                        showFlashMessage(error.message || "Error loading template group", "error");
+                                        console.error("Error loading template group:", error);
+                                    });
                             }
+                        })
+                        .catch(error => {
+                            showFlashMessage(error.message || "Error loading data", "error");
+                            console.error("Error loading data:", error);
                         });
                     },
-                    updateTemplateGroupPrompt(selectedOption) {
-                        this.prompt_id = selectedOption.id;
-                        this.selectedTemplateGroupPrompt = selectedOption; // Ensure the selected option is updated
-                    },
-                    getTemplateNameById(template_id) {
-                        const template = this.templates.find(template => template.id === template_id);
-                        return template ? template.name : '';
-                    }
-                },
-                created() {
-                    function addTypeToName(prompts) {
-                        prompts.forEach(prompt => { prompt.name = `${prompt.name} (${prompt.type})`; });
-                        return prompts;
-                    }
-
-                    this.templates = JSON.parse('{{ templates | tojson }}');
-                    this.template_group_prompts = JSON.parse('{{ template_group_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
-                    this.template_group_prompts = addTypeToName(this.template_group_prompts);
-
-                    this.template_group_data = JSON.parse('{{ template_group_data | tojson }}'.replace(/\n/g, "\\n"));
-                    if (this.template_group_data && this.template_group_data.name != null) {
-                        this.title      = this.template_group_data.title;
-                        this.name       = this.template_group_data.name;
-                        this.template   = this.template_group_data.data;
-                        this.ai_summary = this.template_group_data.ai_summary;
-                        this.prompt_id  = this.template_group_data.prompt_id;
-
-                        // Set selected options after data is loaded
-                        if (this.template_group_prompts.length) {
-                            this.selectedTemplateGroupPrompt = this.template_group_prompts.find(prompt => prompt.id === this.prompt_id);
-                        }
-                    }
-                },
+                });
             });
+
+            // Initialize Sortable after Vue is mounted
+            setTimeout(() => {
+                const sortableContainer = document.querySelector('.sortable-container');
+                if (sortableContainer) {
+                    new Sortable(sortableContainer, {
+                        handle: '.drag-handle',
+                        animation: 150,
+                        onEnd: function(evt) {
+                            // Access the Vue app instance
+                            const app = document.querySelector('#app').__vue__;
+
+                            // Get the old index
+                            const oldIndex = evt.oldIndex;
+                            // Get the new index
+                            const newIndex = evt.newIndex;
+
+                            // Create a new array with the reordered items
+                            const newTemplate = [...app.template];
+                            const movedItem = newTemplate.splice(oldIndex, 1)[0];
+                            newTemplate.splice(newIndex, 0, movedItem);
+
+                            // Update the template array with the new order
+                            app.updateTemplateOrder(newTemplate);
+                        },
+                        onStart: function(evt) {
+                            console.log('Drag started', evt);
+                        },
+                        onChange: function(evt) {
+                            console.log('Order changed', evt);
+                        }
+                    });
+                    console.log('Sortable initialized on', sortableContainer);
+                } else {
+                    console.error('Sortable container not found');
+                }
+            }, 500);
         </script>
     </main>
 {% endblock content %}

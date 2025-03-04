@@ -6,6 +6,29 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/report.css" rel="stylesheet">
+<style>
+    .drag-handle {
+        cursor: move;
+        padding: 10px;
+        border-radius: 3px;
+        text-align: center;
+    }
+    .template-group {
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .template-item {
+        transition: all 0.3s;
+    }
+    .sortable-ghost {
+        opacity: 0.5;
+        background-color: #f0f8ff;
+    }
+    .sortable-chosen {
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+</style>
 {% endblock stylesheets %}
 {% block content %}
     <main>
@@ -32,7 +55,7 @@
                                     </h2>
                                 </div>
                                 <div class="col-auto">
-                                    <button class="btn btn-primary mb-2 mb-sm-0" @click="checkForm">Save</button>
+                                    <button class="btn btn-primary mb-2 mb-sm-0" type="button" @click.prevent="submitForm">Save</button>
                                 </div>
                             </div>
                             <div class="row g-5">
@@ -40,13 +63,15 @@
                                 <h4 class="mb-3">Report title</h4>
                                 <input v-model="title" id="template-title" class="form-control mb-5" type="text" placeholder="Write title here..." required>
                                 <h4 class="mb-3">Report template</h4>
-                                <draggable v-model="template" :element="'div'">
-                                    <div v-for="element in template" :key="element.id">
+                                <div class="sortable-container">
+                                    <div v-for="(element, index) in template" :key="element.id" class="template-item" :data-index="index">
                                         <div v-if="element.type === 'text'" class="template-group">
+                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
                                             <textarea v-model="element.content" required></textarea>
                                             <button class='btn-close-id btn-close ms-2' @click="removeElement(element)" type="button"></button>
                                         </div>
                                         <div v-else-if="element.type === 'graph'" class="template-group">
+                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
                                             <span class="badge badge-success">GRAPH</span>
                                             <div class="template-el-label">Name: {{ getGraphNameById(element.graph_id) }}</div>
                                             <div class="flex-end">
@@ -54,7 +79,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                </draggable>
+                                </div>
                                 <button class="btn btn-primary mt-3" @click="addTextElement" type="button">Add Text</button>
                                 <div class="d-flex flex-direction-column">
                                     <div class="d-flex justify-content-between mb-3 mt-3">
@@ -169,7 +194,7 @@
                                                     </div>
                                                     <div>
                                                         <label class="var-name">${current_grafana_link}:</label>
-                                                        <label class="var-description">Link to Grafana dashboard with test results.</label>
+                                                        <label class="text-description">Link to Grafana dashboard with test results.</label>
                                                     </div>
                                                     <div>
                                                         <label class="var-name">${baseline_vusers}:</label>
@@ -210,90 +235,225 @@
         <!-- CDNJS :: Sortable (https://cdnjs.com/) -->
         <script src="//cdn.jsdelivr.net/npm/sortablejs@1.8.4/Sortable.min.js"></script>
         <!-- CDNJS :: Vue.Draggable (https://cdnjs.com/) -->
-        <script src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.20.0/vuedraggable.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vuedraggable@2.24.3/dist/vuedraggable.umd.min.js"></script>
         <script src="https://unpkg.com/vue-select@latest"></script>
         <link rel="stylesheet" href="https://unpkg.com/vue-select@latest/dist/vue-select.css">
 
         <script>
-            Vue.component('v-select', {
-            extends: VueSelect.VueSelect,
-            props: ['attrs'],
-            });
+            document.addEventListener('DOMContentLoaded', function() {
+                Vue.component('v-select', {
+                extends: VueSelect.VueSelect,
+                props: ['attrs'],
+                });
 
-            const app = new Vue({
-            el: '#app',
-            data() {
-                return {
-                    graphs: [],
-                    nfrs: "",
-                    nfr: "",
-                    name: "",
-                    title: "",
-                    ai_switch: false,
-                    ai_aggregated_data_switch: false,
-                    ai_graph_switch: false,
-                    ai_to_graphs_switch: false,
-                    nfrs_switch: false,
-                    template_prompt_id: "",
-                    aggregated_prompt_id: "",
-                    system_prompt_id: "",
-                    template_prompts: [],
-                    aggregated_data_prompts: [],
-                    system_prompts: [],
-                    template: [],
-                    selectedTemplatePrompt: null,
-                    selectedAggregatedDataPrompt: null,
-                    selectedSystemPrompt: null,
-                };
-            },
-            computed: {
-                templatePromptText() {
-                    return this.selectedTemplatePrompt ? this.selectedTemplatePrompt.prompt : '';
-                },
-                aggregatedPromptText() {
-                    return this.selectedAggregatedDataPrompt ? this.selectedAggregatedDataPrompt.prompt : '';
-                },
-                systemPromptText() {
-                  return this.selectedSystemPrompt ? this.selectedSystemPrompt.prompt : '';
-                }
-            },
-            methods: {
-                addTextElement() {
-                    this.template.push({
-                        graph_id  : null,
-                        type      : 'text',
-                        content   : null
-                    });
-                },
-                addGraphElement(element) {
-                    if (element !== null) {
-                        this.template.push({
-                            graph_id  : element.id,
-                            type      : 'graph',
-                            content   : null
+                initVueApp();
+
+                // Initialize Sortable after Vue is mounted
+                setTimeout(() => {
+                    const sortableContainer = document.querySelector('.sortable-container');
+                    if (sortableContainer) {
+                        new Sortable(sortableContainer, {
+                            handle: '.drag-handle',
+                            animation: 150,
+                            onEnd: function(evt) {
+                                // Access the Vue app instance
+                                const app = document.querySelector('#app').__vue__;
+
+                                // Get the old index
+                                const oldIndex = evt.oldIndex;
+                                // Get the new index
+                                const newIndex = evt.newIndex;
+
+                                // Create a new array with the reordered items
+                                const newTemplate = [...app.template];
+                                const movedItem = newTemplate.splice(oldIndex, 1)[0];
+                                newTemplate.splice(newIndex, 0, movedItem);
+
+                                // Update the template array with the new order
+                                app.updateTemplateOrder(newTemplate);
+                            },
+                            onStart: function(evt) {
+                                console.log('Drag started', evt);
+                            },
+                            onChange: function(evt) {
+                                console.log('Order changed', evt);
+                            }
                         });
+                        console.log('Sortable initialized on', sortableContainer);
+                    } else {
+                        console.error('Sortable container not found');
                     }
-                },
-                removeElement(element) {
-                    const index = this.template.indexOf(element);
-                    if (index !== -1) {
-                        this.template.splice(index, 1);
-                    }
-                },
-                checkForm() {
-                    const form = document.querySelector(".needs-validation");
-                    perforge.utils.validateForm(form, event, (result) => {
-                        if (result) {
+                }, 1000);
+
+                function initVueApp() {
+                    const app = new Vue({
+                    el: "#app",
+                    data() {
+                        return {
+                            graphs: [],
+                            nfrs: "",
+                            nfr: "",
+                            name: "",
+                            title: "",
+                            ai_switch: false,
+                            ai_aggregated_data_switch: false,
+                            ai_graph_switch: false,
+                            ai_to_graphs_switch: false,
+                            nfrs_switch: false,
+                            template_prompt_id: "",
+                            aggregated_prompt_id: "",
+                            system_prompt_id: "",
+                            drag: false,
+                            idCounter: 1, // Add a counter for generating IDs
+                            template: [
+                                {
+                                    graph_id  : null,
+                                    type      : 'text',
+                                    content   : '', // Changed from null to empty string
+                                    id: 1 // Use a simple integer instead of Date.now()
+                                }
+                            ],
+                            template_prompts: [],
+                            aggregated_data_prompts: [],
+                            system_prompts: [],
+                            selectedTemplatePrompt: null,
+                            selectedAggregatedDataPrompt: null,
+                            selectedSystemPrompt: null,
+                        };
+                    },
+                    mounted() {
+                        const self = this;
+
+                        // Find the highest ID to initialize the counter properly
+                        if (this.template && this.template.length > 0) {
+                            let maxId = 0;
+                            this.template.forEach(item => {
+                                if (item.id && item.id > maxId) {
+                                    maxId = item.id;
+                                }
+                            });
+                            this.idCounter = maxId;
+                        }
+
+                        // Ensure all template items have unique IDs and content field
+                        if (this.template && this.template.length > 0) {
+                            this.template.forEach((item, index) => {
+                                if (!item.id) {
+                                    this.idCounter++;
+                                    item.id = this.idCounter;
+                                }
+                                if (!item.hasOwnProperty('content')) {
+                                    item.content = '';
+                                }
+                            });
+                        }
+
+                        // If template is empty, add a default text element
+                        if (this.template.length === 0) {
+                            this.addTextElement();
+                        }
+                    },
+                    computed: {
+                        templatePromptText() {
+                            return this.selectedTemplatePrompt ? this.selectedTemplatePrompt.prompt : '';
+                        },
+                        aggregatedPromptText() {
+                            return this.selectedAggregatedDataPrompt ? this.selectedAggregatedDataPrompt.prompt : '';
+                        },
+                        systemPromptText() {
+                        return this.selectedSystemPrompt ? this.selectedSystemPrompt.prompt : '';
+                        }
+                    },
+                    methods: {
+                        addTextElement() {
+                            this.idCounter++; // Increment the counter
+                            this.template.push({
+                                graph_id: null,
+                                type: 'text',
+                                content: '',
+                                id: this.idCounter
+                            });
+                        },
+                        addGraphElement(graph) {
+                            this.idCounter++; // Increment the counter
+                            this.template.push({
+                                graph_id: graph.id,
+                                type: 'graph',
+                                content: '', // Add default empty content for graph elements
+                                id: this.idCounter
+                            });
+                        },
+                        removeElement(element) {
+                            const index = this.template.indexOf(element);
+                            if (index > -1) {
+                                this.template.splice(index, 1);
+                            }
+                        },
+                        updateTemplateOrder(newOrder) {
+                            // This method is called from the Sortable onEnd handler
+                            console.log("Updating template order to:", newOrder);
+
+                            // Ensure all items have the required content field
+                            newOrder.forEach(item => {
+                                if (!item.hasOwnProperty('content')) {
+                                    item.content = '';
+                                }
+                            });
+
+                            this.template = newOrder;
+                        },
+                        submitForm() {
+                            console.log("submitForm called");
+                            // Validate required fields manually
+                            if (!this.title) {
+                                console.error("Title is required");
+                                showFlashMessage("Title is required", "error");
+                                return;
+                            }
+
+                            if (!this.name) {
+                                console.error("Template name is required");
+                                showFlashMessage("Template name is required", "error");
+                                return;
+                            }
+
+                            // Check if template has content
+                            if (this.template.length === 0) {
+                                console.error("Template must have at least one element");
+                                showFlashMessage("Template must have at least one element", "error");
+                                return;
+                            }
+
+                            // Process template data
                             let plainTemplate = JSON.parse(JSON.stringify(this.template));
+                            console.log("Template before processing:", this.template);
+                            console.log("Plain template after JSON conversion:", plainTemplate);
+
                             for (const item of plainTemplate) {
+                                // Remove client-side IDs to let the server generate proper IDs
+                                delete item.id;
+
+                                // Ensure all items have a content field
+                                if (!item.hasOwnProperty('content')) {
+                                    item.content = '';
+                                }
+
                                 if (item.type === 'text') {
-                                    item.content = item.content.replace(/"/g, '\\\"');
+                                    if (item.content) {
+                                        item.content = item.content.replace(/"/g, '\\\"');
+                                    } else {
+                                        console.error("Text content is required");
+                                        showFlashMessage("Text content is required", "error");
+                                        return;
+                                    }
                                 }
                             }
+                            console.log("Template after processing:", plainTemplate);
+
                             const results = {
-                                "id": '{{ "" if template_config is none else template_config }}',
+                                "id": '{{ "" if template_config is none or template_config == "None" else template_config }}',
                                 "name": this.name,
-                                "nfr": this.nfr.id ? this.nfr.id : null,
+                                "nfr": this.nfr && this.nfr.id ? this.nfr.id : null,
                                 "title": this.title,
                                 "ai_switch": this.ai_switch,
                                 ai_aggregated_data_switch: this.ai_aggregated_data_switch,
@@ -305,73 +465,119 @@
                                 "system_prompt_id": this.system_prompt_id || null,
                                 "data": plainTemplate
                             }
-                            perforge.utils
-                            .sendPostRequest("/template", JSON.stringify(results))
-                            .then((redirectUrl) => {
-                                window.location.replace(redirectUrl);
-                            })
-                            .catch((error) => {
-                                console.error("Request failed:", error);
-                            });
+
+                            console.log("Creating template with data:", results);
+
+                            // Use API client instead of direct POST
+                            const templateId = results.id;
+                            if (templateId && templateId !== 'None') {
+                                // Update existing template
+                                apiClient.templates.update(templateId, results)
+                                    .then(response => {
+                                        console.log("Template updated successfully:", response);
+                                        showFlashMessage("Template updated successfully", "success");
+                                        window.location.href = "/templates";
+                                    })
+                                    .catch(error => {
+                                        console.error("Error updating template:", error);
+                                        showFlashMessage(error.message || "Error updating template", "error");
+                                    });
+                            } else {
+                                // Create new template
+                                apiClient.templates.create(results)
+                                    .then(response => {
+                                        console.log("Template created successfully:", response);
+                                        showFlashMessage("Template created successfully", "success");
+                                        window.location.href = "/templates";
+                                    })
+                                    .catch(error => {
+                                        console.error("Error creating template:", error);
+                                        showFlashMessage(error.message || "Error creating template", "error");
+                                    });
+                            }
+                        },
+                        updateTemplatePrompt(selectedOption) {
+                            this.template_prompt_id = selectedOption.id;
+                            this.selectedTemplatePrompt = selectedOption; // Ensure the selected option is updated
+                        },
+                        updateAggregatedDataPrompt(selectedOption) {
+                            this.aggregated_prompt_id = selectedOption.id;
+                            this.selectedAggregatedDataPrompt = selectedOption; // Ensure the selected option is updated
+                        },
+                        updateSystemPrompt(selectedOption) {
+                        this.system_prompt_id = selectedOption.id;
+                        this.selectedSystemPrompt = selectedOption; // Ensure the selected option is updated
+                        },
+                        getGraphNameById(graph_id) {
+                            const graph = this.graphs.find(graph => graph.id === graph_id);
+                            return graph ? graph.name : '';
                         }
-                    });
-                },
-                updateTemplatePrompt(selectedOption) {
-                    this.template_prompt_id = selectedOption.id;
-                    this.selectedTemplatePrompt = selectedOption; // Ensure the selected option is updated
-                },
-                updateAggregatedDataPrompt(selectedOption) {
-                    this.aggregated_prompt_id = selectedOption.id;
-                    this.selectedAggregatedDataPrompt = selectedOption; // Ensure the selected option is updated
-                },
-                updateSystemPrompt(selectedOption) {
-                  this.system_prompt_id = selectedOption.id;
-                  this.selectedSystemPrompt = selectedOption; // Ensure the selected option is updated
-                },
-                getGraphNameById(graph_id) {
-                    const graph = this.graphs.find(graph => graph.id === graph_id);
-                    return graph ? graph.name : '';
-                }
-            },
-            created() {
-                function addTypeToName(prompts) {
-                    prompts.forEach(prompt => { prompt.name = `${prompt.name} (${prompt.type})`; });
-                    return prompts;
-                }
+                    },
+                    created() {
+                        function addTypeToName(prompts) {
+                            prompts.forEach(prompt => { prompt.name = `${prompt.name} (${prompt.type})`; });
+                            return prompts;
+                        }
 
-                this.graphs                  = JSON.parse('{{ graphs | tojson }}');
-                this.nfrs                    = JSON.parse('{{ nfrs | tojson }}');
-                this.template_prompts        = JSON.parse('{{ template_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
-                this.template_prompts        = addTypeToName(this.template_prompts);
-                this.aggregated_data_prompts = JSON.parse('{{ aggregated_data_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
-                this.aggregated_data_prompts = addTypeToName(this.aggregated_data_prompts);
-                this.system_prompts = JSON.parse('{{ system_prompts | tojson | safe }}'.replace(/\n/g, "\\n"));
-                this.system_prompts = addTypeToName(this.system_prompts);
-                this.template_data           = JSON.parse('{{ template_data | tojson }}'.replace(/\n/g, "\\n"));
+                        // Load data using API client
+                        Promise.all([
+                            apiClient.graphs.getAll(),
+                            apiClient.nfrs.getAll(),
+                            apiClient.prompts.getAll({ place: 'template' }),
+                            apiClient.prompts.getAll({ place: 'aggregated_data' }),
+                            apiClient.prompts.getAll({ place: 'system' })
+                        ])
+                        .then(([graphsResponse, nfrsResponse, templatePromptsResponse, aggregatedDataPromptsResponse, systemPromptsResponse]) => {
+                            this.graphs = graphsResponse.data.graphs || [];
+                            this.nfrs = nfrsResponse.data.nfrs || [];
 
-                if (this.template_data && this.template_data.name != null) {
-                    this.title                = this.template_data.title;
-                    this.name                 = this.template_data.name;
-                    this.nfr                  = this.nfrs.find(nfr => nfr.id === this.template_data.nfr) || "";
-                    this.template             = this.template_data.data;
-                    this.template_prompt_id   = this.template_data.template_prompt_id
-                    this.aggregated_prompt_id = this.template_data.aggregated_prompt_id
-                    this.system_prompt_id     = this.template_data.system_prompt_id
-                    this.ai_switch            = this.template_data.ai_switch;
-                    this.ai_aggregated_data_switch = this.template_data.ai_aggregated_data_switch;
-                    this.ai_graph_switch      = this.template_data.ai_graph_switch;
-                    this.ai_to_graphs_switch  = this.template_data.ai_to_graphs_switch;
-                    this.nfrs_switch          = this.template_data.nfrs_switch;
+                            // Process prompts
+                            this.template_prompts = addTypeToName(templatePromptsResponse.data.prompts || []);
+                            this.aggregated_data_prompts = addTypeToName(aggregatedDataPromptsResponse.data.prompts || []);
+                            this.system_prompts = addTypeToName(systemPromptsResponse.data.prompts || []);
 
-                    // Set selected options after data is loaded
-                    if (this.template_prompts.length && this.aggregated_data_prompts.length && this.system_prompts.length) {
-                        this.selectedTemplatePrompt = this.template_prompts.find(prompt => prompt.id === this.template_prompt_id);
-                        this.selectedAggregatedDataPrompt = this.aggregated_data_prompts.find(prompt => prompt.id === this.aggregated_prompt_id);
-                        this.selectedSystemPrompt = this.system_prompts.find(prompt => prompt.id === this.system_prompt_id);
-                    }
+                            // If template_config is provided, load the template data
+                            const templateId = '{{ template_config }}';
+                            if (templateId && templateId !== 'None') {
+                                apiClient.templates.getById(templateId)
+                                    .then(response => {
+                                        const templateData = response.data.template;
+                                        if (templateData && templateData.name != null) {
+                                            this.title = templateData.title;
+                                            this.name = templateData.name;
+                                            this.nfr = this.nfrs.find(nfr => nfr.id === templateData.nfr) || "";
+                                            this.template = templateData.data;
+                                            this.template_prompt_id = templateData.template_prompt_id;
+                                            this.aggregated_prompt_id = templateData.aggregated_prompt_id;
+                                            this.system_prompt_id = templateData.system_prompt_id;
+                                            this.ai_switch = templateData.ai_switch;
+                                            this.ai_aggregated_data_switch = templateData.ai_aggregated_data_switch;
+                                            this.ai_graph_switch = templateData.ai_graph_switch;
+                                            this.ai_to_graphs_switch = templateData.ai_to_graphs_switch;
+                                            this.nfrs_switch = templateData.nfrs_switch;
+
+                                            // Set selected options after data is loaded
+                                            if (this.template_prompts.length && this.aggregated_data_prompts.length && this.system_prompts.length) {
+                                                this.selectedTemplatePrompt = this.template_prompts.find(prompt => prompt.id === this.template_prompt_id);
+                                                this.selectedAggregatedDataPrompt = this.aggregated_data_prompts.find(prompt => prompt.id === this.aggregated_prompt_id);
+                                                this.selectedSystemPrompt = this.system_prompts.find(prompt => prompt.id === this.system_prompt_id);
+                                            }
+                                        }
+                                    })
+                                    .catch(error => {
+                                        showFlashMessage(error.message || "Error loading template", "error");
+                                        console.error("Error loading template:", error);
+                                    });
+                            }
+                        })
+                        .catch(error => {
+                            showFlashMessage(error.message || "Error loading data", "error");
+                            console.error("Error loading data:", error);
+                        });
+                    },
+                });
                 }
-            },
-        });
+            });
         </script>
     </main>
 {% endblock content %}

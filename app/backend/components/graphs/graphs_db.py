@@ -85,9 +85,15 @@ class DBGraphs(db.Model):
 
     @classmethod
     def count(cls, schema_name):
+        # Reset the schema context
+        cls.__table__.schema = None
+        # Set the new schema
         cls.__table__.schema = schema_name
         try:
-            return db.session.query(cls).count()
+            # Use the existing session instead of creating a scoped session
+            # Flask-SQLAlchemy 3.x handles sessions differently
+            count = db.session.query(cls).count()
+            return count
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise

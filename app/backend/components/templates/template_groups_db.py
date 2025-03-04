@@ -41,6 +41,8 @@ class DBTemplateGroups(db.Model):
 
             for data_record in validated_data.data:
                 data_dict = data_record.model_dump()
+                # Ensure ID is None for new data records to let the database auto-generate it
+                data_dict['id'] = None
                 record    = DBTemplateGroupData(**data_dict)
                 instance.data.append(record)
 
@@ -101,6 +103,8 @@ class DBTemplateGroups(db.Model):
             config.data.clear()
             for data_record in validated_data.data:
                 data_dict = data_record.model_dump()
+                # Ensure ID is None for new data records to let the database auto-generate it
+                data_dict['id'] = None
                 record    = DBTemplateGroupData(**data_dict)
                 config.data.append(record)
             db.session.commit()

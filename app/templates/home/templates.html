@@ -52,56 +52,6 @@
                                             </tr>
                                         </thead>
                                         <tbody class="list">
-                                            {% for template in templates %}
-                                            <tr>
-                                                <td class="name">{{ template.name }}</td>
-                                                <td class="title">{{ template.title }}</td>
-                                                <td class="nfr">
-                                                    {% for nfr in nfrs %}
-                                                        {% if nfr.id == template.nfr %}
-                                                            {{ nfr.name }}
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
-                                                <td class="nfr-switch">{{ template.nfrs_switch }}</td>
-                                                <td class="template_prompt_id">
-                                                    {% for prompt in template_prompts %}
-                                                        {% if prompt.id == template.template_prompt_id %}
-                                                            {{ prompt.name }}
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
-                                                <td class="aggregated_prompt_id">
-                                                    {% for prompt in aggregated_data_prompts %}
-                                                        {% if prompt.id == template.aggregated_prompt_id %}
-                                                            {{ prompt.name }}
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
-                                                <td class="ai-switch">{{ template.ai_switch }}</td>
-                                                <td class="actions" style="width: 20%;">
-                                                    <a class="btn btn-secondary" href="/template?template_config={{ template.id }}">Edit</a>
-                                                    <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ template.id }}">Delete</a>
-                                                </td>
-                                            </tr>
-                                            <div class="modal fade" id="deleteModal{{ template.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-                                              <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                  <div class="modal-header">
-                                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                  </div>
-                                                  <div class="modal-body">
-                                                    Are you sure you want to delete the "{{ template.name }}" template?
-                                                  </div>
-                                                  <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <a class="btn btn-danger" href="/delete-template?template_config={{ template.id }}">Confirm Delete</a>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            {% endfor %}
                                         </tbody>
                                     </table>
                                 </div>
@@ -136,7 +86,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="template_groups" data-list='{"valueNames":["name", "actions"], "page": 5, "pagination": true}'>
+                            <div id="template-groups" data-list='{"valueNames":["name", "actions"], "page": 5, "pagination": true}'>
                                 <div class="d-flex align-items-center justify-content-end mb-3">
                                     <div class="d-flex">
                                         <a class="btn btn-primary ms-2" type="button" href="/template-group">Add template group</a>
@@ -155,54 +105,6 @@
                                             </tr>
                                         </thead>
                                         <tbody class="list">
-                                            {% for template_group in template_groups %}
-                                            <tr>
-                                                <td class="name">{{ template_group.name }}</td>
-                                                <td class="title">{{ template_group.title }}</td>
-                                                {% set counter = namespace(value=0) %}
-                                                <td class="template list">
-                                                    {% for element in template_group.data %}
-                                                        {% if element.type == "template" %}
-                                                            {% for template in templates %}
-                                                                {% if element.template_id == template.id %}
-                                                                    {% set counter.value = counter.value + 1 %}
-                                                                    {{ counter.value }}. {{ template.name }}<br>
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
-                                                <td class="aggregated_prompt_id">
-                                                    {% for prompt in template_group_prompts %}
-                                                        {% if prompt.id == template_group.prompt_id %}
-                                                            {{ prompt.name }}
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </td>
-                                                <td class="ai_summary">{{ template_group.ai_summary }}</td>
-                                                <td class="actions" style="width: 20%;">
-                                                    <a class="btn btn-secondary" href="/template-group?template_group_config={{ template_group.id }}">Edit</a>
-                                                    <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModalGroup{{ template_group.id }}">Delete</a>
-                                                </td>
-                                            </tr>
-                                            <div class="modal fade" id="deleteModalGroup{{ template_group.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-                                              <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                  <div class="modal-header">
-                                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                  </div>
-                                                  <div class="modal-body">
-                                                    Are you sure you want to delete the "{{ template_group.name }}" template group?
-                                                  </div>
-                                                  <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <a class="btn btn-danger" href="/delete-template-group?template_group_config={{ template_group.id }}">Confirm Delete</a>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            {% endfor %}
                                         </tbody>
                                     </table>
                                 </div>
@@ -227,5 +129,209 @@
                 {% endwith %}
             </div>
         </div>
+        <script>
+            function deleteTemplate(templateId) {
+                apiClient.templates.delete(templateId)
+                    .then(response => {
+                        showFlashMessage("Template deleted successfully", "success");
+                        // Close the modal
+                        const modalElement = document.getElementById('deleteModal' + templateId);
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        modal.hide();
+                        // Reload the page to refresh the template list
+                        window.location.reload();
+                    })
+                    .catch(error => {
+                        showFlashMessage(error.message || "Error deleting template", "error");
+                        console.error("Error deleting template:", error);
+                    });
+            }
+
+            // Load templates data using API client
+            document.addEventListener('DOMContentLoaded', function() {
+                // Fetch all required data
+                Promise.all([
+                    apiClient.templates.getAll(),
+                    apiClient.templateGroups.getAll(),
+                    apiClient.nfrs.getAll(),
+                    apiClient.prompts.getAll({ place: 'template' }),
+                    apiClient.prompts.getAll({ place: 'aggregated_data' }),
+                    apiClient.prompts.getAll({ place: 'template_group' })
+                ])
+                .then(([templatesResponse, templateGroupsResponse, nfrsResponse, templatePromptsResponse, aggregatedDataPromptsResponse, templateGroupPromptsResponse]) => {
+                    const templates = templatesResponse.data.templates || [];
+                    const templateGroups = templateGroupsResponse.data.template_groups || [];
+                    const nfrs = nfrsResponse.data.nfrs || [];
+                    const templatePrompts = templatePromptsResponse.data.prompts || [];
+                    const aggregatedDataPrompts = aggregatedDataPromptsResponse.data.prompts || [];
+                    const templateGroupPrompts = templateGroupPromptsResponse.data.prompts || [];
+
+                    // Render templates
+                    renderTemplates(templates, nfrs, templatePrompts, aggregatedDataPrompts);
+
+                    // Render template groups
+                    renderTemplateGroups(templateGroups, templateGroupPrompts, templates);
+                })
+                .catch(error => {
+                    showFlashMessage(error.message || "Error loading data", "error");
+                    console.error("Error loading data:", error);
+                });
+            });
+
+            function renderTemplates(templates, nfrs, templatePrompts, aggregatedDataPrompts) {
+                const tbody = document.querySelector('#templates tbody.list');
+                tbody.innerHTML = ''; // Clear existing content
+
+                templates.forEach(template => {
+                    // Find related data
+                    const nfr = nfrs.find(n => n.id === template.nfr) || { name: '' };
+                    const templatePrompt = templatePrompts.find(p => p.id === template.template_prompt_id) || { name: '' };
+                    const aggregatedPrompt = aggregatedDataPrompts.find(p => p.id === template.aggregated_prompt_id) || { name: '' };
+
+                    // Create row HTML
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="name">${template.name || ''}</td>
+                        <td class="title">${template.title || ''}</td>
+                        <td class="nfr">${nfr.name || ''}</td>
+                        <td class="nfr-switch">${template.nfrs_switch}</td>
+                        <td class="template_prompt_id">${templatePrompt.name || ''}</td>
+                        <td class="aggregated_prompt_id">${aggregatedPrompt.name || ''}</td>
+                        <td class="ai-switch">${template.ai_switch}</td>
+                        <td class="actions" style="width: 20%;">
+                            <a class="btn btn-secondary" href="/template?template_config=${template.id}">Edit</a>
+                            <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal${template.id}">Delete</a>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+
+                    // Create modal for delete confirmation
+                    const modalDiv = document.createElement('div');
+                    modalDiv.className = 'modal fade';
+                    modalDiv.id = `deleteModal${template.id}`;
+                    modalDiv.setAttribute('tabindex', '-1');
+                    modalDiv.setAttribute('aria-labelledby', 'deleteModalLabel');
+                    modalDiv.setAttribute('aria-hidden', 'true');
+
+                    modalDiv.innerHTML = `
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to delete the "${template.name}" template?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-danger" onclick="deleteTemplate('${template.id}')">Confirm Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.appendChild(modalDiv);
+                });
+
+                // Initialize list.js for pagination
+                new List('templates', {
+                    valueNames: ['name', 'title', 'nfr', 'nfr-switch', 'template_prompt_id', 'aggregated_prompt_id', 'ai-switch'],
+                    page: 5,
+                    pagination: true
+                });
+            }
+
+            function renderTemplateGroups(templateGroups, templateGroupPrompts, templates) {
+                const tbody = document.querySelector('#template-groups tbody.list');
+                tbody.innerHTML = ''; // Clear existing content
+
+                templateGroups.forEach(group => {
+                    // Find related data
+                    const templateGroupPrompt = templateGroupPrompts.find(p => p.id === group.prompt_id) || { name: '' };
+                    
+                    // Generate templates list
+                    let templatesHtml = '';
+                    if (group.data && Array.isArray(group.data)) {
+                        let counter = 0;
+                        group.data.forEach(element => {
+                            if (element.type === "template" && element.template_id) {
+                                counter++;
+                                const template = templates.find(t => t.id === element.template_id);
+                                const templateName = template ? template.name : `Unknown (ID: ${element.template_id})`;
+                                templatesHtml += `${counter}. ${templateName}<br>`;
+                            }
+                        });
+                    }
+
+                    // Create row HTML
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="name">${group.name || ''}</td>
+                        <td class="title">${group.title || ''}</td>
+                        <td class="template">${templatesHtml}</td>
+                        <td class="prompt_id">${templateGroupPrompt.name || ''}</td>
+                        <td class="ai_summary">${group.ai_summary}</td>
+                        <td class="actions" style="width: 20%;">
+                            <a class="btn btn-secondary" href="/template-group?template_group_config=${group.id}">Edit</a>
+                            <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteGroupModal${group.id}">Delete</a>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+
+                    // Create modal for delete confirmation
+                    const modalDiv = document.createElement('div');
+                    modalDiv.className = 'modal fade';
+                    modalDiv.id = `deleteGroupModal${group.id}`;
+                    modalDiv.setAttribute('tabindex', '-1');
+                    modalDiv.setAttribute('aria-labelledby', 'deleteGroupModalLabel');
+                    modalDiv.setAttribute('aria-hidden', 'true');
+
+                    modalDiv.innerHTML = `
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteGroupModalLabel">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    Are you sure you want to delete the "${group.name}" template group?
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-danger" onclick="deleteTemplateGroup('${group.id}')">Confirm Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    document.body.appendChild(modalDiv);
+                });
+
+                // Initialize list.js for pagination
+                new List('template-groups', {
+                    valueNames: ['name', 'title', 'template', 'prompt_id', 'ai_summary', 'actions'],
+                    page: 5,
+                    pagination: true
+                });
+            }
+
+            function deleteTemplateGroup(groupId) {
+                apiClient.templateGroups.delete(groupId)
+                    .then(response => {
+                        showFlashMessage("Template group deleted successfully", "success");
+                        // Close the modal
+                        const modalElement = document.getElementById('deleteGroupModal' + groupId);
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        modal.hide();
+                        // Reload the page to refresh the template groups list
+                        window.location.reload();
+                    })
+                    .catch(error => {
+                        showFlashMessage(error.message || "Error deleting template group", "error");
+                        console.error("Error deleting template group:", error);
+                    });
+            }
+        </script>
     </main>
 {% endblock content %}

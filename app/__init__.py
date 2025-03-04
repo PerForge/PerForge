@@ -25,7 +25,7 @@ from flask                                       import Flask
 from flask_login                                 import LoginManager
 from flask_bcrypt                                import Bcrypt
 from flask_compress                              import Compress
-
+from app.api                                     import register_blueprints
 
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -83,8 +83,11 @@ with app.app_context():
         ], checkfirst=True)
     DBPrompts.load_default_prompts_from_yaml()
 
+# Register API blueprints
+register_blueprints(app)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 # # Import routing, models and Start the App
-from app.views import (auth, custom, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates, report)
+from app.views import (auth, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates, report)

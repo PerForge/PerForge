@@ -15,26 +15,19 @@ async function fetchAndDisplayTestData(testTitle, sourceType, id) {
     } catch (error) {
         console.error('Error fetching data:', error);
         hideLoadingScreen(loadingScreen);
+        // Show error message to the user
+        showFlashMessage('Failed to load report data. Please try again.', 'error');
     }
 }
 
 async function fetchData(testTitle, sourceType, id) {
-    const response = await fetch('/api/data', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            test_title: testTitle,
-            source_type: sourceType,
-            id: id
-        })
-    });
-    
-    if (!response.ok) {
-        throw new Error('Network response was not ok');
+    try {
+        const response = await apiClient.reports.getReportData(testTitle, sourceType, id);
+        return response.data;
+    } catch (error) {
+        console.error('API error:', error);
+        throw error;
     }
-    return response.json();
 }
 
 function showLoadingScreen(loadingScreen, loadingMessage) {

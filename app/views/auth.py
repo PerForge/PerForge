@@ -15,7 +15,7 @@
 import traceback
 import logging
 
-from app                                         import app, login_manager, bc
+from app                                         import app, login_manager, bc, db
 from app.backend                                 import pkg
 from app.backend.components.users.users_db       import DBUsers
 from app.backend.components.projects.projects_db import DBProjects
@@ -177,10 +177,17 @@ def index(path):
     try:
         project = request.cookies.get('project')
         if project != None:
-            projects        = DBProjects.get_configs()
-            project_stats   = DBProjects.get_project_stats(project)
-            current_version = pkg.get_current_version_from_file()
-            return render_template('home/' + path, projects = projects, project_stats=project_stats, current_version=current_version)
+            # Close and reset database connections to ensure schema changes take effect
+            db.session.close()
+            db.engine.dispose()
+            
+            # Force a complete reset of all SQLAlchemy connections
+            with app.app_context():
+                projects = DBProjects.get_configs()
+                project_stats = DBProjects.get_project_stats(project)
+                current_version = pkg.get_current_version_from_file()
+            
+            return render_template('home/' + path, projects=projects, project_stats=project_stats, current_version=current_version)
         else:
             return redirect(url_for('choose_project'))
     except TemplateNotFound:

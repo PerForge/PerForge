@@ -19,7 +19,14 @@ from flask_sqlalchemy import SQLAlchemy
 
 
 basedir     = os.path.abspath(os.path.dirname(__file__))
-db = SQLAlchemy()
+# Configure SQLAlchemy with optimized connection pooling settings
+db = SQLAlchemy(engine_options={
+    'pool_size': 10,  # Default number of connections to maintain
+    'max_overflow': 20,  # Allow up to this many extra connections when pool_size is reached
+    'pool_timeout': 30,  # Seconds to wait before giving up on getting a connection
+    'pool_recycle': 300,  # Recycle connections after 5 minutes to avoid stale connections
+    'pool_pre_ping': True  # Check connection validity before using it from the pool
+})
 
 class Config:
 

@@ -1,5 +1,5 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
-
+<!-- API Client -->
 <div class="sidebar">
     <div class="sidebar-header">
         <img src="/static/assets/img/logo.png" height="25" alt="PerForge">
@@ -149,25 +149,30 @@
         if (projectIdFromCookie === undefined) {
             window.location.href = 'login.html';
         } else {
-            $.get('/get-projects')
-            .done(function(response) {
-                const projects = response['projects'];
-                var arrayLength = projects.length;
-                for (var i = 0; i < arrayLength; i++) {
-                    const projectName = projects[i]['name'];
-                    const projectId = projects[i]['id'];
-                    const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="/set-project?project=' + projectId + '">' + projectName + '</a>'
-                    wrapper.insertAdjacentHTML("afterbegin", projectElement);
+            // Use the API client to get projects
+            apiClient.projects.getAll()
+                .then(function(response) {
+                    // The new API returns data in the standardized format
+                    const projects = response.data.projects;
+                    var arrayLength = projects.length;
+                    for (var i = 0; i < arrayLength; i++) {
+                        const projectName = projects[i]['name'];
+                        const projectId = projects[i]['id'];
+                        // Create project element with onClick handler for the API client
+                        const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="#" onclick="apiClient.projects.setActive(\'' + projectId + '\'); return false;">' + projectName + '</a>';
+                        wrapper.insertAdjacentHTML("afterbegin", projectElement);
 
-                    if (projectIdFromCookie == projectId) {
-                        var currentProject = document.getElementById('projects-dropdown');
-                        currentProject.textContent += projectName;
+                        if (projectIdFromCookie == projectId) {
+                            var currentProject = document.getElementById('projects-dropdown');
+                            currentProject.textContent += projectName;
+                        }
                     }
-                }
-            }).fail(function() {
-                const projectElement = '<a class="dropdown-item rounded-top rounded-bottom">Could not contact server.</a>'
-                wrapper.insertAdjacentHTML("afterbegin", projectElement);
-            });
+                })
+                .catch(function(error) {
+                    console.error('Error fetching projects:', error);
+                    const projectElement = '<a class="dropdown-item rounded-top rounded-bottom">Could not contact server.</a>';
+                    wrapper.insertAdjacentHTML("afterbegin", projectElement);
+                });
         }
     });
 </script>

@@ -164,7 +164,7 @@
                 }
 
                 const dataSource_select = document.getElementById("dataSourceId");
-                
+
                 // Initialize from cookie if exists
                 const savedDataSource = getCookie("selectedDataSource");
                 if (savedDataSource) {
@@ -190,26 +190,24 @@
                     const dataSourceJson = JSON.parse(dataSource);
                     const sourceType = encodeURIComponent(dataSourceJson.source_type);
                     const id = encodeURIComponent(dataSourceJson.id);
-                    const queryString = `source_type=${sourceType}&id=${id}`;
-                    $("#spinner").show()
-                    perforge.utils
-                        .sendGetRequest(`/load_tests?${queryString}`)
-                        .then((data) => {
-                            if(data.status === 'success'){
-                                updateTable(data.tests);
-                            }else{
+                    $("#spinner").show();
+
+                    // Use the API client instead of direct fetch
+                    apiClient.tests.getTestData(sourceType, id)
+                        .then((response) => {
+                            if(response.status === 'success'){
+                                updateTable(response.data.tests);
+                            } else {
                                 var tableBody = document.getElementById("bulk-select-body");
                                 tableBody.innerHTML = ''; // Clear the table body
-                                const badmsg = document.getElementById("bad-msg");
-                                badmsg.style.display = "flex";
-                                const msg = badmsg.querySelector("#msg");
-                                msg.textContent = data.message;
+                                showFlashMessage(response.message, 'error');
                             }
                             $("#spinner").hide();
                         })
                         .catch((error) => {
                             var tableBody = document.getElementById("bulk-select-body");
                             tableBody.innerHTML = ''; // Clear the table body
+                            showFlashMessage('Failed to load test data. Please try again.', 'error');
                             $("#spinner").hide();
                         });
                 }

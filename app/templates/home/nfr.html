@@ -25,7 +25,7 @@
                 </div>
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
                     <div class="card-body">
-                        <form class="needs-validation" novalidate="">
+                        <form class="needs-validation" novalidate="" id="nfrForm">
                             <div class="flex-direction-column" id="nfrs-container">
                                 <div class="full-screen-section">
                                     <div class="marging-10 mt-3">
@@ -76,11 +76,13 @@
                                 </div>
                             </div>
                         </form>
-                        {% with msgs = get_flashed_messages() %}
-                            {% include 'includes/flashed-msg.html' %}
-                        {% endwith %}
                     </div>
                 </div>
+            </div>
+            <div class="center-section">
+              {% with msgs = get_flashed_messages() %}
+              {% include 'includes/flashed-msg.html' %}
+              {% endwith %}
             </div>
         </div>
         <script>
@@ -143,10 +145,10 @@
               elem.parentNode.parentNode.remove();
             }
 
-            function getNFRs() {
+            function getNFRData() {
               const formData = {};
               const nfrConfig = '{{ nfr_config }}';
-              formData.id = nfrConfig && nfrConfig !== 'None' ? nfrConfig : '';
+              formData.id = nfrConfig && nfrConfig !== 'None' ? nfrConfig : null;
               formData.name = document.querySelector('[name="test_name"]').value;
               const nfrs = document.querySelectorAll('.nfr-row');
               const data = Array.from(nfrs).map(element => ({
@@ -155,11 +157,11 @@
                 metric: element.querySelector('.metric-nfr-field').value,
                 operation: element.querySelector('.operation-nfr-field').value,
                 threshold: parseInt(element.querySelector('.threshold-nfr-field').value),
-                weight: element.querySelector('.weight-nfr-field').value
+                weight: element.querySelector('.weight-nfr-field').value || null
               }));
 
               formData.rows = data;
-              return JSON.stringify(formData);
+              return formData;
             }
 
             const nfrsPanel = document.getElementById("nfrs-panel");
@@ -176,7 +178,7 @@
                     newRow.querySelector('.metric-nfr-field').value = row.metric;
                     newRow.querySelector('.operation-nfr-field').value = row.operation;
                     newRow.querySelector('.threshold-nfr-field').value = row.threshold;
-                    newRow.querySelector('.weight-nfr-field').value = row.weight;
+                    newRow.querySelector('.weight-nfr-field').value = row.weight || '';
                 }
             }
 
@@ -186,30 +188,42 @@
               addNfrRow();
             }
 
-            (() => {
-                "use strict";
-                const forms = document.querySelectorAll(".needs-validation");
-                Array.from(forms).forEach((form) => {
-                    form.addEventListener(
-                        "submit",
-                        (event) => {
-                            perforge.utils.validateForm(form, event, (result) => {
-                            if (result) {
-                                perforge.utils
-                                .sendPostRequest("/nfr", getNFRs())
-                                .then((redirectUrl) => {
-                                    window.location.replace(redirectUrl);
-                                })
-                                .catch((error) => {
-                                    console.error("Request failed:", error);
-                                });
-                            }
-                        });
-                    },
-                    false
-                    );
-                });
-                })();
+            // Form validation and submission
+            document.getElementById('nfrForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                // Basic form validation
+                const form = this;
+                if (!form.checkValidity()) {
+                    event.stopPropagation();
+                    form.classList.add('was-validated');
+                    return;
+                }
+
+                const nfrData = getNFRData();
+                const nfrId = nfrData.id;
+
+                // Use the API client to save the NFR
+                const apiCall = nfrId
+                    ? apiClient.nfrs.update(nfrId, nfrData)
+                    : apiClient.nfrs.create(nfrData);
+
+                apiCall
+                    .then(response => {
+                        // Show success message
+                        const message = nfrId ? "NFR updated successfully." : "NFR created successfully.";
+                        showFlashMessage(message, "success");
+
+                        // Redirect to NFRs list page after a short delay
+                        setTimeout(() => {
+                            window.location.href = '/nfrs';
+                        }, 1000);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showFlashMessage(error.message || "An error occurred while saving the NFR.", "error");
+                    });
+            });
           </script>
     </main>
 {% endblock content %}

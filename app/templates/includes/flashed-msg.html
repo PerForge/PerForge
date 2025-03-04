@@ -17,9 +17,9 @@
         {% for category, msg in messages %}
             {% if category == 'info' %}
                 <script>
-                    const badmsg = document.getElementById("good-msg");
-                    badmsg.style.display = "flex";
-                    const msg = badmsg.querySelector("#msg");
+                    const goodmsg = document.getElementById("good-msg");
+                    goodmsg.style.display = "flex";
+                    const msg = goodmsg.querySelector("#msg");
                     msg.textContent = `{{ msg }}`
                 </script>
             {% elif category == 'error' %}
