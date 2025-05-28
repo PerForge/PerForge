@@ -16,7 +16,7 @@ import logging
 import pandas as pd
 
 from app.backend.integrations.data_sources.base_extraction                                      import DataExtractionBase
-from app.backend.integrations.data_sources.base_queries                                         import QueriesBase              
+from app.backend.integrations.data_sources.base_queries                                         import QueriesBase
 from app.backend.integrations.data_sources.influxdb_v2.queries.influxdb_backend_listener_client import InfluxDBBackendListenerClientImpl
 from app.backend.integrations.data_sources.influxdb_v2.queries                                  import mderevyankoaqa
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db                              import DBInfluxdb

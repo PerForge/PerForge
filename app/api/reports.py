@@ -32,7 +32,7 @@ def _ensure_report_types_loaded():
         'app.backend.integrations.atlassian_jira.atlassian_jira_report',
         'app.backend.integrations.atlassian_confluence.atlassian_confluence_report'
     ]
-    
+
     for module_name in report_modules:
         try:
             importlib.import_module(module_name)
@@ -123,6 +123,18 @@ def get_test_data():
 
         ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id)
         tests = ds_obj.get_test_log()
+        
+        # Format timestamps to sortable format for better table sorting
+        for test in tests:
+            if 'start_time' in test and test['start_time']:
+                # Convert pandas Timestamp to sortable string format
+                if hasattr(test['start_time'], 'strftime'):
+                    test['start_time'] = test['start_time'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            if 'end_time' in test and test['end_time']:
+                # Convert pandas Timestamp to sortable string format
+                if hasattr(test['end_time'], 'strftime'):
+                    test['end_time'] = test['end_time'].strftime('%Y-%m-%d %H:%M:%S')
 
         return api_response(data={"tests": tests})
     except Exception as e:
@@ -192,8 +204,23 @@ def generate_report():
 
         # Handle PDF report (special case)
         if action_type == "pdf_report":
+            # Ensure all report types are loaded before getting the PDF report instance
+            _ensure_report_types_loaded()
+
             pdf = ReportRegistry.get_report_instance(action_type, project_id)
-            result = pdf.generate_report(data["tests"], db_id, template_group)
+
+            # Add robust error handling for pandas operations
+            try:
+                result = pdf.generate_report(data["tests"], db_id, template_group)
+            except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                logging.error(f"Detailed PDF generation error: {error_details}")
+                return api_response(
+                    message=f"Error generating PDF report: {str(e)}",
+                    status=HTTP_INTERNAL_SERVER_ERROR,
+                    errors=[{"code": "pdf_generation_error", "message": str(e)}]
+                )
             pdf.pdf_io.seek(0)
 
             # Convert the result to a JSON string and include it in the headers
@@ -213,7 +240,7 @@ def generate_report():
         elif action_type:
             # Ensure all report types are loaded before validation
             _ensure_report_types_loaded()
-            
+
             if ReportRegistry.is_valid_report_type(action_type):
                 report_instance = ReportRegistry.get_report_instance(action_type, project_id)
                 result = report_instance.generate_report(data["tests"], db_id, action_id, template_group)

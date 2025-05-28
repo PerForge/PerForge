@@ -230,6 +230,7 @@
 
                         // Insert cells for each column based on your data structure
                         const runIdCell = row.insertCell();
+                        runIdCell.className = "test_title";
                         runIdCell.textContent = test.test_title;
 
                         // Create and insert the Test ID dropdown
@@ -261,22 +262,27 @@
 
                         // Insert Test Name (modify as needed)
                         const applicationCell = row.insertCell();
+                        applicationCell.className = "application";
                         applicationCell.textContent = test.application;
 
                         // Insert Duration (modify as needed)
                         const durationCell = row.insertCell();
+                        durationCell.className = "duration";
                         durationCell.textContent = test.duration;
 
                         // Insert Max Threads (modify as needed)
                         const max_threadsCell = row.insertCell();
+                        max_threadsCell.className = "max_threads";
                         max_threadsCell.textContent = test.max_threads;
 
                         // Insert Start Time (modify as needed)
                         const start_timeCell = row.insertCell();
+                        start_timeCell.className = "start_time";
                         start_timeCell.textContent = test.start_time;
 
                         // Insert End Time (modify as needed)
                         const end_timeCell = row.insertCell();
+                        end_timeCell.className = "end_time";
                         end_timeCell.textContent = test.end_time;
 
                         // Create and insert the Test ID dropdown

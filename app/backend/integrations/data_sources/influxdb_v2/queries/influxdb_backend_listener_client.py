@@ -28,13 +28,13 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> group(columns: ["_value", "testTitle", "application"])
       |> rename(columns: {{_value: "max_threads"}})
 
-    end_time = data 
+    end_time = data
       |> max(column: "_time")
       |> keep(columns: ["_time", "testTitle", "application"])
       |> group(columns: ["_time", "testTitle", "application"])
       |> rename(columns: {{_time: "end_time"}})
 
-    start_time = data 
+    start_time = data
       |> min(column: "_time")
       |> keep(columns: ["_time", "testTitle", "application"])
       |> group(columns: ["_time", "testTitle", "application"])
@@ -222,7 +222,7 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       |> group(columns: ["_field"])
       |> aggregateWindow(
-      every: 30s, 
+      every: 30s,
       fn: (tables=<-, column) =>
       tables
           |> quantile(q: 0.90, method: "exact_selector"),
@@ -235,7 +235,6 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "countError")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> filter(fn: (r) => r["transaction"] != "all")
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
       |> set(key: "_field", value: "Errors Per Second")'''
@@ -269,12 +268,12 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(
-          every: 30s, 
+          every: 30s,
           fn: (tables=<-, column) =>
               tables
               |> quantile(q: 0.90, method: "exact_selector"),
           createEmpty: false)'''
-          
+
   def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
@@ -283,7 +282,7 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> keep(columns: ["_value"])
       |> max(column: "_value")'''
-      
+
   def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
@@ -296,7 +295,7 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
       |> keep(columns: ["_value"])
       |> median(column: "_value")'''
-      
+
   def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
@@ -308,7 +307,7 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''
-      
+
   def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
@@ -320,7 +319,7 @@ class InfluxDBBackendListenerClientImpl(QueriesBase):
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''
-      
+
   def get_errors_pct_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})

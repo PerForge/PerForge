@@ -39,18 +39,29 @@
 
   const sendPostRequest = (url, json) => {
     return new Promise((resolve, reject) => {
-      $.ajax({
-        url: url,
-        type: "POST",
-        data: json,
-        contentType: "application/json",
-        success: function (data) {
-          resolve(data.redirect_url);
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-          reject({ jqXHR, textStatus, errorThrown });
-        },
-      });
+      // Parse the JSON string if it's a string
+      const data = typeof json === 'string' ? JSON.parse(json) : json;
+      
+      // Convert traditional URL to API endpoint
+      const endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
+      
+      // Use the API client for all POST requests
+      apiClient.post(endpoint, data)
+        .then((response) => {
+          if (response.status === 'success') {
+            // Handle redirect if available
+            if (response.redirect_url) {
+              resolve(response.redirect_url);
+            } else {
+              resolve(response);
+            }
+          } else {
+            reject(new Error(response.message || 'Request failed'));
+          }
+        })
+        .catch((error) => {
+          reject(error);
+        });
     });
   };
 
@@ -82,108 +93,63 @@
       // Parse the JSON string if it's a string
       const data = typeof json === 'string' ? JSON.parse(json) : json;
 
-      // Use the API client for PDF report generation
-      if (url === '/generate' && data.output_id === 'pdf_report') {
-        apiClient.tests.generateReport(data)
-          .then((response) => {
-            if (response.status === 'success' && response.data.pdf_content) {
-              // Create a Blob from the PDF content
-              const pdfContent = atob(response.data.pdf_content);
-              const byteArray = new Uint8Array(pdfContent.length);
-              for (let i = 0; i < pdfContent.length; i++) {
-                byteArray[i] = pdfContent.charCodeAt(i);
-              }
-              const blob = new Blob([byteArray], { type: "application/pdf" });
-
-              // Create a download link
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = response.data.filename || 'report.pdf';
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-
-              // Show the result in the modal
-              showResultModal("Report generated!", response.data);
-              resolve(response.data);
-            } else {
-              showResultModal("Failed!", response.message || "Failed to generate PDF report");
-              reject(new Error(response.message || "Failed to generate PDF report"));
+      // Use only API client for all report generation
+      apiClient.tests.generateReport(data)
+        .then((response) => {
+          if (response.status === 'success' && response.data.pdf_content) {
+            // Create a Blob from the PDF content
+            const pdfContent = atob(response.data.pdf_content);
+            const byteArray = new Uint8Array(pdfContent.length);
+            for (let i = 0; i < pdfContent.length; i++) {
+              byteArray[i] = pdfContent.charCodeAt(i);
             }
-          })
-          .catch((error) => {
-            showResultModal("Failed!", error.message || "An error occurred while generating the PDF report");
-            reject(error);
-          });
-      } else {
-        // Legacy implementation for backward compatibility
-        $.ajax({
-          url: url,
-          type: "POST",
-          data: json,
-          contentType: "application/json",
-          success: function (data, textStatus, request) {
-            const contentType = request.getResponseHeader("Content-Type");
-            if (contentType === "application/pdf") {
-              const resultJson = request.getResponseHeader("X-Result-Data");
-              const result = JSON.parse(resultJson);
+            const blob = new Blob([byteArray], { type: "application/pdf" });
 
-              // Create a Blob from the response data
-              const blob = new Blob([data], { type: "application/pdf" });
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = result.filename + '.pdf';
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
+            // Create a download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = response.data.filename || 'report.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
 
-              // Show the result in the modal
-              showResultModal("Report generated!", result);
-
-              resolve(result);
-            } else {
-              resolve(data.redirect_url);
-            }
-          },
-          error: function (jqXHR, textStatus, errorThrown) {
-            reject({ jqXHR, textStatus, errorThrown });
-          },
-          xhrFields: {
-            responseType: "blob", // Set the responseType to handle binary data
-          },
+            // Show the result in the modal
+            showResultModal("Report generated!", response.data);
+            resolve(response.data);
+          } else {
+            showResultModal("Failed!", response.message || "Failed to generate PDF report");
+            reject(new Error(response.message || "Failed to generate PDF report"));
+          }
+        })
+        .catch((error) => {
+          showResultModal("Failed!", error.message || "An error occurred while generating the PDF report");
+          reject(error);
         });
-      }
     });
   };
 
   const sendGetRequest = (url) => {
     return new Promise((resolve, reject) => {
-      // Use the API client for GET requests if possible
+      // Convert URL to API endpoint format
+      let endpoint;
+      
       if (url.startsWith('/api/v1/')) {
-        const endpoint = url.replace('/api/v1/', '');
-        apiClient.get(endpoint)
-          .then((response) => {
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          });
+        // Already in the correct format
+        endpoint = url.replace('/api/v1/', '');
       } else {
-        // Legacy implementation for backward compatibility
-        $.ajax({
-          url: url,
-          type: "GET",
-          dataType: 'json',
-          success: function (data) {
-            resolve(data);
-          },
-          error: function (jqXHR, textStatus, errorThrown) {
-            reject({ jqXHR, textStatus, errorThrown });
-          },
-        });
+        // Convert traditional URL to API endpoint
+        endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
       }
+      
+      // Use the API client for all GET requests
+      apiClient.get(endpoint)
+        .then((response) => {
+          resolve(response);
+        })
+        .catch((error) => {
+          reject(error);
+        });
     });
   };
 
@@ -214,21 +180,38 @@
     const resultModalBody = document.getElementById('resultModalBody');
     const resultModalLabel = document.getElementById('resultModalLabel');
     resultModalBody.innerHTML = ''; // Clear previous content
-    resultModalLabel.innerHTML = message
+    resultModalLabel.innerHTML = message;
+  
     if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
+      // Filter out binary/large content that shouldn't be displayed
+      const filteredResult = {};
+      
       for (const [key, value] of Object.entries(result)) {
-        resultModalBody.style.display = 'block';
-        const p = document.createElement('p');
-        p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
-        resultModalBody.appendChild(p);
+        // Skip pdf_content and blob properties
+        if (key !== 'pdf_content' && key !== 'blob') {
+          filteredResult[key] = value;
+        }
       }
-    }else if (typeof result === 'string') {
+      
+      // Check if we have any properties to display
+      if (Object.keys(filteredResult).length > 0) {
+        resultModalBody.style.display = 'block';
+        
+        for (const [key, value] of Object.entries(filteredResult)) {
+          const p = document.createElement('p');
+          p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
+          resultModalBody.appendChild(p);
+        }
+      } else {
+        resultModalBody.style.display = 'none';
+      }
+    } else if (typeof result === 'string') {
       resultModalBody.style.display = 'block';
       const p = document.createElement('p');
       p.textContent = result; // Set the text content to the string result
       p.style.whiteSpace = 'pre-wrap'; // Preserve new lines and wrap text
       resultModalBody.appendChild(p);
-    }else{
+    } else {
       resultModalBody.style.display = 'none';
     }
 

@@ -202,7 +202,35 @@ class DataProvider:
         return df.fillna(0)
 
     def df_delete_nan_rows(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove rows containing NaN values."""
+        """
+        Selectively remove rows containing NaN values and raise exceptions for problematic data.
+
+        Args:
+            df: The DataFrame to process
+
+        Returns:
+            A DataFrame with NaN rows removed
+
+        Raises:
+            ValueError: If all columns are completely NaN or if some metrics are missing
+        """
+        # Check if the DataFrame is empty
+        if df.empty:
+            raise ValueError("DataFrame is empty - no metrics data available")
+
+        # Check if any columns are completely NaN
+        all_nan_columns = df.columns[df.isna().all()].tolist()
+
+        # If all columns are NaN, raise an exception
+        if len(all_nan_columns) == len(df.columns):
+            raise ValueError(f"All metrics data is missing: {', '.join(all_nan_columns)}")
+
+        # If some columns are completely NaN, log a warning but continue with remaining columns
+        if all_nan_columns:
+            # Raise an exception with information about which metrics are missing
+            raise ValueError(f"Some metrics data is completely missing: {', '.join(all_nan_columns)}")
+
+        # If no columns are completely NaN, proceed with normal dropna
         return df.dropna()
 
     def get_statistics(self, test_title: str, test_obj: TestData = None) -> Dict[str, Any]:

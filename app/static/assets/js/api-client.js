@@ -52,24 +52,71 @@ const apiClient = {
      *
      * @param {string} endpoint - API endpoint to call
      * @param {Object} data - Data to send in the request body
+     * @param {Object} options - Additional options
      * @returns {Promise} - Promise that resolves with the API response
      */
-    post: function(endpoint, data = {}) {
-        return fetch(this.baseUrl + endpoint, {
+    post: function(endpoint, data = {}, options = {}) {
+        const fetchOptions = {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
+                'Accept': options.acceptHeader || 'application/json',
                 'Content-Type': 'application/json'
             },
             credentials: 'same-origin',
             body: JSON.stringify(data)
-        })
+        };
+
+        // If responseType is set to 'blob', we'll handle the response as binary data
+        if (options.responseType === 'blob') {
+            fetchOptions.responseType = 'blob';
+        }
+
+        return fetch(this.baseUrl + endpoint, fetchOptions)
         .then(response => {
             if (!response.ok) {
-                return response.json().then(err => {
-                    throw err;
+                // Try to parse as JSON first, but if it fails, return a generic error
+                return response.text().then(text => {
+                    try {
+                        const err = JSON.parse(text);
+                        throw err;
+                    } catch (e) {
+                        throw new Error(`API error: ${response.status} ${response.statusText}`);
+                    }
                 });
             }
+
+            // Check the content type
+            const contentType = response.headers.get('Content-Type');
+            
+            // Handle binary responses if requested or if content type is PDF
+            if (options.responseType === 'blob' || (contentType && contentType.includes('application/pdf'))) {
+                return response.blob().then(blob => {
+                    // Try to get result data from header
+                    const resultJson = response.headers.get('X-Result-Data');
+                    let result = { success: true };
+                    
+                    if (resultJson) {
+                        try {
+                            result = JSON.parse(resultJson);
+                        } catch (e) {
+                            console.warn('Could not parse X-Result-Data header:', e);
+                        }
+                    }
+
+                    // Return an object with the blob and metadata
+                    return {
+                        status: 'success',
+                        data: {
+                            blob: blob,
+                            contentType: contentType,
+                            filename: result.filename || 'download',
+                            ...result
+                        }
+                    };
+                });
+            }
+            
+            // For standard JSON responses
             return response.json();
         });
     },
@@ -660,6 +707,39 @@ const apiClient = {
          * @returns {Promise} - Promise that resolves with the generated report
          */
         generateReport: function(data) {
+            // If this is a PDF report, we need to handle it as a binary response
+            if (data.output_id === 'pdf_report') {
+                return apiClient.post('/reports', data, { responseType: 'blob' })
+                    .then(response => {
+                        if (response.status === 'success' && response.data.blob) {
+                            // For API client's direct consumers, convert to base64 for easier handling
+                            return new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    // The result is a data URL like 'data:application/pdf;base64,JVBERi0...'
+                                    // We need to extract just the base64 part
+                                    const base64Content = reader.result.split(',')[1];
+                                    
+                                    // Return a consistent response format
+                                    resolve({
+                                        status: 'success',
+                                        data: {
+                                            ...response.data,
+                                            pdf_content: base64Content
+                                        }
+                                    });
+                                };
+                                reader.onerror = () => {
+                                    reject(new Error('Failed to read PDF content'));
+                                };
+                                reader.readAsDataURL(response.data.blob);
+                            });
+                        }
+                        return response; // Pass through other responses
+                    });
+            }
+            
+            // For all other report types, use standard JSON handling
             return apiClient.post('/reports', data);
         }
     }
