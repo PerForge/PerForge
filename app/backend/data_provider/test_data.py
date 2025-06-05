@@ -205,27 +205,30 @@ class FrontendTestData(BaseTestData):
         'resource_counts'
     ]
 
+    # Common aggregation types used for performance metrics
+    _aggregation_types = ['mean', 'median', 'p90', 'p99']
+
     def __init__(self) -> None:
         super().__init__()
         # Sitespeed.io specific metrics
 
-        # Core Web Vitals
-        self.largest_contentful_paint: Optional[float] = None  # LCP (ms)
-        self.first_contentful_paint: Optional[float] = None    # FCP (ms)
-        self.cumulative_layout_shift: Optional[float] = None   # CLS (score)
-        self.total_blocking_time: Optional[float] = None       # TBT (ms)
-        self.first_input_delay: Optional[float] = None         # FID (ms)
-        self.interaction_to_next_paint: Optional[float] = None # INP (ms)
+        # Core Web Vitals - using dictionaries for different aggregations
+        self.largest_contentful_paint: Optional[Dict[str, float]] = None  # LCP (ms)
+        self.first_contentful_paint: Optional[Dict[str, float]] = None    # FCP (ms)
+        self.cumulative_layout_shift: Optional[Dict[str, float]] = None   # CLS (score)
+        self.total_blocking_time: Optional[Dict[str, float]] = None       # TBT (ms)
+        self.first_input_delay: Optional[Dict[str, float]] = None         # FID (ms)
+        self.interaction_to_next_paint: Optional[Dict[str, float]] = None # INP (ms)
 
-        # Other important metrics
-        self.speed_index: Optional[float] = None               # Speed Index (ms)
-        self.time_to_interactive: Optional[float] = None       # TTI (ms)
-        self.total_page_size: Optional[float] = None           # Total transfer size (bytes)
-        self.dom_size: Optional[int] = None                    # Number of DOM elements
-        self.cpu_long_tasks: Optional[int] = None              # Number of long tasks
-        self.js_execution_time: Optional[float] = None         # JavaScript execution time (ms)
+        # Other important metrics - using dictionaries for different aggregations
+        self.speed_index: Optional[Dict[str, float]] = None               # Speed Index (ms)
+        self.time_to_interactive: Optional[Dict[str, float]] = None       # TTI (ms)
+        self.total_page_size: Optional[Dict[str, float]] = None           # Total transfer size (bytes)
+        self.dom_size: Optional[Dict[str, int]] = None                    # Number of DOM elements
+        self.cpu_long_tasks: Optional[Dict[str, int]] = None              # Number of long tasks
+        self.js_execution_time: Optional[Dict[str, float]] = None         # JavaScript execution time (ms)
 
-        # Lighthouse scores (0-100)
+        # Lighthouse scores (0-100) - these remain as single values
         self.performance_score: Optional[float] = None
         self.accessibility_score: Optional[float] = None
         self.best_practices_score: Optional[float] = None
@@ -238,7 +241,39 @@ class FrontendTestData(BaseTestData):
         # Set the test type for frontend tests
         self.test_type = "front_end"
 
-    # Parameter mapping has been removed to simplify the codebase
+    def get_metric_aggregation(self, metric_name: str, aggregation: str, default_value: Any = None) -> Any:
+        """
+        Get a specific aggregation value of a metric.
+
+        Args:
+            metric_name: Name of the metric to retrieve
+            aggregation: Aggregation type (mean, median, p90, etc.)
+            default_value: Value to return if the metric or aggregation is not available
+
+        Returns:
+            The metric aggregation value or the default value if not available
+        """
+        metric = self.get_metric(metric_name, {})
+        if isinstance(metric, dict):
+            return metric.get(aggregation, default_value)
+        # For backward compatibility with non-dict metrics
+        return metric if metric is not None else default_value
+
+    def set_metric_aggregation(self, metric_name: str, aggregation: str, value: Any) -> None:
+        """
+        Set a specific aggregation value for a metric.
+
+        Args:
+            metric_name: Name of the metric to set
+            aggregation: Aggregation type (mean, median, p90, etc.)
+            value: Value to set for the metric aggregation
+        """
+        metric = self.get_metric(metric_name)
+        # Initialize the dictionary if it doesn't exist
+        if not isinstance(metric, dict):
+            metric = {}
+            self.set_metric(metric_name, metric)
+        metric[aggregation] = value
 
 
 class TestDataFactory:

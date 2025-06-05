@@ -46,9 +46,9 @@ class DataProvider:
 
     # Map data source types to test types
     source_to_test_type_map: Dict[str, str] = {
-        "influxdb_v2": "back_end",  # InfluxDB is typically used for backend load tests
-        "timescaledb": "back_end",  # TimeScaleDB also for backend tests
-        "sitespeed_influxdb_v2": "front_end",  # Sitespeed with InfluxDB for frontend tests
+        "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": "back_end",
+        "mderevyankoaqa": "back_end",
+        "sitespeed_influxdb_v2": "front_end",
     }
 
     def __init__(self, project: Any, source_type: Any, id: Optional[str] = None) -> None:
@@ -65,7 +65,7 @@ class DataProvider:
         self.ds_obj = self.class_map.get(source_type, None)(project=self.project, id=id)
 
         # Determine the test type based on the source type
-        self.test_type = self.source_to_test_type_map.get(source_type, "back_end")
+        self.test_type = self.source_to_test_type_map.get(self.ds_obj.listener, "back_end")
 
     # Basic data retrieval methods
     def get_test_log(self) -> Dict[str, Any]:
