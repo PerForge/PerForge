@@ -24,7 +24,8 @@ from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction impor
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.integrations.data_sources.timescaledb.timescaledb_extraction import TimeScaleDB
-from app.backend.data_provider.test_data import TestData
+from app.backend.data_provider.test_data import TestData, BaseTestData, BackendTestData, FrontendTestData, TestDataFactory
+import logging
 
 class DataProvider:
     """
@@ -34,11 +35,20 @@ class DataProvider:
     - Data extraction from various sources (InfluxDB, TimeScaleDB)
     - Data transformation and preprocessing
     - Performance metrics calculation and aggregation
+    - Support for both backend and frontend test types
     """
 
     class_map: Dict[str, Type[DataExtractionBase]] = {
         "influxdb_v2": InfluxdbV2,
         "timescaledb": TimeScaleDB
+        # Add more data sources as needed
+    }
+
+    # Map data source types to test types
+    source_to_test_type_map: Dict[str, str] = {
+        "influxdb_v2": "back_end",  # InfluxDB is typically used for backend load tests
+        "timescaledb": "back_end",  # TimeScaleDB also for backend tests
+        "sitespeed_influxdb_v2": "front_end",  # Sitespeed with InfluxDB for frontend tests
     }
 
     def __init__(self, project: Any, source_type: Any, id: Optional[str] = None) -> None:
@@ -51,7 +61,11 @@ class DataProvider:
             id: Optional identifier for specific data source instance
         """
         self.project = project
+        self.source_type = source_type
         self.ds_obj = self.class_map.get(source_type, None)(project=self.project, id=id)
+
+        # Determine the test type based on the source type
+        self.test_type = self.source_to_test_type_map.get(source_type, "back_end")
 
     # Basic data retrieval methods
     def get_test_log(self) -> Dict[str, Any]:
@@ -78,45 +92,193 @@ class DataProvider:
         pass
 
     # Data collection and caching methods
-    def collect_test_obj(self, test_title: str) -> None:
+    def collect_test_obj(self, test_title: str, test_type: Optional[str] = None) -> BaseTestData:
         """
-        Collect and cache all test-related data.
+        Collect and create a test data object for the specified test
 
         Args:
             test_title: The title/name of the test to collect data for
-        """
-        test_obj = TestData()
+            test_type: Optional test type override. If not provided, will use the type determined by source_type
 
-        if not test_obj.test_title:
-            test_obj.test_title = test_title
-        if not test_obj.start_time_human:
-            test_obj.start_time_human = self.ds_obj.get_start_time(test_title=test_title, time_format='human')
-        if not test_obj.end_time_human:
-            test_obj.end_time_human = self.ds_obj.get_end_time(test_title=test_title, time_format='human')
-        if not test_obj.start_time_iso:
-            test_obj.start_time_iso = self.ds_obj.get_start_time(test_title=test_title, time_format='iso')
-        if not test_obj.end_time_iso:
-            test_obj.end_time_iso = self.ds_obj.get_end_time(test_title=test_title, time_format='iso')
-        if not test_obj.start_time_timestamp:
-            test_obj.start_time_timestamp = self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp')
-        if not test_obj.end_time_timestamp:
-            test_obj.end_time_timestamp = self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp')
-        if not test_obj.application:
-            test_obj.application = self.ds_obj.get_application(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        if not test_obj.duration:
-            test_obj.calculate_duration()
-        if not test_obj.max_active_users:
-            test_obj.max_active_users = self.ds_obj.get_max_active_users_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        if not test_obj.median_throughput:
-            test_obj.median_throughput = self.ds_obj.get_median_throughput_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        if not test_obj.median_response_time_stats:
-            test_obj.median_response_time_stats = self.ds_obj.get_median_response_time_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        if not test_obj.pct90_response_time_stats:
-            test_obj.pct90_response_time_stats = self.ds_obj.get_pct90_response_time_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        if not test_obj.errors_pct_stats:
-            test_obj.errors_pct_stats = self.ds_obj.get_errors_pct_stats(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-        if not test_obj.aggregated_table:
-            test_obj.aggregated_table = self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        Returns:
+            Appropriate test data object populated with test data
+        """
+        # Use provided test_type or default to the one determined by source_type
+        effective_test_type = test_type if test_type else self.test_type
+
+        # Create appropriate test data object
+        test_obj = TestDataFactory.create_test_data(effective_test_type)
+
+        # Set common data for all test types
+        if hasattr(test_obj, 'test_title'):
+            test_obj.set_metric('test_title', test_title)
+        if hasattr(test_obj, 'start_time_human'):
+            test_obj.set_metric('start_time_human', self.ds_obj.get_start_time(test_title=test_title, time_format='human'))
+        if hasattr(test_obj, 'end_time_human'):
+            test_obj.set_metric('end_time_human', self.ds_obj.get_end_time(test_title=test_title, time_format='human'))
+        if hasattr(test_obj, 'start_time_iso'):
+            test_obj.set_metric('start_time_iso', self.ds_obj.get_start_time(test_title=test_title, time_format='iso'))
+        if hasattr(test_obj, 'end_time_iso'):
+            test_obj.set_metric('end_time_iso', self.ds_obj.get_end_time(test_title=test_title, time_format='iso'))
+        if hasattr(test_obj, 'start_time_timestamp'):
+            test_obj.set_metric('start_time_timestamp', self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp'))
+        if hasattr(test_obj, 'end_time_timestamp'):
+            test_obj.set_metric('end_time_timestamp', self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp'))
+        if hasattr(test_obj, 'application'):
+            test_obj.set_metric('application', self.ds_obj.get_application(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
+        # Calculate duration
+        test_obj.calculate_duration()
+        # Get aggregated data table for all test types
+        if hasattr(test_obj, 'aggregated_table'):
+            test_obj.set_metric('aggregated_table', self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
+        # Dispatch to specialized collection methods based on test type
+        if effective_test_type == "back_end":
+            self._collect_backend_test_data(test_obj)
+        elif effective_test_type == "front_end":
+            self._collect_frontend_test_data(test_obj)
+        return test_obj
+
+    def _collect_backend_test_data(self, test_obj: BackendTestData) -> None:
+        """
+        Collect data specific to backend tests
+
+        Args:
+            test_obj: BackendTestData object to populate
+        """
+        # Now that error handling is moved to base_extraction.py, we can simplify this method
+        # Each method in base_extraction.py now handles errors and provides fallback values
+
+        # Max active users
+        value = self.ds_obj.get_max_active_users_stats(
+            test_title=test_obj.test_title,
+            start=test_obj.start_time_iso,
+            end=test_obj.end_time_iso
+        )
+        test_obj.set_metric('max_active_users', value)
+
+        # Median throughput
+        value = self.ds_obj.get_median_throughput_stats(
+            test_title=test_obj.test_title,
+            start=test_obj.start_time_iso,
+            end=test_obj.end_time_iso
+        )
+        test_obj.set_metric('median_throughput', value)
+
+        # Median response time
+        value = self.ds_obj.get_median_response_time_stats(
+            test_title=test_obj.test_title,
+            start=test_obj.start_time_iso,
+            end=test_obj.end_time_iso
+        )
+        test_obj.set_metric('median_response_time_stats', value)
+
+        # 90th percentile response time
+        value = self.ds_obj.get_pct90_response_time_stats(
+            test_title=test_obj.test_title,
+            start=test_obj.start_time_iso,
+            end=test_obj.end_time_iso
+        )
+        test_obj.set_metric('pct90_response_time_stats', value)
+
+        # Error percentage
+        value = self.ds_obj.get_errors_pct_stats(
+            test_title=test_obj.test_title,
+            start=test_obj.start_time_iso,
+            end=test_obj.end_time_iso
+        )
+        test_obj.set_metric('errors_pct_stats', value)
+
+    def _collect_frontend_test_data(self, test_obj: FrontendTestData) -> None:
+        """
+        Collect data specific to frontend tests
+
+        Args:
+            test_obj: FrontendTestData object to populate
+        """
+        # Since error handling is now in base_extraction.py, we can simplify this method
+        # We still need to maintain hasattr checks since some methods might not exist
+        # for all data source types
+
+        # Core Web Vitals - Largest Contentful Paint
+        if hasattr(self.ds_obj, 'get_largest_contentful_paint'):
+            value = self.ds_obj.get_largest_contentful_paint(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('largest_contentful_paint', value)
+
+        # First Contentful Paint
+        if hasattr(self.ds_obj, 'get_first_contentful_paint'):
+            value = self.ds_obj.get_first_contentful_paint(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('first_contentful_paint', value)
+
+        # Cumulative Layout Shift
+        if hasattr(self.ds_obj, 'get_cumulative_layout_shift'):
+            value = self.ds_obj.get_cumulative_layout_shift(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('cumulative_layout_shift', value)
+
+        # Total Blocking Time
+        if hasattr(self.ds_obj, 'get_total_blocking_time'):
+            value = self.ds_obj.get_total_blocking_time(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('total_blocking_time', value)
+
+        # Speed Index
+        if hasattr(self.ds_obj, 'get_speed_index'):
+            value = self.ds_obj.get_speed_index(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('speed_index', value)
+
+        # Performance Score
+        if hasattr(self.ds_obj, 'get_performance_score'):
+            value = self.ds_obj.get_performance_score(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('performance_score', value)
+
+        # Accessibility Score
+        if hasattr(self.ds_obj, 'get_accessibility_score'):
+            value = self.ds_obj.get_accessibility_score(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('accessibility_score', value)
+
+        # Resource Counts
+        if hasattr(self.ds_obj, 'get_resource_counts'):
+            value = self.ds_obj.get_resource_counts(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('resource_counts', value)
+
+        # Double-check that we have an aggregated table
+        if not test_obj.has_metric('aggregated_table'):
+            value = self.ds_obj.get_aggregated_table(
+                test_title=test_obj.test_title,
+                start=test_obj.start_time_iso,
+                end=test_obj.end_time_iso
+            )
+            test_obj.set_metric('aggregated_table', value)
 
         return test_obj
 
