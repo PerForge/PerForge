@@ -219,7 +219,12 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: A list of dictionaries containing aggregated table data.
         """
-        return self._fetch_aggregated_table(test_title, start, end)
+        try:
+            aggregated_table = self._fetch_aggregated_table(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting aggregated table: {str(e)}")
+            aggregated_table = []
+        return aggregated_table
 
     @validate_time_format
     def get_start_time(self, test_title: str, **kwargs) -> Any:
@@ -261,7 +266,12 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The application name.
         """
-        return self._fetch_application(test_title, start, end)
+        try:
+            application = self._fetch_application(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting application name: {str(e)}")
+            application = "Application not found"
+        return application
 
     @abstractmethod
     def _fetch_rps(self, test_title: str, start: str, end: str) -> pd.DataFrame:
@@ -483,7 +493,12 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The maximum number of active users.
         """
-        return self._fetch_max_active_users_stats(test_title, start, end)
+        try:
+            value = self._fetch_max_active_users_stats(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting max active users: {str(e)}")
+            value = 0
+        return value
 
     @abstractmethod
     def _fetch_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
@@ -505,7 +520,12 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The median throughput stats as an integer.
         """
-        return self._fetch_median_throughput_stats(test_title, start, end)
+        try:
+            value = self._fetch_median_throughput_stats(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting median throughput: {str(e)}")
+            value = 0
+        return value
 
     @abstractmethod
     def _fetch_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
@@ -527,7 +547,12 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The median response time stats as a float.
         """
-        return self._fetch_median_response_time_stats(test_title, start, end)
+        try:
+            value = self._fetch_median_response_time_stats(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting median response time stats: {str(e)}")
+            value = 0.0
+        return value
 
     @abstractmethod
     def _fetch_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
@@ -549,7 +574,12 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The 90th percentile response time stats as a float.
         """
-        return self._fetch_pct90_response_time_stats(test_title, start, end)
+        try:
+            value = self._fetch_pct90_response_time_stats(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting 90th percentile response time stats: {str(e)}")
+            value = 0.0
+        return value
 
     @abstractmethod
     def _fetch_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
@@ -571,4 +601,9 @@ class DataExtractionBase(ABC):
         :param end: The end time.
         :return: The percentage of errors as a float.
         """
-        return self._fetch_errors_pct_stats(test_title, start, end)
+        try:
+            value = self._fetch_errors_pct_stats(test_title, start, end)
+        except Exception as e:
+            logging.warning(f"Error getting errors percentage stats: {str(e)}")
+            value = 0.0
+        return value

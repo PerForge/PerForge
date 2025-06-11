@@ -26,7 +26,7 @@ from app.backend.components.projects.projects_db                           impor
 from app.backend.components.templates.templates_db                         import DBTemplates
 from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
 from app.backend.data_provider.data_provider                               import DataProvider
-from app.backend.data_provider.test_data                                        import TestData
+from app.backend.data_provider.test_data                                  import TestData, BaseTestData
 
 from typing import Dict, Any
 
@@ -38,8 +38,8 @@ class ReportingBase:
         self.project                   = project
         self.schema_name               = DBProjects.get_config_by_id(id=self.project)['name']
         self.validation_obj            = NFRValidation(project=self.project)
-        self.current_test_obj: TestData        = None
-        self.baseline_test_obj: TestData       = None
+        self.current_test_obj: BaseTestData    = None
+        self.baseline_test_obj: BaseTestData   = None
 
     def set_template(self, template, db_id: Dict[str, str]):
         template_obj                   = DBTemplates.get_config_by_id(schema_name=self.schema_name, id=template)
@@ -113,26 +113,96 @@ class ReportingBase:
             response["Output tokens"] = 0
         return response
 
-    def collect_data(self, current_test_title, baseline_test_title = None):
-        default_grafana_id           = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
-        default_grafana_obj          = Grafana(project=self.project, id=default_grafana_id)
-        self.current_test_obj: TestData      = self.dp_obj.collect_test_obj(test_title=current_test_title)
-
-        self.parameters              = {
-            "test_name"           : self.current_test_obj.application,
-            "current_start_time"  : self.current_test_obj.start_time_human,
-            "current_end_time"    : self.current_test_obj.end_time_human,
-            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, self.current_test_obj.application, current_test_title),
-            "current_duration"    : self.current_test_obj.duration,
-            "current_vusers"      : self.current_test_obj.max_active_users
+    def _collect_parameters(self, test_obj: BaseTestData, prefix: str = "") -> Dict[str, Any]:
+        """
+        Extract all metrics from a test data object and format them as parameters with optional prefix.
+        
+        Args:
+            test_obj: The test data object to extract parameters from
+            prefix: Prefix to add to parameter names (e.g., "baseline_" for baseline metrics)
+            
+        Returns:
+            Dictionary of parameters with original metric names (prefixed if specified)
+        """
+        if not test_obj:
+            return {}
+            
+        parameters = {}
+        
+        # Simply convert all available metrics to parameters with their exact names
+        for metric_name in test_obj.get_available_metrics():
+            # Apply prefix to parameter name but keep original metric name
+            param_name = f"{prefix}{metric_name}"
+            parameters[param_name] = test_obj.get_metric(metric_name)
+        
+        # Standard parameter names for compatibility with existing templates
+        # These will be named the same regardless of the underlying storage
+        if not prefix:
+            parameters["test_name"] = test_obj.get_metric('application')
+            parameters["test_type"] = test_obj.get_metric('test_type')
+            
+        return parameters
+    
+    def _create_grafana_link(self, test_obj: BaseTestData, test_title: str, prefix: str = "") -> Dict[str, str]:
+        """
+        Generate a Grafana dashboard link parameter for the test.
+        
+        Args:
+            test_obj: The test data object
+            test_title: The test title to use in the link
+            prefix: Prefix for the parameter name
+            
+        Returns:
+            Dictionary with the Grafana link parameter
+        """
+        # Get default Grafana configuration
+        default_grafana_id = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
+        default_grafana_obj = Grafana(project=self.project, id=default_grafana_id)
+        
+        # Create parameter name with prefix
+        link_param_name = f"{prefix}grafana_link"
+        
+        # Generate the link
+        return {
+            link_param_name: default_grafana_obj.get_grafana_test_link(
+                test_obj.get_metric('start_time_timestamp'), 
+                test_obj.get_metric('end_time_timestamp'), 
+                test_obj.get_metric('application'), 
+                test_title
+            )
         }
-        if baseline_test_title is not None:
-            self.baseline_test_obj: TestData      = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
 
-            self.parameters.update({
-                "baseline_start_time"  : self.baseline_test_obj.start_time_human,
-                "baseline_end_time"    : self.baseline_test_obj.end_time_human,
-                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_test_obj.start_time_timestamp, self.baseline_test_obj.end_time_timestamp, self.baseline_test_obj.application, baseline_test_title),
-                "baseline_duration"    : self.baseline_test_obj.duration,
-                "baseline_vusers"      : self.baseline_test_obj.max_active_users
-            })
+    def collect_data(self, current_test_title, baseline_test_title=None):
+        """
+        Collect test data and prepare parameters for report generation.
+        
+        Args:
+            current_test_title: Title of the current test to analyze
+            baseline_test_title: Optional title of a baseline test for comparison
+        """
+        # Collect current test data
+        self.current_test_obj = self.dp_obj.collect_test_obj(test_title=current_test_title)
+        
+        # Set compatibility attributes for report types that expect them directly on the object
+        self.current_start_timestamp = self.current_test_obj.get_metric('start_time_timestamp')
+        self.current_end_timestamp = self.current_test_obj.get_metric('end_time_timestamp')
+        self.test_name = self.current_test_obj.get_metric('application')
+
+        # Initialize parameters dictionary
+        self.parameters = {}
+        
+        # Process current test data
+        self.parameters.update(self._collect_parameters(self.current_test_obj))
+        self.parameters.update(self._create_grafana_link(self.current_test_obj, current_test_title))
+        
+        # Process baseline test data if provided
+        if baseline_test_title is not None:
+            self.baseline_test_obj = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
+            
+            # Set compatibility attributes
+            self.baseline_start_timestamp = self.baseline_test_obj.get_metric('start_time_timestamp')
+            self.baseline_end_timestamp = self.baseline_test_obj.get_metric('end_time_timestamp')
+            
+            # Add baseline parameters with consistent 'baseline_' prefix
+            self.parameters.update(self._collect_parameters(self.baseline_test_obj, "baseline_"))
+            self.parameters.update(self._create_grafana_link(self.baseline_test_obj, baseline_test_title, "baseline_"))
