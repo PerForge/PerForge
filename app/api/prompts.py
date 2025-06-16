@@ -41,7 +41,7 @@ def get_prompts():
             prompt_configs = DBPrompts.get_configs_by_place(project_id=project_id, place=place)
             return api_response(data={"prompts": prompt_configs})
         else:
-            default_configs, custom_configs = DBPrompts.get_configs(id=project_id)
+            default_configs, custom_configs = DBPrompts.get_configs(project_id=project_id)
             all_prompts = default_configs + custom_configs
             return api_response(data={"prompts": all_prompts})
             
@@ -134,7 +134,7 @@ def create_prompt():
         # Set project ID
         prompt_data["project_id"] = project_id
         
-        new_prompt_id = DBPrompts.save(data=prompt_data)
+        new_prompt_id = DBPrompts.save(project_id=project_id, data=prompt_data)
         
         return api_response(
             data={"prompt_id": new_prompt_id},
@@ -171,7 +171,7 @@ def update_prompt(prompt_id):
             )
             
         # Check if prompt exists
-        existing_prompt = DBPrompts.get_config_by_id(id=prompt_id)
+        existing_prompt = DBPrompts.get_config_by_id(project_id=project_id, id=prompt_id)
         if not existing_prompt:
             return api_response(
                 message=f"Prompt with ID {prompt_id} not found",
@@ -204,7 +204,7 @@ def update_prompt(prompt_id):
         # Set project ID
         prompt_data["project_id"] = project_id
         
-        DBPrompts.update(data=prompt_data)
+        DBPrompts.update(project_id=project_id, data=prompt_data)
         
         return api_response(
             data={"prompt_id": prompt_id},
@@ -240,7 +240,7 @@ def delete_prompt(prompt_id):
             )
             
         # Check if prompt exists
-        existing_prompt = DBPrompts.get_config_by_id(id=prompt_id)
+        existing_prompt = DBPrompts.get_config_by_id(project_id=project_id, id=prompt_id)
         if not existing_prompt:
             return api_response(
                 message=f"Prompt with ID {prompt_id} not found",
@@ -248,7 +248,7 @@ def delete_prompt(prompt_id):
                 errors=[{"code": "not_found", "message": f"Prompt with ID {prompt_id} not found"}]
             )
             
-        DBPrompts.delete(id=prompt_id)
+        DBPrompts.delete(project_id=project_id, id=prompt_id)
         
         return api_response(
             message="Prompt deleted successfully",

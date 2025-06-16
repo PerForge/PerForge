@@ -96,7 +96,7 @@ class AzureWikiReport(ReportingBase):
             if obj["type"] == "text":
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = DBGraphs.get_config_by_id(schema_name=self.schema_name, id=obj["graph_id"])
+                graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph

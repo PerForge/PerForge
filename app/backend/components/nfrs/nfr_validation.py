@@ -46,7 +46,6 @@ class DataRow:
 class NFRValidation:
     def __init__(self, project):
         self.project            = project
-        self.schema_name        = DBProjects.get_config_by_id(id=self.project)['name']
         self.nfr_result         = []
         self.transaction_result = []
 
@@ -189,7 +188,7 @@ class NFRValidation:
 
     def create_summary(self, id, data):
         # Get NFRs for the specific application
-        nfr_config = DBNFRs.get_config_by_id(schema_name=self.schema_name, id=id)
+        nfr_config = DBNFRs.get_config_by_id(project_id=self.project, id=id)
         if nfr_config:
             self.compare_with_nfrs(nfr_config, data)
             self.calculate_apdex()

@@ -40,7 +40,7 @@ def get_nfrs():
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        nfr_configs = DBNFRs.get_configs(schema_name=project_data['name'])
+        nfr_configs = DBNFRs.get_configs(project_id=project_id)
         return api_response(data={"nfrs": nfr_configs})
     except Exception as e:
         logging.error(f"Error getting NFRs: {str(e)}")
@@ -79,7 +79,7 @@ def get_nfr(nfr_id):
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        nfr_data = DBNFRs.get_config_by_id(schema_name=project_data['name'], id=nfr_id)
+        nfr_data = DBNFRs.get_config_by_id(project_id=project_id, id=nfr_id)
         if not nfr_data:
             return api_response(
                 message=f"NFR with ID {nfr_id} not found",
@@ -145,7 +145,7 @@ def create_nfr():
         nfr_data["id"] = None
         
         new_nfr_id = DBNFRs.save(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=nfr_data
         )
         
@@ -192,7 +192,7 @@ def update_nfr(nfr_id):
             )
             
         # Check if NFR exists
-        existing_nfr = DBNFRs.get_config_by_id(schema_name=project_data['name'], id=nfr_id)
+        existing_nfr = DBNFRs.get_config_by_id(project_id=project_id, id=nfr_id)
         if not existing_nfr:
             return api_response(
                 message=f"NFR with ID {nfr_id} not found",
@@ -223,7 +223,7 @@ def update_nfr(nfr_id):
         nfr_data["id"] = nfr_id
         
         DBNFRs.update(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=nfr_data
         )
         
@@ -269,7 +269,7 @@ def delete_nfr(nfr_id):
             )
             
         # Check if NFR exists
-        existing_nfr = DBNFRs.get_config_by_id(schema_name=project_data['name'], id=nfr_id)
+        existing_nfr = DBNFRs.get_config_by_id(project_id=project_id, id=nfr_id)
         if not existing_nfr:
             return api_response(
                 message=f"NFR with ID {nfr_id} not found",
@@ -277,7 +277,7 @@ def delete_nfr(nfr_id):
                 errors=[{"code": "not_found", "message": f"NFR with ID {nfr_id} not found"}]
             )
             
-        DBNFRs.delete(schema_name=project_data['name'], id=nfr_id)
+        DBNFRs.delete(project_id=project_id, id=nfr_id)
         
         return api_response(
             message="NFR deleted successfully",

@@ -36,13 +36,12 @@ class ReportingBase:
 
     def __init__(self, project):
         self.project                   = project
-        self.schema_name               = DBProjects.get_config_by_id(id=self.project)['name']
         self.validation_obj            = NFRValidation(project=self.project)
         self.current_test_obj: TestData        = None
         self.baseline_test_obj: TestData       = None
 
     def set_template(self, template, db_id: Dict[str, str]):
-        template_obj                   = DBTemplates.get_config_by_id(schema_name=self.schema_name, id=template)
+        template_obj                   = DBTemplates.get_config_by_id(project_id=self.project, id=template)
         self.nfr                       = template_obj["nfr"]
         self.title                     = template_obj["title"]
         self.data                      = template_obj["data"]
@@ -63,7 +62,7 @@ class ReportingBase:
             self.ai_support_obj        = AISupport(project=self.project, system_prompt=self.system_prompt_id)
 
     def set_template_group(self, template_group):
-        template_group_obj             = DBTemplateGroups.get_config_by_id(schema_name=self.schema_name, id=template_group)
+        template_group_obj             = DBTemplateGroups.get_config_by_id(project_id=self.project, id=template_group)
         self.group_title               = template_group_obj["title"]
         self.template_order            = template_group_obj["data"]
         self.template_group_prompt_id  = template_group_obj["prompt_id"]
@@ -114,15 +113,19 @@ class ReportingBase:
         return response
 
     def collect_data(self, current_test_title, baseline_test_title = None):
-        default_grafana_id           = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
-        default_grafana_obj          = Grafana(project=self.project, id=default_grafana_id)
+        default_grafana_config = DBGrafana.get_default_config(project_id=self.project)
+        default_grafana_obj = None
+        if default_grafana_config:
+            default_grafana_id = default_grafana_config["id"]
+            default_grafana_obj = Grafana(project=self.project, id=default_grafana_id)
+
         self.current_test_obj: TestData      = self.dp_obj.collect_test_obj(test_title=current_test_title)
 
         self.parameters              = {
             "test_name"           : self.current_test_obj.application,
             "current_start_time"  : self.current_test_obj.start_time_human,
             "current_end_time"    : self.current_test_obj.end_time_human,
-            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, self.current_test_obj.application, current_test_title),
+            "current_grafana_link": default_grafana_obj.get_grafana_test_link(self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, self.current_test_obj.application, current_test_title) if default_grafana_obj else "",
             "current_duration"    : self.current_test_obj.duration,
             "current_vusers"      : self.current_test_obj.max_active_users
         }
@@ -132,7 +135,7 @@ class ReportingBase:
             self.parameters.update({
                 "baseline_start_time"  : self.baseline_test_obj.start_time_human,
                 "baseline_end_time"    : self.baseline_test_obj.end_time_human,
-                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_test_obj.start_time_timestamp, self.baseline_test_obj.end_time_timestamp, self.baseline_test_obj.application, baseline_test_title),
+                "baseline_grafana_link": default_grafana_obj.get_grafana_test_link(self.baseline_test_obj.start_time_timestamp, self.baseline_test_obj.end_time_timestamp, self.baseline_test_obj.application, baseline_test_title) if default_grafana_obj else "",
                 "baseline_duration"    : self.baseline_test_obj.duration,
                 "baseline_vusers"      : self.baseline_test_obj.max_active_users
             })

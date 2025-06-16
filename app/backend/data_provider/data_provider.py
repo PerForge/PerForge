@@ -23,7 +23,6 @@ import pandas as pd
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
-from app.backend.integrations.data_sources.timescaledb.timescaledb_extraction import TimeScaleDB
 from app.backend.data_provider.test_data import TestData
 
 class DataProvider:
@@ -37,8 +36,7 @@ class DataProvider:
     """
 
     class_map: Dict[str, Type[DataExtractionBase]] = {
-        "influxdb_v2": InfluxdbV2,
-        "timescaledb": TimeScaleDB
+        "influxdb_v2": InfluxdbV2
     }
 
     def __init__(self, project: Any, source_type: Any, id: Optional[str] = None) -> None:

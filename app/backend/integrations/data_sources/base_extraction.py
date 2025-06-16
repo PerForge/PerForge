@@ -19,6 +19,7 @@ import pandas as pd
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.errors                          import ErrorMessages
 from abc                                         import ABC, abstractmethod
+from app.backend.integrations.integration        import Integration
 from typing                                      import List, Dict, Any, Callable
 from functools                                   import wraps
 from datetime                                    import datetime
@@ -121,7 +122,7 @@ def validate_float_output(func: Callable):
         return result
     return wrapper
 
-class DataExtractionBase(ABC):
+class DataExtractionBase(Integration, ABC):
 
     required_metrics = ['overal_throughput',
                         'overal_users',
@@ -135,9 +136,8 @@ class DataExtractionBase(ABC):
         Initialize the DataExtractionBase class with configuration for the data source.
         :param project: Project configuration for the data source.
         """
+        super().__init__(project)
         self.metric_map  = {}
-        self.project     = project
-        self.schema_name = DBProjects.get_config_by_id(id=self.project)['name']
 
     @abstractmethod
     def set_config(self):

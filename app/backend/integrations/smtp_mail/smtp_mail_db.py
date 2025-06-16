@@ -23,13 +23,14 @@ from sqlalchemy.orm              import joinedload
 class DBSMTPMail(db.Model):
     __tablename__ = 'smtp_mail'
     id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     name          = db.Column(db.String(120), nullable=False)
     server        = db.Column(db.String(120), nullable=False)
     port          = db.Column(db.Integer, nullable=False)
     use_ssl       = db.Column(db.Boolean, default=False)
     use_tls       = db.Column(db.Boolean, default=False)
     username      = db.Column(db.String(120), nullable=False)
-    token         = db.Column(db.Integer, db.ForeignKey('public.secrets.id', ondelete='SET NULL'))
+    token         = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     is_default    = db.Column(db.Boolean, default=False)
     recipients    = db.relationship('DBSMTPMailRecipient', backref='smtp_mail', cascade='all, delete-orphan', lazy=True)
 
@@ -37,20 +38,20 @@ class DBSMTPMail(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
-            validated_data            = SmtpMailModel(**data)
-            instance                  = cls(**validated_data.model_dump(exclude={'recipients'}))
-            instance.__table__.schema = schema_name
+            data['project_id'] = project_id
+            smtp_model_instance = SmtpMailModel(**data)
+            instance_data = smtp_model_instance.model_dump(exclude={'recipients'})
+            instance = cls(**instance_data)
 
-            for recipient_data in validated_data.recipients:
-                recipient_dict             = recipient_data.model_dump()
-                recipient                  = DBSMTPMailRecipient(**recipient_dict)
-                instance.recipients.append(recipient)
+            if smtp_model_instance.recipients:
+                for recipient_model in smtp_model_instance.recipients:
+                    instance.recipients.append(DBSMTPMailRecipient(**recipient_model.model_dump()))
 
             if instance.is_default:
-                cls.reset_default_config(schema_name)
-            elif not cls.get_default_config(schema_name):
+                cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id):
                 instance.is_default = True
 
             db.session.add(instance)
@@ -62,17 +63,14 @@ class DBSMTPMail(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBSMTPMailRecipient.__table__.schema = schema_name
-
+    def get_configs(cls, project_id):
         try:
-            query   = db.session.query(cls).options(joinedload(cls.recipients)).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).options(joinedload(cls.recipients)).all()
             configs = []
             for config in query:
-                config_dict               = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
-                validated_data            = SmtpMailModel(**config_dict)
+                validated_data = SmtpMailModel(**config_dict)
                 configs.append(validated_data.model_dump())
             return configs
         except Exception:
@@ -80,16 +78,13 @@ class DBSMTPMail(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema                 = schema_name
-        DBSMTPMailRecipient.__table__.schema = schema_name
-
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).options(joinedload(cls.recipients)).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).options(joinedload(cls.recipients)).one_or_none()
             if config:
-                config_dict               = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
-                validated_data            = SmtpMailModel(**config_dict)
+                validated_data = SmtpMailModel(**config_dict)
                 return validated_data.model_dump()
             return None
         except Exception:
@@ -97,16 +92,13 @@ class DBSMTPMail(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBSMTPMailRecipient.__table__.schema = schema_name
-
+    def get_default_config(cls, project_id):
         try:
-            config = db.session.query(cls).options(joinedload(cls.recipients)).filter_by(is_default=True).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).options(joinedload(cls.recipients)).one_or_none()
             if config:
-                config_dict               = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
-                validated_data            = SmtpMailModel(**config_dict)
+                validated_data = SmtpMailModel(**config_dict)
                 return validated_data.model_dump()
             return None
         except Exception:
@@ -114,36 +106,35 @@ class DBSMTPMail(db.Model):
             raise
 
     @classmethod
-    def reset_default_config(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBSMTPMailRecipient.__table__.schema = schema_name
-
+    def reset_default_config(cls, project_id):
         try:
-            db.session.query(cls).update({cls.is_default: False})
+            db.session.query(cls).filter_by(project_id=project_id).update({cls.is_default: False})
+            db.session.commit()
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema                 = schema_name
-        DBSMTPMailRecipient.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = SmtpMailModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            if validated_data.is_default:
-                cls.reset_default_config(schema_name)
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
+            if not config:
+                return
 
-            exclude_fields = {'recipients'}
-            for field, value in validated_data.model_dump().items():
-                if field not in exclude_fields:
-                    setattr(config, field, value)
+            if validated_data.is_default:
+                cls.reset_default_config(project_id)
+
+            exclude_fields = {'recipients', 'project_id'}
+            for field, value in validated_data.model_dump(exclude=exclude_fields).items():
+                setattr(config, field, value)
 
             config.recipients.clear()
             for recipient_data in validated_data.recipients:
                 recipient_dict = recipient_data.model_dump()
-                recipient      = DBSMTPMailRecipient(**recipient_dict)
+                recipient = DBSMTPMailRecipient(**recipient_dict)
                 config.recipients.append(recipient)
             db.session.commit()
         except Exception:
@@ -152,28 +143,23 @@ class DBSMTPMail(db.Model):
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
-            return count
+            return db.session.query(cls).filter_by(project_id=project_id).count()
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema                 = schema_name
-        DBSMTPMailRecipient.__table__.schema = schema_name
-
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
+                is_default_deleted = config.is_default
                 db.session.delete(config)
                 db.session.commit()
-                if config.is_default:
-                    new_default_config = db.session.query(cls).first()
+                if is_default_deleted:
+                    new_default_config = db.session.query(cls).filter_by(project_id=project_id).first()
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()

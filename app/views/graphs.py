@@ -30,10 +30,10 @@ def get_graphs():
     try:
         project_id      = request.cookies.get('project')
         project_data    = DBProjects.get_config_by_id(id=project_id)
-        graph_configs   = DBGraphs.get_configs(schema_name=project_data['name'])
+        graph_configs   = DBGraphs.get_configs(project_id=project_id)
         prompt_configs  = DBPrompts.get_configs_by_place(project_id=project_id, place="graph")
         form            = GraphForm(request.form)
-        grafana_configs = DBGrafana.get_configs(schema_name=project_data['name'])
+        grafana_configs = DBGrafana.get_configs(project_id=project_id)
         return render_template('home/graphs.html', graphs_list=graph_configs, graph_prompts=prompt_configs, form_for_graphs=form, grafana_configs=grafana_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))

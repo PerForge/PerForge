@@ -21,7 +21,6 @@ class Integration(ABC):
 
     def __init__(self, project):
         self.project     = project
-        self.schema_name = DBProjects.get_config_by_id(id=self.project)['name']
 
     @abstractmethod
     def set_config(self):

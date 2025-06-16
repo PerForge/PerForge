@@ -33,13 +33,13 @@ class AtlassianConfluence(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        id     = id if id else DBAtlassianConfluence.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBAtlassianConfluence.get_config_by_id(schema_name=self.schema_name, id=id)
+        id     = id if id else DBAtlassianConfluence.get_default_config(project_id=self.project)["id"]
+        config = DBAtlassianConfluence.get_config_by_id(project_id=self.project, id=id)
         if config['id']:
             self.id        = config["id"]
             self.name      = config["name"]
             self.email     = config["email"]
-            self.token     = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.token     = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.org_url   = config["org_url"]
             self.space_key = config["space_key"]
             self.parent_id = config["parent_id"]

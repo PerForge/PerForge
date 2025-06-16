@@ -57,8 +57,8 @@
                                 </div>
                                 <label for="org_url" class="mt-2">Wiki Organization Url:</label>
                                 {{ form.org_url(class="form-control") }}
-                                <label for="project_id" class="mt-2">Wiki Project:</label>
-                                {{ form.project_id(class="form-control") }}
+                                <label for="azure_project_id" class="mt-2">Wiki Project:</label>
+                                {{ form.azure_project_id(class="form-control") }}
                                 <label for="identifier" class="mt-2">Wiki Identifier:</label>
                                 {{ form.identifier(class="form-control") }}
                                 <label for="path_to_report" class="mt-2">Wiki Path To Report:</label>
@@ -129,7 +129,7 @@
         // Function to handle form submission
         function handleFormSubmit(event) {
             event.preventDefault();
-            
+
             if (!validateForm()) {
                 return false;
             }
@@ -153,7 +153,7 @@
             });
 
             // Use the API client to save the integration
-            const apiCall = integrationId 
+            const apiCall = integrationId
                 ? apiClient.integrations.update(integrationId, data, 'azure_wiki')
                 : apiClient.integrations.create(data, 'azure_wiki');
 
@@ -180,7 +180,7 @@
         document.getElementById('deleteButton')?.addEventListener('click', function() {
             const integrationId = document.getElementById('config_id').value;
             const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-            
+
             apiClient.integrations.delete(integrationId, 'azure_wiki')
                 .then(response => {
                     modal.hide();

@@ -14,7 +14,7 @@
 
 from flask_wtf          import FlaskForm
 from wtforms            import StringField, IntegerField, FloatField, PasswordField, FieldList, SelectField, TextAreaField, FormField
-from wtforms.validators import Email, DataRequired, NumberRange, Email
+from wtforms.validators import Email, DataRequired, NumberRange
 
 
 class LoginForm(FlaskForm):
@@ -63,7 +63,7 @@ class AzureWikiForm(FlaskForm):
     name           = StringField('Name', validators=[DataRequired()])
     token          = StringField('Personal Access Token', validators=[DataRequired()])
     org_url        = StringField('Wiki Organization Url', validators=[DataRequired()])
-    project_id     = StringField('Wiki Project', validators=[DataRequired()])
+    azure_project_id = StringField('Azure DevOps Project Name or ID', validators=[DataRequired()])
     identifier     = StringField('Wiki Identifier', validators=[DataRequired()])
     path_to_report = StringField('Wiki Path To Report', validators=[DataRequired()])
     is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
@@ -100,7 +100,7 @@ class AtlassianJiraForm(FlaskForm):
     token      = StringField('Token', validators=[DataRequired()])
     token_type = SelectField('Token type', choices=[('api_token', 'API Token'), ('personal_access_token', 'Personal Access Token')], default='api_token')
     org_url    = StringField('Organization url', validators=[DataRequired()])
-    project_id = StringField('Project id', validators=[DataRequired()])
+    jira_project_key = StringField('Jira Project Key', validators=[DataRequired()])
     epic_field = StringField('Epic field')
     epic_name  = StringField('Epic name')
     is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)

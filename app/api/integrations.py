@@ -82,7 +82,7 @@ def get_integrations():
 
         # Get AI Support integrations
         try:
-            ai_support_configs = DBAISupport.get_configs(schema_name=project_data['name'])
+            ai_support_configs = DBAISupport.get_configs(project_id=project_id)
             for config in ai_support_configs:
                 config['integration_type'] = 'ai_support'
                 all_integrations.append(config)
@@ -91,7 +91,7 @@ def get_integrations():
 
         # Get InfluxDB integrations
         try:
-            influxdb_configs = DBInfluxdb.get_configs(schema_name=project_data['name'])
+            influxdb_configs = DBInfluxdb.get_configs(project_id=project_id)
             for config in influxdb_configs:
                 config['integration_type'] = 'influxdb'
                 all_integrations.append(config)
@@ -100,7 +100,7 @@ def get_integrations():
 
         # Get Atlassian Confluence integrations
         try:
-            atlassian_confluence_configs = DBAtlassianConfluence.get_configs(schema_name=project_data['name'])
+            atlassian_confluence_configs = DBAtlassianConfluence.get_configs(project_id=project_id)
             for config in atlassian_confluence_configs:
                 config['integration_type'] = 'atlassian_confluence'
                 all_integrations.append(config)
@@ -109,7 +109,7 @@ def get_integrations():
 
         # Get Atlassian Jira integrations
         try:
-            atlassian_jira_configs = DBAtlassianJira.get_configs(schema_name=project_data['name'])
+            atlassian_jira_configs = DBAtlassianJira.get_configs(project_id=project_id)
             for config in atlassian_jira_configs:
                 config['integration_type'] = 'atlassian_jira'
                 all_integrations.append(config)
@@ -118,7 +118,7 @@ def get_integrations():
 
         # Get Azure Wiki integrations
         try:
-            azure_wiki_configs = DBAzureWiki.get_configs(schema_name=project_data['name'])
+            azure_wiki_configs = DBAzureWiki.get_configs(project_id=project_id)
             for config in azure_wiki_configs:
                 config['integration_type'] = 'azure_wiki'
                 all_integrations.append(config)
@@ -127,7 +127,7 @@ def get_integrations():
 
         # Get Grafana integrations
         try:
-            grafana_configs = DBGrafana.get_configs(schema_name=project_data['name'])
+            grafana_configs = DBGrafana.get_configs(project_id=project_id)
             for config in grafana_configs:
                 config['integration_type'] = 'grafana'
                 all_integrations.append(config)
@@ -136,7 +136,7 @@ def get_integrations():
 
         # Get SMTP Mail integrations
         try:
-            smtp_mail_configs = DBSMTPMail.get_configs(schema_name=project_data['name'])
+            smtp_mail_configs = DBSMTPMail.get_configs(project_id=project_id)
             for config in smtp_mail_configs:
                 config['integration_type'] = 'smtp_mail'
                 all_integrations.append(config)
@@ -194,7 +194,7 @@ def get_integration(integration_id):
 
         try:
             db_class = get_db_class(integration_type)
-            integration_data = db_class.get_config_by_id(schema_name=project_data['name'], id=integration_id)
+            integration_data = db_class.get_config_by_id(project_id=project_id, id=integration_id)
 
             if not integration_data:
                 return api_response(
@@ -281,7 +281,7 @@ def create_integration():
         try:
             db_class = get_db_class(integration_type)
             new_integration_id = db_class.save(
-                schema_name=project_data['name'],
+                project_id=project_id,
                 data=integration_data
             )
 
@@ -354,7 +354,7 @@ def update_integration(integration_id):
             db_class = get_db_class(integration_type)
 
             # Check if integration exists
-            existing_integration = db_class.get_config_by_id(schema_name=project_data['name'], id=integration_id)
+            existing_integration = db_class.get_config_by_id(project_id=project_id, id=integration_id)
             if not existing_integration:
                 return api_response(
                     message=f"Integration with ID {integration_id} not found",
@@ -377,7 +377,7 @@ def update_integration(integration_id):
             integration_data["id"] = integration_id
 
             db_class.update(
-                schema_name=project_data['name'],
+                project_id=project_id,
                 data=integration_data
             )
 
@@ -441,7 +441,7 @@ def delete_integration(integration_id):
             db_class = get_db_class(integration_type)
 
             # Check if integration exists
-            existing_integration = db_class.get_config_by_id(schema_name=project_data['name'], id=integration_id)
+            existing_integration = db_class.get_config_by_id(project_id=project_id, id=integration_id)
             if not existing_integration:
                 return api_response(
                     message=f"Integration with ID {integration_id} not found",
@@ -449,7 +449,7 @@ def delete_integration(integration_id):
                     errors=[{"code": "not_found", "message": f"Integration with ID {integration_id} not found"}]
                 )
 
-            db_class.delete(schema_name=project_data['name'], id=integration_id)
+            db_class.delete(project_id=project_id, id=integration_id)
 
             return api_response(
                 message="Integration deleted successfully",

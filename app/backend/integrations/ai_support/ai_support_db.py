@@ -22,13 +22,14 @@ from app.backend.pydantic_models import AISupportModel
 class DBAISupport(db.Model):
     __tablename__  = 'ai_support'
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id     = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     name           = db.Column(db.String(120), nullable=False)
     ai_provider    = db.Column(db.String(120), nullable=False)
     azure_url      = db.Column(db.String(120))
     api_version    = db.Column(db.String(120))
     ai_text_model  = db.Column(db.String(120), nullable=False)
     ai_image_model = db.Column(db.String(120), nullable=False)
-    token          = db.Column(db.Integer, db.ForeignKey('public.secrets.id', ondelete='SET NULL'))
+    token          = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     temperature    = db.Column(db.Float, nullable=False)
     is_default     = db.Column(db.Boolean, default=False)
 
@@ -36,15 +37,15 @@ class DBAISupport(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = AISupportModel(**data)
             instance = cls(**validated_data.model_dump())
-            instance.__table__.schema = schema_name
 
             if instance.is_default:
-                cls.reset_default_config(schema_name)
-            elif not cls.get_default_config(schema_name):
+                cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id):
                 instance.is_default = True
 
             db.session.add(instance)
@@ -56,10 +57,9 @@ class DBAISupport(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def get_configs(cls, project_id):
         try:
-            query = db.session.query(cls).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).all()
             valid_configs = []
             for config in query:
                 config_dict    = config.to_dict()
@@ -71,10 +71,9 @@ class DBAISupport(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema = schema_name
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 config_dict    = config.to_dict()
                 validated_data = AISupportModel(**config_dict)
@@ -85,10 +84,9 @@ class DBAISupport(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def get_default_config(cls, project_id):
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).one_or_none()
             if config:
                 config_dict    = config.to_dict()
                 validated_data = AISupportModel(**config_dict)
@@ -99,26 +97,28 @@ class DBAISupport(db.Model):
             raise
 
     @classmethod
-    def reset_default_config(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def reset_default_config(cls, project_id):
         try:
-            db.session.query(cls).update({cls.is_default: False})
+            db.session.query(cls).filter_by(project_id=project_id).update({cls.is_default: False})
+            db.session.commit()
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = AISupportModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            if validated_data.is_default:
-                cls.reset_default_config(schema_name)
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
+            if not config:
+                return
 
-            for key, value in validated_data.model_dump().items():
+            if validated_data.is_default:
+                cls.reset_default_config(project_id)
+
+            for key, value in validated_data.model_dump(exclude={'project_id'}).items():
                 setattr(config, key, value)
 
             db.session.commit()
@@ -128,27 +128,23 @@ class DBAISupport(db.Model):
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
-            return count
+            return db.session.query(cls).filter_by(project_id=project_id).count()
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema = schema_name
-
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
+                is_default_deleted = config.is_default
                 db.session.delete(config)
                 db.session.commit()
-                if config.is_default:
-                    new_default_config = db.session.query(cls).first()
+                if is_default_deleted:
+                    new_default_config = db.session.query(cls).filter_by(project_id=project_id).first()
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()

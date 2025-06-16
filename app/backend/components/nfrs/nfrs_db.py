@@ -23,6 +23,7 @@ from sqlalchemy.orm              import joinedload
 class DBNFRs(db.Model):
     __tablename__ = 'nfrs'
     id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'))
     name          = db.Column(db.String(120), nullable=False)
     rows          = db.relationship('DBNFRRows', backref='nfrs', cascade='all, delete-orphan', lazy=True)
 
@@ -30,15 +31,16 @@ class DBNFRs(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
-            validated_data            = NFRsModel(**data)
-            instance                  = cls(**validated_data.model_dump(exclude={'rows'}))
-            instance.__table__.schema = schema_name
+            data['project_id'] = project_id
+            validated_data = NFRsModel(**data)
+            instance = cls(**validated_data.model_dump(exclude={'rows', 'project_id'}))
+            instance.project_id = project_id
 
             for row_data in validated_data.rows:
                 row_dict = row_data.model_dump()
-                row      = DBNFRRows(**row_dict)
+                row = DBNFRRows(**row_dict)
                 instance.rows.append(row)
 
             db.session.add(instance)
@@ -50,17 +52,15 @@ class DBNFRs(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema       = schema_name
-        DBNFRRows.__table__.schema = schema_name
+    def get_configs(cls, project_id):
         try:
-            query         = db.session.query(cls).options(joinedload(cls.rows)).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).options(joinedload(cls.rows)).all()
             valid_configs = []
 
             for config in query:
-                config_dict         = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['rows'] = [row.to_dict() for row in config.rows]
-                validated_data      = NFRsModel(**config_dict)
+                validated_data = NFRsModel(**config_dict)
                 valid_configs.append(validated_data.model_dump())
             return valid_configs
         except Exception:
@@ -68,27 +68,29 @@ class DBNFRs(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema       = schema_name
-        DBNFRRows.__table__.schema = schema_name
+    def get_config_by_id(cls, project_id, id):
         try:
-            config              = db.session.query(cls).options(joinedload(cls.rows)).filter_by(id=id).one_or_none()
-            config_dict         = config.to_dict()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).options(joinedload(cls.rows)).one_or_none()
+            if not config:
+                return None
+            config_dict = config.to_dict()
             config_dict['rows'] = [row.to_dict() for row in config.rows]
-            validated_data      = NFRsModel(**config_dict)
+            validated_data = NFRsModel(**config_dict)
             return validated_data.model_dump()
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema       = schema_name
-        DBNFRRows.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = NFRsModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            exclude_fields = {'rows'}
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
+            if not config:
+                return
+
+            exclude_fields = {'rows', 'project_id', 'id'}
 
             for field, value in validated_data.model_dump().items():
                 if field not in exclude_fields:
@@ -97,7 +99,7 @@ class DBNFRs(db.Model):
             config.rows.clear()
             for row_data in validated_data.rows:
                 row_dict = row_data.model_dump()
-                row      = DBNFRRows(**row_dict)
+                row = DBNFRRows(**row_dict)
                 config.rows.append(row)
             db.session.commit()
         except Exception:
@@ -106,21 +108,18 @@ class DBNFRs(db.Model):
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
+            count = db.session.query(cls).filter_by(project_id=project_id).count()
             return count
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema       = schema_name
-        DBNFRRows.__table__.schema = schema_name
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()

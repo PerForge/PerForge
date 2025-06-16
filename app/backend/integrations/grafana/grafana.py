@@ -32,14 +32,14 @@ class Grafana(Integration):
         return f'Integration id is {self.id}, url is {self.server}'
 
     def set_config(self, id):
-        id     = id if id else DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBGrafana.get_config_by_id(schema_name=self.schema_name, id=id)
+        id     = id if id else DBGrafana.get_default_config(project_id=self.project)["id"]
+        config = DBGrafana.get_config_by_id(project_id=self.project, id=id)
         if config['id']:
             self.id                  = config["id"]
             self.name                = config["name"]
             self.server              = config["server"]
             self.org_id              = config["org_id"]
-            self.token               = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.token               = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.test_title          = config["test_title"]
             self.app                 = config["app"]
             self.baseline_test_title = config["baseline_test_title"]

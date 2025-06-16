@@ -20,6 +20,17 @@ from app.backend.components.users.users_db       import DBUsers
 from app.backend.components.secrets.secrets_db   import DBSecrets
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.components.prompts.prompts_db   import DBPrompts
+from app.backend.components.graphs.graphs_db     import DBGraphs
+from app.backend.components.nfrs.nfrs_db         import DBNFRs, DBNFRRows
+from app.backend.components.templates.templates_db import DBTemplates, DBTemplateData
+from app.backend.components.templates.template_groups_db import DBTemplateGroups, DBTemplateGroupData
+from app.backend.integrations.ai_support.ai_support_db import DBAISupport
+from app.backend.integrations.atlassian_confluence.atlassian_confluence_db import DBAtlassianConfluence
+from app.backend.integrations.atlassian_jira.atlassian_jira_db import DBAtlassianJira
+from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
+from app.backend.integrations.grafana.grafana_db import DBGrafana, DBGrafanaDashboards
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
+from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail, DBSMTPMailRecipient
 from logging.handlers                            import RotatingFileHandler
 from flask                                       import Flask
 from flask_login                                 import LoginManager
@@ -38,7 +49,7 @@ app.config['COMPRESS_MIN_SIZE'] = 500
 
 # Setup database
 database_directory = os.path.join(basedir, "data")
-app.config['SQLALCHEMY_DATABASE_URI']        = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'/database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -79,7 +90,23 @@ with app.app_context():
         DBUsers.__table__,
         DBSecrets.__table__,
         DBProjects.__table__,
-        DBPrompts.__table__
+        DBPrompts.__table__,
+        DBAISupport.__table__,
+        DBAtlassianConfluence.__table__,
+        DBAtlassianJira.__table__,
+        DBAzureWiki.__table__,
+        DBGrafana.__table__,
+        DBInfluxdb.__table__,
+        DBSMTPMail.__table__,
+        DBNFRs.__table__,
+        DBNFRRows.__table__,
+        DBTemplates.__table__,
+        DBTemplateData.__table__,
+        DBTemplateGroups.__table__,
+        DBTemplateGroupData.__table__,
+        DBGraphs.__table__,
+        DBGrafanaDashboards.__table__,
+        DBSMTPMailRecipient.__table__
         ], checkfirst=True)
     DBPrompts.load_default_prompts_from_yaml()
 

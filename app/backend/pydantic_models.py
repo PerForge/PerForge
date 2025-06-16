@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, EmailStr
 from typing   import Optional
 from datetime import datetime
 
@@ -32,18 +32,10 @@ class BaseModelWithStripping(BaseModel):
                 values[field_name] = value
         return values
 
-class TestMetadataModel(BaseModelWithStripping):
-    test_title : str
-    application: str
-    tool       : str
-    start_time : datetime
-    end_time   : datetime
-    duration   : int
-    max_threads: float
-
 
 class InfluxdbModel(BaseModelWithStripping):
     id        : Optional[int]
+    project_id: Optional[int]
     name      : str
     url       : str
     org_id    : str
@@ -68,6 +60,7 @@ class GrafanaObjectModel(BaseModelWithStripping):
 
 class GrafanaModel(BaseModelWithStripping):
     id                 : Optional[int]
+    project_id         : Optional[int]
     name               : str
     server             : str
     org_id             : str
@@ -80,39 +73,42 @@ class GrafanaModel(BaseModelWithStripping):
 
 
 class AzureWikiModel(BaseModelWithStripping):
-    id            : Optional[int]
-    name          : str
-    token         : Optional[int]
-    org_url       : str
-    project_id    : str
-    identifier    : str
-    path_to_report: str
-    is_default    : bool
+    id              : Optional[int]
+    project_id      : Optional[int]
+    name            : str
+    token           : Optional[int]
+    org_url         : str
+    azure_project_id: str
+    identifier      : str
+    path_to_report  : str
+    is_default      : bool
 
 
 class AtlassianConfluenceModel(BaseModelWithStripping):
-    id        : Optional[int]
-    name      : str
-    email     : str
-    token     : Optional[int]
-    token_type: str
-    org_url   : str
-    space_key : str
-    parent_id : str
-    is_default: bool
+    id           : Optional[int]
+    project_id   : Optional[int]
+    name         : str
+    email        : EmailStr
+    token        : Optional[int]
+    token_type   : str
+    org_url      : str
+    space_key    : str
+    parent_id    : str
+    is_default   : bool
 
 
 class AtlassianJiraModel(BaseModelWithStripping):
-    id        : Optional[int]
-    name      : str
-    email     : str
-    token     : Optional[int]
-    token_type: str
-    org_url   : str
-    project_id: str
-    epic_field: Optional[str]
-    epic_name : Optional[str]
-    is_default: bool
+    id              : Optional[int]
+    project_id      : Optional[int]
+    name            : str
+    email           : EmailStr
+    token           : Optional[int]
+    token_type      : str
+    org_url         : str
+    jira_project_key: str
+    epic_field      : Optional[str]
+    epic_name       : Optional[str]
+    is_default      : bool
 
 
 class SmtpMailObjectModel(BaseModelWithStripping):
@@ -123,6 +119,7 @@ class SmtpMailObjectModel(BaseModelWithStripping):
 
 class SmtpMailModel(BaseModelWithStripping):
     id        : Optional[int]
+    project_id: Optional[int]
     name      : str
     server    : str
     port      : int
@@ -136,6 +133,7 @@ class SmtpMailModel(BaseModelWithStripping):
 
 class AISupportModel(BaseModelWithStripping):
     id            : Optional[int]
+    project_id    : Optional[int]
     name          : str
     ai_provider   : str
     azure_url     : Optional[str]
@@ -149,6 +147,7 @@ class AISupportModel(BaseModelWithStripping):
 
 class GraphModel(BaseModelWithStripping):
     id         : Optional[int]
+    project_id : Optional[int]
     name       : str
     grafana_id : int
     dash_id    : int
@@ -175,6 +174,7 @@ class TemplateObjectModel(BaseModelWithStripping):
 
 class TemplateModel(BaseModelWithStripping):
     id                       : Optional[int]
+    project_id               : Optional[int]
     name                     : str
     nfr                      : Optional[int]
     title                    : str
@@ -199,6 +199,7 @@ class TemplateGroupObjectModel(BaseModelWithStripping):
 
 class TemplateGroupModel(BaseModelWithStripping):
     id        : Optional[int]
+    project_id: Optional[int]
     name      : str
     title     : str
     ai_summary: bool
@@ -219,6 +220,7 @@ class NFRObjectModel(BaseModelWithStripping):
 
 class NFRsModel(BaseModelWithStripping):
     id  : Optional[int]
+    project_id: Optional[int]
     name: str
     rows: list[NFRObjectModel]
 

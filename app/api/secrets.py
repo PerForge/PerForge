@@ -40,7 +40,7 @@ def get_secrets():
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        secret_configs = DBSecrets.get_configs(id=project_id)
+        secret_configs = DBSecrets.get_configs(project_id=project_id)
         
         # Remove sensitive data from response
         for secret in secret_configs:
@@ -85,7 +85,7 @@ def get_secret(secret_id):
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        secret_data = DBSecrets.get_config_by_id(id=secret_id)
+        secret_data = DBSecrets.get_config_by_id(project_id=project_id, id=secret_id)
         if not secret_data:
             return api_response(
                 message=f"Secret with ID {secret_id} not found",
@@ -155,6 +155,7 @@ def create_secret():
         secret_data["id"] = None
         
         new_secret_id = DBSecrets.save(
+            project_id=project_id,
             data=secret_data
         )
         
@@ -201,7 +202,7 @@ def update_secret(secret_id):
             )
             
         # Check if secret exists
-        existing_secret = DBSecrets.get_config_by_id(id=secret_id)
+        existing_secret = DBSecrets.get_config_by_id(project_id=project_id, id=secret_id)
         if not existing_secret:
             return api_response(
                 message=f"Secret with ID {secret_id} not found",
@@ -236,6 +237,7 @@ def update_secret(secret_id):
         secret_data["id"] = secret_id
         
         DBSecrets.update(
+            project_id=project_id,
             data=secret_data
         )
         
@@ -281,7 +283,7 @@ def delete_secret(secret_id):
             )
             
         # Check if secret exists
-        existing_secret = DBSecrets.get_config_by_id(id=secret_id)
+        existing_secret = DBSecrets.get_config_by_id(project_id=project_id, id=secret_id)
         if not existing_secret:
             return api_response(
                 message=f"Secret with ID {secret_id} not found",
@@ -289,7 +291,7 @@ def delete_secret(secret_id):
                 errors=[{"code": "not_found", "message": f"Secret with ID {secret_id} not found"}]
             )
             
-        DBSecrets.delete(id=secret_id)
+        DBSecrets.delete(project_id=project_id, id=secret_id)
         
         return api_response(
             message="Secret deleted successfully",
