@@ -14,6 +14,7 @@
 
 import re
 import logging
+import json
 
 from sqlalchemy.sql.expression import False_
 
@@ -69,13 +70,71 @@ class ReportingBase:
         self.ai_summary                = template_group_obj["ai_summary"]
 
     def replace_variables(self, text):
+        """Replace template variables with their corresponding values
+
+        Args:
+            text: Template text with variables to replace
+
+        Returns:
+            Text with all replaceable variables substituted
+        """
         variables = re.findall(r"\$\{(.*?)\}", text)
         for var in variables:
+            # First check if it's a regular parameter
             if var in self.parameters:
-                text = text.replace("${"+var+"}", str(self.parameters[var]))
-            else:
-                logging.warning(f"Variable {var} not found in parameters")
+                text = text.replace("${" + var + "}", str(self.parameters[var]))
+                continue
+
+            # Check if it's a table variable with aggregation suffix
+            # Format: table_name_table_aggregation (e.g., timings_fully_loaded_table_median)
+            match = re.match(r"(.+?)_table_(median|mean|p90|p99)$", var)
+            if match and hasattr(self.current_test_obj, "get_table"):
+                table_name = match.group(1)
+                aggregation = match.group(2)
+
+                # Lazy load the table with specified aggregation
+                try:
+                    # Get the table from current test object
+                    table = self.current_test_obj.get_table(table_name, aggregation)
+
+                    # If baseline test object exists, set baseline metrics
+                    if self.baseline_test_obj is not None and hasattr(self.baseline_test_obj, "get_table"):
+                        try:
+                            # Get the corresponding table from baseline
+                            baseline_table = self.baseline_test_obj.get_table(table_name, aggregation)
+                            if baseline_table is not None:
+                                # Set baseline metrics in current table to enable difference calculation
+                                table.set_baseline_metrics(baseline_table.get_current_metrics())
+                        except Exception as e:
+                            logging.warning(f"Error loading baseline table '{table_name}' with aggregation '{aggregation}': {e}")
+
+                    if table is not None:
+                        # Format the table based on the report type
+                        metrics = table.get_current_metrics()
+                        value = self.format_table(metrics)
+                        text = text.replace("${" + var + "}", value)
+                        continue
+                except Exception as e:
+                    logging.warning(f"Error loading table '{table_name}' with aggregation '{aggregation}': {e}")
+
+            # If we got here, the variable wasn't replaced
+            logging.warning(f"Variable {var} not found in parameters or tables")
+
         return text
+
+    def format_table(self, metrics):
+        """
+        Format a metrics table for report consumption. This base implementation returns a JSON string
+        representation of the metrics list. Derived classes can override this to provide
+        format-specific implementations.
+
+        Args:
+            metrics: A list of dictionaries containing the metrics data
+
+        Returns:
+            A string representation of the metrics suitable for the report format
+        """
+        return json.dumps(metrics)
 
     def analyze_template(self):
         overall_summary = ""
@@ -115,61 +174,61 @@ class ReportingBase:
     def _collect_parameters(self, test_obj: BaseTestData, prefix: str = "") -> Dict[str, Any]:
         """
         Extract all metrics from a test data object and format them as parameters with optional prefix.
-        
+
         Args:
             test_obj: The test data object to extract parameters from
             prefix: Prefix to add to parameter names (e.g., "baseline_" for baseline metrics)
-            
+
         Returns:
             Dictionary of parameters with original metric names (prefixed if specified)
         """
         if not test_obj:
             return {}
-            
+
         parameters = {}
-        
+
         # Simply convert all available metrics to parameters with their exact names
         for metric_name in test_obj.get_available_metrics():
             # Apply prefix to parameter name but keep original metric name
             param_name = f"{prefix}{metric_name}"
             parameters[param_name] = test_obj.get_metric(metric_name)
-        
+
         # Standard parameter names for compatibility with existing templates
         # These will be named the same regardless of the underlying storage
         if not prefix:
             parameters["test_name"] = test_obj.get_metric('application')
             parameters["test_type"] = test_obj.get_metric('test_type')
-            
+
         return parameters
-    
+
     def _create_grafana_link(self, test_obj: BaseTestData, test_title: str, prefix: str = "") -> Dict[str, str]:
         """
         Generate a Grafana dashboard link parameter for the test.
-        
+
         Args:
             test_obj: The test data object
             test_title: The test title to use in the link
             prefix: Prefix for the parameter name
-            
+
         Returns:
             Dictionary with the Grafana link parameter
         """
-        # Get default Grafana configuration          
+        # Get default Grafana configuration
         default_grafana_config = DBGrafana.get_default_config(project_id=self.project)
         default_grafana_obj = None
         if default_grafana_config:
             default_grafana_id = default_grafana_config["id"]
             default_grafana_obj = Grafana(project=self.project, id=default_grafana_id)
-        
+
         # Create parameter name with prefix
         link_param_name = f"{prefix}grafana_link"
-        
+
         # Generate the link
         return {
             link_param_name: default_grafana_obj.get_grafana_test_link(
-                test_obj.get_metric('start_time_timestamp'), 
-                test_obj.get_metric('end_time_timestamp'), 
-                test_obj.get_metric('application'), 
+                test_obj.get_metric('start_time_timestamp'),
+                test_obj.get_metric('end_time_timestamp'),
+                test_obj.get_metric('application'),
                 test_title
             )
         }
@@ -177,14 +236,28 @@ class ReportingBase:
     def collect_data(self, current_test_title, baseline_test_title=None):
         """
         Collect test data and prepare parameters for report generation.
-        
+
         Args:
             current_test_title: Title of the current test to analyze
             baseline_test_title: Optional title of a baseline test for comparison
         """
-        # Collect current test data
+
+        # Process baseline test data if provided
+        if baseline_test_title is not None:
+            # First collect the baseline test object
+            self.baseline_test_obj = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
+
+            # Set compatibility attributes
+            self.baseline_start_timestamp = self.baseline_test_obj.get_metric('start_time_timestamp')
+            self.baseline_end_timestamp = self.baseline_test_obj.get_metric('end_time_timestamp')
+
+            # Add baseline parameters with consistent 'baseline_' prefix
+            self.parameters.update(self._collect_parameters(self.baseline_test_obj, "baseline_"))
+            self.parameters.update(self._create_grafana_link(self.baseline_test_obj, baseline_test_title, "baseline_"))
+
+        # Now collect the current test object
         self.current_test_obj = self.dp_obj.collect_test_obj(test_title=current_test_title)
-        
+
         # Set compatibility attributes for report types that expect them directly on the object
         self.current_start_timestamp = self.current_test_obj.get_metric('start_time_timestamp')
         self.current_end_timestamp = self.current_test_obj.get_metric('end_time_timestamp')
@@ -192,19 +265,7 @@ class ReportingBase:
 
         # Initialize parameters dictionary
         self.parameters = {}
-        
+
         # Process current test data
         self.parameters.update(self._collect_parameters(self.current_test_obj))
         self.parameters.update(self._create_grafana_link(self.current_test_obj, current_test_title))
-        
-        # Process baseline test data if provided
-        if baseline_test_title is not None:
-            self.baseline_test_obj = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
-            
-            # Set compatibility attributes
-            self.baseline_start_timestamp = self.baseline_test_obj.get_metric('start_time_timestamp')
-            self.baseline_end_timestamp = self.baseline_test_obj.get_metric('end_time_timestamp')
-            
-            # Add baseline parameters with consistent 'baseline_' prefix
-            self.parameters.update(self._collect_parameters(self.baseline_test_obj, "baseline_"))
-            self.parameters.update(self._create_grafana_link(self.baseline_test_obj, baseline_test_title, "baseline_"))

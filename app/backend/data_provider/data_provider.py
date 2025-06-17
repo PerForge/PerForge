@@ -99,7 +99,7 @@ class DataProvider:
             test_type: Optional test type override. If not provided, will use the type determined by source_type
 
         Returns:
-            Appropriate test data object populated with test data
+            Test data object populated with test data
         """
         # Use provided test_type or default to the one determined by source_type
         effective_test_type = test_type if test_type else self.test_type
@@ -129,11 +129,15 @@ class DataProvider:
         # Get aggregated data table for all test types
         if hasattr(test_obj, 'aggregated_table'):
             test_obj.set_metric('aggregated_table', self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
+
+        # Set data provider reference in test object for lazy loading
+        if hasattr(test_obj, 'data_provider'):
+            test_obj.data_provider = self
+
         # Dispatch to specialized collection methods based on test type
         if effective_test_type == "back_end":
             self._collect_backend_test_data(test_obj)
-        elif effective_test_type == "front_end":
-            self._collect_frontend_test_data(test_obj)
+
         return test_obj
 
     def _collect_backend_test_data(self, test_obj: BackendTestData) -> None:
@@ -186,99 +190,19 @@ class DataProvider:
         )
         test_obj.set_metric('errors_pct_stats', value)
 
+
     def _collect_frontend_test_data(self, test_obj: FrontendTestData) -> None:
         """
         Collect data specific to frontend tests
 
+        In the lazy loading approach, this method doesn't need to eagerly load all metrics tables.
+        The tables will be loaded on-demand when they are requested via the get_table method.
+
+        We're just setting up the test object with common metadata here.
+
         Args:
             test_obj: FrontendTestData object to populate
         """
-        # Since error handling is now in base_extraction.py, we can simplify this method
-        # We still need to maintain hasattr checks since some methods might not exist
-        # for all data source types
-
-        # Core Web Vitals - Largest Contentful Paint
-        if hasattr(self.ds_obj, 'get_largest_contentful_paint'):
-            value = self.ds_obj.get_largest_contentful_paint(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('largest_contentful_paint', value)
-
-        # First Contentful Paint
-        if hasattr(self.ds_obj, 'get_first_contentful_paint'):
-            value = self.ds_obj.get_first_contentful_paint(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('first_contentful_paint', value)
-
-        # Cumulative Layout Shift
-        if hasattr(self.ds_obj, 'get_cumulative_layout_shift'):
-            value = self.ds_obj.get_cumulative_layout_shift(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('cumulative_layout_shift', value)
-
-        # Total Blocking Time
-        if hasattr(self.ds_obj, 'get_total_blocking_time'):
-            value = self.ds_obj.get_total_blocking_time(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('total_blocking_time', value)
-
-        # Speed Index
-        if hasattr(self.ds_obj, 'get_speed_index'):
-            value = self.ds_obj.get_speed_index(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('speed_index', value)
-
-        # Performance Score
-        if hasattr(self.ds_obj, 'get_performance_score'):
-            value = self.ds_obj.get_performance_score(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('performance_score', value)
-
-        # Accessibility Score
-        if hasattr(self.ds_obj, 'get_accessibility_score'):
-            value = self.ds_obj.get_accessibility_score(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('accessibility_score', value)
-
-        # Resource Counts
-        if hasattr(self.ds_obj, 'get_resource_counts'):
-            value = self.ds_obj.get_resource_counts(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('resource_counts', value)
-
-        # Double-check that we have an aggregated table
-        if not test_obj.has_metric('aggregated_table'):
-            value = self.ds_obj.get_aggregated_table(
-                test_title=test_obj.test_title,
-                start=test_obj.start_time_iso,
-                end=test_obj.end_time_iso
-            )
-            test_obj.set_metric('aggregated_table', value)
-
-        return test_obj
 
     # Metric initialization and configuration
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from app.backend.integrations.data_sources.base_queries import QueriesBase
+from app.backend.integrations.data_sources.base_queries import FrontEndQueriesBase
+from typing import Optional
 
-class SitespeedFluxQueries(QueriesBase):
+class SitespeedFluxQueries(FrontEndQueriesBase):
   def get_test_log(self, bucket: str) -> str:
     return f'''data = from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
@@ -44,8 +45,8 @@ class SitespeedFluxQueries(QueriesBase):
   def get_start_time(self, testTitle: str, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
-      |> filter(fn: (r) => r["_measurement"] == "jmeter")
-      |> filter(fn: (r) => r["_field"] == "maxAT")
+      |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint")
+      |> filter(fn: (r) => r["_field"] == "median")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> keep(columns: ["_time"])
       |> min(column: "_time")'''
@@ -53,8 +54,8 @@ class SitespeedFluxQueries(QueriesBase):
   def get_end_time(self, testTitle: str, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
-      |> filter(fn: (r) => r["_measurement"] == "jmeter")
-      |> filter(fn: (r) => r["_field"] == "maxAT")
+      |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint")
+      |> filter(fn: (r) => r["_field"] == "median")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
@@ -62,99 +63,135 @@ class SitespeedFluxQueries(QueriesBase):
   def get_app_name(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r["_measurement"] == "jmeter")
-      |> filter(fn: (r) => r["_field"] == "maxAT")
+      |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint")
+      |> filter(fn: (r) => r["_field"] == "median")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> distinct(column: "application")
-      |> keep(columns: ["application"])'''
+      |> distinct(column: "app")
+      |> keep(columns: ["app"])'''
 
-  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
-      return f'''import "join"
-      rpm_set = from(bucket: "{bucket}")
+  def get_google_web_vitals(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
+      |> filter(fn: (r) => r["statistics"] == "googleWebVitals")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "count")
-      |> filter(fn: (r) => r["statut"] == "all")
-      |> keep(columns: ["_value", "_time", "transaction"])
-      |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)
-      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 60))}}))
+      |> group(columns: ["page", "_measurement"])
       |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
-      |> rename(columns: {{"_value": "rpm"}})
-      |> keep(columns: ["rpm", "transaction"])
+      '''
 
-      errors_set = from(bucket: "{bucket}")
+  def get_timings_fully_loaded(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
+      |> filter(fn: (r) => r["statistics"] == "timings")
+      |> filter(fn: (r) => r["_measurement"] == "fullyLoaded")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "count")
-      |> filter(fn: (r) => r["statut"] == "ko" or r["statut"] == "all")
-      |> group(columns: ["transaction", "statut"])
-      |> sum()
-      |> pivot(rowKey: ["transaction"], columnKey: ["statut"], valueColumn: "_value")
-      |> group()
-      |> map(fn: (r) => ({{ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }}))
-      |> toInt()
-      |> rename(columns: {{"all": "count"}})
-      |> keep(columns: ["errors","count", "transaction"])
-
-      stats1 = join.full(
-        left: rpm_set,
-        right: errors_set,
-        on: (l, r) => l.transaction == r.transaction,
-        as: (l, r) => {{
-            return {{transaction: l.transaction, rpm: l.rpm, errors: r.errors, count: r.count}}
-        }},
-      )
-
-      stats2 = from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
-      |> filter(fn: (r) => r["statut"] == "all")
-      |> keep(columns: ["_value", "transaction", "_field"])
-      |> group(columns: ["transaction","_field"])
+      |> group(columns: ["page", "_measurement"])
       |> median()
-      |> toInt()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
-      |> pivot(rowKey: ["transaction"], columnKey: ["_field"], valueColumn: "_value")
-      |> map(fn: (r) => ({{
-          r with
-          pct50: if exists r["pct50.0"] then r["pct50.0"] else 0,
-          pct75: if exists r["pct75.0"] then r["pct75.0"] else 0,
-          pct90: if exists r["pct90.0"] then r["pct90.0"] else 0,
-      }}))
-      |> drop(columns: ["pct50.0", "pct75.0", "pct90.0"])
+      '''
 
-      stats3 = join.full(
-        left: stats1,
-        right: stats2,
-        on: (l, r) => l.transaction == r.transaction,
-        as: (l, r) => {{
-            return {{transaction: l.transaction, rpm: l.rpm, errors: l.errors, count: l.count, avg: r.avg, pct50: r.pct50, pct75: r.pct75, pct90: r.pct90}}
-        }},
-      )
-
-      stddev = from(bucket: "{bucket}")
+  def get_timings_page_timings(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
+      |> filter(fn: (r) => r["timings"] == "pageTimings")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "avg")
-      |> filter(fn: (r) => r["statut"] == "all")
-      |> keep(columns: ["_value", "transaction"])
-      |> group(columns: ["transaction"])
-      |> stddev()
-      |> toInt()
+      |> group(columns: ["page", "_measurement"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
-      |> rename(columns: {{"_value": "stddev"}})
+      '''
 
-      join.full(
-        left: stats3,
-        right: stddev,
-        on: (l, r) => l.transaction == r.transaction,
-        as: (l, r) => {{
-            return {{transaction: l.transaction, rpm: l.rpm, errors: l.errors, count: l.count, avg: l.avg, pct50: l.pct50, pct75: l.pct75, pct90: l.pct90, stddev: r.stddev }}
-        }},
-      )'''
+  def get_timings_main_document(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["mainDocumentTimings"] != "")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> group(columns: ["page", "_measurement"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
+      |> group()
+      '''
+
+  def get_cpu_long_tasks(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["statistics"] == "cpu")
+      |> filter(fn: (r) => r["summaryType"] == "pageSummary")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> group(columns: ["page", "_measurement"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
+      |> group()
+      '''
+
+  def get_cdp_performance_js_heap_used_size(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["_measurement"] == "JSHeapUsedSize")
+      |> filter(fn: (r) => r["performance"] == "JSHeapUsedSize")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> group(columns: ["page", "_measurement"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
+      |> group()
+      '''
+
+  def get_cdp_performance_js_heap_total_size(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["_measurement"] == "JSHeapTotalSize")
+      |> filter(fn: (r) => r["performance"] == "JSHeapTotalSize")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> group(columns: ["page", "_measurement"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
+      |> group()
+      '''
+
+  def get_content_types(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["_measurement"] == "requests")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["summaryType"] == "pageSummary")
+      |> filter(fn: (r) => not exists r["party"])
+      |> filter(fn: (r) => not exists r["thirdPartyType"])
+      |> group(columns: ["page", "contentType"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
+      |> rename(columns: {{ "": "Total" }})
+      |> group()
+      '''
+
+  def get_first_party_content_types(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["party"] == "firstParty")
+      |> filter(fn: (r) => r["_measurement"] == "transferSize")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> group(columns: ["page", "contentType"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
+      |> group()
+      '''
+
+  def get_third_party_content_types(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["party"] == "thirdParty")
+      |> filter(fn: (r) => r["_measurement"] == "transferSize")
+      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> group(columns: ["page", "contentType"])
+      |> median()
+      |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
+      |> group()
+      '''

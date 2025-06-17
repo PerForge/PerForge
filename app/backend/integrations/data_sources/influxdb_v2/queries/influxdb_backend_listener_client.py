@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from app.backend.integrations.data_sources.base_queries import QueriesBase
+from app.backend.integrations.data_sources.base_queries import BackEndQueriesBase
 
-class InfluxDBBackendListenerClientImpl(QueriesBase):
+class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
   def get_test_log(self, bucket: str) -> str:
     return f'''data = from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
