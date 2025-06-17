@@ -19,6 +19,7 @@ from app.backend.integrations.data_sources.base_extraction                      
 from app.backend.integrations.data_sources.base_queries                                         import QueriesBase
 from app.backend.integrations.data_sources.influxdb_v2.queries.influxdb_backend_listener_client import InfluxDBBackendListenerClientImpl
 from app.backend.integrations.data_sources.influxdb_v2.queries                                  import mderevyankoaqa
+from app.backend.integrations.data_sources.influxdb_v2.queries.sitespeed_influxdb_v2            import SitespeedFluxQueries
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db                              import DBInfluxdb
 from app.backend.components.secrets.secrets_db                                                  import DBSecrets
 from app.backend.errors                                                                         import ErrorMessages
@@ -33,7 +34,8 @@ class InfluxdbV2(DataExtractionBase):
 
     queries_map: Dict[str, Type[QueriesBase]] = {
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": InfluxDBBackendListenerClientImpl,
-        "mderevyankoaqa": mderevyankoaqa
+        "mderevyankoaqa": mderevyankoaqa,
+        "sitespeed_influxdb_v2": SitespeedFluxQueries
     }
 
     def __init__(self, project, id=None):
