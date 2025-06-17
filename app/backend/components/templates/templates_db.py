@@ -22,6 +22,7 @@ from sqlalchemy.orm              import joinedload
 class DBTemplates(db.Model):
     __tablename__             = 'templates'
     id                        = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id                = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     name                      = db.Column(db.String(120), nullable=False)
     nfr                       = db.Column(db.Integer, db.ForeignKey('nfrs.id', ondelete='SET NULL'))
     title                     = db.Column(db.String(120), nullable=False)
@@ -30,24 +31,24 @@ class DBTemplates(db.Model):
     ai_graph_switch           = db.Column(db.Boolean, default=False)
     ai_to_graphs_switch       = db.Column(db.Boolean, default=False)
     nfrs_switch               = db.Column(db.Boolean, default=False)
-    template_prompt_id        = db.Column(db.Integer, db.ForeignKey('public.prompts.id', ondelete='SET NULL'))
-    aggregated_prompt_id      = db.Column(db.Integer, db.ForeignKey('public.prompts.id', ondelete='SET NULL'))
-    system_prompt_id          = db.Column(db.Integer, db.ForeignKey('public.prompts.id', ondelete='SET NULL'))
+    template_prompt_id        = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
+    aggregated_prompt_id      = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
+    system_prompt_id          = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
     data                      = db.relationship('DBTemplateData', backref='templates', cascade='all, delete-orphan', lazy=True)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
-            validated_data            = TemplateModel(**data)
-            instance                  = cls(**validated_data.model_dump(exclude={'data'}))
-            instance.__table__.schema = schema_name
+            data['project_id'] = project_id
+            validated_data = TemplateModel(**data)
+            instance = cls(**validated_data.model_dump(exclude={'data'}))
 
             for data_record in validated_data.data:
                 data_dict = data_record.model_dump()
-                record    = DBTemplateData(**data_dict)
+                record = DBTemplateData(**data_dict)
                 instance.data.append(record)
 
             db.session.add(instance)
@@ -59,17 +60,14 @@ class DBTemplates(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema            = schema_name
-        DBTemplateData.__table__.schema = schema_name
-
+    def get_configs(cls, project_id):
         try:
-            query = db.session.query(cls).options(joinedload(cls.data)).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).options(joinedload(cls.data)).all()
             valid_configs = []
             for config in query:
-                config_dict         = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['data'] = [row.to_dict() for row in config.data]
-                validated_data      = TemplateModel(**config_dict)
+                validated_data = TemplateModel(**config_dict)
                 valid_configs.append(validated_data.model_dump())
             return valid_configs
         except Exception:
@@ -77,41 +75,25 @@ class DBTemplates(db.Model):
             raise
 
     @classmethod
-    def get_configs_brief(cls, schema_name, fields=None):
-        """
-        Get a list of templates with specified fields only.
-        
-        Args:
-            schema_name (str): Database schema name
-            fields (list): List of field names to return. Defaults to ['id', 'name'] if None
-            
-        Returns:
-            list: List of dictionaries containing specified template fields
-        """
+    def get_configs_brief(cls, project_id, fields=None):
         if fields is None:
             fields = ['id', 'name']
-            
-        cls.__table__.schema = schema_name
-
         try:
-            templates = db.session.query(cls).all()
-            return [{field: getattr(template, field) for field in fields} 
+            templates = db.session.query(cls).filter_by(project_id=project_id).all()
+            return [{field: getattr(template, field) for field in fields}
                     for template in templates]
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema            = schema_name
-        DBTemplateData.__table__.schema = schema_name
-
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).options(joinedload(cls.data)).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).options(joinedload(cls.data)).one_or_none()
             if config:
-                config_dict         = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['data'] = [row.to_dict() for row in config.data]
-                validated_data      = TemplateModel(**config_dict)
+                validated_data = TemplateModel(**config_dict)
                 return validated_data.model_dump()
             return None
         except Exception:
@@ -119,22 +101,22 @@ class DBTemplates(db.Model):
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema            = schema_name
-        DBTemplateData.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = TemplateModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            exclude_fields = {'data'}
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
+            if not config:
+                return
 
-            for field, value in validated_data.model_dump().items():
-                if field not in exclude_fields:
-                    setattr(config, field, value)
+            exclude_fields = {'data', 'project_id'}
+            for field, value in validated_data.model_dump(exclude=exclude_fields).items():
+                setattr(config, field, value)
 
             config.data.clear()
             for data_record in validated_data.data:
                 data_dict = data_record.model_dump()
-                record    = DBTemplateData(**data_dict)
+                record = DBTemplateData(**data_dict)
                 config.data.append(record)
             db.session.commit()
         except Exception:
@@ -143,23 +125,18 @@ class DBTemplates(db.Model):
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
+            count = db.session.query(cls).filter_by(project_id=project_id).count()
             return count
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema            = schema_name
-        DBTemplateData.__table__.schema = schema_name
-
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()

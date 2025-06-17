@@ -23,10 +23,11 @@ from sqlalchemy.orm              import joinedload
 class DBGrafana(db.Model):
     __tablename__       = 'grafana'
     id                  = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id          = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     name                = db.Column(db.String(120), nullable=False)
     server              = db.Column(db.String(120), nullable=False)
     org_id              = db.Column(db.String(120), nullable=False)
-    token               = db.Column(db.Integer, db.ForeignKey('public.secrets.id', ondelete='SET NULL'))
+    token               = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     test_title          = db.Column(db.String(120), nullable=False)
     app                 = db.Column(db.String(120), nullable=False)
     baseline_test_title = db.Column(db.String(120), nullable=False)
@@ -37,20 +38,21 @@ class DBGrafana(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
-            validated_data            = GrafanaModel(**data)
-            instance                  = cls(**validated_data.model_dump(exclude={'dashboards'}))
-            instance.__table__.schema = schema_name
+            data['project_id'] = project_id
+            grafana_model_instance = GrafanaModel(**data)
+            instance_data = grafana_model_instance.model_dump(exclude={'dashboards'})
+            instance = cls(**instance_data)
 
-            for dashboard_data in validated_data.dashboards:
-                dashboard_dict = dashboard_data.model_dump()
-                dashboard      = DBGrafanaDashboards(**dashboard_dict)
-                instance.dashboards.append(dashboard)
+            if grafana_model_instance.dashboards:
+                for dashboard_data_dict in grafana_model_instance.dashboards:
+                    dashboard = DBGrafanaDashboards(**dashboard_data_dict.model_dump() if hasattr(dashboard_data_dict, 'model_dump') else dashboard_data_dict)
+                    instance.dashboards.append(dashboard)
 
             if instance.is_default:
-                cls.reset_default_config(schema_name)
-            elif not cls.get_default_config(schema_name):
+                cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id):
                 instance.is_default = True
 
             db.session.add(instance)
@@ -62,17 +64,14 @@ class DBGrafana(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBGrafanaDashboards.__table__.schema = schema_name
+    def get_configs(cls, project_id):
         try:
-            query         = db.session.query(cls).options(joinedload(cls.dashboards)).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).options(joinedload(cls.dashboards)).all()
             valid_configs = []
-
             for config in query:
-                config_dict               = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['dashboards'] = [dashboard.to_dict() for dashboard in config.dashboards]
-                validated_data            = GrafanaModel(**config_dict)
+                validated_data = GrafanaModel(**config_dict)
                 valid_configs.append(validated_data.model_dump())
             return valid_configs
         except Exception:
@@ -80,29 +79,13 @@ class DBGrafana(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema                 = schema_name
-        DBGrafanaDashboards.__table__.schema = schema_name
+    def get_config_by_id(cls, project_id, id):
         try:
-            config                    = db.session.query(cls).options(joinedload(cls.dashboards)).filter_by(id=id).one_or_none()
-            config_dict               = config.to_dict()
-            config_dict['dashboards'] = [dashboard.to_dict() for dashboard in config.dashboards]
-            validated_data            = GrafanaModel(**config_dict)
-            return validated_data.model_dump()
-        except Exception:
-            logging.warning(str(traceback.format_exc()))
-            raise
-
-    @classmethod
-    def get_default_config(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBGrafanaDashboards.__table__.schema = schema_name
-        try:
-            config                    = db.session.query(cls).options(joinedload(cls.dashboards)).filter_by(is_default=True).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).options(joinedload(cls.dashboards)).one_or_none()
             if config:
-                config_dict               = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['dashboards'] = [dashboard.to_dict() for dashboard in config.dashboards]
-                validated_data            = GrafanaModel(**config_dict)
+                validated_data = GrafanaModel(**config_dict)
                 return validated_data.model_dump()
             return None
         except Exception:
@@ -110,24 +93,39 @@ class DBGrafana(db.Model):
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema                 = schema_name
-        DBGrafanaDashboards.__table__.schema = schema_name
+    def get_default_config(cls, project_id):
         try:
-            validated_data = GrafanaModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            if validated_data.is_default:
-                cls.reset_default_config(schema_name)
+            config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).options(joinedload(cls.dashboards)).one_or_none()
+            if config:
+                config_dict = config.to_dict()
+                config_dict['dashboards'] = [dashboard.to_dict() for dashboard in config.dashboards]
+                validated_data = GrafanaModel(**config_dict)
+                return validated_data.model_dump()
+            return None
+        except Exception:
+            logging.warning(str(traceback.format_exc()))
+            raise
 
-            exclude_fields = {'dashboards'}
-            for field, value in validated_data.model_dump().items():
-                if field not in exclude_fields:
-                    setattr(config, field, value)
+    @classmethod
+    def update(cls, project_id, data):
+        try:
+            data['project_id'] = project_id
+            validated_data = GrafanaModel(**data)
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
+            if not config:
+                return
+
+            if validated_data.is_default:
+                cls.reset_default_config(project_id)
+
+            exclude_fields = {'dashboards', 'project_id'}
+            for field, value in validated_data.model_dump(exclude=exclude_fields).items():
+                setattr(config, field, value)
 
             config.dashboards.clear()
             for dashboard_data in validated_data.dashboards:
                 dashboard_dict = dashboard_data.model_dump()
-                dashboard      = DBGrafanaDashboards(**dashboard_dict)
+                dashboard = DBGrafanaDashboards(**dashboard_dict)
                 config.dashboards.append(dashboard)
             db.session.commit()
         except Exception:
@@ -136,37 +134,33 @@ class DBGrafana(db.Model):
             raise
 
     @classmethod
-    def reset_default_config(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBGrafanaDashboards.__table__.schema = schema_name
+    def reset_default_config(cls, project_id):
         try:
-            db.session.query(cls).update({cls.is_default: False})
+            db.session.query(cls).filter_by(project_id=project_id).update({cls.is_default: False})
+            db.session.commit()
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
-            return count
+            return db.session.query(cls).filter_by(project_id=project_id).count()
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema                 = schema_name
-        DBGrafanaDashboards.__table__.schema = schema_name
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
+                is_default_deleted = config.is_default
                 db.session.delete(config)
                 db.session.commit()
-                if config.is_default:
-                    new_default_config = db.session.query(cls).first()
+                if is_default_deleted:
+                    new_default_config = db.session.query(cls).filter_by(project_id=project_id).first()
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()

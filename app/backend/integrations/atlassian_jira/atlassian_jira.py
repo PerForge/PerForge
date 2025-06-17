@@ -33,16 +33,16 @@ class AtlassianJira(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        id     = id if id else DBAtlassianJira.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBAtlassianJira.get_config_by_id(schema_name=self.schema_name, id=id)
+        id     = id if id else DBAtlassianJira.get_default_config(project_id=self.project)["id"]
+        config = DBAtlassianJira.get_config_by_id(project_id=self.project, id=id)
         if config['id']:
             self.id         = config["id"]
             self.name       = config["name"]
             self.email      = config["email"]
-            self.token      = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.token      = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.token_type = config["token_type"]
             self.org_url    = config["org_url"]
-            self.project_id = config["project_id"]
+            self.jira_project_key = config["jira_project_key"]
             self.epic_field = config["epic_field"]
             self.epic_name  = config["epic_name"]
             if self.token_type == "api_token":
@@ -61,7 +61,7 @@ class AtlassianJira(Integration):
 
     def put_page_to_jira(self, title):
         issue_dict = {
-            'project'  : {'key': self.project_id},
+            'project'  : {'key': self.jira_project_key},
             'summary'  : title,
             'issuetype': {'name': 'Task'}
         }

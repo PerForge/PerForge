@@ -55,7 +55,7 @@ class AISupport(Integration):
         self.ai_obj: Optional[AIProvider] = None
 
         # Get system prompt from database
-        prompt_config = DBPrompts.get_config_by_id(id=system_prompt)
+        prompt_config = DBPrompts.get_config_by_id(project_id=self.project, id=system_prompt)
         self.system_prompt = prompt_config["prompt"] or "You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results."
 
         # Set configuration at the end of initialization
@@ -72,8 +72,8 @@ class AISupport(Integration):
             id: Configuration ID to use, or None to use default
         """
         # Get default config ID if none provided
-        id = id if id else DBAISupport.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBAISupport.get_config_by_id(schema_name=self.schema_name, id=id)
+        id = id if id else DBAISupport.get_default_config(project_id=self.project)["id"]
+        config = DBAISupport.get_config_by_id(project_id=self.project, id=id)
 
         if config['id']:
             self.name = config["name"]
@@ -83,7 +83,7 @@ class AISupport(Integration):
             self.temperature = config["temperature"]
 
             # Get token from secrets database
-            self.token = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.token = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
 
             # Common provider arguments
             provider_args = {
@@ -190,7 +190,7 @@ class AISupport(Integration):
         if not prompt_id or not graph:
             return ""
 
-        prompt_value = DBPrompts.get_config_by_id(id=prompt_id)["prompt"]
+        prompt_value = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
         # Use the AI object directly for image analysis since LangChain doesn't handle images well
         response = self.ai_obj.analyze_graph(graph, prompt_value)
@@ -221,7 +221,7 @@ class AISupport(Integration):
             return
 
         try:
-            prompt_value = DBPrompts.get_config_by_id(id=prompt_id)["prompt"]
+            prompt_value = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
             prompt_value = prompt_value + "\n\n" + str(data)
 
             # Use the chain with or without memory
@@ -264,7 +264,7 @@ class AISupport(Integration):
         if not self.models_created:
             return "Error: AI failed to initialize."
 
-        prompt_value = DBPrompts.get_config_by_id(id=prompt_id)["prompt"]
+        prompt_value = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
         # Replace placeholders with actual data
         prompt_value = prompt_value.replace("[aggregated_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
@@ -293,7 +293,7 @@ class AISupport(Integration):
         if not self.models_created:
             return "Error: AI failed to initialize."
 
-        prompt_value = DBPrompts.get_config_by_id(id=prompt_id)["prompt"]
+        prompt_value = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
         # Add all individual summaries to the prompt
         for text in self.summary:

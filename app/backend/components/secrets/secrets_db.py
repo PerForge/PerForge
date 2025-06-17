@@ -17,27 +17,29 @@ import logging
 
 from app.config                  import db
 from app.backend.pydantic_models import SecretsModel
-from sqlalchemy                  import or_
+from sqlalchemy                  import or_, UniqueConstraint
 
 
 class DBSecrets(db.Model):
 
     __tablename__  = 'secrets'
-    __table_args__ = {'schema': 'public'}
+    __table_args__ = (UniqueConstraint('key', 'project_id', name='_key_project_uc'),)
+
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    key            = db.Column(db.String(120), unique=True, nullable=False)
+    key            = db.Column(db.String(120), nullable=False)
     type           = db.Column(db.String(120), nullable=False)
     value          = db.Column(db.String(500), nullable=False)
-    project_id     = db.Column(db.Integer, db.ForeignKey('public.projects.id', ondelete='CASCADE'))
+    project_id     = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), index=True)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, data):
+    def save(cls, project_id, data):
         try:
             validated_data = SecretsModel(**data)
-            instance       = cls(**validated_data.model_dump())
+            instance = cls(**validated_data.model_dump(exclude={'project_id'}))
+            instance.project_id = project_id
             db.session.add(instance)
             db.session.commit()
             return instance.key
@@ -47,14 +49,14 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, id):
+    def get_configs(cls, project_id):
         try:
             query = db.session.query(cls).filter(
-                or_(cls.project_id == id, cls.project_id.is_(None))
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
             ).all()
             valid_configs = []
             for config in query:
-                config_dict    = config.to_dict()
+                config_dict = config.to_dict()
                 validated_data = SecretsModel(**config_dict)
                 valid_configs.append(validated_data.model_dump())
             return valid_configs
@@ -63,11 +65,14 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, id):
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter(
+                cls.id == id,
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).one_or_none()
             if config:
-                config_dict    = config.to_dict()
+                config_dict = config.to_dict()
                 validated_data = SecretsModel(**config_dict)
                 return validated_data.model_dump()
             return None
@@ -76,11 +81,15 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def get_config_by_key(cls, key):
+    def get_config_by_key(cls, project_id, key):
         try:
-            config = db.session.query(cls).filter_by(key=key).one_or_none()
+            # Prioritize project-specific secret over a global one
+            config = db.session.query(cls).filter(
+                cls.key == key,
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
+            ).order_by(cls.project_id.desc()).first()
             if config:
-                config_dict    = config.to_dict()
+                config_dict = config.to_dict()
                 validated_data = SecretsModel(**config_dict)
                 return validated_data.model_dump()
             return None
@@ -89,14 +98,15 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def update(cls, data):
+    def update(cls, project_id, data):
         try:
             validated_data = SecretsModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            for key, value in validated_data.model_dump().items():
-                setattr(config, key, value)
-
-            db.session.commit()
+            config = db.session.query(cls).filter_by(id=validated_data.id, project_id=project_id).one_or_none()
+            if config:
+                # Exclude id and project_id from being updated
+                for key, value in validated_data.model_dump(exclude={'id', 'project_id'}).items():
+                    setattr(config, key, value)
+                db.session.commit()
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
@@ -114,9 +124,10 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def delete(cls, id):
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            # Only allow deleting secrets that belong to the project
+            config = db.session.query(cls).filter_by(id=id, project_id=project_id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()

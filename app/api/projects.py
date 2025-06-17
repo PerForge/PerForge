@@ -253,34 +253,8 @@ def set_active_project(project_id):
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
 
-        # Close all existing database connections to ensure schema changes take effect immediately
-        db.session.close()
-        db.engine.dispose()
-        
-        # Reset schema contexts for all models that use schema_name
-        schema_name = existing_project['name']
-        integration_models = [
-            DBAISupport, DBAtlassianConfluence, DBAtlassianJira,
-            DBAzureWiki, DBGrafana, DBInfluxdb, DBSMTPMail
-        ]
-        
-        # Reset schema for all models
-        for model in integration_models:
-            model.__table__.schema = None
-            model.__table__.schema = schema_name
-            
-        # Reset schema for other models
-        DBGraphs.__table__.schema = None
-        DBGraphs.__table__.schema = schema_name
-        
-        DBNFRs.__table__.schema = None
-        DBNFRs.__table__.schema = schema_name
-        
-        DBTemplates.__table__.schema = None
-        DBTemplates.__table__.schema = schema_name
-        
         # Log the schema switch for debugging purposes
-        logging.info(f"Switching active project to ID: {project_id}, Schema: {existing_project['name']}")
+        logging.info(f"Switching active project to ID: {project_id}, Name: {existing_project['name']}")
 
         # Create response with cookie
         response = api_response(

@@ -22,9 +22,10 @@ from app.backend.pydantic_models import AtlassianConfluenceModel
 class DBAtlassianConfluence(db.Model):
     __tablename__ = 'atlassian_confluence'
     id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
     name          = db.Column(db.String(120), nullable=False)
     email         = db.Column(db.String(120), nullable=False)
-    token         = db.Column(db.Integer, db.ForeignKey('public.secrets.id', ondelete='SET NULL'))
+    token         = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     token_type    = db.Column(db.String(120), nullable=False)
     org_url       = db.Column(db.String(120), nullable=False)
     space_key     = db.Column(db.String(120), nullable=False)
@@ -35,15 +36,15 @@ class DBAtlassianConfluence(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = AtlassianConfluenceModel(**data)
             instance = cls(**validated_data.model_dump())
-            instance.__table__.schema = schema_name
 
             if instance.is_default:
-                cls.reset_default_config(schema_name)
-            elif not cls.get_default_config(schema_name):
+                cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id):
                 instance.is_default = True
 
             db.session.add(instance)
@@ -55,11 +56,9 @@ class DBAtlassianConfluence(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def get_configs(cls, project_id):
         try:
-            query = db.session.query(cls).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).all()
             configs = [config.to_dict() for config in query]
             return [AtlassianConfluenceModel(**config).model_dump() for config in configs]
         except Exception:
@@ -67,11 +66,9 @@ class DBAtlassianConfluence(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema = schema_name
-
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 validated_data = AtlassianConfluenceModel(**config.to_dict())
                 return validated_data.model_dump()
@@ -81,11 +78,9 @@ class DBAtlassianConfluence(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def get_default_config(cls, project_id):
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).one_or_none()
             if config:
                 validated_data = AtlassianConfluenceModel(**config.to_dict())
                 return validated_data.model_dump()
@@ -95,24 +90,22 @@ class DBAtlassianConfluence(db.Model):
             raise
 
     @classmethod
-    def reset_default_config(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def reset_default_config(cls, project_id):
         try:
-            db.session.query(cls).update({cls.is_default: False})
+            db.session.query(cls).filter_by(project_id=project_id).update({cls.is_default: False})
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = AtlassianConfluenceModel(**data)
-            config = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
             if validated_data.is_default:
-                cls.reset_default_config(schema_name)
+                cls.reset_default_config(project_id)
 
             for key, value in validated_data.model_dump().items():
                 setattr(config, key, value)
@@ -124,27 +117,23 @@ class DBAtlassianConfluence(db.Model):
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
-
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
+            count = db.session.query(cls).filter_by(project_id=project_id).count()
             return count
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema = schema_name
-
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()
                 if config.is_default:
-                    new_default_config = db.session.query(cls).first()
+                    new_default_config = db.session.query(cls).filter_by(project_id=project_id).first()
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()

@@ -23,27 +23,28 @@ from sqlalchemy.orm              import joinedload
 class DBTemplateGroups(db.Model):
     __tablename__ = 'template_groups'
     id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'))
     name          = db.Column(db.String(120), nullable=False)
     title         = db.Column(db.String(120), nullable=False)
     ai_summary    = db.Column(db.Boolean, default=False)
-    prompt_id     = db.Column(db.Integer, db.ForeignKey('public.prompts.id', ondelete='SET NULL'))
+    prompt_id     = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
     data          = db.relationship('DBTemplateGroupData', backref='template_groups', cascade='all, delete-orphan', lazy=True)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
-            validated_data            = TemplateGroupModel(**data)
-            instance                  = cls(**validated_data.model_dump(exclude={'data'}))
-            instance.__table__.schema = schema_name
+            data['project_id'] = project_id
+            validated_data = TemplateGroupModel(**data)
+            instance = cls(**validated_data.model_dump(exclude={'data', 'project_id'}))
+            instance.project_id = project_id
 
             for data_record in validated_data.data:
                 data_dict = data_record.model_dump()
-                # Ensure ID is None for new data records to let the database auto-generate it
                 data_dict['id'] = None
-                record    = DBTemplateGroupData(**data_dict)
+                record = DBTemplateGroupData(**data_dict)
                 instance.data.append(record)
 
             db.session.add(instance)
@@ -55,16 +56,14 @@ class DBTemplateGroups(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema                 = schema_name
-        DBTemplateGroupData.__table__.schema = schema_name
+    def get_configs(cls, project_id):
         try:
-            query = db.session.query(cls).options(joinedload(cls.data)).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).options(joinedload(cls.data)).all()
             valid_configs = []
             for config in query:
-                config_dict         = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['data'] = [row.to_dict() for row in config.data]
-                validated_data      = TemplateGroupModel(**config_dict)
+                validated_data = TemplateGroupModel(**config_dict)
                 valid_configs.append(validated_data.model_dump())
             return valid_configs
         except Exception:
@@ -72,15 +71,13 @@ class DBTemplateGroups(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema                 = schema_name
-        DBTemplateGroupData.__table__.schema = schema_name
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).options(joinedload(cls.data)).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).options(joinedload(cls.data)).one_or_none()
             if config:
-                config_dict         = config.to_dict()
+                config_dict = config.to_dict()
                 config_dict['data'] = [row.to_dict() for row in config.data]
-                validated_data      = TemplateGroupModel(**config_dict)
+                validated_data = TemplateGroupModel(**config_dict)
                 return validated_data.model_dump()
             return None
         except Exception:
@@ -88,13 +85,15 @@ class DBTemplateGroups(db.Model):
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema                 = schema_name
-        DBTemplateGroupData.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = TemplateGroupModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
-            exclude_fields = {'data'}
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
+            if not config:
+                return
+            
+            exclude_fields = {'data', 'project_id', 'id'}
 
             for field, value in validated_data.model_dump().items():
                 if field not in exclude_fields:
@@ -103,9 +102,8 @@ class DBTemplateGroups(db.Model):
             config.data.clear()
             for data_record in validated_data.data:
                 data_dict = data_record.model_dump()
-                # Ensure ID is None for new data records to let the database auto-generate it
                 data_dict['id'] = None
-                record    = DBTemplateGroupData(**data_dict)
+                record = DBTemplateGroupData(**data_dict)
                 config.data.append(record)
             db.session.commit()
         except Exception:
@@ -114,12 +112,9 @@ class DBTemplateGroups(db.Model):
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema                 = schema_name
-        DBTemplateGroupData.__table__.schema = schema_name
-
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()

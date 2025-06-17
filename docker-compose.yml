@@ -3,8 +3,6 @@ services:
   perforge:
     image: perforge/perforge-app:latest
     container_name: perforge
-    environment:
-      DATABASE_URL: postgresql+psycopg2://perforgedbuser:perforgedbpass@timescaledb:5432/perforge
     ports:
       - "7878:7878"
     volumes:
@@ -13,24 +11,8 @@ services:
       - perforge-net
     restart: always
 
-  timescaledb:
-    image: timescale/timescaledb:2.17.0-pg16
-    container_name: timescaledb
-    environment:
-      POSTGRES_DB: perforge
-      POSTGRES_USER: perforgedbuser
-      POSTGRES_PASSWORD: perforgedbpass
-    ports:
-      - "5432:5432"
-    volumes:
-      - timescaledb-data:/var/lib/postgresql/data
-    networks:
-      - perforge-net
-    restart: always
-
 volumes:
   perforge-conf:
-  timescaledb-data:
 
 networks:
   perforge-net:

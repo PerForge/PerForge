@@ -40,7 +40,7 @@ def get_graphs():
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
 
-        graph_configs = DBGraphs.get_configs(schema_name=project_data['name'])
+        graph_configs = DBGraphs.get_configs(project_id=project_id)
         return api_response(data={"graphs": graph_configs})
     except Exception as e:
         logging.error(f"Error getting graphs: {str(e)}")
@@ -79,7 +79,7 @@ def get_graph(graph_id):
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
 
-        graph_data = DBGraphs.get_config_by_id(schema_name=project_data['name'], id=graph_id)
+        graph_data = DBGraphs.get_config_by_id(project_id=project_id, id=graph_id)
         if not graph_data:
             return api_response(
                 message=f"Graph with ID {graph_id} not found",
@@ -145,7 +145,7 @@ def create_graph():
         graph_data["id"] = None
 
         new_graph_id = DBGraphs.save(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=graph_data
         )
 
@@ -192,7 +192,7 @@ def update_graph(graph_id):
             )
 
         # Check if graph exists
-        existing_graph = DBGraphs.get_config_by_id(schema_name=project_data['name'], id=graph_id)
+        existing_graph = DBGraphs.get_config_by_id(project_id=project_id, id=graph_id)
         if not existing_graph:
             return api_response(
                 message=f"Graph with ID {graph_id} not found",
@@ -223,7 +223,7 @@ def update_graph(graph_id):
         graph_data["id"] = graph_id
 
         DBGraphs.update(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=graph_data
         )
 
@@ -269,7 +269,7 @@ def delete_graph(graph_id):
             )
 
         # Check if graph exists
-        existing_graph = DBGraphs.get_config_by_id(schema_name=project_data['name'], id=graph_id)
+        existing_graph = DBGraphs.get_config_by_id(project_id=project_id, id=graph_id)
         if not existing_graph:
             return api_response(
                 message=f"Graph with ID {graph_id} not found",
@@ -277,7 +277,7 @@ def delete_graph(graph_id):
                 errors=[{"code": "not_found", "message": f"Graph with ID {graph_id} not found"}]
             )
 
-        DBGraphs.delete(schema_name=project_data['name'], id=graph_id)
+        DBGraphs.delete(project_id=project_id, id=graph_id)
 
         return api_response(
             message="Graph deleted successfully",

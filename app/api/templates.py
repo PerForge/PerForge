@@ -44,7 +44,7 @@ def get_templates():
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        template_configs = DBTemplates.get_configs(schema_name=project_data['name'])
+        template_configs = DBTemplates.get_configs(project_id=project_id)
         return api_response(data={"templates": template_configs})
     except Exception as e:
         logging.error(f"Error getting templates: {str(e)}")
@@ -83,7 +83,7 @@ def get_template(template_id):
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        template_data = DBTemplates.get_config_by_id(schema_name=project_data['name'], id=template_id)
+        template_data = DBTemplates.get_config_by_id(project_id=project_id, id=template_id)
         if not template_data:
             return api_response(
                 message=f"Template with ID {template_id} not found",
@@ -149,7 +149,7 @@ def create_template():
         template_data["id"] = None
         
         new_template_id = DBTemplates.save(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=template_data
         )
         
@@ -196,7 +196,7 @@ def update_template(template_id):
             )
             
         # Check if template exists
-        existing_template = DBTemplates.get_config_by_id(schema_name=project_data['name'], id=template_id)
+        existing_template = DBTemplates.get_config_by_id(project_id=project_id, id=template_id)
         if not existing_template:
             return api_response(
                 message=f"Template with ID {template_id} not found",
@@ -227,7 +227,7 @@ def update_template(template_id):
         template_data["id"] = template_id
         
         DBTemplates.update(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=template_data
         )
         
@@ -273,7 +273,7 @@ def delete_template(template_id):
             )
             
         # Check if template exists
-        existing_template = DBTemplates.get_config_by_id(schema_name=project_data['name'], id=template_id)
+        existing_template = DBTemplates.get_config_by_id(project_id=project_id, id=template_id)
         if not existing_template:
             return api_response(
                 message=f"Template with ID {template_id} not found",
@@ -281,7 +281,7 @@ def delete_template(template_id):
                 errors=[{"code": "not_found", "message": f"Template with ID {template_id} not found"}]
             )
             
-        DBTemplates.delete(schema_name=project_data['name'], id=template_id)
+        DBTemplates.delete(project_id=project_id, id=template_id)
         
         return api_response(
             message="Template deleted successfully",
@@ -323,7 +323,7 @@ def get_template_groups():
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        template_group_configs = DBTemplateGroups.get_configs(schema_name=project_data['name'])
+        template_group_configs = DBTemplateGroups.get_configs(project_id=project_id)
         return api_response(data={"template_groups": template_group_configs})
     except Exception as e:
         logging.error(f"Error getting template groups: {str(e)}")
@@ -362,7 +362,7 @@ def get_template_group(group_id):
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
             
-        template_group_data = DBTemplateGroups.get_config_by_id(schema_name=project_data['name'], id=group_id)
+        template_group_data = DBTemplateGroups.get_config_by_id(project_id=project_id, id=group_id)
         if not template_group_data:
             return api_response(
                 message=f"Template group with ID {group_id} not found",
@@ -431,7 +431,7 @@ def create_template_group():
         template_group_data["id"] = None
         
         new_group_id = DBTemplateGroups.save(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=template_group_data
         )
         
@@ -478,7 +478,7 @@ def update_template_group(group_id):
             )
             
         # Check if template group exists
-        existing_group = DBTemplateGroups.get_config_by_id(schema_name=project_data['name'], id=group_id)
+        existing_group = DBTemplateGroups.get_config_by_id(project_id=project_id, id=group_id)
         if not existing_group:
             return api_response(
                 message=f"Template group with ID {group_id} not found",
@@ -512,7 +512,7 @@ def update_template_group(group_id):
         template_group_data["id"] = group_id
         
         DBTemplateGroups.update(
-            schema_name=project_data['name'],
+            project_id=project_id,
             data=template_group_data
         )
         
@@ -558,7 +558,7 @@ def delete_template_group(group_id):
             )
             
         # Check if template group exists
-        existing_group = DBTemplateGroups.get_config_by_id(schema_name=project_data['name'], id=group_id)
+        existing_group = DBTemplateGroups.get_config_by_id(project_id=project_id, id=group_id)
         if not existing_group:
             return api_response(
                 message=f"Template group with ID {group_id} not found",
@@ -566,7 +566,7 @@ def delete_template_group(group_id):
                 errors=[{"code": "not_found", "message": f"Template group with ID {group_id} not found"}]
             )
             
-        DBTemplateGroups.delete(schema_name=project_data['name'], id=group_id)
+        DBTemplateGroups.delete(project_id=project_id, id=group_id)
         
         return api_response(
             message="Template group deleted successfully",

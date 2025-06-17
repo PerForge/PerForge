@@ -33,7 +33,7 @@ def get_nfrs():
     try:
         project_id   = request.cookies.get('project')
         project_data = DBProjects.get_config_by_id(id=project_id)
-        nfrs_list    = DBNFRs.get_configs(schema_name=project_data['name'])
+        nfrs_list    = DBNFRs.get_configs(project_id=project_id)
         return render_template('home/nfrs.html', nfrs_list=nfrs_list)
     except Exception:
         logging.warning(str(traceback.format_exc()))
@@ -54,7 +54,7 @@ def get_nfr():
         nfr_id       = request.args.get('nfr_config')
         nfr_data     = {}
         if nfr_id:
-            nfr_data = DBNFRs.get_config_by_id(schema_name=project_data['name'], id=nfr_id)
+            nfr_data = DBNFRs.get_config_by_id(project_id=project_id, id=nfr_id)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00020.value, "error")

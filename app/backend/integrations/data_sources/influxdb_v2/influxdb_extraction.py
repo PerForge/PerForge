@@ -43,7 +43,6 @@ class InfluxdbV2(DataExtractionBase):
         self.set_config(id)
         self.tmz_utc = tz.tzutc()
         self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
-
         if self.listener in self.queries_map:
             # Instantiate the correct client class
             self.queries = self.queries_map[self.listener]()
@@ -53,6 +52,9 @@ class InfluxdbV2(DataExtractionBase):
 
         self._initialize_client()
 
+    def __str__(self):
+        return str(self.to_dict())
+
     def __enter__(self):
         self._initialize_client()
         return self
@@ -61,14 +63,14 @@ class InfluxdbV2(DataExtractionBase):
         self._close_client()
 
     def set_config(self, id):
-        id     = id if id else DBInfluxdb.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBInfluxdb.get_config_by_id(schema_name=self.schema_name, id=id)
+        id     = id if id else DBInfluxdb.get_default_config(project_id=self.project)["id"]
+        config = DBInfluxdb.get_config_by_id(project_id=self.project, id=id)
         if config["id"]:
             self.id       = config["id"]
             self.name     = config["name"]
-            self.url      = config["url"]
+            self.url      = config["url"].replace("influxdb", "localhost")
             self.org_id   = config["org_id"]
-            self.token    = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.token    = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.timeout  = config["timeout"]
             self.bucket   = config["bucket"]
             self.listener = config["listener"]

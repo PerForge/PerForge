@@ -33,8 +33,8 @@ class SmtpMail(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        id     = id if id else DBSMTPMail.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBSMTPMail.get_config_by_id(schema_name=self.schema_name, id=id)
+        id     = id if id else DBSMTPMail.get_default_config(project_id=self.project)["id"]
+        config = DBSMTPMail.get_config_by_id(project_id=self.project, id=id)
         if config['id']:
             self.id         = config["id"]
             self.name       = config["name"]
@@ -43,7 +43,7 @@ class SmtpMail(Integration):
             self.use_ssl    = config["use_ssl"]
             self.use_tls    = config["use_tls"]
             self.username   = config["username"]
-            self.password   = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.password   = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.recipients = [value for key, value in config.items() if key.startswith("recipients-")]
         else:
             logging.warning("There's no SMTP Mail integration configured, or you're attempting to send a request from an unsupported location.")

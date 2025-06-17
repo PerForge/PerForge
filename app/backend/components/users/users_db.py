@@ -23,7 +23,6 @@ from flask_login                 import UserMixin
 class DBUsers(db.Model, UserMixin):
 
     __tablename__  = 'users'
-    __table_args__ = {'schema': 'public'}
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user           = db.Column(db.String(120), unique=True, nullable=False)
     password       = db.Column(db.String(500), nullable=False)

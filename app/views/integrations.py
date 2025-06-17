@@ -36,13 +36,13 @@ def integrations():
         project_id   = request.cookies.get('project')
         project_data = DBProjects.get_config_by_id(id=project_id)
 
-        influxdb_configs             = DBInfluxdb.get_configs(schema_name=project_data['name'])
-        grafana_configs              = DBGrafana.get_configs(schema_name=project_data['name'])
-        smtp_mail_configs            = DBSMTPMail.get_configs(schema_name=project_data['name'])
-        atlassian_confluence_configs = DBAtlassianConfluence.get_configs(schema_name=project_data['name'])
-        atlassian_jira_configs       = DBAtlassianJira.get_configs(schema_name=project_data['name'])
-        azure_configs                = DBAzureWiki.get_configs(schema_name=project_data['name'])
-        ai_support_configs           = DBAISupport.get_configs(schema_name=project_data['name'])
+        influxdb_configs             = DBInfluxdb.get_configs(project_id=project_id)
+        grafana_configs              = DBGrafana.get_configs(project_id=project_id)
+        smtp_mail_configs            = DBSMTPMail.get_configs(project_id=project_id)
+        atlassian_confluence_configs = DBAtlassianConfluence.get_configs(project_id=project_id)
+        atlassian_jira_configs       = DBAtlassianJira.get_configs(project_id=project_id)
+        azure_configs                = DBAzureWiki.get_configs(project_id=project_id)
+        ai_support_configs           = DBAISupport.get_configs(project_id=project_id)
         return render_template('home/integrations.html',
                                influxdb_configs             = influxdb_configs,
                                grafana_configs              = grafana_configs,
@@ -64,9 +64,9 @@ def add_influxdb():
         project_id      = request.cookies.get('project')
         project_data    = DBProjects.get_config_by_id(id=project_id)
         influxdb_config = request.args.get('influxdb_config')
-        secret_configs  = DBSecrets.get_configs(id=project_id)
+        secret_configs  = DBSecrets.get_configs(project_id=project_id)
         if influxdb_config is not None:
-            output = DBInfluxdb.get_config_by_id(schema_name=project_data['name'], id=influxdb_config)
+            output = DBInfluxdb.get_config_by_id(project_id=project_id, id=influxdb_config)
             form   = InfluxDBForm(data=output)
         return render_template('integrations/influxdb.html', form=form, influxdb_config=influxdb_config, secret_configs=secret_configs)
     except Exception:
@@ -81,9 +81,9 @@ def add_grafana():
         project_id     = request.cookies.get('project')
         project_data   = DBProjects.get_config_by_id(id=project_id)
         grafana_config = request.args.get('grafana_config')
-        secret_configs = DBSecrets.get_configs(id=project_id)
+        secret_configs = DBSecrets.get_configs(project_id=project_id)
         if grafana_config is not None:
-            output = DBGrafana.get_config_by_id(schema_name=project_data['name'], id=grafana_config)
+            output = DBGrafana.get_config_by_id(project_id=project_id, id=grafana_config)
             form   = GrafanaForm(data=output)
         return render_template('integrations/grafana.html', form=form, grafana_config=grafana_config, secret_configs=secret_configs)
     except Exception:
@@ -98,9 +98,9 @@ def add_smtp_mail():
         project_id       = request.cookies.get('project')
         project_data     = DBProjects.get_config_by_id(id=project_id)
         smtp_mail_config = request.args.get('smtp_mail_config')
-        secret_configs   = DBSecrets.get_configs(id=project_id)
+        secret_configs   = DBSecrets.get_configs(project_id=project_id)
         if smtp_mail_config is not None:
-            output = DBSMTPMail.get_config_by_id(schema_name=project_data['name'], id=smtp_mail_config)
+            output = DBSMTPMail.get_config_by_id(project_id=project_id, id=smtp_mail_config)
             form   = SMTPMailForm(data=output)
         return render_template('integrations/smtp-mail.html', form=form, smtp_mail_config=smtp_mail_config, secret_configs=secret_configs)
     except Exception:
@@ -115,9 +115,9 @@ def add_atlassian_confluence():
         project_id                  = request.cookies.get('project')
         project_data                = DBProjects.get_config_by_id(id=project_id)
         atlassian_confluence_config = request.args.get('atlassian_confluence_config')
-        secret_configs              = DBSecrets.get_configs(id=project_id)
+        secret_configs              = DBSecrets.get_configs(project_id=project_id)
         if atlassian_confluence_config is not None:
-            output = DBAtlassianConfluence.get_config_by_id(schema_name=project_data['name'], id=atlassian_confluence_config)
+            output = DBAtlassianConfluence.get_config_by_id(project_id=project_id, id=atlassian_confluence_config)
             form   = AtlassianConfluenceForm(data=output)
         return render_template('integrations/atlassian-confluence.html', form=form, atlassian_confluence_config=atlassian_confluence_config, secret_configs=secret_configs)
     except Exception:
@@ -132,9 +132,9 @@ def add_atlassian_jira():
         project_id            = request.cookies.get('project')
         project_data          = DBProjects.get_config_by_id(id=project_id)
         atlassian_jira_config = request.args.get('atlassian_jira_config')
-        secret_configs        = DBSecrets.get_configs(id=project_id)
+        secret_configs        = DBSecrets.get_configs(project_id=project_id)
         if atlassian_jira_config is not None:
-            output = DBAtlassianJira.get_config_by_id(schema_name=project_data['name'], id=atlassian_jira_config)
+            output = DBAtlassianJira.get_config_by_id(project_id=project_id, id=atlassian_jira_config)
             form   = AtlassianJiraForm(data=output)
         return render_template('integrations/atlassian-jira.html', form=form, atlassian_jira_config=atlassian_jira_config, secret_configs=secret_configs)
     except Exception:
@@ -149,9 +149,9 @@ def add_azure():
         project_id     = request.cookies.get('project')
         project_data   = DBProjects.get_config_by_id(id=project_id)
         azure_config   = request.args.get('azure_config')
-        secret_configs = DBSecrets.get_configs(id=project_id)
+        secret_configs = DBSecrets.get_configs(project_id=project_id)
         if azure_config is not None:
-            output = DBAzureWiki.get_config_by_id(schema_name=project_data['name'], id=azure_config)
+            output = DBAzureWiki.get_config_by_id(project_id=project_id, id=azure_config)
             form   = AzureWikiForm(data=output)
         return render_template('integrations/azure.html', form=form, azure_config=azure_config, secret_configs=secret_configs)
     except Exception:
@@ -166,9 +166,9 @@ def add_ai_support():
         project_id        = request.cookies.get('project')
         project_data      = DBProjects.get_config_by_id(id=project_id)
         ai_support_config = request.args.get('ai_support_config')
-        secret_configs    = DBSecrets.get_configs(id=project_id)
+        secret_configs    = DBSecrets.get_configs(project_id=project_id)
         if ai_support_config is not None:
-            output = DBAISupport.get_config_by_id(schema_name=project_data['name'], id=ai_support_config)
+            output = DBAISupport.get_config_by_id(project_id=project_id, id=ai_support_config)
             form   = AISupportForm(data=output)
         return render_template('integrations/ai-support.html', form=form, ai_support_config=ai_support_config, secret_configs=secret_configs)
     except Exception:

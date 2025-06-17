@@ -33,14 +33,14 @@ class AzureWiki(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        id = id if id else DBAzureWiki.get_default_config(schema_name=self.schema_name)["id"]
-        config = DBAzureWiki.get_config_by_id(schema_name=self.schema_name, id=id)
+        id = id if id else DBAzureWiki.get_default_config(project_id=self.project)["id"]
+        config = DBAzureWiki.get_config_by_id(project_id=self.project, id=id)
         if config['id']:
             self.id                        = config["id"]
             self.name                      = config["name"]
-            self.token                     = DBSecrets.get_config_by_id(id=config["token"])["value"]
+            self.token                     = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.org_url                   = config["org_url"]
-            self.project_id                = config["project_id"]
+            self.azure_project_id          = config["azure_project_id"]
             self.identifier                = config["identifier"]
             self.path_to_report            = config["path_to_report"]
             self.azure_headers_attachments = {
@@ -63,7 +63,7 @@ class AzureWiki(Integration):
         for _ in range(3):
             try:
                 response = requests.put(
-                url = f'{self.org_url}/{self.project_id}/_apis/wiki/wikis/{self.identifier}/attachments?name={name}&api-version=6.0', headers=self.azure_headers_attachments, data=image)
+                url = f'{self.org_url}/{self.azure_project_id}/_apis/wiki/wikis/{self.identifier}/attachments?name={name}&api-version=6.0', headers=self.azure_headers_attachments, data=image)
                 if response.status_code != 201:
                     name = str(random.randint(1,100)) + name
                 elif response.status_code == 201:
@@ -77,7 +77,7 @@ class AzureWiki(Integration):
         return None
 
     def put_page(self, path, page_content):
-        wiki_api_url = f'{self.org_url}/{self.project_id}/_apis/wiki/wikis/{self.identifier}/pages?path={path}&api-version=6.0'
+        wiki_api_url = f'{self.org_url}/{self.azure_project_id}/_apis/wiki/wikis/{self.identifier}/pages?path={path}&api-version=6.0'
         try:
             response = requests.put(
                 url=wiki_api_url, headers=self.azure_authorization_headers, json={ "content": page_content })
@@ -89,7 +89,7 @@ class AzureWiki(Integration):
             logging.warning("Detailed error info: " + err_info)
 
     def get_page(self, path):
-        wiki_api_url = f'{self.org_url}/{self.project_id}/_apis/wiki/wikis/{self.identifier}/pages?path={path}&api-version=6.0'
+        wiki_api_url = f'{self.org_url}/{self.azure_project_id}/_apis/wiki/wikis/{self.identifier}/pages?path={path}&api-version=6.0'
         try:
             response = requests.get(url=wiki_api_url, headers=self.azure_authorization_headers)
             return response

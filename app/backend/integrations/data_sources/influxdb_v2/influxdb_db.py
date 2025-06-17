@@ -22,10 +22,11 @@ from app.backend.pydantic_models import InfluxdbModel
 class DBInfluxdb(db.Model):
     __tablename__ = 'influxdb'
     id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
     name          = db.Column(db.String(120), nullable=False)
     url           = db.Column(db.String(120), nullable=False)
     org_id        = db.Column(db.String(120), nullable=False)
-    token         = db.Column(db.Integer, db.ForeignKey('public.secrets.id', ondelete='SET NULL'))
+    token         = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     timeout       = db.Column(db.Integer, nullable=False)
     bucket        = db.Column(db.String(120), nullable=False)
     listener      = db.Column(db.String(120), nullable=False)
@@ -36,15 +37,15 @@ class DBInfluxdb(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, schema_name, data):
+    def save(cls, project_id, data):
         try:
-            validated_data            = InfluxdbModel(**data)
-            instance                  = cls(**validated_data.model_dump())
-            instance.__table__.schema = schema_name
+            data['project_id'] = project_id
+            validated_data = InfluxdbModel(**data)
+            instance = cls(**validated_data.model_dump())
 
             if instance.is_default:
-                instance.reset_default_config(schema_name)
-            elif not instance.get_default_config(schema_name):
+                cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id):
                 instance.is_default = True
 
             db.session.add(instance)
@@ -56,10 +57,9 @@ class DBInfluxdb(db.Model):
             raise
 
     @classmethod
-    def get_configs(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def get_configs(cls, project_id):
         try:
-            query         = db.session.query(cls).all()
+            query = db.session.query(cls).filter_by(project_id=project_id).all()
             valid_configs = []
             for config in query:
                 validated_data = InfluxdbModel(**config.to_dict())
@@ -70,10 +70,9 @@ class DBInfluxdb(db.Model):
             raise
 
     @classmethod
-    def get_config_by_id(cls, schema_name, id):
-        cls.__table__.schema = schema_name
+    def get_config_by_id(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 validated_data = InfluxdbModel(**config.to_dict())
                 return validated_data.model_dump()
@@ -83,10 +82,9 @@ class DBInfluxdb(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def get_default_config(cls, project_id):
         try:
-            config = db.session.query(cls).filter_by(is_default=True).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).one_or_none()
             if config:
                 validated_data = InfluxdbModel(**config.to_dict())
                 return validated_data.model_dump()
@@ -96,15 +94,15 @@ class DBInfluxdb(db.Model):
             raise
 
     @classmethod
-    def update(cls, schema_name, data):
-        cls.__table__.schema = schema_name
+    def update(cls, project_id, data):
         try:
+            data['project_id'] = project_id
             validated_data = InfluxdbModel(**data)
-            config         = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
             if validated_data.is_default:
-                cls.reset_default_config(schema_name)
+                cls.reset_default_config(project_id)
 
-            for key, value in validated_data.model_dump().items():
+            for key, value in validated_data.model_dump(exclude={'id', 'project_id'}).items():
                 setattr(config, key, value)
 
             db.session.commit()
@@ -114,35 +112,33 @@ class DBInfluxdb(db.Model):
             raise
 
     @classmethod
-    def reset_default_config(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def reset_default_config(cls, project_id):
         try:
-            db.session.query(cls).update({cls.is_default: False})
+            db.session.query(cls).filter_by(project_id=project_id).update({cls.is_default: False})
+            db.session.commit()
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def count(cls, schema_name):
-        cls.__table__.schema = schema_name
+    def count(cls, project_id):
         try:
-            count = db.session.query(cls).count()
+            count = db.session.query(cls).filter_by(project_id=project_id).count()
             return count
         except Exception:
             logging.warning(str(traceback.format_exc()))
             raise
 
     @classmethod
-    def delete(cls, schema_name, id):
-        cls.__table__.schema = schema_name
+    def delete(cls, project_id, id):
         try:
-            config = db.session.query(cls).filter_by(id=id).one_or_none()
+            config = db.session.query(cls).filter_by(project_id=project_id, id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()
                 if config.is_default:
-                    new_default_config = db.session.query(cls).first()
+                    new_default_config = db.session.query(cls).filter_by(project_id=project_id).first()
                     if new_default_config:
                         new_default_config.is_default = True
                         db.session.commit()

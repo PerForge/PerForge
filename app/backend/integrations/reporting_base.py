@@ -36,13 +36,12 @@ class ReportingBase:
 
     def __init__(self, project):
         self.project                   = project
-        self.schema_name               = DBProjects.get_config_by_id(id=self.project)['name']
         self.validation_obj            = NFRValidation(project=self.project)
         self.current_test_obj: BaseTestData    = None
         self.baseline_test_obj: BaseTestData   = None
 
     def set_template(self, template, db_id: Dict[str, str]):
-        template_obj                   = DBTemplates.get_config_by_id(schema_name=self.schema_name, id=template)
+        template_obj                   = DBTemplates.get_config_by_id(project_id=self.project, id=template)
         self.nfr                       = template_obj["nfr"]
         self.title                     = template_obj["title"]
         self.data                      = template_obj["data"]
@@ -63,7 +62,7 @@ class ReportingBase:
             self.ai_support_obj        = AISupport(project=self.project, system_prompt=self.system_prompt_id)
 
     def set_template_group(self, template_group):
-        template_group_obj             = DBTemplateGroups.get_config_by_id(schema_name=self.schema_name, id=template_group)
+        template_group_obj             = DBTemplateGroups.get_config_by_id(project_id=self.project, id=template_group)
         self.group_title               = template_group_obj["title"]
         self.template_order            = template_group_obj["data"]
         self.template_group_prompt_id  = template_group_obj["prompt_id"]
@@ -155,9 +154,12 @@ class ReportingBase:
         Returns:
             Dictionary with the Grafana link parameter
         """
-        # Get default Grafana configuration
-        default_grafana_id = DBGrafana.get_default_config(schema_name=self.schema_name)["id"]
-        default_grafana_obj = Grafana(project=self.project, id=default_grafana_id)
+        # Get default Grafana configuration          
+        default_grafana_config = DBGrafana.get_default_config(project_id=self.project)
+        default_grafana_obj = None
+        if default_grafana_config:
+            default_grafana_id = default_grafana_config["id"]
+            default_grafana_obj = Grafana(project=self.project, id=default_grafana_id)
         
         # Create parameter name with prefix
         link_param_name = f"{prefix}grafana_link"
