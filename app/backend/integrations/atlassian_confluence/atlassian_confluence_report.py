@@ -72,6 +72,95 @@ class AtlassianConfluenceReport(ReportingBase):
         response     = self.output_obj.put_page(title=page_title, content="")
         self.page_id = response["id"]
 
+    def format_table(self, metrics):
+        """
+        Format a metrics table for Confluence report. Converts the list of dictionaries
+        into an HTML table format suitable for Confluence.
+
+        Args:
+            metrics: A list of dictionaries containing the metrics data
+
+        Returns:
+            A string with HTML table markup
+        """
+        if not metrics:
+            return "<table><tr><td>No data available</td></tr></table>"
+
+        # Create list of all keys from the metrics
+        all_keys = set()
+        for record in metrics:
+            all_keys.update(record.keys())
+
+        # Sort keys for consistent display with 'page' first if it exists
+        keys = sorted(all_keys)
+        if 'page' in keys:
+            keys.remove('page')
+            keys.insert(0, 'page')
+
+        # Start building the HTML table
+        html = ["<table>", "<thead>", "<tr>"]
+
+        # Create the table headers from the keys
+        for key in keys:
+            html.append(f"<th>{key}</th>")
+
+        html.append("</tr>")
+        html.append("</thead>")
+        html.append("<tbody>")
+
+        # Add rows for each record
+        for record in metrics:
+            html.append("<tr>")
+
+            # Add each cell with the corresponding value
+            for key in keys:
+                value = record.get(key, '')
+
+                # Handle null values
+                if value is None or value == 'None' or (isinstance(value, float) and (value != value)):
+                    value = ""
+                    html.append(f"<td>{value}</td>")
+                # Check for comparison pattern like "2772.00 > 2790.00"
+                elif isinstance(value, str) and " > " in value:
+                    try:
+                        # Split the string and parse the numbers
+                        parts = value.split(" > ")
+                        if len(parts) == 2:
+                            first_val = float(parts[0])
+                            second_val = float(parts[1])
+                            
+                            # Determine color based on comparison
+                            # Green if second value is less (improvement)
+                            # Red if second value is more (degradation)
+                            if second_val < first_val:
+                                html.append(f"<td><span style='color: green;'>{value}</span></td>")
+                            elif second_val > first_val:
+                                html.append(f"<td><span style='color: red;'>{value}</span></td>")
+                            else:
+                                html.append(f"<td>{value}</td>")
+                        else:
+                            html.append(f"<td>{value}</td>")
+                    except (ValueError, IndexError):
+                        # If parsing fails, just display the value normally
+                        html.append(f"<td>{value}</td>")
+                # Format numeric values to two decimal places
+                elif isinstance(value, float):
+                    value = f"{value:.2f}"
+                    html.append(f"<td>{value}</td>")
+                else:
+                    value = str(value)
+                    # Handle newlines in values by converting to <br/>
+                    value = value.replace('\n', '<br/>')
+                    html.append(f"<td>{value}</td>")
+
+            html.append("</tr>")
+
+        # Close the table
+        html.append("</tbody></table>")
+
+        # Return the complete HTML table
+        return ''.join(html)
+
     def generate_report(self, tests, influxdb, action_id, template_group=None):
         templates_title = ""
         group_title     = None
