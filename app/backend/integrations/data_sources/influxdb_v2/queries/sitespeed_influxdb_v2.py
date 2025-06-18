@@ -136,6 +136,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["statistics"] == "cpu")
       |> filter(fn: (r) => r["summaryType"] == "pageSummary")
+      |> filter(fn: (r) => r["_measurement"] == "durations" or r["_measurement"] == "lastLongTask" or r["_measurement"] == "maxPotentialFid"  or r["_measurement"] == "tasks" or r["_measurement"] == "totalBlockingTime" or r["_measurement"] == "totalDuration")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> filter(fn: (r) => r["_field"] == "{aggregation}")
