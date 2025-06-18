@@ -404,6 +404,101 @@ class FrontendTestData(BaseTestData):
         # Set the test type for frontend tests
         self.test_type = "front_end"
 
+    def create_aggregated_table(self) -> None:
+        """
+        Combines all collected tables into one aggregated table.
+        Renames 'page' column to 'transaction' and stores the result in self.aggregated_table.
+        The aggregated table will be a list of dictionaries with merged metrics.
+        
+        When baseline data is available:
+        - Includes both current and baseline metrics
+        - Calculates raw differences (current - baseline) with _diff suffix
+        - Calculates percentage differences ((current - baseline) / baseline * 100%) with _diff_pct suffix
+        """
+        if not self._loaded_tables:
+            self.aggregated_table = []
+            return
+            
+        current_metrics = {}
+        baseline_metrics = {}
+        has_baseline = False
+        
+        # First, collect all metrics by page/transaction identifier
+        for (table_name, aggregation), table_obj in self._loaded_tables.items():
+            if not table_obj.current:
+                continue
+                
+            # Process current metrics
+            for metric_entry in table_obj.current:
+                if 'page' not in metric_entry:
+                    continue
+                    
+                page_name = metric_entry['page']
+                
+                if page_name not in current_metrics:
+                    current_metrics[page_name] = {}
+                    
+                # Add all metrics from this table to the page's metrics
+                for key, value in metric_entry.items():
+                    if key != 'page':
+                        # Skip page key as we'll rename it to transaction
+                        # Convert string values to float if they look numeric
+                        if isinstance(value, str) and value.replace('.', '').isdigit():
+                            try:
+                                value = float(value)
+                            except ValueError:
+                                pass
+                        current_metrics[page_name][key] = value
+            
+            # Process baseline metrics if available
+            if table_obj.baseline:  
+                has_baseline = True
+                for baseline_entry in table_obj.baseline:
+                    if 'page' not in baseline_entry:
+                        continue
+                        
+                    page_name = baseline_entry['page']
+                    
+                    if page_name not in baseline_metrics:
+                        baseline_metrics[page_name] = {}
+                    
+                    # Add baseline metrics
+                    for key, value in baseline_entry.items():
+                        if key != 'page':
+                            # Convert string values to float if they look numeric
+                            if isinstance(value, str) and value.replace('.', '').isdigit():
+                                try:
+                                    value = float(value)
+                                except ValueError:
+                                    pass
+                            baseline_metrics[page_name][f"{key}_baseline"] = value
+        
+        # Calculate differences and combine metrics
+        aggregated_list = []
+        for page_name, metrics in current_metrics.items():
+            entry = {'transaction': page_name}
+            entry.update(metrics)
+            
+            # Add baseline and calculate differences if available for this page
+            if has_baseline and page_name in baseline_metrics:
+                entry.update(baseline_metrics[page_name])
+                
+                # Calculate differences for numeric metrics
+                for key, current_value in metrics.items():
+                    baseline_key = f"{key}_baseline"
+                    if baseline_key in baseline_metrics[page_name] and isinstance(current_value, (int, float)):
+                        baseline_value = baseline_metrics[page_name][baseline_key]
+                        if isinstance(baseline_value, (int, float)) and baseline_value != 0:
+                            # Raw difference
+                            entry[f"{key}_diff"] = current_value - baseline_value
+                            # Percentage difference
+                            entry[f"{key}_diff_pct"] = ((current_value - baseline_value) / baseline_value) * 100
+            
+            aggregated_list.append(entry)
+        
+        self.aggregated_table = aggregated_list
+        return self.aggregated_table
+
     # All table-related methods are now inherited from BaseTestData
 
 

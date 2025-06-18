@@ -34,28 +34,46 @@ class MetricsTable:
         self.aggregation = aggregation
         self.current: List[Dict[str, Any]] = []
         self.baseline: Optional[List[Dict[str, Any]]] = None
-        self.diff: Optional[Dict[str, Any]] = None
-        self.diff_pct: Optional[Dict[str, Any]] = None
+
+    def _sanitize_metrics(self, metrics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Replace None or null values with 0.00 in numeric fields"""
+        # If no metrics, return empty list
+        if not metrics:
+            return []
+
+        result = []
+        # First pass: analyze what fields tend to contain numeric values
+        numeric_fields = set()
+        for metric in metrics:
+            for key, value in metric.items():
+                if isinstance(value, (int, float)) and value is not None:
+                    numeric_fields.add(key)
+
+        # Second pass: replace None values with 0.00 for fields that contained numeric values
+        for metric in metrics:
+            new_metric = {}
+            for key, value in metric.items():
+                if value is None or value == "null":
+                    if key in numeric_fields:
+                        # Replace with 0.00 for fields that contained numeric values elsewhere
+                        new_metric[key] = 0.00
+                    else:
+                        # Keep original value for non-numeric fields
+                        new_metric[key] = value
+                else:
+                    new_metric[key] = value
+            result.append(new_metric)
+        return result
 
     def set_current_metrics(self, metrics: List[Dict[str, Any]]) -> None:
         """Set the current metrics values from a list of dictionaries"""
-        self.current = metrics
+        self.current = self._sanitize_metrics(metrics)
 
     def set_baseline_metrics(self, metrics: List[Dict[str, Any]]) -> None:
         """Set the baseline metrics for comparison from a list of dictionaries"""
-        self.baseline = metrics
-        self._calculate_diff()
+        self.baseline = self._sanitize_metrics(metrics)
 
-    def _calculate_diff(self) -> None:
-        """Calculate the difference between current and baseline metrics"""
-        if not self.baseline or not self.current:
-            return
 
-        # We'll need to adapt our diff calculation to work with lists of dictionaries
-        # This requires matching records between current and baseline
-        # For now, we'll disable this functionality since it needs a redesign
-        self.diff = {}
-        self.diff_pct = {}
 
     def get_metric(self, metric_name: str) -> Any:
         """Get the current value of a specific metric from all records"""
@@ -64,8 +82,22 @@ class MetricsTable:
         return values if values else None
 
     def get_current_metrics(self) -> List[Dict[str, Any]]:
-        """Get all current metrics"""
-        return self.current
+        """Get all current metrics with float values formatted to 3 decimal places"""
+        result = []
+
+        for metric in self.current:
+            new_metric = {}
+
+            # Format float values to max 3 decimal places
+            for key, value in metric.items():
+                if isinstance(value, float):
+                    new_metric[key] = f"{value:.2f}"
+                else:
+                    new_metric[key] = value
+
+            result.append(new_metric)
+
+        return result
 
     def get_baseline_metric(self, metric_name: str) -> Any:
         """Get the baseline value of a specific metric from all records"""
@@ -74,17 +106,68 @@ class MetricsTable:
         values = [record.get(metric_name) for record in self.baseline if metric_name in record]
         return values if values else None
 
-    def get_diff_metric(self, metric_name: str) -> Any:
-        """Get the difference value of a specific metric"""
-        return None if self.diff is None else self.diff.get(metric_name)
 
-    def get_diff_pct_metric(self, metric_name: str) -> Any:
-        """Get the percentage difference of a specific metric"""
-        return None if self.diff_pct is None else self.diff_pct.get(metric_name)
+
+    def get_comparison_metrics(self) -> List[Dict[str, Any]]:
+        """
+        Get metrics with baseline comparison when available.
+        Returns metrics in format: "baseline_value>current_value" when baseline exists,
+        otherwise returns just current values.
+        """
+        if not self.baseline:
+            return self.current
+
+        # Create comparison metrics
+        result = []
+
+        # Create a mapping of baseline metrics by key (assuming each metric has a unique identifier)
+        baseline_map = {self._get_metric_key(item): item for item in self.baseline}
+
+        # For each current metric, find the corresponding baseline metric and format comparison
+        for curr in self.current:
+            new_metric = curr.copy()  # Start with current metric
+            key = self._get_metric_key(curr)
+
+            if key in baseline_map:
+                # For each numeric field, replace with baseline>current format
+                for field, value in curr.items():
+                    if isinstance(value, (int, float)) and field in baseline_map[key]:
+                        baseline_value = baseline_map[key][field]
+
+                        # Format float values to max 2 decimal places
+                        if baseline_value:
+                            baseline_str = f"{float(baseline_value):.2f}"
+                        else:
+                            baseline_str = "0.00"
+                        if value:
+                            value_str = f"{float(value):.2f}"
+                        else:
+                            value_str = "0.00"
+
+                        new_metric[field] = f"{baseline_str} > {value_str}"
+
+            result.append(new_metric)
+
+        return result
 
     def has_baseline(self) -> bool:
         """Check if the table has baseline data"""
         return self.baseline is not None
+
+    def _get_metric_key(self, metric: Dict[str, Any]) -> str:
+        """
+        Generate a unique key for a metric to match baseline with current.
+        Assumes metrics have some identifier field like 'page', 'name', etc.
+        """
+        # Try common identifier fields first
+        for key in ['page', 'name', 'id', 'url']:
+            if key in metric:
+                return str(metric[key])
+
+        # If no identifier found, use a hash of the serialized dict
+        # Exclude highly variable fields that shouldn't affect matching
+        matching_dict = {k: v for k, v in metric.items() if k not in ['timestamp']}
+        return str(hash(frozenset(matching_dict.items())))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the table to a dictionary with all data"""
@@ -95,11 +178,7 @@ class MetricsTable:
         if self.baseline:
             result["baseline"] = self.baseline
 
-        if self.diff:
-            result["diff"] = self.diff
 
-        if self.diff_pct:
-            result["diff_pct"] = self.diff_pct
 
         return result
 

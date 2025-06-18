@@ -24,7 +24,7 @@ from io                                       import BytesIO
 from PIL                                      import Image as PILImage
 from reportlab.lib.colors                     import Color
 from reportlab.lib.enums                      import TA_LEFT
-from reportlab.lib.pagesizes                  import A4
+from reportlab.lib.pagesizes                  import A4, landscape
 from reportlab.lib.styles                     import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units                      import inch
 from reportlab.lib.utils                      import ImageReader
@@ -37,7 +37,7 @@ from datetime                                 import datetime
 class Pdf:
 
     def __init__(self, pdf_io, margin=15):
-        self.doc              = BaseDocTemplate(pdf_io, pagesize=A4, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
+        self.doc              = BaseDocTemplate(pdf_io, pagesize=landscape(A4), leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
         self.elements         = []
         self.text_color       = Color(206 / 255, 213 / 255, 218 / 255)
         self.header_color     = Color(40 / 255, 40 / 255, 40 / 255)
@@ -54,7 +54,7 @@ class Pdf:
         # Create a custom page template with a gray background
         def on_page(canvas, doc):
             canvas.setFillColor(self.background_color)
-            canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
+            canvas.rect(0, 0, landscape(A4)[0], landscape(A4)[1], fill=1, stroke=0)
             # Check if it's the first page
             if doc.page == 1:
                 draw_header(canvas)
@@ -63,11 +63,11 @@ class Pdf:
             # Adjust the y-coordinate of the rectangle to move it closer to the top
             header_radius    = 10
             header_text_size = 16
-            rect_y           = A4[1] - self.header_height
+            rect_y           = landscape(A4)[1] - self.header_height
 
             # Draw the new rectangle with full width and rounded bottom edges
             canvas.setFillColor(self.header_color)
-            canvas.roundRect(0, rect_y, A4[0], 60, header_radius, fill=1, stroke=0)
+            canvas.roundRect(0, rect_y, landscape(A4)[0], 60, header_radius, fill=1, stroke=0)
 
             # Add the logo
             logo = ImageReader(self.logo_path)
@@ -83,7 +83,7 @@ class Pdf:
 
             # Calculate the combined width and adjust positions
             combined_width = logo_width_scaled + title_width
-            logo_x         = (A4[0] - combined_width) / 2
+            logo_x         = (landscape(A4)[0] - combined_width) / 2
             title_x        = logo_x + logo_width_scaled
 
              # Draw the logo and title
@@ -116,8 +116,8 @@ class Pdf:
         image_io = BytesIO(image)
         img      = PILImage.open(image_io)
         img_width, img_height = img.size
-        max_width  = A4[0] - self.doc.leftMargin - self.doc.rightMargin
-        max_height = A4[1] - self.doc.topMargin - self.doc.bottomMargin - 0.25 * inch  # Subtract the height of the Spacer
+        max_width  = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin
+        max_height = landscape(A4)[1] - self.doc.topMargin - self.doc.bottomMargin - 0.25 * inch  # Subtract the height of the Spacer
         if img_width > max_width:
             img_height = img_height * (max_width / img_width)
             img_width  = max_width
@@ -141,23 +141,29 @@ class Pdf:
         cell_style.fontName = self.regular_font
         cell_style.textColor = self.text_color
         cell_style.fontSize = 8
-        
+
         header_style = styles['Normal']
         header_style.fontName = self.title_font
         header_style.textColor = self.text_color
         header_style.fontSize = 9
-        
+
         # Process headers (first row)
         header_row = []
         for cell in table_data[0]:
+            # Replace various forms of null values with 0
+            if cell is None or cell == '' or cell == 'None' or (isinstance(cell, float) and (cell != cell)):  # None, empty string, 'None' string, and NaN
+                cell = 0
             cell_text = str(cell)
             header_row.append(Paragraph(cell_text, header_style))
         processed_data.append(header_row)
-        
+
         # Process data rows
         for row in table_data[1:]:
             processed_row = []
             for cell in row:
+                # Replace various forms of null values with 0
+                if cell is None or cell == '' or cell == 'None' or (isinstance(cell, float) and (cell != cell)):  # None, empty string, 'None' string, and NaN
+                    cell = 0
                 cell_text = str(cell)
                 # Add soft breaks for long text
                 if len(cell_text) > max_chars_per_cell:
@@ -166,15 +172,15 @@ class Pdf:
                     cell_text = '<br/>'.join(parts)
                 processed_row.append(Paragraph(cell_text, cell_style))
             processed_data.append(processed_row)
-        
+
         # Calculate table width and column widths
-        available_width = A4[0] - self.doc.leftMargin - self.doc.rightMargin - 10  # Extra margin for safety
+        available_width = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin - 10  # Extra margin for safety
         num_columns = len(table_data[0])
-        
+
         # Use equal column widths across the full page width
         col_width = available_width / num_columns
         col_widths = [col_width] * num_columns
-        
+
         # Create table with the calculated column widths
         table = Table(processed_data, colWidths=col_widths, cornerRadii=[6, 6, 6, 6])
         table.setStyle(TableStyle([
@@ -192,7 +198,7 @@ class Pdf:
             ('LEFTPADDING', (0, 0), (-1, -1), 4),
             ('RIGHTPADDING', (0, 0), (-1, -1), 4),
         ]))
-        
+
         self.elements.append(Spacer(1, 0.25 * inch))
         self.elements.append(table)
 
@@ -318,7 +324,13 @@ class PdfReport(ReportingBase):
 
         # Add rows for each record
         for record in metrics:
-            row = [record.get(key, '') for key in keys]
+            # Get each value and replace None or empty values with ''
+            row = []
+            for key in keys:
+                value = record.get(key, '')
+                if value is None or value == 'None' or (isinstance(value, float) and (value != value)):
+                    value = 0
+                row.append(value)
             table_data.append(row)
 
         # Convert any numerical values to more readable format

@@ -51,7 +51,7 @@ class ReportingBase:
         self.system_prompt_id          = template_obj["system_prompt_id"]
         self.dp_obj                    = DataProvider(project=self.project, source_type=db_id.get("source_type"), id=db_id.get("id"))
         self.ai_switch                 = template_obj["ai_switch"]
-        if db_id.get("source_type") == "influxdb_v2":
+        if self.dp_obj.test_type == "back_end":
             self.ml_switch                 = True # Temporary fix for ML switch
         else:
             self.ml_switch                 = False
@@ -88,7 +88,7 @@ class ReportingBase:
             # Check if it's a table variable with aggregation suffix
             # Format: table_name_table_aggregation (e.g., timings_fully_loaded_table_median)
             match = re.match(r"(.+?)_table_(median|mean|p90|p99)$", var)
-            if match and hasattr(self.current_test_obj, "get_table"):
+            if match and hasattr(self.current_test_obj, "get_table") and self.dp_obj.test_type == "front_end":
                 table_name = match.group(1)
                 aggregation = match.group(2)
 
@@ -110,7 +110,11 @@ class ReportingBase:
 
                     if table is not None:
                         # Format the table based on the report type
-                        metrics = table.get_current_metrics()
+                        # When baseline is available, use comparison metrics
+                        if self.baseline_test_obj is not None and table.has_baseline():
+                            metrics = table.get_comparison_metrics()
+                        else:
+                            metrics = table.get_current_metrics()
                         value = self.format_table(metrics)
                         text = text.replace("${" + var + "}", value)
                         continue
@@ -134,12 +138,14 @@ class ReportingBase:
         Returns:
             A string representation of the metrics suitable for the report format
         """
-        return json.dumps(metrics)
+        return metrics
 
     def analyze_template(self):
         overall_summary = ""
         nfr_summary     = ""
-        data            = self.current_test_obj.aggregated_table
+        if self.dp_obj.test_type == "front_end":
+            data = self.current_test_obj.create_aggregated_table()
+        data = self.current_test_obj.aggregated_table
         if self.nfrs_switch:
             nfr_summary = self.validation_obj.create_summary(self.nfr, data)
         if self.ml_switch:
@@ -223,15 +229,19 @@ class ReportingBase:
         # Create parameter name with prefix
         link_param_name = f"{prefix}grafana_link"
 
-        # Generate the link
-        return {
-            link_param_name: default_grafana_obj.get_grafana_test_link(
-                test_obj.get_metric('start_time_timestamp'),
-                test_obj.get_metric('end_time_timestamp'),
-                test_obj.get_metric('application'),
-                test_title
-            )
-        }
+        # Generate the link if Grafana object exists and has the required method
+        if default_grafana_obj is not None and hasattr(default_grafana_obj, 'get_grafana_test_link'):
+            return {
+                link_param_name: default_grafana_obj.get_grafana_test_link(
+                    test_obj.get_metric('start_time_timestamp'),
+                    test_obj.get_metric('end_time_timestamp'),
+                    test_obj.get_metric('application'),
+                    test_title
+                )
+            }
+        else:
+            # Return empty link if Grafana object or method doesn't exist
+            return {link_param_name: ""}
 
     def collect_data(self, current_test_title, baseline_test_title=None):
         """
@@ -241,6 +251,9 @@ class ReportingBase:
             current_test_title: Title of the current test to analyze
             baseline_test_title: Optional title of a baseline test for comparison
         """
+
+        # Initialize parameters dictionary
+        self.parameters = {}
 
         # Process baseline test data if provided
         if baseline_test_title is not None:
@@ -262,9 +275,6 @@ class ReportingBase:
         self.current_start_timestamp = self.current_test_obj.get_metric('start_time_timestamp')
         self.current_end_timestamp = self.current_test_obj.get_metric('end_time_timestamp')
         self.test_name = self.current_test_obj.get_metric('application')
-
-        # Initialize parameters dictionary
-        self.parameters = {}
 
         # Process current test data
         self.parameters.update(self._collect_parameters(self.current_test_obj))

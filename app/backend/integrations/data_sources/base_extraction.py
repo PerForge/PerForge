@@ -148,8 +148,8 @@ class DataExtractionBase(ABC):
         Initialize the DataExtractionBase class with configuration for the data source.
         :param project: Project configuration for the data source.
         """
-        super().__init__(project)
-        self.metric_map  = {}
+        self.project = project
+        self.metric_map = {}
 
     @abstractmethod
     def set_config(self):

@@ -126,9 +126,6 @@ class DataProvider:
             test_obj.set_metric('application', self.ds_obj.get_application(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
         # Calculate duration
         test_obj.calculate_duration()
-        # Get aggregated data table for all test types
-        if hasattr(test_obj, 'aggregated_table'):
-            test_obj.set_metric('aggregated_table', self.ds_obj.get_aggregated_table(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
 
         # Set data provider reference in test object for lazy loading
         if hasattr(test_obj, 'data_provider'):
@@ -137,7 +134,8 @@ class DataProvider:
         # Dispatch to specialized collection methods based on test type
         if effective_test_type == "back_end":
             self._collect_backend_test_data(test_obj)
-
+        elif effective_test_type == "front_end":
+            self._collect_frontend_test_data(test_obj)
         return test_obj
 
     def _collect_backend_test_data(self, test_obj: BackendTestData) -> None:
@@ -190,19 +188,21 @@ class DataProvider:
         )
         test_obj.set_metric('errors_pct_stats', value)
 
+        # Get aggregated data table
+        if hasattr(test_obj, 'aggregated_table'):
+            test_obj.set_metric('aggregated_table', self.ds_obj.get_aggregated_table(test_title=test_obj.test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
+
 
     def _collect_frontend_test_data(self, test_obj: FrontendTestData) -> None:
         """
         Collect data specific to frontend tests
 
-        In the lazy loading approach, this method doesn't need to eagerly load all metrics tables.
-        The tables will be loaded on-demand when they are requested via the get_table method.
-
-        We're just setting up the test object with common metadata here.
-
         Args:
             test_obj: FrontendTestData object to populate
         """
+        # Get aggregated data table
+        if hasattr(test_obj, 'aggregated_table'):
+            test_obj.set_metric('aggregated_table', "")
 
     # Metric initialization and configuration
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:
