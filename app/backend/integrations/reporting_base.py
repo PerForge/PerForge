@@ -87,7 +87,7 @@ class ReportingBase:
 
             # Check if it's a table variable with aggregation suffix
             # Format: table_name_table_aggregation (e.g., timings_fully_loaded_table_median)
-            match = re.match(r"(.+?)_table_(median|mean|p90|p99)$", var)
+            match = re.match(r"(.+?)_table_(median|mean|p75|p90|p95|p99)$", var)
             if match and hasattr(self.current_test_obj, "get_table") and self.dp_obj.test_type == "front_end":
                 table_name = match.group(1)
                 aggregation = match.group(2)

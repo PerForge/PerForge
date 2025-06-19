@@ -144,7 +144,7 @@ class MetricsTable:
                         else:
                             value_str = "0.00"
 
-                        new_metric[field] = f"{baseline_str} > {value_str}"
+                        new_metric[field] = f"{baseline_str} -> {value_str}"
 
             result.append(new_metric)
 
