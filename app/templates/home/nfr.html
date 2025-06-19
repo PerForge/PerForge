@@ -23,16 +23,25 @@
                     </div>
                   </h4>
                 </div>
+
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
                     <div class="card-body">
                         <form class="needs-validation" novalidate="" id="nfrForm">
                             <div class="flex-direction-column" id="nfrs-container">
                                 <div class="full-screen-section">
-                                    <div class="marging-10 mt-3">
-                                        <label class="col-form-nfr-label">Name:</label>
-                                    </div>
-                                    <div class="marging-10">
-                                        <input name="test_name" id="test_name" class="form-control" required>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="marging-10 mt-0 me-2">
+                                            <label class="col-form-nfr-label mb-0">Name:</label>
+                                        </div>
+                                        <div class="marging-10 flex-grow-1 me-3">
+                                            <input name="test_name" id="test_name" class="form-control" required>
+                                        </div>
+                                        <div class="btn-group" role="group" aria-label="Metric Type Switcher">
+                                            <input type="radio" class="btn-check" name="metricType" id="backendMetricsBtn" value="backend" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary" for="backendMetricsBtn">Backend Metrics</label>
+                                            <input type="radio" class="btn-check" name="metricType" id="frontendMetricsBtn" value="frontend" autocomplete="off">
+                                            <label class="btn btn-outline-primary" for="frontendMetricsBtn">Frontend Metrics</label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="full-screen-section">
@@ -99,13 +108,9 @@
                   <div class="invalid-feedback">Please provide a valid data.</div>
                 </div>
                 <div class="nfr-col-s padding-10">
-                  <select class="form-select metric-nfr-field" required>
-                    <option value="avg" selected>avg</option>
-                    <option value="pct50">50%-tile</option>
-                    <option value="pct75">75%-tile</option>
-                    <option value="pct90">90%-tile</option>
-                    <option value="count">count</option>
-                    <option value="rpm">rpm</option>
+                  <select name="metric" class="form-select metric-nfr-field" required>
+                    <option selected disabled value="">Choose...</option>
+                    <!-- Options will be dynamically populated by JavaScript -->
                   </select>
                   <div class="valid-feedback">Looks good!</div>
                   <div class="invalid-feedback">Please provide a valid data.</div>
@@ -136,9 +141,39 @@
               </div>
             `;
 
+            const backendMetrics = ["avg", "pct50", "pct75", "pct90", "count", "rpm"];
+            const frontendMetrics = [
+              "CLS", "FCP", "FID", "LCP", "TBT", "TTFB", "fullyLoaded", "backEndTime",
+              "domContentLoadedTime", "domInteractiveTime", "domainLookupTime", "frontEndTime",
+              "pageDownloadTime", "pageLoadTime", "redirectionTime", "serverConnectionTime",
+              "serverResponseTime", "_queued", "blocked", "connect", "dns", "receive",
+              "send", "ssl", "wait", "durations", "lastLongTask", "maxPotentialFid",
+              "tasks", "totalBlockingTime", "totalDuration", "JSHeapUsedSize",
+              "JSHeapTotalSize", "css", "font", "html", "image", "javascript", "json",
+              "plain", "favicon", "svg", "other"
+            ];
+            const allMetrics = [...new Set([...backendMetrics, ...frontendMetrics])].sort();
+
             function addNfrRow() {
               const container = document.getElementById("nfrs-container");
               container.insertAdjacentHTML("beforeend", rowTemplate);
+              const newRow = container.querySelector('.nfr-row:last-child');
+              const metricSelect = newRow.querySelector('.metric-nfr-field');
+
+              const selectedMetricType = document.querySelector('input[name="metricType"]:checked').value;
+              const metricsToUse = selectedMetricType === 'frontend' ? frontendMetrics : backendMetrics;
+
+              // Clear any existing options except the placeholder
+              while (metricSelect.options.length > 1) {
+                metricSelect.remove(1);
+              }
+
+              metricsToUse.forEach(metric => {
+                const option = document.createElement('option');
+                option.value = metric;
+                option.textContent = metric;
+                metricSelect.appendChild(option);
+              });
             }
 
             function deleteNfrRow(elem) {
@@ -170,16 +205,46 @@
 
             if (nfrsJson && nfrsJson.name != null) {
                 name.value = nfrsJson.name;
+
+                // Determine metric type from the first row and set the switcher
+                if (nfrsJson.rows && nfrsJson.rows.length > 0) {
+                    const firstMetric = nfrsJson.rows[0].metric;
+                    if (frontendMetrics.includes(firstMetric)) {
+                        document.getElementById('frontendMetricsBtn').checked = true;
+                    } else {
+                        document.getElementById('backendMetricsBtn').checked = true;
+                    }
+                    // Update all dropdowns to reflect the new switcher state *before* populating rows
+                    // This ensures new rows added in the loop get the correct metric list initially.
+                    updateAllMetricDropdowns();
+                }
+
                 for (const row of nfrsJson.rows) {
                     addNfrRow();
                     const newRow = document.querySelector('.nfr-row:last-child');
+                    const metricSelect = newRow.querySelector('.metric-nfr-field');
+
+                    while (metricSelect.options.length > 1) {
+                        metricSelect.remove(1);
+                    }
+
+                    allMetrics.forEach(metric => {
+                        const option = document.createElement('option');
+                        option.value = metric;
+                        option.textContent = metric;
+                        metricSelect.appendChild(option);
+                    });
+
                     newRow.querySelector('.regex-nfr-field').checked = row.regex;
                     newRow.querySelector('.scope-nfr-field').value = row.scope;
-                    newRow.querySelector('.metric-nfr-field').value = row.metric;
+                    metricSelect.value = row.metric;
                     newRow.querySelector('.operation-nfr-field').value = row.operation;
                     newRow.querySelector('.threshold-nfr-field').value = row.threshold;
                     newRow.querySelector('.weight-nfr-field').value = row.weight || '';
                 }
+                // Call updateAllMetricDropdowns again after all rows are loaded and values set
+                // This ensures all dropdowns are correctly populated and values preserved if possible.
+                updateAllMetricDropdowns();
             }
 
             const container = document.getElementById("nfrs-container");
@@ -187,6 +252,54 @@
             if (nfRows.length === 0) {
               addNfrRow();
             }
+
+            // Function to update all metric dropdowns based on switcher
+            function updateAllMetricDropdowns() {
+                const selectedMetricType = document.querySelector('input[name="metricType"]:checked').value;
+                const metricsToUse = selectedMetricType === 'frontend' ? frontendMetrics : backendMetrics;
+                const allRows = document.querySelectorAll('.nfr-row');
+
+                allRows.forEach(row => {
+                    const metricSelect = row.querySelector('.metric-nfr-field');
+                    if (metricSelect) {
+                        const currentValue = metricSelect.value;
+                        // Clear existing options (keeping the placeholder if it exists)
+                        let placeholderOption = null;
+                        if (metricSelect.options.length > 0 && metricSelect.options[0].disabled && metricSelect.options[0].value === "") {
+                            placeholderOption = metricSelect.options[0].cloneNode(true);
+                        }
+                        metricSelect.innerHTML = ''; // Clear all options
+                        if (placeholderOption) {
+                            metricSelect.appendChild(placeholderOption);
+                        }
+
+                        metricsToUse.forEach(metric => {
+                            const option = document.createElement('option');
+                            option.value = metric;
+                            option.textContent = metric;
+                            metricSelect.appendChild(option);
+                        });
+
+                        // Try to re-select the previous value if it's valid in the new list
+                        if (metricsToUse.includes(currentValue)) {
+                            metricSelect.value = currentValue;
+                        } else if (placeholderOption && metricSelect.options.length > 1) {
+                            metricSelect.selectedIndex = 1; // Select first actual metric after placeholder
+                        } else if (!placeholderOption && metricSelect.options.length > 0) {
+                            metricSelect.selectedIndex = 0; // Select first actual metric
+                        } else if (placeholderOption && metricSelect.options.length === 1){
+                            metricSelect.selectedIndex = 0; // Only placeholder left
+                        } else {
+                            metricSelect.value = ""; // No valid options, clear selection or rely on placeholder
+                        }
+                    }
+                });
+            }
+
+            // Add event listeners to switcher buttons
+            document.querySelectorAll('input[name="metricType"]').forEach(radio => {
+                radio.addEventListener('change', updateAllMetricDropdowns);
+            });
 
             // Form validation and submission
             document.getElementById('nfrForm').addEventListener('submit', function(event) {
