@@ -1,6 +1,7 @@
 # Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 
-from typing import Optional, Dict, List, Any
+import logging
+from typing import Optional, Dict, List, Any, Union, Type
 from abc import ABC
 
 
@@ -29,6 +30,9 @@ class BaseTestData(ABC):
         'performance_status'
     }
 
+    # Common aggregation types used for performance metrics across test types
+    _aggregation_types = ['mean', 'median', 'p90', 'p99']
+
     def __init__(self) -> None:
         # Common attributes for all test types
         self.test_title: Optional[str] = None
@@ -43,6 +47,20 @@ class BaseTestData(ABC):
         self.duration: Optional[str] = None
         self.aggregated_table: Optional[List[Dict[str, Any]]] = None
         self.performance_status: Optional[bool] = None
+
+        # Default aggregation type
+        self.aggregation = "median"
+
+        # Import the MetricsTable class
+        from app.backend.data_provider.metrics_table import MetricsTable
+        self.MetricsTable = MetricsTable
+
+        # Dictionary to cache loaded tables with their aggregations
+        # Format: {(table_name, aggregation): table_obj}
+        self._loaded_tables = {}
+
+        # Data provider reference - will be set by DataProvider.collect_test_obj
+        self.data_provider = None
 
     def calculate_duration(self) -> None:
         """Calculate test duration from start and end timestamps."""
@@ -133,114 +151,6 @@ class BaseTestData(ABC):
                 if not attr.startswith('__') and
                 callable(getattr(self, attr))}
 
-
-class BackendTestData(BaseTestData):
-    """
-    Test data specific to backend performance tests.
-
-    This class extends the base test data with metrics specific to backend testing,
-    such as user counts, throughput, response times, and error rates.
-    """
-
-    # Define the list of metrics specific to backend tests
-    _backend_metrics = [
-        'max_active_users',
-        'median_throughput',
-        'median_response_time_stats',
-        'pct90_response_time_stats',
-        'errors_pct_stats',
-        'ml_anomalies',
-        'ml_html_summary'
-    ]
-
-    def __init__(self) -> None:
-        super().__init__()
-        # Load test specific metrics
-        self.max_active_users: Optional[int] = None
-        self.median_throughput: Optional[float] = None
-        self.median_response_time_stats: Optional[float] = None
-        self.pct90_response_time_stats: Optional[float] = None
-        self.errors_pct_stats: Optional[float] = None
-        self.ml_anomalies: Optional[Dict[str, Any]] = None
-        self.ml_html_summary: Optional[str] = None
-
-        # Set the test type for backend tests
-        self.test_type = "back_end"
-
-
-class FrontendTestData(BaseTestData):
-    """
-    Test data specific to frontend web performance tests.
-
-    This class extends the base test data with metrics specific to web performance testing,
-    such as page load times, web vitals, and other frontend performance indicators.
-    """
-
-    # Define the list of metrics specific to frontend tests
-    _frontend_metrics = [
-        # Core Web Vitals
-        'largest_contentful_paint',
-        'first_contentful_paint',
-        'cumulative_layout_shift',
-        'total_blocking_time',
-        'first_input_delay',
-        'interaction_to_next_paint',
-
-        # Other important metrics
-        'speed_index',
-        'time_to_interactive',
-        'total_page_size',
-        'dom_size',
-        'cpu_long_tasks',
-        'js_execution_time',
-
-        # Lighthouse scores
-        'performance_score',
-        'accessibility_score',
-        'best_practices_score',
-        'seo_score',
-        'pwa_score',
-
-        # Resource counts
-        'resource_counts'
-    ]
-
-    # Common aggregation types used for performance metrics
-    _aggregation_types = ['mean', 'median', 'p90', 'p99']
-
-    def __init__(self) -> None:
-        super().__init__()
-        # Sitespeed.io specific metrics
-
-        # Core Web Vitals - using dictionaries for different aggregations
-        self.largest_contentful_paint: Optional[Dict[str, float]] = None  # LCP (ms)
-        self.first_contentful_paint: Optional[Dict[str, float]] = None    # FCP (ms)
-        self.cumulative_layout_shift: Optional[Dict[str, float]] = None   # CLS (score)
-        self.total_blocking_time: Optional[Dict[str, float]] = None       # TBT (ms)
-        self.first_input_delay: Optional[Dict[str, float]] = None         # FID (ms)
-        self.interaction_to_next_paint: Optional[Dict[str, float]] = None # INP (ms)
-
-        # Other important metrics - using dictionaries for different aggregations
-        self.speed_index: Optional[Dict[str, float]] = None               # Speed Index (ms)
-        self.time_to_interactive: Optional[Dict[str, float]] = None       # TTI (ms)
-        self.total_page_size: Optional[Dict[str, float]] = None           # Total transfer size (bytes)
-        self.dom_size: Optional[Dict[str, int]] = None                    # Number of DOM elements
-        self.cpu_long_tasks: Optional[Dict[str, int]] = None              # Number of long tasks
-        self.js_execution_time: Optional[Dict[str, float]] = None         # JavaScript execution time (ms)
-
-        # Lighthouse scores (0-100) - these remain as single values
-        self.performance_score: Optional[float] = None
-        self.accessibility_score: Optional[float] = None
-        self.best_practices_score: Optional[float] = None
-        self.seo_score: Optional[float] = None
-        self.pwa_score: Optional[float] = None
-
-        # Resource counts
-        self.resource_counts: Optional[Dict[str, int]] = None   # Count by resource type
-
-        # Set the test type for frontend tests
-        self.test_type = "front_end"
-
     def get_metric_aggregation(self, metric_name: str, aggregation: str, default_value: Any = None) -> Any:
         """
         Get a specific aggregation value of a metric.
@@ -261,7 +171,7 @@ class FrontendTestData(BaseTestData):
 
     def set_metric_aggregation(self, metric_name: str, aggregation: str, value: Any) -> None:
         """
-        Set a specific aggregation value for a metric.
+        Set a specific aggregation value for a metric and update the default aggregation if needed.
 
         Args:
             metric_name: Name of the metric to set
@@ -274,6 +184,322 @@ class FrontendTestData(BaseTestData):
             metric = {}
             self.set_metric(metric_name, metric)
         metric[aggregation] = value
+
+        # Legacy support for updating aggregation via metric name
+        if metric_name == 'default_aggregation':
+            self.set_aggregation_type(aggregation)
+
+    def get_table(self, table_name: str, aggregation: str = None) -> Any:
+        """
+        Get a table with specific aggregation, loading it if needed.
+
+        Args:
+            table_name: Base name of the table (e.g., 'timings_fully_loaded')
+            aggregation: Specific aggregation to use ('median', 'mean', 'p90', 'p99')
+                          If None, uses the default aggregation
+
+        Returns:
+            MetricsTable object or None if table couldn't be loaded
+        """
+        # Use default aggregation if none specified
+        aggregation = aggregation or self.aggregation
+
+        # Validate aggregation type
+        if aggregation not in self._aggregation_types:
+            logging.warning(f"'{aggregation}' is not a recognized aggregation type. Using '{self.aggregation}' instead.")
+            aggregation = self.aggregation
+
+        # Check if table name is valid - child classes should override to add their specific metrics
+        table_metrics = getattr(self, '_table_metrics', [])
+        if not table_metrics or table_name not in table_metrics:
+            logging.warning(f"Table '{table_name}' is not a recognized metric table for {self.__class__.__name__}.")
+            return None
+
+        # Create a cache key for this table+aggregation combination
+        cache_key = (table_name, aggregation)
+
+        # Check if we've already loaded this table with this aggregation
+        if cache_key not in self._loaded_tables:
+            # Create the table with specified aggregation
+            table = self.MetricsTable(f"{table_name}_table_{aggregation}", aggregation=aggregation)
+
+            # Load data if we have a data provider
+            if hasattr(self, 'data_provider') and self.data_provider is not None:
+                # Determine method to call based on table name
+                method_name = f"get_{table_name}"
+                if hasattr(self.data_provider.ds_obj, method_name):
+                    try:
+                        method = getattr(self.data_provider.ds_obj, method_name)
+                        value = method(
+                            test_title=self.test_title,
+                            start=self.start_time_iso,
+                            end=self.end_time_iso,
+                            bucket=self.data_provider.ds_obj.bucket,
+                            aggregation=aggregation
+                        )
+
+                        # Set metrics in the table
+                        table.set_current_metrics(value)
+
+                        # Store in cache
+                        self._loaded_tables[cache_key] = table
+
+                        logging.info(f"Lazy loaded table '{table_name}' with aggregation '{aggregation}'")
+                    except Exception as e:
+                        logging.warning(f"Error loading table {table_name} with {aggregation}: {e}")
+                        return None
+                else:
+                    logging.warning(f"Method get_{table_name} not found in data source")
+                    return None
+            else:
+                logging.warning("No data provider available to load table data")
+                return None
+
+        # Return the cached table
+        return self._loaded_tables.get(cache_key)
+
+    def set_current_metrics_for_table(self, table_name: str, metrics_data: Dict[str, Any]) -> None:
+        """
+        Set current metrics for a specified MetricsTable.
+
+        Args:
+            table_name: The snake_case name of the metrics table (e.g., 'google_web_vitals')
+            metrics_data: Dictionary containing the metrics data
+        """
+        # Get or create the table with default aggregation
+        table = self.get_table(table_name)
+        if table is not None:
+            table.set_current_metrics(metrics_data)
+
+    def set_aggregation_type(self, aggregation: str) -> None:
+        """
+        Set the default aggregation type for this test data object.
+
+        Note: This only updates the aggregation type variable. To fully apply this to tables,
+        they would need to be reinitialized with the new aggregation type.
+
+        Args:
+            aggregation: The aggregation type to use ("mean", "median", "p90", "p99", etc.)
+        """
+        if aggregation in self._aggregation_types:
+            self.aggregation = aggregation
+        else:
+            # Log warning that an unsupported aggregation type was provided
+            logging.warning(f"'{aggregation}' is not a recognized aggregation type. Using '{self.aggregation}' instead.")
+
+    def set_baseline_metrics_for_table(self, table_name: str, metrics_data: Dict[str, Any]) -> None:
+        """
+        Set baseline metrics for a specified MetricsTable.
+
+        Args:
+            table_name: The snake_case name of the metrics table (e.g., 'google_web_vitals')
+            metrics_data: Dictionary containing the baseline metrics data
+        """
+        # Get or create the table with default aggregation
+        table = self.get_table(table_name)
+        if table is not None:
+            table.set_baseline_metrics(metrics_data)
+
+    def set_baseline_metrics_for_all_tables(self, baseline_test_data: 'BaseTestData') -> None:
+        """
+        Set baseline metrics for all loaded MetricsTable instances from another test data object.
+        Note: This only sets baseline metrics for tables that are already loaded in the current object.
+
+        Args:
+            baseline_test_data: Another test data object containing baseline metrics
+        """
+        # For each loaded table in baseline_test_data, set the baseline metrics in this object
+        if not hasattr(baseline_test_data, '_loaded_tables'):
+            # Handle backward compatibility with old test data instances
+            logging.warning("Baseline test data does not support lazy loading")
+            return
+
+        # Get the list of metrics tables for this class
+        table_metrics = getattr(self, '_table_metrics', [])
+        if not table_metrics:
+            return
+
+        # Iterate through all table names defined in the class
+        for table_name in table_metrics:
+            # Get the baseline table if it's loaded in the baseline object
+            for (name, agg), baseline_table in baseline_test_data._loaded_tables.items():
+                if name == table_name:
+                    # Get or create this table with the same aggregation
+                    current_table = self.get_table(table_name, agg)
+                    if current_table and baseline_table:
+                        baseline_metrics = baseline_table.get_current_metrics()
+                        if baseline_metrics:
+                            current_table.set_baseline_metrics(baseline_metrics)
+
+
+class BackendTestData(BaseTestData):
+    """
+    Test data specific to backend performance tests.
+
+    This class extends the base test data with metrics specific to backend testing,
+    such as user counts, throughput, response times, and error rates.
+    """
+
+    # Define the list of metrics specific to backend tests
+    _backend_metrics = [
+        'max_active_users',
+        'median_throughput',
+        'median_response_time',
+        'error_rate',
+        'test_duration',
+        'rps'
+    ]
+
+    # Define backend table metrics for lazy loading
+    _table_metrics = [
+        # Future backend tables can be added here
+        'response_times',
+        'throughput',
+        'errors',
+        'active_users'
+    ]
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Set the test type for backend tests
+        self.test_type = "back_end"
+
+        # Initialize backend test specific metrics
+        self.max_active_users: Optional[int] = None
+        self.median_throughput: Optional[float] = None
+        self.median_response_time: Optional[float] = None
+        self.error_rate: Optional[float] = None
+        self.test_duration: Optional[str] = None
+        self.rps: Optional[float] = None
+
+
+class FrontendTestData(BaseTestData):
+    """
+    Test data specific to frontend web performance tests.
+
+    This class extends the base test data with metrics specific to web performance testing,
+    such as page load times, web vitals, and other frontend performance indicators.
+
+    This class implements lazy loading for metric tables, which means tables are only
+    loaded when they are actually accessed or requested by templates.
+    """
+
+    # Metric table names that are available for lazy loading - used by the base class's get_table method
+    _table_metrics = [
+        # SiteSpeed tables
+        'google_web_vitals',
+        'timings_fully_loaded',
+        'timings_page_timings',
+        'timings_main_document',
+        'cpu_long_tasks',
+        'cdp_performance_js_heap_used_size',
+        'cdp_performance_js_heap_total_size',
+        'content_types',
+        'first_party_content_types',
+        'third_party_content_types'
+    ]
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Set the test type for frontend tests
+        self.test_type = "front_end"
+
+    def create_aggregated_table(self) -> None:
+        """
+        Combines all collected tables into one aggregated table.
+        Renames 'page' column to 'transaction' and stores the result in self.aggregated_table.
+        The aggregated table will be a list of dictionaries with merged metrics.
+        
+        When baseline data is available:
+        - Includes both current and baseline metrics
+        - Calculates raw differences (current - baseline) with _diff suffix
+        - Calculates percentage differences ((current - baseline) / baseline * 100%) with _diff_pct suffix
+        """
+        if not self._loaded_tables:
+            self.aggregated_table = []
+            return
+            
+        current_metrics = {}
+        baseline_metrics = {}
+        has_baseline = False
+        
+        # First, collect all metrics by page/transaction identifier
+        for (table_name, aggregation), table_obj in self._loaded_tables.items():
+            if not table_obj.current:
+                continue
+                
+            # Process current metrics
+            for metric_entry in table_obj.current:
+                if 'page' not in metric_entry:
+                    continue
+                    
+                page_name = metric_entry['page']
+                
+                if page_name not in current_metrics:
+                    current_metrics[page_name] = {}
+                    
+                # Add all metrics from this table to the page's metrics
+                for key, value in metric_entry.items():
+                    if key != 'page':
+                        # Skip page key as we'll rename it to transaction
+                        # Convert string values to float if they look numeric
+                        if isinstance(value, str) and value.replace('.', '').isdigit():
+                            try:
+                                value = float(value)
+                            except ValueError:
+                                pass
+                        current_metrics[page_name][key] = value
+            
+            # Process baseline metrics if available
+            if table_obj.baseline:  
+                has_baseline = True
+                for baseline_entry in table_obj.baseline:
+                    if 'page' not in baseline_entry:
+                        continue
+                        
+                    page_name = baseline_entry['page']
+                    
+                    if page_name not in baseline_metrics:
+                        baseline_metrics[page_name] = {}
+                    
+                    # Add baseline metrics
+                    for key, value in baseline_entry.items():
+                        if key != 'page':
+                            # Convert string values to float if they look numeric
+                            if isinstance(value, str) and value.replace('.', '').isdigit():
+                                try:
+                                    value = float(value)
+                                except ValueError:
+                                    pass
+                            baseline_metrics[page_name][f"{key}_baseline"] = value
+        
+        # Calculate differences and combine metrics
+        aggregated_list = []
+        for page_name, metrics in current_metrics.items():
+            entry = {'transaction': page_name}
+            entry.update(metrics)
+            
+            # Add baseline and calculate differences if available for this page
+            if has_baseline and page_name in baseline_metrics:
+                entry.update(baseline_metrics[page_name])
+                
+                # Calculate differences for numeric metrics
+                for key, current_value in metrics.items():
+                    baseline_key = f"{key}_baseline"
+                    if baseline_key in baseline_metrics[page_name] and isinstance(current_value, (int, float)):
+                        baseline_value = baseline_metrics[page_name][baseline_key]
+                        if isinstance(baseline_value, (int, float)) and baseline_value != 0:
+                            # Raw difference
+                            entry[f"{key}_diff"] = current_value - baseline_value
+                            # Percentage difference
+                            entry[f"{key}_diff_pct"] = ((current_value - baseline_value) / baseline_value) * 100
+            
+            aggregated_list.append(entry)
+        
+        self.aggregated_table = aggregated_list
+        return self.aggregated_table
+
+    # All table-related methods are now inherited from BaseTestData
 
 
 class TestDataFactory:

@@ -117,7 +117,6 @@ class NFRValidation:
     # Constructs a flux request to the InfluxDB based on the NFRs
     # Takes test data and compares it with the NFRs
     def compare_with_nfrs(self, nfr_config, data):
-        # try:
         nfr_result = {}
         # Initialize flags and variables
         bad_weight = False
@@ -181,7 +180,9 @@ class NFRValidation:
                     if nfr['status'] == 'PASSED':
                         total_passed_weight += nfr['weight']
             # Calculate Apdex as the percentage of total_passed_weight in total_weight
-            if total_weight == 0 or total_passed_weight == 0:
+            if total_weight == 0:
+                self.apdex = "N/A"
+            elif total_passed_weight == 0:
                 self.apdex = 0
             else:
                 self.apdex = round((total_passed_weight / total_weight) * 100)
@@ -193,10 +194,11 @@ class NFRValidation:
             self.compare_with_nfrs(nfr_config, data)
             self.calculate_apdex()
             summary = 'Overall performance based on NFRs:\n'
-            if self.apdex >= 80 : result = "acceptable"
-            elif self.apdex < 80 and self.apdex >= 70: result = "conditionally acceptable"
-            else: result = "unacceptable"
-            summary += f"- Test results are {result}.\n"
+            if self.apdex == "N/A": result = "cannot be evaluated based on NFRs, as the provided scope does not align with any available data."
+            elif self.apdex >= 80 : result = "are acceptable"
+            elif self.apdex < 80 and self.apdex >= 70: result = "are conditionally acceptable"
+            else: result = "are unacceptable"
+            summary += f"- Test results {result}.\n"
             summary += f"- {self.apdex}% of NFRs are satisfied.\n\n"
             if len(self.transaction_result) > 0:
                 summary += "Requests that do not meet NFRs:\n"
