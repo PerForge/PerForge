@@ -1,178 +1,85 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <!-- API Client -->
-<div class="sidebar">
-    <div class="sidebar-header">
-        <img src="/static/assets/img/logo.png" height="25" alt="PerForge">
-        <a type="button" href="/">PerForge</a>
-    </div>
-    <a class="nav-link" type="button" href="/">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fas fa-home"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+<script>
+    $(document).ready(function() {
+        // Получаем текущий путь URL
+        const currentPath = window.location.pathname;
+
+        // Находим все навигационные ссылки
+        const navLinks = document.querySelectorAll('.horizontal-sidebar .nav-link');
+
+        // Проверяем каждую ссылку и добавляем класс active к текущей
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+
+            // Проверка для главной страницы
+            if (href === '/' && (currentPath === '/' || currentPath === '/index')) {
+                link.classList.add('active');
+            }
+            // Проверка для других страниц (с учетом подпапок)
+            else if (href !== '/' && currentPath.startsWith(href)) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+<div class="horizontal-sidebar">
+    <div class="sidebar-container">
+        <div class="sidebar-header">
+            <img src="/static/assets/img/logo.png" height="25" alt="PerForge">
+            <a type="button" href="/">PerForge</a>
+        </div>
+        <div class="nav-links-container">
+            <a class="nav-link" type="button" href="/">
+                <span class="nav-link-icon"><i class="fas fa-home"></i></span>
                 <span class="nav-link-text">Home</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/tests">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fas fa-tachometer-alt"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/tests">
+                <span class="nav-link-icon"><i class="fas fa-tachometer-alt"></i></span>
                 <span class="nav-link-text">Tests</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/templates">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fa-solid fa-diagram-project"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/templates">
+                <span class="nav-link-icon"><i class="fa-solid fa-diagram-project"></i></span>
                 <span class="nav-link-text">Templates</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/graphs">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fas fa-chart-area"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/graphs">
+                <span class="nav-link-icon"><i class="fas fa-chart-area"></i></span>
                 <span class="nav-link-text">Graphs</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/nfrs">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="far fa-check-circle"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/nfrs">
+                <span class="nav-link-icon"><i class="far fa-check-circle"></i></span>
                 <span class="nav-link-text">NFRs</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/prompts">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fa-solid fa-list"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/prompts">
+                <span class="nav-link-icon"><i class="fa-solid fa-list"></i></span>
                 <span class="nav-link-text">Prompts</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/integrations">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fas fa-link"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/integrations">
+                <span class="nav-link-icon"><i class="fas fa-link"></i></span>
                 <span class="nav-link-text">Integrations</span>
-            </span>
-        </div>
-    </a>
-    <a class="nav-link" type="button" href="/secrets">
-        <div class="d-flex align-items-center">
-            <span class="nav-link-icon">
-                <span class="fa-solid fa-key"></span>
-            </span>
-            <span class="nav-link-text-wrapper">
+            </a>
+            <a class="nav-link" type="button" href="/secrets">
+                <span class="nav-link-icon"><i class="fa-solid fa-key"></i></span>
                 <span class="nav-link-text">Secrets</span>
-            </span>
+            </a>
         </div>
-    </a>
-    <a class="nav-link dropdown-indicator" href="#profile" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="profile">
-        <div class="d-flex align-items-center">
-            <div class="dropdown-indicator-icon">
-                <span class="fas fa-caret-right"></span>
-            </div>
-            <span class="nav-link-icon">
-                <span class="far fa-sun"></span>
-            </span>
-            <span class="nav-link-text">Settings</span>
-        </div>
-    </a>
-    <div class="parent-wrapper">
-        <ul class="nav collapse parent" id="profile">
-            <li class="nav-item">
-              <a class="nav-link" href="/register" data-bs-toggle="" aria-expanded="false">
-                  <div class="d-flex align-items-center">
-                      <span class="nav-link-text">Add user</span>
-                  </div>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/view-logs" data-bs-toggle="" aria-expanded="false">
-                  <div class="d-flex align-items-center">
-                      <span class="nav-link-text">View logs</span>
-                  </div>
-              </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/logout" data-bs-toggle="" aria-expanded="false">
-                    <div class="d-flex align-items-center">
-                        <span class="nav-link-text">Sign out</span>
-                    </div>
-                </a>
-            </li>
-        </ul>
-    </div>
-    <div class="fixed-bottom">
-        <a id = "projects-dropdown" data-bs-toggle="dropdown"></a>
-        <div id="projects-list" class="dropdown-menu">
-            <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+        <div class="settings-dropdown dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="nav-link-icon"><i class="fas fa-cog"></i></span>
+                <span class="nav-link-text">Settings</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown">
+                <li><a class="dropdown-item" href="/register">
+                    <i class="fas fa-user-plus me-2"></i>Add user
+                </a></li>
+                <li><a class="dropdown-item" href="/view-logs">
+                    <i class="fas fa-clipboard-list me-2"></i>View logs
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/logout">
+                    <i class="fas fa-sign-out-alt me-2"></i>Sign out
+                </a></li>
+            </ul>
         </div>
     </div>
 </div>
-{% include 'includes/project-modal.html' %}
-<script>
-    $(document).ready(function() {
-        var wrapper = document.getElementById('projects-list');
-
-        function getCookie(cookieName) {
-            let cookie = {};
-            document.cookie.split(';').forEach(function(el) {
-                let [key,value] = el.split('=');
-                cookie[key.trim()] = value;
-            })
-            return cookie[cookieName];
-        }
-        function setCookie(cname, cvalue) {
-            document.cookie = cname + "=" + cvalue;
-        }
-
-        var projectIdFromCookie = getCookie("project");
-        if (projectIdFromCookie === undefined) {
-            window.location.href = 'login.html';
-        } else {
-            // Use the API client to get projects
-            apiClient.projects.getAll()
-                .then(function(response) {
-                    // The new API returns data in the standardized format
-                    const projects = response.data.projects;
-                    var arrayLength = projects.length;
-                    for (var i = 0; i < arrayLength; i++) {
-                        const projectName = projects[i]['name'];
-                        const projectId = projects[i]['id'];
-                        // Create project element with onClick handler for the API client
-                        const projectElement = '<a class="dropdown-item rounded-top rounded-bottom" href="#" onclick="apiClient.projects.setActive(\'' + projectId + '\'); return false;">' + projectName + '</a>';
-                        wrapper.insertAdjacentHTML("afterbegin", projectElement);
-
-                        if (projectIdFromCookie == projectId) {
-                            var currentProject = document.getElementById('projects-dropdown');
-                            currentProject.textContent += projectName;
-                        }
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Error fetching projects:', error);
-                    const projectElement = '<a class="dropdown-item rounded-top rounded-bottom">Could not contact server.</a>';
-                    wrapper.insertAdjacentHTML("afterbegin", projectElement);
-                });
-        }
-    });
-</script>

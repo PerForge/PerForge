@@ -11,18 +11,6 @@
     <div class="main-background">
       {% include 'includes/sidebar.html' %}
       <div class="main-body">
-        <div class="main-body-header">
-            <h4 class="mb-0">Graphs
-                <div class="tooltip-container">
-                  <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
-                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                  </a>
-                  <div class="tooltip-content" style="font-size: 16px;">
-                      Click to learn more
-                  </div>
-                </div>
-            </h4>
-        </div>
         <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
           <div class="card-body">
               <div id="table-id">
@@ -125,7 +113,16 @@
       <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title" id="addnewgraphLabel">Add graph</h2>
+                <h2 class="mb-0">Graphs
+                    <div class="tooltip-container">
+                      <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
+                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                      </a>
+                      <div class="tooltip-content" style="font-size: 16px;">
+                          Click to learn more
+                      </div>
+                    </div>
+                </h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">

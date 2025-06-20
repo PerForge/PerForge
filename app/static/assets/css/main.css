@@ -103,7 +103,7 @@ img {
 
 .main-background {
     height: auto;
-    min-height: 100vh;
+    min-height: 94vh;
     background-attachment: fixed;
     background-size: cover;
     background: var(--bs-gradient);
@@ -121,11 +121,201 @@ img {
 .sidebar {
     height: 100%;
     width: 170px;
+    background-color: var(--bs-background); }
+
+/* Horizontal sidebar styles */
+.horizontal-sidebar {
+    width: 100%;
+    height: 6vh;
     position: fixed;
     top: 0;
     left: 0;
-    overflow-x: hidden;
-    background-color: var(--bs-background); }
+    right: 0;
+    z-index: 100;
+    background-color: var(--bs-background-dark);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.horizontal-sidebar .sidebar-container {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 15px;
+}
+
+.horizontal-sidebar .sidebar-header {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    background-color: transparent;
+    padding: 0 15px 0 0;
+    margin-right: 15px;
+    border-right: 1px solid var(--border-main-color);
+}
+
+.horizontal-sidebar .nav-links-container {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    overflow-x: auto;
+    flex-grow: 1;
+    scrollbar-width: none; /* Firefox */
+}
+
+.horizontal-sidebar .nav-links-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+.horizontal-sidebar .nav-link {
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-direction: row;
+    text-decoration: none;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.horizontal-sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-blue);
+}
+
+.horizontal-sidebar .nav-link.active {
+    color: var(--bs-blue);
+    position: relative;
+}
+
+.horizontal-sidebar .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 15px;
+    right: 15px;
+    height: 3px;
+    background-color: var(--bs-blue);
+}
+
+body.light-theme .horizontal-sidebar .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .horizontal-sidebar .nav-link.active {
+    background-color: rgba(0, 0, 0, 0.07);
+    color: var(--bs-blue);
+}
+
+.horizontal-sidebar .nav-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9em;
+}
+
+.horizontal-sidebar .nav-link-text {
+    font-size: 0.95em;
+}
+
+.horizontal-sidebar .settings-dropdown {
+    position: relative;
+    margin-left: auto; /* Pushes the element to the right side */
+    margin-right: 50px; /* Right margin to make space for theme switcher */
+    display: flex;
+    align-items: center;
+}
+
+/* Dropdown menu styles */
+.horizontal-sidebar .dropdown-menu {
+    background-color: var(--bs-background-dark);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    border: 1px solid var(--border-main-color);
+    padding: 8px 0;
+    z-index: 1000;
+    margin-top: 5px;
+}
+
+.horizontal-sidebar .dropdown-item {
+    color: var(--text-main-color);
+    padding: 8px 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+
+.horizontal-sidebar .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-blue);
+}
+
+.horizontal-sidebar .dropdown-divider {
+    border-top: 1px solid var(--border-main-color);
+    margin: 4px 0;
+}
+
+.horizontal-sidebar .dropdown-toggle::after {
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Light theme dropdown adjustments */
+body.light-theme .horizontal-sidebar .dropdown-menu {
+    background-color: var(--bs-white);
+    border: 1px solid var(--border-main-color);
+}
+
+body.light-theme .horizontal-sidebar .dropdown-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--bs-blue);
+}
+
+/* Form select styling */
+.form-select {
+    color: var(--text-main-color);
+    background-color: var(--bs-background-dark);
+    border-color: var(--border-main-color);
+}
+
+body.light-theme .form-select {
+    color: #212529; /* Black text for light theme */
+    background-color: #fff;
+    border-color: #ced4da;
+}
+
+/* Theme switcher button styles */
+.theme-switcher-btn {
+    position: fixed;
+    top: 74px; /* Positioned below the horizontal menu (64px + 10px) */
+    right: 15px;
+    background-color: transparent;
+    border: none;
+    color: var(--text-main-color);
+    z-index: 99;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.theme-switcher-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--bs-blue);
+}
+
+body.light-theme .theme-switcher-btn {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .theme-switcher-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+
 
 .sidebar-header {
     font-size: 19px;
@@ -138,14 +328,13 @@ img {
     display: flex;
     flex-direction: column;
     height: 100%;
-    margin-left: 170px;
+    margin-left: 0;
+    margin-top: 6vh; /* Match the height of the horizontal-sidebar */
 }
 
+/* Replaced by horizontal sidebar */
 .main-body-header {
-    font-size: 19px;
-    padding: 16px;
-    height: 64px;
-    background-color: var(--bs-background);
+    display: none;
 }
 
 .full-screen-section {
@@ -2819,12 +3008,28 @@ body.light-theme .sidebar {
     background-color: var(--bs-background-dark);
 }
 
+body.light-theme .horizontal-sidebar {
+    background-color: var(--bs-white);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .horizontal-sidebar {
+    background-color: var(--bs-white);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
 body.light-theme .sidebar-header {
     background-color: #e9ecef; /* Slightly darker than sidebar bg */
 }
 
-body.light-theme .main-body-header {
-    background-color: var(--bs-background-dark);
+body.light-theme .horizontal-sidebar .sidebar-header {
+    background-color: transparent;
+    border-right: 1px solid #dee2e6;
+}
+
+body.light-theme .horizontal-sidebar .sidebar-header {
+    background-color: transparent;
+    border-right: 1px solid #dee2e6;
 }
 
 body.light-theme .nav-link {
@@ -2951,8 +3156,8 @@ body.light-theme .text-info {
 }
 
 .theme-switcher-btn {
-    position: absolute;
-    top: 20px;
+    position: fixed;
+    top: 12px; /* Positioned inside horizontal navbar */
     right: 20px;
     z-index: 1050;
     border: none !important;
