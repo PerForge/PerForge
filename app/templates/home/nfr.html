@@ -36,11 +36,14 @@
                                         <div class="marging-10 flex-grow-1 me-3">
                                             <input name="test_name" id="test_name" class="form-control" required>
                                         </div>
-                                        <div class="btn-group" role="group" aria-label="Metric Type Switcher">
-                                            <input type="radio" class="btn-check" name="metricType" id="backendMetricsBtn" value="backend" autocomplete="off" checked>
-                                            <label class="btn btn-outline-primary" for="backendMetricsBtn">Backend Metrics</label>
-                                            <input type="radio" class="btn-check" name="metricType" id="frontendMetricsBtn" value="frontend" autocomplete="off">
-                                            <label class="btn btn-outline-primary" for="frontendMetricsBtn">Frontend Metrics</label>
+
+                                        <!-- New Switcher UI -->
+                                        <div class="d-flex align-items-center" role="group" aria-label="Metric Type Switcher">
+                                            <label class="mb-0 me-2" for="metricTypeSwitch">Backend</label>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="metricTypeSwitch">
+                                            </div>
+                                            <label class="mb-0 ms-1" for="metricTypeSwitch">Frontend Metrics</label>
                                         </div>
                                     </div>
                                 </div>
@@ -160,7 +163,7 @@
               const newRow = container.querySelector('.nfr-row:last-child');
               const metricSelect = newRow.querySelector('.metric-nfr-field');
 
-              const selectedMetricType = document.querySelector('input[name="metricType"]:checked').value;
+              const selectedMetricType = document.getElementById('metricTypeSwitch').checked ? 'frontend' : 'backend';
               const metricsToUse = selectedMetricType === 'frontend' ? frontendMetrics : backendMetrics;
 
               // Clear any existing options except the placeholder
@@ -185,6 +188,7 @@
               const nfrConfig = '{{ nfr_config }}';
               formData.id = nfrConfig && nfrConfig !== 'None' ? nfrConfig : null;
               formData.name = document.querySelector('[name="test_name"]').value;
+              formData.metric_type = document.getElementById('metricTypeSwitch').checked ? 'frontend' : 'backend';
               const nfrs = document.querySelectorAll('.nfr-row');
               const data = Array.from(nfrs).map(element => ({
                 regex: element.querySelector('.regex-nfr-field').checked,
@@ -210,9 +214,9 @@
                 if (nfrsJson.rows && nfrsJson.rows.length > 0) {
                     const firstMetric = nfrsJson.rows[0].metric;
                     if (frontendMetrics.includes(firstMetric)) {
-                        document.getElementById('frontendMetricsBtn').checked = true;
+                        document.getElementById('metricTypeSwitch').checked = true;
                     } else {
-                        document.getElementById('backendMetricsBtn').checked = true;
+                        document.getElementById('metricTypeSwitch').checked = false;
                     }
                     // Update all dropdowns to reflect the new switcher state *before* populating rows
                     // This ensures new rows added in the loop get the correct metric list initially.
@@ -255,8 +259,10 @@
 
             // Function to update all metric dropdowns based on switcher
             function updateAllMetricDropdowns() {
-                const selectedMetricType = document.querySelector('input[name="metricType"]:checked').value;
-                const metricsToUse = selectedMetricType === 'frontend' ? frontendMetrics : backendMetrics;
+                const metricSwitch = document.getElementById('metricTypeSwitch');
+                const selectedType = metricSwitch.checked ? 'frontend' : 'backend';
+                const metricsToUse = selectedType === 'frontend' ? frontendMetrics : backendMetrics;
+
                 const allRows = document.querySelectorAll('.nfr-row');
 
                 allRows.forEach(row => {
@@ -296,10 +302,11 @@
                 });
             }
 
-            // Add event listeners to switcher buttons
-            document.querySelectorAll('input[name="metricType"]').forEach(radio => {
-                radio.addEventListener('change', updateAllMetricDropdowns);
-            });
+            // Add event listener to the new switcher
+            const metricSwitch = document.getElementById('metricTypeSwitch');
+            if (metricSwitch) {
+                metricSwitch.addEventListener('change', updateAllMetricDropdowns);
+            }
 
             // Form validation and submission
             document.getElementById('nfrForm').addEventListener('submit', function(event) {

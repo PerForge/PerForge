@@ -2796,3 +2796,171 @@ pre {
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
+/* Light Theme Overrides */
+body.light-theme {
+    --text-main-color: #212529; /* Dark Gray for text */
+    --border-main-color: #dee2e6; /* Light Gray for borders */
+    --bs-background: #ffffff; /* White */
+    --bs-background-dark: #f8f9fa; /* Very Light Gray */
+    --bs-gray-900: #e9ecef; /* Light Gray for body background */
+    --bs-gradient: #e9ecef; /* No gradient, solid light gray */
+    --card-bg: #ffffff; /* White for cards */
+    --pagination-bg: #ffffff; /* White for pagination */
+    --tooltip-bg: #343a40; /* Dark gray for tooltips */
+    --tooltip-color: #ffffff; /* White text for tooltips */
+
+    /* Adjust primary and secondary app colors if needed, or they'll inherit from :root */
+    /* --bs-primary-app: #dee2e6; */
+    /* --bs-secondary-app: #6c757d; */
+}
+
+body.light-theme .sidebar {
+    background-color: var(--bs-background-dark);
+}
+
+body.light-theme .sidebar-header {
+    background-color: #e9ecef; /* Slightly darker than sidebar bg */
+}
+
+body.light-theme .main-body-header {
+    background-color: var(--bs-background-dark);
+}
+
+body.light-theme .nav-link {
+    color: var(--text-main-color);
+}
+
+body.light-theme .nav-link:hover {
+    color: var(--bs-blue); /* Keep blue for hover, or choose a light theme specific one */
+}
+
+body.light-theme .table {
+    color: var(--text-main-color);
+    border-color: var(--border-main-color);
+}
+
+body.light-theme .table > :not(caption) > * > * {
+    background-color: var(--bs-background);
+    border-bottom-width: 1px;
+}
+
+body.light-theme .form-control {
+    color: var(--text-main-color);
+    background-color: #ffffff; /* White for form controls */
+    border: 1px solid var(--border-main-color);
+}
+
+body.light-theme .form-control:focus {
+    border-color: var(--bs-blue);
+    background-color: #ffffff;
+}
+
+body.light-theme .input-group-text {
+    color: var(--bs-primary);
+    background-color: #e9ecef; /* Light gray for input group text */
+    border: 1px solid var(--border-main-color);
+}
+
+body.light-theme textarea {
+    background-color: #ffffff;
+    color: var(--text-main-color);
+    border-color: var(--border-main-color);
+}
+
+body.light-theme textarea:focus {
+    border-color: var(--bs-primary);
+}
+
+body.light-theme .vue-select-imput {
+    --vs-controls-color: var(--text-main-color);
+    --vs-border-color: var(--border-main-color);
+    --vs-dropdown-bg: #ffffff;
+    --vs-dropdown-color: var(--text-main-color);
+    --vs-dropdown-option-color: var(--text-main-color);
+    --vs-dropdown-option--active-bg: #e9ecef;
+    --vs-dropdown-option--active-color: var(--text-main-color);
+}
+
+body.light-theme .badge-success {
+    --badge-bg: rgba(25, 135, 84, 0.1);
+    --badge-color: #198754 !important;
+    --badge-border-color: rgba(25, 135, 84, 0.2);
+}
+
+body.light-theme .badge-failure {
+    --badge-bg: rgba(220, 53, 69, 0.1);
+    --badge-color: #dc3545 !important;
+    --badge-border-color: rgba(220, 53, 69, 0.2);
+}
+
+body.light-theme .badge-primary {
+    --badge-bg: rgba(13, 110, 253, 0.1);
+    --badge-color: #0d6efd !important;
+    --badge-border-color: rgba(13, 110, 253, 0.2);
+}
+
+body.light-theme .btn-close {
+    fill: var(--text-main-color);
+}
+
+body.light-theme .loading-screen {
+    background-color: var(--bs-gradient);
+}
+
+body.light-theme .loading-message {
+    color: var(--text-main-color);
+}
+
+body.light-theme .btn-primary2 {
+    background-color: var(--bs-tertiary);
+    /* Adjust other btn-primary2 colors if needed for light theme */
+}
+body.light-theme .btn-primary2:hover {
+    background-color: var(--bs-cyan);
+}
+
+body.light-theme .btn-secondary2 {
+    background-color: var(--bs-danger);
+    /* Adjust other btn-secondary2 colors if needed for light theme */
+}
+body.light-theme .btn-secondary2:hover {
+    background-color: var(--bs-orange);
+}
+
+body.light-theme .btn-success2 {
+    background-color: var(--bs-teal);
+    color: #ffffff; /* Ensure text is visible */
+}
+body.light-theme .btn-success2:hover {
+    background-color: var(--bs-green);
+    color: #ffffff;
+}
+
+body.light-theme .btn-warning2 {
+    background-color: var(--bs-warning);
+    color: #000000; /* Ensure text is visible */
+}
+body.light-theme .btn-warning2:hover {
+    background-color: var(--bs-orange);
+    color: #000000;
+}
+
+body.light-theme .text-info {
+    color: var(--bs-info) !important; /* Ensure this uses a light-theme friendly info color if needed, or keep as is */
+}
+
+.theme-switcher-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-main-color);
+    padding: 0.25rem 0.5rem;
+}
+
+body.light-theme .theme-switcher-btn {
+    color: var(--text-main-color);
+}

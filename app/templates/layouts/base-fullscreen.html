@@ -39,7 +39,18 @@
 {% block stylesheets %}{% endblock stylesheets %}
 </head>
 <body>
+        <script>
+        // Immediately apply theme from localStorage to prevent FOUC
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+                document.body.classList.add('light-theme');
+            }
+        })();
+    </script>
     {% block content %}{% endblock content %}
+    <button id="themeSwitcher" class="btn btn-sm theme-switcher-btn"><i id="themeIcon" class="fas fa-sun"></i></button>
+    {% include 'includes/sidebar.html' %}
     {% include 'includes/scripts.html' %}
     <!-- Specific Page JS goes HERE  -->
     {% block javascripts %}{% endblock javascripts %}
