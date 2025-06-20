@@ -109,6 +109,10 @@ img {
     background: var(--bs-gradient);
 }
 
+.main-background.fullscreen {
+    min-height: 100vh;
+}
+
 .blur::before {
     content: "";
     position: absolute;
@@ -3157,7 +3161,7 @@ body.light-theme .text-info {
 
 .theme-switcher-btn {
     position: fixed;
-    top: 12px; /* Positioned inside horizontal navbar */
+    top: 1.2vh; /* Positioned inside horizontal navbar */
     right: 20px;
     z-index: 1050;
     border: none !important;
