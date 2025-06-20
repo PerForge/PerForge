@@ -225,7 +225,6 @@ body.light-theme .horizontal-sidebar .nav-link.active {
 .horizontal-sidebar .settings-dropdown {
     position: relative;
     margin-left: auto; /* Pushes the element to the right side */
-    margin-right: 50px; /* Right margin to make space for theme switcher */
     display: flex;
     align-items: center;
 }

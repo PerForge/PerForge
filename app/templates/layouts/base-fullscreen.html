@@ -49,7 +49,6 @@
         })();
     </script>
     {% block content %}{% endblock content %}
-    <button id="themeSwitcher" class="btn btn-sm theme-switcher-btn"><i id="themeIcon" class="fas fa-sun"></i></button>
     {% if request.endpoint not in ['login', 'register', 'register_admin', 'choose_project'] %}
         {% include 'includes/sidebar.html' %}
     {% endif %}

@@ -2,21 +2,16 @@
 <!-- API Client -->
 <script>
     $(document).ready(function() {
-        // Получаем текущий путь URL
         const currentPath = window.location.pathname;
 
-        // Находим все навигационные ссылки
         const navLinks = document.querySelectorAll('.horizontal-sidebar .nav-link');
 
-        // Проверяем каждую ссылку и добавляем класс active к текущей
         navLinks.forEach(link => {
             const href = link.getAttribute('href');
 
-            // Проверка для главной страницы
             if (href === '/' && (currentPath === '/' || currentPath === '/index')) {
                 link.classList.add('active');
             }
-            // Проверка для других страниц (с учетом подпапок)
             else if (href !== '/' && currentPath.startsWith(href)) {
                 link.classList.add('active');
             }
@@ -68,7 +63,13 @@
                 <span class="nav-link-icon"><i class="fas fa-cog"></i></span>
                 <span class="nav-link-text">Settings</span>
             </a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown">
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown" data-bs-auto-close="outside">
+                <li>
+                    <button class="dropdown-item" id="themeSwitcher" type="button">
+                        <i id="themeIcon" class="fas fa-sun me-2"></i>Theme
+                    </button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/register">
                     <i class="fas fa-user-plus me-2"></i>Add user
                 </a></li>
