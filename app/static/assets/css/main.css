@@ -103,10 +103,14 @@ img {
 
 .main-background {
     height: auto;
-    min-height: 100vh;
+    min-height: 94vh;
     background-attachment: fixed;
     background-size: cover;
     background: var(--bs-gradient);
+}
+
+.main-background.fullscreen {
+    min-height: 100vh;
 }
 
 .blur::before {
@@ -121,11 +125,197 @@ img {
 .sidebar {
     height: 100%;
     width: 170px;
+    background-color: var(--bs-background); }
+
+/* Horizontal sidebar styles */
+.horizontal-sidebar {
+    width: 100%;
+    height: 6vh;
     position: fixed;
     top: 0;
     left: 0;
-    overflow-x: hidden;
-    background-color: var(--bs-background); }
+    right: 0;
+    z-index: 100;
+    background-color: var(--bs-background-dark);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.horizontal-sidebar .sidebar-container {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 15px;
+}
+
+.horizontal-sidebar .sidebar-header {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    background-color: transparent;
+    padding: 0 15px 0 0;
+    margin-right: 15px;
+    border-right: 1px solid var(--border-main-color);
+}
+
+.horizontal-sidebar .nav-links-container {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    overflow-x: auto;
+    flex-grow: 1;
+    scrollbar-width: none; /* Firefox */
+}
+
+.horizontal-sidebar .nav-links-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+.horizontal-sidebar .nav-link {
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-direction: row;
+    text-decoration: none;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.horizontal-sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-blue);
+}
+
+.horizontal-sidebar .nav-link.active {
+    color: var(--bs-blue);
+    position: relative;
+}
+
+.horizontal-sidebar .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 15px;
+    right: 15px;
+    height: 3px;
+    background-color: var(--bs-blue);
+}
+
+body.light-theme .horizontal-sidebar .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .horizontal-sidebar .nav-link.active {
+    background-color: rgba(0, 0, 0, 0.07);
+    color: var(--bs-blue);
+}
+
+.horizontal-sidebar .nav-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9em;
+}
+
+.horizontal-sidebar .nav-link-text {
+    font-size: 0.95em;
+}
+
+.horizontal-sidebar .settings-dropdown {
+    position: relative;
+    margin-left: auto; /* Pushes the element to the right side */
+    display: flex;
+    align-items: center;
+}
+
+/* Dropdown menu styles */
+.horizontal-sidebar .dropdown-menu {
+    background-color: var(--bs-background-dark);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    border: 1px solid var(--border-main-color);
+    padding: 8px 0;
+    z-index: 1000;
+    margin-top: 5px;
+}
+
+.horizontal-sidebar .dropdown-item {
+    color: var(--text-main-color);
+    padding: 8px 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+
+.horizontal-sidebar .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-blue);
+}
+
+.horizontal-sidebar .dropdown-divider {
+    border-top: 1px solid var(--border-main-color);
+    margin: 4px 0;
+}
+
+.horizontal-sidebar .dropdown-toggle::after {
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Light theme dropdown adjustments */
+body.light-theme .horizontal-sidebar .dropdown-menu {
+    background-color: var(--bs-white);
+    border: 1px solid var(--border-main-color);
+}
+
+body.light-theme .horizontal-sidebar .dropdown-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--bs-blue);
+}
+
+/* Form select styling */
+.form-select {
+    color: var(--text-main-color);
+    background-color: var(--bs-background-dark);
+    border-color: var(--border-main-color);
+}
+
+body.light-theme .form-select {
+    color: #212529; /* Black text for light theme */
+    background-color: #fff;
+    border-color: #ced4da;
+}
+
+/* Theme switcher button styles */
+.theme-switcher-btn {
+    position: fixed;
+    top: 1.2vh;
+    right: 1vh;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-main-color);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.theme-switcher-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--bs-blue);
+}
+
+body.light-theme .theme-switcher-btn {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .theme-switcher-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+
 
 .sidebar-header {
     font-size: 19px;
@@ -138,14 +328,13 @@ img {
     display: flex;
     flex-direction: column;
     height: 100%;
-    margin-left: 170px;
+    margin-left: 0;
+    margin-top: 6vh; /* Match the height of the horizontal-sidebar */
 }
 
+/* Replaced by horizontal sidebar */
 .main-body-header {
-    font-size: 19px;
-    padding: 16px;
-    height: 64px;
-    background-color: var(--bs-background);
+    display: none;
 }
 
 .full-screen-section {
@@ -2795,4 +2984,178 @@ textarea:focus  {
 pre {
     white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+/* Light Theme Overrides */
+body.light-theme {
+    --text-main-color: #212529; /* Dark Gray for text */
+    --border-main-color: #dee2e6; /* Light Gray for borders */
+    --bs-background: #ffffff; /* White */
+    --bs-background-dark: #f8f9fa; /* Very Light Gray */
+    --bs-gray-900: #e9ecef; /* Light Gray for body background */
+    --bs-gradient: #e9ecef; /* No gradient, solid light gray */
+    --card-bg: #ffffff; /* White for cards */
+    --pagination-bg: #ffffff; /* White for pagination */
+    --tooltip-bg: #343a40; /* Dark gray for tooltips */
+    --tooltip-color: #ffffff; /* White text for tooltips */
+
+    /* Adjust primary and secondary app colors if needed, or they'll inherit from :root */
+    /* --bs-primary-app: #dee2e6; */
+    /* --bs-secondary-app: #6c757d; */
+}
+
+body.light-theme .sidebar {
+    background-color: var(--bs-background-dark);
+}
+
+body.light-theme .horizontal-sidebar {
+    background-color: var(--bs-white);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .horizontal-sidebar {
+    background-color: var(--bs-white);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .sidebar-header {
+    background-color: #e9ecef; /* Slightly darker than sidebar bg */
+}
+
+body.light-theme .horizontal-sidebar .sidebar-header {
+    background-color: transparent;
+    border-right: 1px solid #dee2e6;
+}
+
+body.light-theme .horizontal-sidebar .sidebar-header {
+    background-color: transparent;
+    border-right: 1px solid #dee2e6;
+}
+
+body.light-theme .nav-link {
+    color: var(--text-main-color);
+}
+
+body.light-theme .nav-link:hover {
+    color: var(--bs-blue); /* Keep blue for hover, or choose a light theme specific one */
+}
+
+body.light-theme .table {
+    color: var(--text-main-color);
+    border-color: var(--border-main-color);
+}
+
+body.light-theme .table > :not(caption) > * > * {
+    background-color: var(--bs-background);
+    border-bottom-width: 1px;
+}
+
+body.light-theme .form-control {
+    color: var(--text-main-color);
+    background-color: #ffffff; /* White for form controls */
+    border: 1px solid var(--border-main-color);
+}
+
+body.light-theme .form-control:focus {
+    border-color: var(--bs-blue);
+    background-color: #ffffff;
+}
+
+body.light-theme .input-group-text {
+    color: var(--bs-primary);
+    background-color: #e9ecef; /* Light gray for input group text */
+    border: 1px solid var(--border-main-color);
+}
+
+body.light-theme textarea {
+    background-color: #ffffff;
+    color: var(--text-main-color);
+    border-color: var(--border-main-color);
+}
+
+body.light-theme textarea:focus {
+    border-color: var(--bs-primary);
+}
+
+body.light-theme .vue-select-imput {
+    --vs-controls-color: var(--text-main-color);
+    --vs-border-color: var(--border-main-color);
+    --vs-dropdown-bg: #ffffff;
+    --vs-dropdown-color: var(--text-main-color);
+    --vs-dropdown-option-color: var(--text-main-color);
+    --vs-dropdown-option--active-bg: #e9ecef;
+    --vs-dropdown-option--active-color: var(--text-main-color);
+}
+
+body.light-theme .badge-success {
+    --badge-bg: rgba(25, 135, 84, 0.1);
+    --badge-color: #198754 !important;
+    --badge-border-color: rgba(25, 135, 84, 0.2);
+}
+
+body.light-theme .badge-failure {
+    --badge-bg: rgba(220, 53, 69, 0.1);
+    --badge-color: #dc3545 !important;
+    --badge-border-color: rgba(220, 53, 69, 0.2);
+}
+
+body.light-theme .badge-primary {
+    --badge-bg: rgba(13, 110, 253, 0.1);
+    --badge-color: #0d6efd !important;
+    --badge-border-color: rgba(13, 110, 253, 0.2);
+}
+
+body.light-theme .btn-close {
+    fill: var(--text-main-color);
+}
+
+body.light-theme .loading-screen {
+    background-color: var(--bs-gradient);
+}
+
+body.light-theme .loading-message {
+    color: var(--text-main-color);
+}
+
+body.light-theme .btn-primary2 {
+    background-color: var(--bs-tertiary);
+    /* Adjust other btn-primary2 colors if needed for light theme */
+}
+body.light-theme .btn-primary2:hover {
+    background-color: var(--bs-cyan);
+}
+
+body.light-theme .btn-secondary2 {
+    background-color: var(--bs-danger);
+    /* Adjust other btn-secondary2 colors if needed for light theme */
+}
+body.light-theme .btn-secondary2:hover {
+    background-color: var(--bs-orange);
+}
+
+body.light-theme .btn-success2 {
+    background-color: var(--bs-teal);
+    color: #ffffff; /* Ensure text is visible */
+}
+body.light-theme .btn-success2:hover {
+    background-color: var(--bs-green);
+    color: #ffffff;
+}
+
+body.light-theme .btn-warning2 {
+    background-color: var(--bs-warning);
+    color: #000000; /* Ensure text is visible */
+}
+body.light-theme .btn-warning2:hover {
+    background-color: var(--bs-orange);
+    color: #000000;
+}
+
+body.light-theme .text-info {
+    color: var(--bs-info) !important; /* Ensure this uses a light-theme friendly info color if needed, or keep as is */
+}
+
+
+body.light-theme .theme-switcher-btn {
+    color: var(--text-main-color);
 }

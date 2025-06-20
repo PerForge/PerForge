@@ -10,8 +10,6 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header">
-                </div>
                 <div class="center-section">
                     <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
                         <div class="card-header">
@@ -137,7 +135,7 @@
       // Function to handle form submission
       function handleFormSubmit(event) {
           event.preventDefault();
-          
+
           if (!validateForm()) {
               return false;
           }
@@ -161,7 +159,7 @@
           });
 
           // Use the API client to save the integration
-          const apiCall = integrationId 
+          const apiCall = integrationId
               ? apiClient.integrations.update(integrationId, data, 'atlassian_confluence')
               : apiClient.integrations.create(data, 'atlassian_confluence');
 
@@ -188,7 +186,7 @@
       document.getElementById('deleteButton')?.addEventListener('click', function() {
           const integrationId = document.getElementById('config_id').value;
           const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-          
+
           apiClient.integrations.delete(integrationId, 'atlassian_confluence')
               .then(response => {
                   modal.hide();

@@ -10,8 +10,6 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header">
-                </div>
                 <div class="center-section">
                     <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
                         <div class="card-header">
@@ -224,7 +222,7 @@
         // Function to handle form submission
         function handleFormSubmit(event) {
             event.preventDefault();
-            
+
             if (!validateForm()) {
                 return false;
             }
@@ -245,7 +243,7 @@
 
             const grafanaId = formData.id;
             const dashboardInputs = document.querySelectorAll('.dashboardInput');
-            
+
             dashboardInputs.forEach((input, index) => {
                 const dashboardId = document.querySelector(`input[name='dashboards-${index}-id']`).value;
                 formData.dashboards.push({
@@ -256,7 +254,7 @@
             });
 
             // Use the API client to save the integration
-            const apiCall = id 
+            const apiCall = id
                 ? apiClient.integrations.update(id, formData, 'grafana')
                 : apiClient.integrations.create(formData, 'grafana');
 
@@ -283,7 +281,7 @@
         document.getElementById('deleteButton')?.addEventListener('click', function() {
             const integrationId = document.getElementById('config_id').value;
             const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-            
+
             apiClient.integrations.delete(integrationId, 'grafana')
                 .then(response => {
                     modal.hide();
