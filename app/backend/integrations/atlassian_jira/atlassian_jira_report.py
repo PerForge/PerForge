@@ -55,6 +55,64 @@ class AtlassianJiraReport(ReportingBase):
         else:
             return graph, ""
 
+    def format_table(self, metrics):
+        if not metrics:
+            return "No data available\n\n"
+
+        all_keys = set()
+        for record in metrics:
+            all_keys.update(record.keys())
+        
+        keys = sorted(list(all_keys))
+
+        if 'page' in keys:
+            keys.remove('page')
+            keys.insert(0, 'page')
+        elif 'transaction' in keys:
+            keys.remove('transaction')
+            keys.insert(0, 'transaction')
+
+        # Header
+        header = '||' + '||'.join(keys) + '||\n'
+        
+        # Body
+        body = []
+        for record in metrics:
+            row = []
+            for key in keys:
+                value = record.get(key, '')
+                value_str = ""
+
+                if value is None or value == 'None' or (isinstance(value, float) and (value != value)):
+                    value_str = " "
+                elif isinstance(value, str) and " -> " in value:
+                    try:
+                        parts = value.split(" -> ")
+                        if len(parts) == 2:
+                            first_val = float(parts[0])
+                            second_val = float(parts[1])
+                            value_str = value
+                            if first_val != 0:
+                                diff_pct = ((second_val - first_val) / first_val) * 100
+                                if diff_pct <= -10:
+                                    value_str = f'{{color:green}}{value}{{color}}'
+                                elif diff_pct >= 10:
+                                    value_str = f'{{color:red}}{value}{{color}}'
+                            elif second_val > first_val:
+                                value_str = f'{{color:red}}{value}{{color}}'
+                        else:
+                            value_str = value
+                    except (ValueError, ZeroDivisionError, IndexError):
+                        value_str = value
+                elif isinstance(value, float):
+                    value_str = f"{value:.2f}"
+                else:
+                    value_str = str(value)
+                row.append(value_str)
+            body.append('|' + '|'.join(row) + '|\n')
+
+        return header + "".join(body) + "\n"
+
     def generate_path(self, isgroup):
         if isgroup: title = self.group_title
         else: title = self.replace_variables(self.title)
