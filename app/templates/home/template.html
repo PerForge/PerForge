@@ -157,7 +157,7 @@
                                                     <label for="template">Template name</label>
                                                     <input v-model="name" id="template-name" class="form-control" type="text" required>
                                                 </div>
-                                                <div class="margin-all-10">
+                                                <div v-if="nfrs_switch" class="margin-all-10">
                                                     <label for="flow">NFR</label>
                                                     <v-select v-model="nfr" class="vue-select-imput" :options="nfrs" label="name">
                                                     </v-select>
@@ -172,47 +172,48 @@
                                     <div class="col-12 col-xl-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <div>
+                                                <div class="variables-container">
                                                     <label>Available variables:</label>
-                                                    <div>
-                                                        <label class="var-name">${current_vusers}:</label>
-                                                        <label class="var-description">Max number of threads.</label>
+
+                                                    <div class="variables-section  mt-3">
+                                                        <h6>Common variables:</h6>
+                                                        <div v-for="variable in commonVariables" :key="variable.name" class="variable-item">
+                                                            <label class="var-name" @click="copyToClipboard(variable.name)">${ variable.name }</label>
+                                                            <label class="var-description">${ variable.description }</label>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <label class="var-name">${current_duration}:</label>
-                                                        <label class="var-description">Duration of the test.</label>
+
+                                                    <div class="variables-section mt-3">
+                                                        <h6>Backend variables:</h6>
+                                                        <div v-for="variable in backendVariables" :key="variable.name" class="variable-item">
+                                                            <label class="var-name" @click="copyToClipboard(variable.name)">${ variable.name }</label>
+                                                            <label class="var-description">${ variable.description }</label>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <label class="var-name">${current_start_time}:</label>
-                                                        <label class="var-description">Start datetime for the test.</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-xl-12 mt-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div>
+                                                    <label>Available Tables:</label>
+                                                    <div class="text-description">Tables can be used in templates to display test metrics data using the following format:</div>
+                                                    <div class="variables-section mt-3">
+                                                        <h6>Backend Test Tables:</h6>
+                                                        <div v-for="table in backendTables" :key="table.name" class="variable-item">
+                                                            <label class="var-name" @click="copyToClipboard(table.name)">${ table.name }</label>
+                                                            <label class="var-description">${ table.description }</label>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <label class="var-name">${current_end_time}:</label>
-                                                        <label class="var-description">End datetime for the test.</label>
-                                                    </div>
-                                                    <div>
-                                                        <label class="var-name">${current_grafana_link}:</label>
-                                                        <label class="text-description">Link to Grafana dashboard with test results.</label>
-                                                    </div>
-                                                    <div>
-                                                        <label class="var-name">${baseline_vusers}:</label>
-                                                        <label class="var-description">Max number of threads for baseline test (If specified).</label>
-                                                    </div>
-                                                    <div>
-                                                        <label class="var-name">${baseline_duration}:</label>
-                                                        <label class="var-description">Duration of the baseline test (If specified).</label>
-                                                    </div>
-                                                    <div>
-                                                        <label class="var-name">${baseline_start_time}:</label>
-                                                        <label class="var-description">Start datetime for the baseline test (If specified).</label>
-                                                    </div>
-                                                    <div>
-                                                        <label class="var-name">${baseline_end_time}:</label>
-                                                        <label class="var-description">End datetime for the baseline test (If specified).</label>
-                                                    </div>
-                                                    <div>
-                                                        <label class="var-name">${baseline_grafana_link}:</label>
-                                                        <label class="var-description">Link to Grafana dashboard with baseline test results (If specified).</label>
+                                                    <div class="variables-section mt-3">
+                                                        <h6>Frontend Test Tables:</h6>
+                                                        <div v-for="table in frontendTables" :key="table.name" class="variable-item">
+                                                            <label class="var-name" @click="copyToClipboard(table.name)">${ table.name }</label>
+                                                            <label class="var-description">${ table.description }</label>
+                                                        </div>
+                                                        <div class="text-description mt-3">For frontend tables, always specify the aggregation type: median, mean, p90, p95, or p99. Please ensure that the desired aggregation type is available in InfluxDB</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -286,37 +287,69 @@
                 function initVueApp() {
                     const app = new Vue({
                     el: "#app",
+                    delimiters: ['${', '}'],
                     data() {
                         return {
+                            title: '',
+                            name: '',
                             graphs: [],
-                            nfrs: "",
-                            nfr: "",
-                            name: "",
-                            title: "",
+                            nfrs: [],
+                            nfr: '',
+                            template: [],
+                            template_prompts: [],
+                            aggregated_data_prompts: [],
+                            system_prompts: [],
+                            template_prompt_id: '',
+                            aggregated_prompt_id: '',
+                            system_prompt_id: '',
                             ai_switch: false,
                             ai_aggregated_data_switch: false,
                             ai_graph_switch: false,
                             ai_to_graphs_switch: false,
                             nfrs_switch: false,
-                            template_prompt_id: "",
-                            aggregated_prompt_id: "",
-                            system_prompt_id: "",
-                            drag: false,
-                            idCounter: 1, // Add a counter for generating IDs
-                            template: [
-                                {
-                                    graph_id  : null,
-                                    type      : 'text',
-                                    content   : '', // Changed from null to empty string
-                                    id: 1 // Use a simple integer instead of Date.now()
-                                }
-                            ],
-                            template_prompts: [],
-                            aggregated_data_prompts: [],
-                            system_prompts: [],
                             selectedTemplatePrompt: null,
                             selectedAggregatedDataPrompt: null,
                             selectedSystemPrompt: null,
+                            idCounter: 1,
+                            commonVariables: [
+                                { name: '${current_test_name}', description: 'Name of the current test.' },
+                                { name: '${current_duration}', description: 'Duration of the current test in seconds.' },
+                                { name: '${current_start_time}', description: 'Start time of the current test.' },
+                                { name: '${current_end_time}', description: 'End time of the current test.' },
+                                { name: '${baseline_test_name}', description: 'Name of the baseline test.' },
+                                { name: '${baseline_duration}', description: 'Duration of the baseline test in seconds.' },
+                                { name: '${baseline_start_time}', description: 'Start time of the baseline test.' },
+                                { name: '${baseline_end_time}', description: 'End time of the baseline test.' },
+                            ],
+                            backendVariables: [
+                                { name: '${current_max_active_users}', description: 'Max active users for the current test.' },
+                                { name: '${current_errors_pct_stats}', description: 'Error percentage for the current test.' },
+                                { name: '${current_median_response_time_stats}', description: 'Median response time for the current test.' },
+                                { name: '${current_median_throughput}', description: 'Median throughput for the current test.' },
+                                { name: '${current_pct90_response_time_stats}', description: '90th percentile response time for the current test.' },
+                                { name: '${current_grafana_link}', description: 'Grafana link for the current test.' },
+                                { name: '${baseline_max_active_users}', description: 'Max active users for the baseline test.' },
+                                { name: '${baseline_errors_pct_stats}', description: 'Error percentage for the baseline test.' },
+                                { name: '${baseline_median_response_time_stats}', description: 'Median response time for the baseline test.' },
+                                { name: '${baseline_median_throughput}', description: 'Median throughput for the baseline test.' },
+                                { name: '${baseline_pct90_response_time_stats}', description: '90th percentile response time for the baseline test.' },
+                                { name: '${baseline_grafana_link}', description: 'Grafana link for the baseline test.' },
+                            ],
+                            backendTables: [
+                                { name: '${aggregated_data_table_}', description: 'Aggregated metrics for backend tests. No aggregation type needed.' }
+                            ],
+                            frontendTables: [
+                                { name: '${google_web_vitals_table_median}', description: 'Web Vitals metrics (LCP, CLS, FID) with median aggregation.' },
+                                { name: '${timings_fully_loaded_table_median}', description: 'Page fully loaded timings with median aggregation.' },
+                                { name: '${timings_page_timings_table_median}', description: 'Page timings metrics with median aggregation.' },
+                                { name: '${timings_main_document_table_median}', description: 'Main document load timings with median aggregation.' },
+                                { name: '${cpu_long_tasks_table_median}', description: 'CPU long tasks metrics with median aggregation.' },
+                                { name: '${cdp_performance_js_heap_used_size_table_median}', description: 'JavaScript heap used size metrics with median aggregation.' },
+                                { name: '${cdp_performance_js_heap_total_size_table_median}', description: 'JavaScript heap total size metrics with median aggregation.' },
+                                { name: '${content_types_table_}', description: 'Content types metrics with median aggregation.' },
+                                { name: '${first_party_content_types_table_}', description: 'First-party content types metrics with median aggregation.' },
+                                { name: '${third_party_content_types_table_}', description: 'Third-party content types metrics with median aggregation.' }
+                            ]
                         };
                     },
                     mounted() {
@@ -363,6 +396,14 @@
                         }
                     },
                     methods: {
+                        copyToClipboard(text) {
+                            navigator.clipboard.writeText(text).then(() => {
+                                showFlashMessage(`Copied '${text}' to clipboard`, 'success');
+                            }, (err) => {
+                                showFlashMessage('Failed to copy text', 'error');
+                                console.error('Could not copy text: ', err);
+                            });
+                        },
                         addTextElement() {
                             this.idCounter++; // Increment the counter
                             this.template.push({

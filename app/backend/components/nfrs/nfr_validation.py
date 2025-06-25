@@ -14,9 +14,16 @@
 
 import re
 import logging
+from enum import Enum
 
 from app.backend.components.nfrs.nfrs_db         import DBNFRs
 from app.backend.components.projects.projects_db import DBProjects
+
+# NFR validation status enum - moved from metric.py
+class NFRStatus(Enum):
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    NOT_EVALUATED = "NOT_EVALUATED"
 
 
 class Nfr:
@@ -29,18 +36,6 @@ class Nfr:
         self.threshold   = nfr["threshold"]
         self.weight      = nfr["weight"]
         self.description = description
-
-
-class DataRow:
-    def __init__(self, data_row):
-        self.avg         = data_row["avg"]
-        self.count       = data_row["count"]
-        self.errors      = data_row["errors"]
-        self.rpm         = data_row["rpm"]
-        self.pct50       = data_row["pct50"]
-        self.pct75       = data_row["pct75"]
-        self.pct90       = data_row["pct90"]
-        self.transaction = data_row["transaction"]
 
 
 class NFRValidation:
@@ -57,13 +52,13 @@ class NFRValidation:
         try:
             if isinstance(value, (int, float)) and isinstance(threshold, (int, float)):
                 if operation == '>':
-                    return "PASSED" if value > threshold else "FAILED"
+                    return NFRStatus.PASSED if value > threshold else NFRStatus.FAILED
                 elif operation == '<':
-                    return "PASSED" if value < threshold else "FAILED"
+                    return NFRStatus.PASSED if value < threshold else NFRStatus.FAILED
                 elif operation == '>=':
-                    return "PASSED" if value >= threshold else "FAILED"
+                    return NFRStatus.PASSED if value >= threshold else NFRStatus.FAILED
                 elif operation == '<=':
-                    return "PASSED" if value <= threshold else "FAILED"
+                    return NFRStatus.PASSED if value <= threshold else NFRStatus.FAILED
             else:
                 return "threshold is not a number"
         except TypeError:
@@ -116,8 +111,16 @@ class NFRValidation:
     # Method takes a list of NFRs
     # Constructs a flux request to the InfluxDB based on the NFRs
     # Takes test data and compares it with the NFRs
-    def compare_with_nfrs(self, nfr_config, data):
-        nfr_result = {}
+    def calculate_nfr_weights(self, nfr_config):
+        """
+        Calculate weights for NFRs based on the configuration.
+
+        Args:
+            nfr_config: NFR configuration containing rules
+
+        Returns:
+            tuple: (distribute_weight, bad_weight)
+        """
         # Initialize flags and variables
         bad_weight = False
 
@@ -139,45 +142,109 @@ class NFRValidation:
             bad_weight = True
             logging.warning("The total weight of your NFRs exceeds 100, so all NFRs will be considered equal.")
 
+        return distribute_weight, bad_weight
+
+    def compare_with_nfrs(self, nfr_config, table, distribute_weight=None, bad_weight=False):
+        """
+        Compare table data with NFR configuration and update metrics accordingly.
+
+        Args:
+            nfr_config: NFR configuration containing rules
+            table: MetricsTable object containing both data and metrics to validate/update
+            distribute_weight: Weight to distribute for NFRs without specified weights
+            bad_weight: Flag indicating if the total weight exceeds 100%
+        """
+        # Create a dictionary to track NFR results by description
+        # This will be used to find existing NFR results when we're processing multiple tables
+        nfr_results_dict = {}
+        for nfr in self.nfr_result:
+            if "nfr" in nfr:
+                nfr_results_dict[nfr["nfr"]] = nfr
+
+        # Group metrics by scope (transaction/page)
+        metrics_by_scope = {}
+        if table and hasattr(table, 'metrics'):
+            for metric in table.metrics:
+                scope = metric.scope or 'unknown'
+                if scope not in metrics_by_scope:
+                    metrics_by_scope[scope] = {}
+                metrics_by_scope[scope][metric.name] = metric
+
+        # Get all unique scopes
+        all_scopes = list(metrics_by_scope.keys())
+
         # Iterate through NFRs
         for nfr_row in nfr_config["rows"]:
             nfr = Nfr(nfr_row, self.generate_name(nfr_row))
-            if nfr.scope == 'each' or nfr.scope in [item['transaction'] for item in data] or nfr.regex:
-                # Iterate through Data for validation
-                for row in data:
-                    data_row = DataRow(row)
-                    # Applying NFRs weights
-                    if nfr.weight is None or bad_weight:
-                        nfr.weight = distribute_weight
-                    # Check if the regex matches the transaction
-                    is_regex_match = self.is_match(regex=nfr.scope, string=data_row.transaction) if nfr.regex else False
 
-                    # Determine whether to process this row based on the NFR scope
-                    should_process = nfr.scope == 'each' or nfr.scope == data_row.transaction or is_regex_match
+            # Get or create NFR result for this NFR
+            nfr_desc = nfr.description
+            if nfr_desc in nfr_results_dict:
+                # This NFR has already been processed in a previous table
+                nfr_result = nfr_results_dict[nfr_desc]
+                # Remove it from self.nfr_result since we'll re-add it later
+                self.nfr_result = [r for r in self.nfr_result if r.get("nfr") != nfr_desc]
+            else:
+                # This is the first time we're seeing this NFR
+                nfr_result = {}
 
-                    if should_process:
-                        result = nfr_result.get("status", 'PASSED')
+            # Applying NFRs weights
+            if nfr.weight is None or bad_weight:
+                nfr.weight = distribute_weight
+
+            # Determine which scopes we need to evaluate
+            applicable_scopes = []
+            if nfr.scope == 'each':
+                applicable_scopes = all_scopes
+            elif nfr.regex:
+                # Check regex against all scopes
+                applicable_scopes = [scope for scope in all_scopes if self.is_match(regex=nfr.scope, string=scope)]
+            elif nfr.scope in all_scopes:
+                applicable_scopes = [nfr.scope]
+
+            if applicable_scopes:
+                # Get initial status - default to PASSED if not set
+                result = nfr_result.get("status", NFRStatus.PASSED)
+
+                # Process each applicable scope
+                for scope in applicable_scopes:
+                    if scope in metrics_by_scope and nfr.metric in metrics_by_scope[scope]:
+                        # Get the metric object
+                        metric = metrics_by_scope[scope][nfr.metric]
+                        # Get metric value
+                        metric_value = metric.value
+
                         # Call compare_value function here
-                        compare_result = self.compare_value(getattr(data_row, nfr.metric), nfr.operation, nfr.threshold)
-                        if "FAILED" == compare_result:
-                            self.transaction_result.append(f"{data_row.transaction} transaction did not meet the NFR as its {nfr.metric} of {getattr(data_row, nfr.metric)} {self.operation_to_text(nfr.operation)} {nfr.threshold}.")
+                        compare_result = self.compare_value(metric_value, nfr.operation, nfr.threshold)
+
+                        # Update the metric's NFR status
+                        metric.set_nfr_status(compare_result, nfr.threshold, nfr.operation)
+
+                        if compare_result == NFRStatus.FAILED:
+                            self.transaction_result.append(f"{scope}: {nfr.metric} {metric_value} {self.operation_to_text(nfr.operation)} {nfr.threshold}.")
+
+                        # Update the overall result status
                         # Append NFR result only if it was not set to FAILED before
-                        nfr_result["status"] = compare_result if result != 'FAILED' else result
-                        nfr_result["nfr"] = nfr.description
-                        nfr_result["weight"] = float(nfr.weight)
-            self.nfr_result.append(nfr_result)
-            nfr_result = {}
+                        if compare_result == NFRStatus.FAILED or result == NFRStatus.FAILED:
+                            result = NFRStatus.FAILED
+
+                # Update NFR result
+                nfr_result["status"] = result
+                nfr_result["nfr"] = nfr.description
+                nfr_result["weight"] = float(nfr.weight)
+                self.nfr_result.append(nfr_result)
 
     def calculate_apdex(self):
         total_weight = 0
         total_passed_weight = 0
+        self.apdex = "N/A"
         # Iterate over each NFR result
         if len(self.nfr_result) > 0:
             for nfr in self.nfr_result:
                 if 'weight' in nfr:
                     total_weight += nfr['weight']
                     # If the NFR status is PASSED, add the weight to total_passed_weight
-                    if nfr['status'] == 'PASSED':
+                    if nfr['status'] == NFRStatus.PASSED:
                         total_passed_weight += nfr['weight']
             # Calculate Apdex as the percentage of total_passed_weight in total_weight
             if total_weight == 0:
@@ -187,23 +254,57 @@ class NFRValidation:
             else:
                 self.apdex = round((total_passed_weight / total_weight) * 100)
 
-    def create_summary(self, id, data):
+    def create_summary(self, id, all_tables):
+        """
+        Create a summary of NFR validation results using all available tables.
+
+        Args:
+            id: The NFR configuration ID to use for validation
+            all_tables: Dictionary of all available MetricsTable objects for validation
+
+        Returns:
+            A summary string of the validation results
+        """
+        # logging is already imported at the top of the file
+
+        # Reset result collections to avoid duplications when processing multiple tables
+        self.nfr_result = []
+        self.transaction_result = []
+
         # Get NFRs for the specific application
         nfr_config = DBNFRs.get_config_by_id(project_id=self.project, id=id)
-        if nfr_config:
-            self.compare_with_nfrs(nfr_config, data)
-            self.calculate_apdex()
-            summary = 'Overall performance based on NFRs:\n'
-            if self.apdex == "N/A": result = "cannot be evaluated based on NFRs, as the provided scope does not align with any available data."
-            elif self.apdex >= 80 : result = "are acceptable"
-            elif self.apdex < 80 and self.apdex >= 70: result = "are conditionally acceptable"
-            else: result = "are unacceptable"
-            summary += f"- Test results {result}.\n"
-            summary += f"- {self.apdex}% of NFRs are satisfied.\n\n"
-            if len(self.transaction_result) > 0:
-                summary += "Requests that do not meet NFRs:\n"
-                for row in self.transaction_result:
-                    summary += f"- {row}\n"
-        else:
-            summary = f"No NFRs for test provided."
+        if not nfr_config:
+            return f"No NFRs for test provided."
+
+        # Find appropriate tables to use for validation
+        # First check if we have any tables at all
+        if not all_tables:
+            logging.warning("No tables available for NFR validation")
+            return "NFR validation failed: No tables available for validation."
+
+        # Calculate NFR weights once for all tables
+        distribute_weight, bad_weight = self.calculate_nfr_weights(nfr_config)
+
+        # Process all tables - this is an enhancement from the previous implementation
+        # that only processed the first table
+        for table_name, table in all_tables.items():
+            if hasattr(table, 'metrics') and table.metrics:
+                # Compare with NFRs and update metric objects directly
+                # Pass the pre-calculated weights to ensure consistency across all tables
+                self.compare_with_nfrs(nfr_config, table, distribute_weight, bad_weight)
+
+        # Calculate and format the results
+        self.calculate_apdex()
+        summary = 'Overall performance based on NFRs:\n'
+        if self.apdex == "N/A": result = "cannot be evaluated based on NFRs, as the provided scope does not align with any available data."
+        elif self.apdex >= 80 : result = "are acceptable"
+        elif self.apdex < 80 and self.apdex >= 70: result = "are conditionally acceptable"
+        else: result = "are unacceptable"
+        summary += f"- Test results {result}.\n"
+        summary += f"- {self.apdex}% of NFRs are satisfied.\n\n"
+        if len(self.transaction_result) > 0:
+            summary += "Requests that do not meet NFRs:\n"
+            for row in self.transaction_result:
+                summary += f"- {row}\n"
+
         return summary

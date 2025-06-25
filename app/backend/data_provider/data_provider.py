@@ -70,9 +70,6 @@ class DataProvider:
         """Retrieve test log data from the database."""
         return self.ds_obj.get_test_log()
 
-    def get_aggregated_table(self, test_title: str, start_time: str, end_time: str):
-        return self.ds_obj.get_aggregated_table(test_title, start_time, end_time)
-
     def get_response_time_data(self) -> None:
         """Retrieve response time data (placeholder)."""
         pass
@@ -188,10 +185,6 @@ class DataProvider:
         )
         test_obj.set_metric('errors_pct_stats', value)
 
-        # Get aggregated data table
-        if hasattr(test_obj, 'aggregated_table'):
-            test_obj.set_metric('aggregated_table', self.ds_obj.get_aggregated_table(test_title=test_obj.test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
-
 
     def _collect_frontend_test_data(self, test_obj: FrontendTestData) -> None:
         """
@@ -201,8 +194,7 @@ class DataProvider:
             test_obj: FrontendTestData object to populate
         """
         # Get aggregated data table
-        if hasattr(test_obj, 'aggregated_table'):
-            test_obj.set_metric('aggregated_table', "")
+        pass
 
     # Metric initialization and configuration
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:

@@ -27,7 +27,7 @@ from app.backend.components.projects.projects_db                           impor
 from app.backend.components.templates.templates_db                         import DBTemplates
 from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
 from app.backend.data_provider.data_provider                               import DataProvider
-from app.backend.data_provider.test_data                                  import TestData, BaseTestData
+from app.backend.data_provider.test_data                                   import BaseTestData, MetricsTable
 
 from typing import Dict, Any
 
@@ -87,34 +87,36 @@ class ReportingBase:
 
             # Check if it's a table variable with aggregation suffix
             # Format: table_name_table_aggregation (e.g., timings_fully_loaded_table_median)
-            match = re.match(r"(.+?)_table_(median|mean|p75|p90|p95|p99)$", var)
-            if match and hasattr(self.current_test_obj, "get_table") and self.dp_obj.test_type == "front_end":
+            match = re.match(r"(.+?)_table_(median|mean|p75|p90|p95|p99|)$", var)
+            if match and hasattr(self.current_test_obj, "get_table"):
                 table_name = match.group(1)
                 aggregation = match.group(2)
 
                 # Lazy load the table with specified aggregation
                 try:
                     # Get the table from current test object
-                    table = self.current_test_obj.get_table(table_name, aggregation)
+                    table: MetricsTable = self.current_test_obj.get_table(table_name, aggregation)
 
                     # If baseline test object exists, set baseline metrics
                     if self.baseline_test_obj is not None and hasattr(self.baseline_test_obj, "get_table"):
                         try:
                             # Get the corresponding table from baseline
-                            baseline_table = self.baseline_test_obj.get_table(table_name, aggregation)
-                            if baseline_table is not None:
+                            baseline_table: MetricsTable = self.baseline_test_obj.get_table(table_name, aggregation)
+                            if baseline_table is not None and baseline_table.metrics:
                                 # Set baseline metrics in current table to enable difference calculation
-                                table.set_baseline_metrics(baseline_table.get_current_metrics())
+                                # Apply baseline values to current metrics directly
+                                table.set_baseline_metrics(baseline_table.metrics)
                         except Exception as e:
                             logging.warning(f"Error loading baseline table '{table_name}' with aggregation '{aggregation}': {e}")
 
                     if table is not None:
                         # Format the table based on the report type
-                        # When baseline is available, use comparison metrics
+                        # When baseline is available, use comparison metrics (baseline -> current format)
                         if self.baseline_test_obj is not None and table.has_baseline():
-                            metrics = table.get_comparison_metrics()
+                            metrics = table.format_comparison_metrics()
                         else:
-                            metrics = table.get_current_metrics()
+                            # No baseline, just format current metrics
+                            metrics = table.format_metrics()
                         value = self.format_table(metrics)
                         text = text.replace("${" + var + "}", value)
                         continue
@@ -143,22 +145,31 @@ class ReportingBase:
     def analyze_template(self):
         overall_summary = ""
         nfr_summary     = ""
-        if self.dp_obj.test_type == "front_end":
-            data = self.current_test_obj.create_aggregated_table()
-        data = self.current_test_obj.aggregated_table
+
+        # Get all tables for validation and AI analysis
+        all_tables = self.current_test_obj.get_all_tables()
+        all_tables_json = self.current_test_obj.get_all_tables_json()
+
+        # NFR validation using all tables
         if self.nfrs_switch:
-            nfr_summary = self.validation_obj.create_summary(self.nfr, data)
+            nfr_summary = self.validation_obj.create_summary(self.nfr, all_tables)
+
         if self.ml_switch:
             self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj) # Update ML analysis in TestData object
+
         if self.ai_switch:
+            # Use JSON string of all tables for AI analysis
             if self.ai_aggregated_data_switch:
-                self.ai_support_obj.analyze_aggregated_data(data, self.aggregated_prompt_id)
+                self.ai_support_obj.analyze_aggregated_data(all_tables_json, self.aggregated_prompt_id)
+
+            # Generate template summary with ML anomalies if available
             if self.ml_switch:
                 overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary, self.current_test_obj.ml_anomalies)
             else:
                 overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
         else:
             overall_summary += f"\n\n {nfr_summary}"
+
         return overall_summary
 
     def analyze_template_group(self):
@@ -193,17 +204,25 @@ class ReportingBase:
 
         parameters = {}
 
-        # Simply convert all available metrics to parameters with their exact names
+        # First, collect all available metrics that are not considered metadata
         for metric_name in test_obj.get_available_metrics():
-            # Apply prefix to parameter name but keep original metric name
             param_name = f"{prefix}{metric_name}"
             parameters[param_name] = test_obj.get_metric(metric_name)
 
-        # Standard parameter names for compatibility with existing templates
-        # These will be named the same regardless of the underlying storage
-        if not prefix:
-            parameters["test_name"] = test_obj.get_metric('application')
-            parameters["test_type"] = test_obj.get_metric('test_type')
+        # Then, explicitly collect common parameters that might be filtered out as metadata
+        # This ensures that essential variables for reporting are always present.
+        common_params_to_collect = {
+            'duration': 'duration',
+            'start_time': 'start_time_human',
+            'end_time': 'end_time_human',
+            'test_name': 'application',
+            'test_type': 'test_type'
+        }
+
+        for report_name, attr_name in common_params_to_collect.items():
+            if test_obj.has_metric(attr_name):
+                param_name = f"{prefix}{report_name}"
+                parameters[param_name] = test_obj.get_metric(attr_name)
 
         return parameters
 
@@ -256,7 +275,7 @@ class ReportingBase:
         self.parameters = {}
 
         # Process baseline test data if provided
-        if baseline_test_title is not None:
+        if baseline_test_title is not None and baseline_test_title != "no data":
             # First collect the baseline test object
             self.baseline_test_obj = self.dp_obj.collect_test_obj(test_title=baseline_test_title)
 
@@ -276,6 +295,6 @@ class ReportingBase:
         self.current_end_timestamp = self.current_test_obj.get_metric('end_time_timestamp')
         self.test_name = self.current_test_obj.get_metric('application')
 
-        # Process current test data
-        self.parameters.update(self._collect_parameters(self.current_test_obj))
-        self.parameters.update(self._create_grafana_link(self.current_test_obj, current_test_title))
+        # Process current test data with 'current_' prefix
+        self.parameters.update(self._collect_parameters(self.current_test_obj, "current_"))
+        self.parameters.update(self._create_grafana_link(self.current_test_obj, current_test_title, "current_"))

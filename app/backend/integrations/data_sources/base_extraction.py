@@ -188,9 +188,17 @@ class DataExtractionBase(ABC):
     def get_test_log(self) -> List[Dict[str, Any]]:
         """
         Retrieve the test log data, validated to ensure required fields are present.
-        :return: A list of dictionaries containing test log data.
+        Results are sorted by test_title in descending order.
+        
+        :return: A list of dictionaries containing test log data, sorted by test_title in descending order.
         """
-        return self._fetch_test_log()
+        test_log = self._fetch_test_log()
+        
+        # Sort by test_title in descending order
+        if test_log:
+            test_log.sort(key=lambda x: x.get('test_title', ''), reverse=True)
+        
+        return test_log
 
     @abstractmethod
     def _fetch_start_time(self, test_title: str, time_format: str) -> Any:
@@ -264,7 +272,7 @@ class DataExtractionBase(ABC):
     # ===================================================================
 
     @abstractmethod
-    def _fetch_aggregated_table(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
+    def _fetch_aggregated_data(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         """
         Fetch the aggregated table for a test between the specified time range.
         :param test_title: The title of the test.
@@ -275,16 +283,17 @@ class DataExtractionBase(ABC):
         pass
 
     @validate_output(expected_keys={'avg', 'count', 'errors', 'pct50', 'pct75', 'pct90', 'rpm', 'stddev', 'transaction'})
-    def get_aggregated_table(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
+    def get_aggregated_data(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
         """
         Retrieve the aggregated table data for the specified test, validated to ensure required fields are present.
         :param test_title: The title of the test.
         :param start: The start time.
         :param end: The end time.
+        :param aggregation: The aggregation type to use ('median', 'mean', 'p90', 'p99').
         :return: A list of dictionaries containing aggregated table data.
         """
         try:
-            aggregated_table = self._fetch_aggregated_table(test_title, start, end)
+            aggregated_table = self._fetch_aggregated_data(test_title, start, end)
         except Exception as e:
             logging.warning(f"Error getting aggregated table: {str(e)}")
             aggregated_table = []
@@ -630,300 +639,280 @@ class DataExtractionBase(ABC):
     # ===================================================================
 
     @abstractmethod
-    def _fetch_google_web_vitals(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_google_web_vitals(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch Google Web Vitals metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of Google Web Vitals metrics
         """
         pass
 
-    def get_google_web_vitals(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_google_web_vitals(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve Google Web Vitals metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of Google Web Vitals metrics
         """
         try:
-            result = self._fetch_google_web_vitals(test_title, start, end, bucket, aggregation)
+            result = self._fetch_google_web_vitals(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting Google Web Vitals: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_timings_fully_loaded(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_timings_fully_loaded(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch fully loaded timing metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of fully loaded timing metrics
         """
         pass
 
-    def get_timings_fully_loaded(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_timings_fully_loaded(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve fully loaded timing metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of fully loaded timing metrics
         """
         try:
-            result = self._fetch_timings_fully_loaded(test_title, start, end, bucket, aggregation)
+            result = self._fetch_timings_fully_loaded(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting fully loaded timings: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_timings_page_timings(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_timings_page_timings(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch page timing metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of page timing metrics
         """
         pass
 
-    def get_timings_page_timings(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_timings_page_timings(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve page timing metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of page timing metrics
         """
         try:
-            result = self._fetch_timings_page_timings(test_title, start, end, bucket, aggregation)
+            result = self._fetch_timings_page_timings(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting page timings: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_timings_main_document(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_timings_main_document(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch main document timing metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of main document timing metrics
         """
         pass
 
-    def get_timings_main_document(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_timings_main_document(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve main document timing metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of main document timing metrics
         """
         try:
-            result = self._fetch_timings_main_document(test_title, start, end, bucket, aggregation)
+            result = self._fetch_timings_main_document(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting main document timings: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_cpu_long_tasks(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_cpu_long_tasks(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch CPU long tasks metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of CPU long tasks metrics
         """
         pass
 
-    def get_cpu_long_tasks(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_cpu_long_tasks(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve CPU long tasks metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of CPU long tasks metrics
         """
         try:
-            result = self._fetch_cpu_long_tasks(test_title, start, end, bucket, aggregation)
+            result = self._fetch_cpu_long_tasks(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting CPU long tasks: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch JavaScript heap used size metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of JS heap used size metrics
         """
         pass
 
-    def get_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve JavaScript heap used size metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of JS heap used size metrics
         """
         try:
-            result = self._fetch_cdp_performance_js_heap_used_size(test_title, start, end, bucket, aggregation)
+            result = self._fetch_cdp_performance_js_heap_used_size(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting JS heap used size: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch JavaScript heap total size metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of JS heap total size metrics
         """
         pass
 
-    def get_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve JavaScript heap total size metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of JS heap total size metrics
         """
         try:
-            result = self._fetch_cdp_performance_js_heap_total_size(test_title, start, end, bucket, aggregation)
+            result = self._fetch_cdp_performance_js_heap_total_size(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting JS heap total size: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch content type metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of content type metrics
         """
         pass
 
-    def get_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve content type metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of content type metrics
         """
         try:
-            result = self._fetch_content_types(test_title, start, end, bucket, aggregation)
+            result = self._fetch_content_types(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting content types: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_first_party_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_first_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch first party content type metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of first party content type metrics
         """
         pass
 
-    def get_first_party_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_first_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve first party content type metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of first party content type metrics
         """
         try:
-            result = self._fetch_first_party_content_types(test_title, start, end, bucket, aggregation)
+            result = self._fetch_first_party_content_types(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting first party content types: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_third_party_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_third_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch third party content type metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of third party content type metrics
         """
         pass
 
-    def get_third_party_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_third_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve third party content type metrics from frontend test.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of third party content type metrics
         """
         try:
-            result = self._fetch_third_party_content_types(test_title, start, end, bucket, aggregation)
+            result = self._fetch_third_party_content_types(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting third party content types: {str(e)}")
             result = {}

@@ -62,6 +62,77 @@ class SmtpMailReport(ReportingBase):
         else:
             return graph, ""
 
+    def format_table(self, metrics):
+        if not metrics:
+            return "<p>No data available</p>"
+        
+        all_keys = set()
+        for record in metrics:
+            all_keys.update(record.keys())
+        
+        keys = sorted(list(all_keys))
+
+        # Prioritize 'page' or 'transaction' column
+        if 'page' in keys:
+            keys.remove('page')
+            keys.insert(0, 'page')
+        elif 'transaction' in keys:
+            keys.remove('transaction')
+            keys.insert(0, 'transaction')
+
+        # Start building the HTML table
+        html = ['<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">']
+        
+        # Header
+        html.append('<thead><tr style="background-color: #f2f2f2;">')
+        for key in keys:
+            html.append(f'<th>{key}</th>')
+        html.append('</tr></thead>')
+        
+        # Body
+        html.append('<tbody>')
+        for record in metrics:
+            html.append('<tr>')
+            for key in keys:
+                value = record.get(key, '')
+                value_str = ""
+                style = ""
+
+                # Handle null values
+                if value is None or value == 'None' or (isinstance(value, float) and (value != value)):
+                    value_str = ""
+                # Check for baseline comparison pattern
+                elif isinstance(value, str) and " -> " in value:
+                    try:
+                        parts = value.split(" -> ")
+                        if len(parts) == 2:
+                            first_val = float(parts[0])
+                            second_val = float(parts[1])
+                            value_str = value
+                            if first_val != 0:
+                                diff_pct = ((second_val - first_val) / first_val) * 100
+                                if diff_pct <= -10:
+                                    style = 'style="color:green;font-weight:bold;"'
+                                elif diff_pct >= 10:
+                                    style = 'style="color:red;font-weight:bold;"'
+                            elif second_val > first_val:
+                                style = 'style="color:red;font-weight:bold;"'
+                        else:
+                            value_str = value
+                    except (ValueError, ZeroDivisionError, IndexError):
+                        value_str = value
+                # Format float to two decimal places
+                elif isinstance(value, float):
+                    value_str = f"{value:.2f}"
+                else:
+                    value_str = str(value)
+
+                html.append(f'<td {style}>{value_str}</td>')
+            html.append('</tr>')
+        
+        html.append('</tbody></table>')
+        return "".join(html)
+
     def generate_path(self, isgroup):
         return self.group_title if isgroup else self.replace_variables(self.title)
 

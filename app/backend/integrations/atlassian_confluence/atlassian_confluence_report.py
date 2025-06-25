@@ -91,11 +91,17 @@ class AtlassianConfluenceReport(ReportingBase):
         for record in metrics:
             all_keys.update(record.keys())
 
-        # Sort keys for consistent display with 'page' first if it exists
+        # Sort keys for consistent display with 'page' or 'transaction' first if it exists
         keys = sorted(all_keys)
         if 'page' in keys:
             keys.remove('page')
             keys.insert(0, 'page')
+        elif 'transaction' in keys:
+            keys.remove('transaction')
+            keys.insert(0, 'transaction')
+
+        # Find the diff percentage columns for color coding
+        diff_pct_columns = [key for key in keys if key.endswith('_diff_pct')]
 
         # Start building the HTML table
         html = ["<table>", "<thead>", "<tr>"]
@@ -120,28 +126,41 @@ class AtlassianConfluenceReport(ReportingBase):
                 if value is None or value == 'None' or (isinstance(value, float) and (value != value)):
                     value = ""
                     html.append(f"<td>{value}</td>")
-                # Check for comparison pattern like "2772.00 > 2790.00"
-                elif isinstance(value, str) and " > " in value:
+                # Check for baseline comparison pattern (e.g., "15.00 -> 12.00")
+                elif isinstance(value, str) and " -> " in value:
                     try:
-                        # Split the string and parse the numbers
-                        parts = value.split(" > ")
+                        # Parse the baseline and current values
+                        parts = value.split(" -> ")
                         if len(parts) == 2:
-                            first_val = float(parts[0])
-                            second_val = float(parts[1])
+                            first_val = float(parts[0])  # baseline
+                            second_val = float(parts[1]) # current
                             
-                            # Determine color based on comparison
-                            # Green if second value is less (improvement)
-                            # Red if second value is more (degradation)
-                            if second_val < first_val:
-                                html.append(f"<td><span style='color: green;'>{value}</span></td>")
-                            elif second_val > first_val:
-                                html.append(f"<td><span style='color: red;'>{value}</span></td>")
+                            # Calculate percentage difference and apply color based on threshold
+                            if first_val != 0:
+                                diff_pct = ((second_val - first_val) / first_val) * 100
+                                
+                                # Color green if 10% or more faster (improvement)
+                                if diff_pct <= -10:
+                                    html.append(f"<td><span style='color: green;'>{value}</span></td>")
+                                # Color red if 10% or more slower (degradation)
+                                elif diff_pct >= 10:
+                                    html.append(f"<td><span style='color: red;'>{value}</span></td>")
+                                # Otherwise, no color
+                                else:
+                                    html.append(f"<td>{value}</td>")
                             else:
-                                html.append(f"<td>{value}</td>")
+                                # Handle baseline is zero case: color red if current value is higher
+                                if second_val > first_val:
+                                    html.append(f"<td><span style='color: red;'>{value}</span></td>")
+                                else:
+                                    html.append(f"<td>{value}</td>")
                         else:
                             html.append(f"<td>{value}</td>")
-                    except (ValueError, IndexError):
+                    except (ValueError, ZeroDivisionError, IndexError):
                         # If parsing fails, just display the value normally
+                        html.append(f"<td>{value}</td>")
+                    except Exception:
+                        # Catch any other unexpected errors
                         html.append(f"<td>{value}</td>")
                 # Format numeric values to two decimal places
                 elif isinstance(value, float):

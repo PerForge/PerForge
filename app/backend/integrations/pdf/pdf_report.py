@@ -313,12 +313,21 @@ class PdfReport(ReportingBase):
         for record in metrics:
             all_keys.update(record.keys())
 
-        # Sort keys for consistent display with 'page' first if it exists
-        keys = sorted(all_keys)
-        if 'page' in keys:
+        # Filter out metadata fields (_baseline, _diff, _diff_pct, _color)
+        keys = [k for k in sorted(all_keys) if not (k.endswith('_baseline') or 
+                                k.endswith('_diff') or 
+                                k.endswith('_diff_pct') or 
+                                k.endswith('_color'))]
+        
+        # Make sure transaction is the first column
+        if 'transaction' in keys:
+            keys.remove('transaction')
+            keys.insert(0, 'transaction')
+        # Fallback to page if no transaction column
+        elif 'page' in keys:
             keys.remove('page')
             keys.insert(0, 'page')
-
+            
         # Create the table data structure with header row
         table_data = [keys]
 
