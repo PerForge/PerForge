@@ -152,10 +152,16 @@
                 actionsCell.style.width = '20%';
 
                 const editButton = document.createElement('a');
-                editButton.className = 'btn btn-secondary';
+                editButton.className = 'btn btn-primary';
                 editButton.href = `/nfr?nfr_config=${nfr.id}`;
                 editButton.textContent = 'Edit';
                 actionsCell.appendChild(editButton);
+
+                const cloneButton = document.createElement('a');
+                cloneButton.className = 'btn btn-secondary ms-2';
+                cloneButton.href = `/nfr?nfr_config=${nfr.id}&clone=true`;
+                cloneButton.textContent = 'Clone';
+                actionsCell.appendChild(cloneButton);
 
                 const deleteButton = document.createElement('button');
                 deleteButton.className = 'btn btn-danger ms-2';

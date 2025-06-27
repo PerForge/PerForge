@@ -40,7 +40,7 @@ def get_tests():
         influxdb_configs       = DBInfluxdb.get_configs(project_id=project_id)
         db_configs = []
         for config in influxdb_configs:
-            db_configs.append({ "id": config["id"], "name": config["name"], "source_type": "influxdb_v2"})
+            db_configs.append({ "id": config["id"], "name": config["name"], "source_type": "influxdb_v2", "listener": config["listener"]})
         template_configs       = DBTemplates.get_configs_brief(project_id=project_id)
         template_group_configs = DBTemplateGroups.get_configs(project_id=project_id)
         output_configs         = DBProjects.get_project_output_configs(project_id=project_id)

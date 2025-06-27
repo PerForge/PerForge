@@ -306,7 +306,7 @@
               if (prompt.type === 'default') {
                   // Default prompts can only be viewed
                   const viewButton = document.createElement('button');
-                  viewButton.className = 'btn btn-secondary';
+                  viewButton.className = 'btn btn-primary';
                   viewButton.textContent = 'View';
                   viewButton.setAttribute('data-bs-toggle', 'modal');
                   viewButton.setAttribute('data-bs-target', '#viewPromptModal');
@@ -314,17 +314,39 @@
                       showViewPromptModal(prompt);
                   });
                   actionsCell.appendChild(viewButton);
+
+                  const cloneButton = document.createElement('button');
+                  cloneButton.className = 'btn btn-secondary ms-2';
+                  cloneButton.textContent = 'Clone';
+                  cloneButton.addEventListener('click', function() {
+                      showClonePromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
+                  });
+                  actionsCell.appendChild(cloneButton);
               } else {
                   // Custom prompts can be edited and deleted
                   const editButton = document.createElement('button');
-                  editButton.className = 'btn btn-secondary';
+                  editButton.className = 'btn btn-primary';
                   editButton.textContent = 'Edit';
                   editButton.setAttribute('data-bs-toggle', 'modal');
                   editButton.setAttribute('data-bs-target', '#promptModal');
                   editButton.addEventListener('click', function() {
                       showEditPromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
                   });
                   actionsCell.appendChild(editButton);
+
+                  const cloneButton = document.createElement('button');
+                  cloneButton.className = 'btn btn-secondary ms-2';
+                  cloneButton.textContent = 'Clone';
+                  cloneButton.addEventListener('click', function() {
+                      showClonePromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
+                  });
+                  actionsCell.appendChild(cloneButton);
 
                   const deleteButton = document.createElement('button');
                   deleteButton.className = 'btn btn-danger ms-2';
@@ -346,6 +368,18 @@
           document.getElementById('view_place').value = prompt.place;
           document.getElementById('view_prompt').value = prompt.prompt;
           document.getElementById('view_scope').value = prompt.project_id ? 'PROJECT' : 'ALL';
+      }
+
+      function showClonePromptModal(prompt) {
+          document.getElementById('prompt_id').value = '';
+          document.getElementById('name').value = prompt.name + ' COPY';
+          document.getElementById('place').value = prompt.place;
+          document.getElementById('prompt').value = prompt.prompt;
+          document.getElementById('prompt_type').value = 'custom';
+          document.getElementById('project_id').value = prompt.project_id ? 'project' : '';
+
+          // Update modal title
+          document.getElementById('addnewpromptLabel').textContent = 'Clone Prompt';
       }
 
       // Function to show the edit prompt modal

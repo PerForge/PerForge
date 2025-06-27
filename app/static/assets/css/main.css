@@ -3159,3 +3159,9 @@ body.light-theme .text-info {
 body.light-theme .theme-switcher-btn {
     color: var(--text-main-color);
 }
+
+.btn.disabled,
+.btn:disabled {
+    pointer-events: none;
+    opacity: 0.65;
+}

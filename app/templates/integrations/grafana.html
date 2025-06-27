@@ -245,9 +245,10 @@
             const dashboardInputs = document.querySelectorAll('.dashboardInput');
 
             dashboardInputs.forEach((input, index) => {
-                const dashboardId = document.querySelector(`input[name='dashboards-${index}-id']`).value;
+                const dashboardIdInput = document.querySelector(`input[name='dashboards-${index}-id']`);
+                const dashboardId = dashboardIdInput ? dashboardIdInput.value : null;
                 formData.dashboards.push({
-                    id: dashboardId ? dashboardId : null,
+                    id: id && dashboardId ? dashboardId : null,
                     content: document.querySelector(`input[name='dashboards-${index}-content']`).value,
                     grafana_id: grafanaId
                 });

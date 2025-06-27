@@ -24,7 +24,7 @@
                                     </div>
                                     <select class="form-select ms-2" id="dataSourceId">
                                         {% for db in db_configs %}
-                                            <option value='{"source_type": "{{ db.source_type }}", "id": "{{ db.id }}"}'>{{ db.name }}</option>
+                                            <option value='{{ db | tojson | safe }}'>{{ db.name }}</option>
                                         {% endfor %}
                                     </select>
                                     <select class="form-select ms-2" id="selectedAction">
@@ -304,8 +304,12 @@
                         btn.className = 'btn btn-danger';
                         const dataSource = document.getElementById('dataSourceId').value;
                         const dataSourceJson = JSON.parse(dataSource);
-                        btn.href = `/report?test_title=${test.test_title}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}`;
                         btn.textContent = 'Report';
+                        if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
+                            btn.classList.add('disabled');
+                        } else {
+                            btn.href = `/report?test_title=${test.test_title}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}`;
+                        }
                         reportCell.appendChild(btn);
                     });
 

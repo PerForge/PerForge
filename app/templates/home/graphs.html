@@ -69,8 +69,9 @@
                                           {% endif %}
                                       {% endfor %}
                                   </td>
-                                  <td class="actions" style="width: 15%;">
-                                      <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#graphModal" data-graph='{{ graph | tojson | safe }}'>Edit</button>
+                                  <td class="actions">
+                                      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#graphModal" data-graph='{{ graph | tojson | safe }}'>Edit</button>
+                                      <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#graphModal" data-clone-graph='{{ graph | tojson | safe }}'>Clone</button>
                                       <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ graph.id }}">Delete</button>
                                   </td>
                               </tr>
@@ -126,59 +127,61 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <div class="mt-3">
-                  <label>Name</label>
-                  <input type="text" class="form-control" id="name" name="name">
-                  <input type="hidden" id="graph_id" name="id">
-              </div>
-              <div class="mt-3">
-                  <label>Grafana</label>
-                  <select class="form-select" id="grafana_id" name="grafana_id">
-                      {% for grafana in grafana_configs %}
-                          <option value="{{ grafana.id }}">{{ grafana.name }}</option>
-                      {% endfor %}
-                  </select>
-              </div>
-              <div class="mt-3">
-                  <label>Dashboard Id</label>
-                  <select class="form-select" id="dash_id" name="dash_id">
-                  </select>
-              </div>
-              <div class="mt-3">
-                  <label>View panel</label>
-                  <input type="text" class="form-control" id="view_panel" name="view_panel">
-              </div>
-              <div class="mt-3">
-                  <label>Panel width</label>
-                  <input type="text" class="form-control" id="width" name="width">
-              </div>
-              <div class="mt-3">
-                  <label class="mt-3">Panel height</label>
-                  <input type="text" class="form-control" id="height" name="height">
-              </div>
-              <div class="mt-3">
-                  <label class="mt-3">Custom vars (optional)</label>
-                  <div class="tooltip-container">
-                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                      <div class="tooltip-content">
-                          You can add additional custom variables to draw graphs with these variables. For example, use the following format: &var-varname=varvalue
-                      </div>
+              <form id="graphForm">
+                  <div class="mt-3">
+                      <label>Name</label>
+                      <input type="text" class="form-control" id="name" name="name">
+                      <input type="hidden" id="graph_id" name="id">
                   </div>
-                  <input type="text" class="form-control" id="custom_vars" name="custom_vars">
-              </div>
-              <div class="mt-3">
-                  <label>Prompt (optional)</label>
-                  <select class="form-select" id="prompt_id" name="prompt_id">
-                      <option value="" selected>Select a prompt</option>
-                      {% for prompt in graph_prompts %}
-                          <option value="{{ prompt.id }}" data-prompt="{{ prompt.prompt }}">{{ prompt.name }}</option>
-                      {% endfor %}
-                  </select>
-              </div>
-              <div class="mt-3">
-                  <label>Prompt value</label>
-                  <textarea class="form-control" id="prompt_value" rows="3" readonly></textarea>
-              </div>
+                  <div class="mt-3">
+                      <label>Grafana</label>
+                      <select class="form-select" id="grafana_id" name="grafana_id">
+                          {% for grafana in grafana_configs %}
+                              <option value="{{ grafana.id }}">{{ grafana.name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+                  <div class="mt-3">
+                      <label>Dashboard Id</label>
+                      <select class="form-select" id="dash_id" name="dash_id">
+                      </select>
+                  </div>
+                  <div class="mt-3">
+                      <label>View panel</label>
+                      <input type="text" class="form-control" id="view_panel" name="view_panel">
+                  </div>
+                  <div class="mt-3">
+                      <label>Panel width</label>
+                      <input type="text" class="form-control" id="width" name="width">
+                  </div>
+                  <div class="mt-3">
+                      <label class="mt-3">Panel height</label>
+                      <input type="text" class="form-control" id="height" name="height">
+                  </div>
+                  <div class="mt-3">
+                      <label class="mt-3">Custom vars (optional)</label>
+                      <div class="tooltip-container">
+                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                          <div class="tooltip-content">
+                              You can add additional custom variables to draw graphs with these variables. For example, use the following format: &var-varname=varvalue
+                          </div>
+                      </div>
+                      <input type="text" class="form-control" id="custom_vars" name="custom_vars">
+                  </div>
+                  <div class="mt-3">
+                      <label>Prompt (optional)</label>
+                      <select class="form-select" id="prompt_id" name="prompt_id">
+                          <option value="" selected>Select a prompt</option>
+                          {% for prompt in graph_prompts %}
+                              <option value="{{ prompt.id }}" data-prompt="{{ prompt.prompt }}">{{ prompt.name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+                  <div class="mt-3">
+                      <label>Prompt value</label>
+                      <textarea class="form-control" id="prompt_value" rows="3" readonly></textarea>
+                  </div>
+              </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -225,34 +228,51 @@
           var modal = $('#graphModal');
           var form = modal.find('form');
 
-          $('button[data-bs-toggle="modal"][data-bs-target="#graphModal"]').click(function() {
-              var graph = $(this).data('graph');
+          $('#graphModal').on('show.bs.modal', function(event) {
+              var button = $(event.relatedTarget);
+              var graphData = button.data('graph');
+              var cloneData = button.data('clone-graph');
+              var modal = $(this);
 
-              // Reset the form
+              // Reset form
+              $('#graphForm')[0].reset();
               $('#graph_id').val('');
-              $('#name').val('');
-              $('#view_panel').val('');
-              $('#width').val('');
-              $('#height').val('');
-              $('#custom_vars').val('');
-              $('#prompt_id').val('');
+              $('#prompt_value').val('');
 
-              // Set modal title based on whether we're adding or editing
-              if (graph) {
-                  $('#addnewgraphLabel').text('Edit graph');
+              if (cloneData) {
+                  // Cloning an existing graph
+                  modal.find('.modal-title').text('Clone Graph');
+                  $('#name').val(cloneData.name + ' COPY');
+                  $('#grafana_id').val(cloneData.grafana_id).change();
 
-                  // Populate form fields with graph data
-                  $('#graph_id').val(graph.id);
-                  $('#name').val(graph.name);
-                  $('#grafana_id').val(graph.grafana_id).change();
-                  $('#dash_id').val(graph.dash_id);
-                  $('#view_panel').val(graph.view_panel);
-                  $('#width').val(graph.width);
-                  $('#height').val(graph.height);
-                  $('#custom_vars').val(graph.custom_vars);
-                  $('#prompt_id').val(graph.prompt_id || '');
+                  setTimeout(function() {
+                      $('#dash_id').val(cloneData.dash_id);
+                  }, 100);
+
+                  $('#view_panel').val(cloneData.view_panel);
+                  $('#width').val(cloneData.width);
+                  $('#height').val(cloneData.height);
+                  $('#custom_vars').val(cloneData.custom_vars);
+                  $('#prompt_id').val(cloneData.prompt_id || '').change();
+              } else if (graphData) {
+                  // Editing an existing graph
+                  modal.find('.modal-title').text('Edit Graph');
+                  $('#graph_id').val(graphData.id);
+                  $('#name').val(graphData.name);
+                  $('#grafana_id').val(graphData.grafana_id).change();
+
+                  setTimeout(function() {
+                      $('#dash_id').val(graphData.dash_id);
+                  }, 100);
+
+                  $('#view_panel').val(graphData.view_panel);
+                  $('#width').val(graphData.width);
+                  $('#height').val(graphData.height);
+                  $('#custom_vars').val(graphData.custom_vars);
+                  $('#prompt_id').val(graphData.prompt_id || '').change();
               } else {
-                  $('#addnewgraphLabel').text('Add graph');
+                  // Adding a new graph
+                  modal.find('.modal-title').text('Add Graph');
               }
           });
 

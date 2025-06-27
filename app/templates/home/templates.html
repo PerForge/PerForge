@@ -196,7 +196,7 @@
                         <td class="aggregated_prompt_id">${aggregatedPrompt.name || ''}</td>
                         <td class="ai-switch">${template.ai_switch}</td>
                         <td class="actions" style="width: 20%;">
-                            <a class="btn btn-secondary" href="/template?template_config=${template.id}">Edit</a>
+                            <a class="btn btn-primary" href="/template?template_config=${template.id}">Edit</a>
                             <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal${template.id}">Delete</a>
                         </td>
                     `;
@@ -270,7 +270,7 @@
                         <td class="prompt_id">${templateGroupPrompt.name || ''}</td>
                         <td class="ai_summary">${group.ai_summary}</td>
                         <td class="actions" style="width: 20%;">
-                            <a class="btn btn-secondary" href="/template-group?template_group_config=${group.id}">Edit</a>
+                            <a class="btn btn-primary" href="/template-group?template_group_config=${group.id}">Edit</a>
                             <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteGroupModal${group.id}">Delete</a>
                         </td>
                     `;
