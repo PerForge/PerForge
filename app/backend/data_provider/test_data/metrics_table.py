@@ -155,7 +155,7 @@ class MetricsTable:
             for metric_name, metric in metrics_dict.items():
                 # Format value to max 2 decimal places if it's a float
                 if isinstance(metric.value, float):
-                    row[metric_name] = f"{metric.value:.2f}"
+                    row[metric_name] = round(metric.value, 2)
                 else:
                     row[metric_name] = metric.value
             result.append(row)

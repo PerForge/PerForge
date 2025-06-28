@@ -151,6 +151,8 @@
     </div>
 
     <script>
+      let listJsInstance;
+
       document.addEventListener('DOMContentLoaded', function() {
         // Load prompts when the page loads
         loadPrompts();
@@ -159,20 +161,9 @@
         const searchInput = document.querySelector('.search-input');
         if (searchInput) {
             searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                const rows = document.querySelectorAll('#prompts-table-body tr');
-
-                rows.forEach(row => {
-                    const name = row.querySelector('.name').textContent.toLowerCase();
-                    const promptText = row.querySelector('.prompt').textContent.toLowerCase();
-                    const place = row.querySelector('.place').textContent.toLowerCase();
-
-                    if (name.includes(searchTerm) || promptText.includes(searchTerm) || place.includes(searchTerm)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
+                if (listJsInstance) {
+                    listJsInstance.search(this.value);
+                }
             });
         }
 
@@ -223,8 +214,7 @@
       function loadPrompts() {
           apiClient.prompts.getAll()
               .then(response => {
-                  if (response.data && response.data.prompts) {
-                      // Split prompts into default and custom
+                  if (response.data && Array.isArray(response.data.prompts)) {
                       const defaultPrompts = response.data.prompts.filter(p => p.type === 'default');
                       const customPrompts = response.data.prompts.filter(p => p.type === 'custom');
 
@@ -232,12 +222,14 @@
                       const showCustom = document.getElementById('selectedTypeSwitch').checked;
                       renderPrompts(showCustom ? customPrompts : defaultPrompts);
                   } else {
-                      showFlashMessage('No prompts found or error loading prompts', 'error');
+                      showFlashMessage('No prompts found.', 'info');
+                      renderPrompts([]);
                   }
               })
               .catch(error => {
                   console.error('Error loading prompts:', error);
                   showFlashMessage(error.message || 'Error loading prompts', 'error');
+                  renderPrompts([]);
               });
       }
 
@@ -250,6 +242,9 @@
               const emptyRow = document.createElement('tr');
               emptyRow.innerHTML = '<td colspan="6" class="text-center">No prompts found</td>';
               tableBody.appendChild(emptyRow);
+              if (listJsInstance) {
+                  listJsInstance.clear();
+              }
               return;
           }
 
@@ -360,6 +355,20 @@
               row.appendChild(actionsCell);
               tableBody.appendChild(row);
           });
+
+          const options = {
+              valueNames: ['name', 'prompt', 'place', 'type', 'project_id'],
+              page: 15,
+              pagination: true
+          };
+
+          setTimeout(() => {
+            if (listJsInstance) {
+              listJsInstance.reIndex();
+            } else {
+              listJsInstance = new List('table-id', options);
+            }
+          }, 0);
       }
 
       // Function to show the view prompt modal

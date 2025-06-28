@@ -151,6 +151,7 @@
                 }
 
                 const dataSource_select = document.getElementById("dataSourceId");
+                let currentAbortController = null;
 
                 // Initialize from cookie if exists
                 const savedDataSource = getCookie("selectedDataSource");
@@ -173,14 +174,22 @@
                 loadData();
 
                 function loadData(){
+                    // If there's a pending request, abort it.
+                    if (currentAbortController) {
+                        currentAbortController.abort();
+                    }
+                    // Create a new AbortController for the new request.
+                    currentAbortController = new AbortController();
+                    const signal = currentAbortController.signal;
+
                     var dataSource = $("#dataSourceId").val();
                     const dataSourceJson = JSON.parse(dataSource);
                     const sourceType = encodeURIComponent(dataSourceJson.source_type);
                     const id = encodeURIComponent(dataSourceJson.id);
                     $("#spinner").show();
 
-                    // Use the API client instead of direct fetch
-                    apiClient.tests.getTestData(sourceType, id)
+                    // Use the API client instead of direct fetch, passing the signal
+                    apiClient.tests.getTestData(sourceType, id, { signal })
                         .then((response) => {
                             if(response.status === 'success'){
                                 updateTable(response.data.tests);
@@ -192,6 +201,11 @@
                             $("#spinner").hide();
                         })
                         .catch((error) => {
+                            // If the error is an AbortError, it means we cancelled it intentionally.
+                            if (error.name === 'AbortError') {
+                                console.log('Fetch aborted');
+                                return; // Don't show an error message.
+                            }
                             var tableBody = document.getElementById("bulk-select-body");
                             tableBody.innerHTML = ''; // Clear the table body
                             showFlashMessage('Failed to load test data. Please try again.', 'error');

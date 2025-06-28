@@ -191,8 +191,29 @@
       </div>
     </div>
     <script>
+      let listJsInstance;
+
       $(document).ready(function() {
-          var grafanaConfigs = {{ grafana_configs | tojson | safe }};
+          const options = {
+              valueNames: ['name', 'grafana', 'dash_id', 'view_panel', 'height', 'width', 'prompt_id'],
+              page: 15,
+              pagination: true
+          };
+
+          setTimeout(() => {
+              listJsInstance = new List('table-id', options);
+          }, 0);
+
+          // Set up search functionality
+          const searchInput = document.querySelector('.search-input');
+          if (searchInput) {
+              searchInput.addEventListener('input', function() {
+                  if (listJsInstance) {
+                      listJsInstance.search(this.value);
+                  }
+              });
+          }
+          var grafanaConfigs = '{{ grafana_configs | tojson | safe }}';
 
           $('#grafana_id').change(function() {
               var selectedGrafanaId = $(this).val();

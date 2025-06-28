@@ -2937,9 +2937,9 @@ textarea:focus  {
     position: fixed;
     /* Change to fixed to ensure it stays in place while scrolling */
     top: 0;
-    left: 170px;
+    left: 0;
     /* Adjust this value based on the width of your sidebar */
-    width: calc(100% - 170px);
+    width: 100%;
     /* Adjust this value based on the width of your sidebar */
     height: 100%;
     background-color: var(--bs-gradient);

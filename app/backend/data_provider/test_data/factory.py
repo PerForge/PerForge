@@ -25,8 +25,3 @@ class TestDataFactory:
             return FrontendTestData()
         # Default to backend test for backward compatibility
         return BackendTestData()
-
-
-# For backward compatibility, map TestData to BackendTestData
-# This allows existing code to continue working without changes
-TestData = BackendTestData

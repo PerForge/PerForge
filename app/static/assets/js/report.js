@@ -31,8 +31,8 @@ async function fetchData(testTitle, sourceType, id) {
 }
 
 function showLoadingScreen(loadingScreen, loadingMessage) {
-    loadingScreen.style.display = 'flex'; 
-    loadingMessage.innerText = 'Preparing your tests data'; 
+    loadingScreen.style.display = 'flex';
+    loadingMessage.innerText = 'Preparing your tests data';
 }
 
 function hideLoadingScreen(loadingScreen) {
@@ -60,7 +60,9 @@ function handleFetchedData(data) {
     createGraphs(chartData, styling, layoutConfig);
 
     // Attach event listeners after rows are inserted
-    initializeListJs();
+    if (aggregatedTable && aggregatedTable.length > 0) {
+        initializeListJs();
+    }
     addDropdownEventListeners(chartData, styling, layoutConfig);
 }
 
@@ -73,9 +75,9 @@ function updateTestDetails(testDetails) {
 function updatePerformanceCard(summary, performanceStatus) {
     const card = document.querySelector('.card[style*="border-left"]');
     const summaryElement = card.querySelector('#summaryCard');
-    
+
     const color = performanceStatus ? '#02d051' : '#ffc107';
-    
+
     card.style.borderLeft = `4px solid ${color}`;
     summaryElement.innerHTML = summary; // Changed from textContent to innerHTML
 }
@@ -89,8 +91,28 @@ function updateCards(statistics) {
 }
 
 function updateTable(aggregatedTable) {
-    const tbody = document.querySelector('#aggregated-table .list');
+    const tableContainer = document.querySelector('#aggregated-table');
+    if (!tableContainer) return; // Exit if the table container doesn't exist
+
+    const tbody = tableContainer.querySelector('.list');
+    const dataComponentCard = tableContainer.closest('.card'); // Find the closest parent with class 'card'
+
+    // Clear previous content
     tbody.innerHTML = '';
+
+    // Check if aggregatedTable is null or empty
+    if (!aggregatedTable || aggregatedTable.length === 0) {
+        // Hide the table's parent card container if there's no data
+        if (dataComponentCard) {
+            dataComponentCard.style.display = 'none';
+        }
+        return; // Exit the function
+    }
+
+    // If there is data, ensure the container is visible
+    if (dataComponentCard) {
+        dataComponentCard.style.display = 'block';
+    }
 
     aggregatedTable.forEach(stat => {
         const row = `
@@ -99,14 +121,14 @@ function updateTable(aggregatedTable) {
                 <button class="dropdown-btn btn btn-primary" data-target="chart-${stat.transaction}">˅</button>
                 ${stat.transaction}
             </th>
-            <th class="count">${stat.count}</th>
-            <th class="avg">${stat.avg}</th>
-            <th class="pct50">${stat.pct50}</th>
-            <th class="pct75">${stat.pct75}</th>
-            <th class="pct90">${stat.pct90}</th>
-            <th class="rpm">${stat.rpm.toFixed(2)}</th>
-            <th class="errors">${stat.errors.toFixed(2)}</th>
-            <th class="stddev">${stat.stddev}</th>
+            <th class="count">${stat.count ?? 'N/A'}</th>
+            <th class="avg">${stat.avg ?? 'N/A'}</th>
+            <th class="pct50">${stat.pct50 ?? 'N/A'}</th>
+            <th class="pct75">${stat.pct75 ?? 'N/A'}</th>
+            <th class="pct90">${stat.pct90 ?? 'N/A'}</th>
+            <th class="rpm">${typeof stat.rpm === 'number' ? stat.rpm.toFixed(2) : 'N/A'}</th>
+            <th class="errors">${typeof stat.errors === 'number' ? stat.errors.toFixed(2) : 'N/A'}</th>
+            <th class="stddev">${stat.stddev ?? 'N/A'}</th>
         </tr>
         <tr class="graph-container" id="graph-${stat.transaction}" style="display: none;" data-transaction="${stat.transaction}">
             <td colspan="9">
@@ -118,8 +140,24 @@ function updateTable(aggregatedTable) {
 }
 
 function updateAnalysisTable(analysisData) {
-    const tbody = document.querySelector('#analysis-table .list');
-    tbody.innerHTML = ''; 
+    const tableContainer = document.querySelector('#analysis-table');
+    if (!tableContainer) return;
+
+    const tbody = tableContainer.querySelector('.list');
+    const cardContainer = tableContainer.closest('.card');
+
+    tbody.innerHTML = '';
+
+    if (!analysisData || analysisData.length === 0) {
+        if (cardContainer) {
+            cardContainer.style.display = 'none';
+        }
+        return;
+    }
+
+    if (cardContainer) {
+        cardContainer.style.display = 'block';
+    }
 
     analysisData.forEach(analysis => {
         const badgeClass = getBadgeClass(analysis.status);
@@ -311,8 +349,8 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
             text: title,
             font: {
                 color: styling.title_font_color,
-                family: styling.font_family, 
-                size: styling.title_size 
+                family: styling.font_family,
+                size: styling.title_size
             }
         },
         paper_bgcolor: styling.paper_bgcolor,
@@ -320,33 +358,33 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
         xaxis: {
             tickfont: {
                 color: styling.axis_font_color,
-                family: styling.font_family, 
-                size: styling.xaxis_tickfont_size 
+                family: styling.font_family,
+                size: styling.xaxis_tickfont_size
             },
             color: styling.axis_font_color,
-            gridcolor: styling.gridcolor 
+            gridcolor: styling.gridcolor
         },
         yaxis: {
             tickfont: {
                 color: leftYAxisColor,
-                family: styling.font_family, 
-                size: styling.yaxis_tickfont_size 
+                family: styling.font_family,
+                size: styling.yaxis_tickfont_size
             },
             color: leftYAxisColor,
-            ticksuffix: ` ${metrics.find(metric => !metric.useRightYAxis).yAxisUnit}`, 
-            zeroline: false, 
+            ticksuffix: ` ${metrics.find(metric => !metric.useRightYAxis).yAxisUnit}`,
+            zeroline: false,
             gridcolor: styling.gridcolor,
             rangemode: 'tozero' // Ensure Y-axis starts at 0
         },
         yaxis2: {
             tickfont: {
-                color: rightYAxisColor, 
-                family: styling.font_family, 
-                size: styling.yaxis_tickfont_size 
+                color: rightYAxisColor,
+                family: styling.font_family,
+                size: styling.yaxis_tickfont_size
             },
             color: rightYAxisColor,
-            ticksuffix: ` ${metrics.find(metric => metric.useRightYAxis)?.yAxisUnit || ''}`, 
-            zeroline: false, 
+            ticksuffix: ` ${metrics.find(metric => metric.useRightYAxis)?.yAxisUnit || ''}`,
+            zeroline: false,
             overlaying: 'y',
             side: 'right',
             showgrid: false,
@@ -357,15 +395,15 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
             bordercolor: styling.hover_bordercolor,
             font: {
                 color: styling.hover_font_color,
-                family: styling.font_family 
+                family: styling.font_family
             }
         },
         legend: {
-            orientation: 'h', 
+            orientation: 'h',
             x: 0,
             y: -0.2,
             xanchor: 'left',
-            yanchor: 'top' 
+            yanchor: 'top'
         },
         ...layoutConfig // Spread the layout configuration
     };
@@ -411,7 +449,7 @@ function createScatterChartForResponseTimes(avgResponseTimePerReq, elementId, st
             tickfont: {
                 color: styling.axis_font_color,
                 family: styling.font_family,
-                size: styling.xaxis_tickfont_size 
+                size: styling.xaxis_tickfont_size
             },
             color: styling.axis_font_color,
             gridcolor: styling.gridcolor
@@ -424,7 +462,7 @@ function createScatterChartForResponseTimes(avgResponseTimePerReq, elementId, st
             },
             color: styling.axis_font_color,
             gridcolor: styling.gridcolor,
-            zeroline: false 
+            zeroline: false
         },
         hoverlabel: {
             bgcolor: styling.hover_bgcolor,

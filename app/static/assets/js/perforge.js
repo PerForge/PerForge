@@ -454,50 +454,44 @@
 
             const updateListControls = () => {
               listInfo &&
-                (listInfo.innerHTML = `${list.i} to ${numberOfcurrentItems} <span> Items of </span>${totalItem}`);
+                (listInfo.innerHTML = `${list.i} to ${list.i + list.visibleItems.length - 1} <span> Items of </span>${totalItem}`);
 
               paginationButtonPrev &&
                 togglePaginationButtonDisable(
                   paginationButtonPrev,
-                  pageCount === 1
+                  list.i === 1
                 );
               paginationButtonNext &&
                 togglePaginationButtonDisable(
                   paginationButtonNext,
-                  pageCount === pageQuantity
+                  list.i + list.visibleItems.length >= totalItem
                 );
-
-              if (pageCount > 1 && pageCount < pageQuantity) {
-                togglePaginationButtonDisable(paginationButtonNext, false);
-                togglePaginationButtonDisable(paginationButtonPrev, false);
-              }
             };
 
             // List info
             updateListControls();
 
+            list.on('updated', item => {
+              updateListControls();
+            });
+
             if (paginationButtonNext) {
               paginationButtonNext.addEventListener('click', e => {
                 e.preventDefault();
-                pageCount += 1;
-
                 const nextInitialIndex = list.i + itemsPerPage;
-                nextInitialIndex <= list.size() &&
+                if (nextInitialIndex <= list.size()) {
                   list.show(nextInitialIndex, itemsPerPage);
-                numberOfcurrentItems += list.visibleItems.length;
-                updateListControls();
+                }
               });
             }
 
             if (paginationButtonPrev) {
               paginationButtonPrev.addEventListener('click', e => {
                 e.preventDefault();
-                pageCount -= 1;
-
-                numberOfcurrentItems -= list.visibleItems.length;
                 const prevItem = list.i - itemsPerPage;
-                prevItem > 0 && list.show(prevItem, itemsPerPage);
-                updateListControls();
+                if (prevItem > 0) {
+                  list.show(prevItem, itemsPerPage);
+                }
               });
             }
 

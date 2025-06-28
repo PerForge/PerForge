@@ -17,7 +17,7 @@ const apiClient = {
      * @param {Object} params - Query parameters
      * @returns {Promise} - Promise that resolves with the API response
      */
-    get: function(endpoint, params = {}) {
+    get: function(endpoint, params = {}, options = {}) {
         const url = new URL(this.baseUrl + endpoint, window.location.origin);
 
         // Add query parameters
@@ -35,7 +35,8 @@ const apiClient = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            signal: options.signal
         })
         .then(response => {
             if (!response.ok) {
@@ -693,11 +694,11 @@ const apiClient = {
          * @param {string} id - Optional ID for the data source
          * @returns {Promise} - Promise that resolves with test data
          */
-        getTestData: function(sourceType, id) {
+        getTestData: function(sourceType, id, options = {}) {
             return apiClient.get('/tests/data', {
                 source_type: sourceType,
                 id: id
-            });
+            }, options);
         },
         
         /**
