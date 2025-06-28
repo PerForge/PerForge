@@ -52,9 +52,13 @@ def get_nfr():
         project_id   = request.cookies.get('project')
         project_data = DBProjects.get_config_by_id(id=project_id)
         nfr_id       = request.args.get('nfr_config')
+        clone        = request.args.get('clone')
         nfr_data     = {}
         if nfr_id:
             nfr_data = DBNFRs.get_config_by_id(project_id=project_id, id=nfr_id)
+            if clone:
+                nfr_data['name'] = f"{nfr_data.get('name', '')} COPY"
+                nfr_id = None
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00020.value, "error")

@@ -28,9 +28,13 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="templates" data-list='{"valueNames":["name", "actions"], "page": 5, "pagination": true}'>
+                            <div id="templates">
                                 <div class="d-flex align-items-center justify-content-end mb-3">
                                     <div class="d-flex">
+                                        <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
+                                            <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" id="templates-search"/>
+                                            <span class="fas fa-search search-box-icon"></span>
+                                        </div>
                                         <a class="btn btn-primary ms-2" type="button" href="/template">Add template</a>
                                     </div>
                                 </div>
@@ -83,9 +87,13 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="template-groups" data-list='{"valueNames":["name", "actions"], "page": 5, "pagination": true}'>
+                            <div id="template-groups">
                                 <div class="d-flex align-items-center justify-content-end mb-3">
                                     <div class="d-flex">
+                                        <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
+                                            <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" id="template-groups-search"/>
+                                            <span class="fas fa-search search-box-icon"></span>
+                                        </div>
                                         <a class="btn btn-primary ms-2" type="button" href="/template-group">Add template group</a>
                                     </div>
                                 </div>
@@ -127,15 +135,16 @@
             </div>
         </div>
         <script>
+            let templatesListJs;
+            let templateGroupsListJs;
+
             function deleteTemplate(templateId) {
                 apiClient.templates.delete(templateId)
                     .then(response => {
                         showFlashMessage("Template deleted successfully", "success");
-                        // Close the modal
                         const modalElement = document.getElementById('deleteModal' + templateId);
                         const modal = bootstrap.Modal.getInstance(modalElement);
                         modal.hide();
-                        // Reload the page to refresh the template list
                         window.location.reload();
                     })
                     .catch(error => {
@@ -144,9 +153,7 @@
                     });
             }
 
-            // Load templates data using API client
             document.addEventListener('DOMContentLoaded', function() {
-                // Fetch all required data
                 Promise.all([
                     apiClient.templates.getAll(),
                     apiClient.templateGroups.getAll(),
@@ -163,29 +170,36 @@
                     const aggregatedDataPrompts = aggregatedDataPromptsResponse.data.prompts || [];
                     const templateGroupPrompts = templateGroupPromptsResponse.data.prompts || [];
 
-                    // Render templates
                     renderTemplates(templates, nfrs, templatePrompts, aggregatedDataPrompts);
-
-                    // Render template groups
                     renderTemplateGroups(templateGroups, templateGroupPrompts, templates);
                 })
                 .catch(error => {
                     showFlashMessage(error.message || "Error loading data", "error");
                     console.error("Error loading data:", error);
                 });
+
+                document.getElementById('templates-search').addEventListener('input', function() {
+                    if (templatesListJs) {
+                        templatesListJs.search(this.value);
+                    }
+                });
+
+                document.getElementById('template-groups-search').addEventListener('input', function() {
+                    if (templateGroupsListJs) {
+                        templateGroupsListJs.search(this.value);
+                    }
+                });
             });
 
             function renderTemplates(templates, nfrs, templatePrompts, aggregatedDataPrompts) {
                 const tbody = document.querySelector('#templates tbody.list');
-                tbody.innerHTML = ''; // Clear existing content
+                tbody.innerHTML = '';
 
                 templates.forEach(template => {
-                    // Find related data
                     const nfr = nfrs.find(n => n.id === template.nfr) || { name: '' };
                     const templatePrompt = templatePrompts.find(p => p.id === template.template_prompt_id) || { name: '' };
                     const aggregatedPrompt = aggregatedDataPrompts.find(p => p.id === template.aggregated_prompt_id) || { name: '' };
 
-                    // Create row HTML
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="name">${template.name || ''}</td>
@@ -196,13 +210,12 @@
                         <td class="aggregated_prompt_id">${aggregatedPrompt.name || ''}</td>
                         <td class="ai-switch">${template.ai_switch}</td>
                         <td class="actions" style="width: 20%;">
-                            <a class="btn btn-secondary" href="/template?template_config=${template.id}">Edit</a>
+                            <a class="btn btn-primary" href="/template?template_config=${template.id}">Edit</a>
                             <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal${template.id}">Delete</a>
                         </td>
                     `;
                     tbody.appendChild(row);
 
-                    // Create modal for delete confirmation
                     const modalDiv = document.createElement('div');
                     modalDiv.className = 'modal fade';
                     modalDiv.id = `deleteModal${template.id}`;
@@ -231,23 +244,25 @@
                     document.body.appendChild(modalDiv);
                 });
 
-                // Initialize list.js for pagination
-                new List('templates', {
-                    valueNames: ['name', 'title', 'nfr', 'nfr-switch', 'template_prompt_id', 'aggregated_prompt_id', 'ai-switch'],
-                    page: 5,
-                    pagination: true
-                });
+                setTimeout(() => {
+                    if (!templatesListJs) {
+                        templatesListJs = new List('templates', {
+                            valueNames: ['name', 'title', 'nfr', 'nfr-switch', 'template_prompt_id', 'aggregated_prompt_id', 'ai-switch', 'actions'],
+                            page: 5,
+                            pagination: true
+                        });
+                    } else {
+                        templatesListJs.reIndex();
+                    }
+                }, 0);
             }
 
             function renderTemplateGroups(templateGroups, templateGroupPrompts, templates) {
                 const tbody = document.querySelector('#template-groups tbody.list');
-                tbody.innerHTML = ''; // Clear existing content
+                tbody.innerHTML = '';
 
                 templateGroups.forEach(group => {
-                    // Find related data
                     const templateGroupPrompt = templateGroupPrompts.find(p => p.id === group.prompt_id) || { name: '' };
-
-                    // Generate templates list
                     let templatesHtml = '';
                     if (group.data && Array.isArray(group.data)) {
                         let counter = 0;
@@ -261,7 +276,6 @@
                         });
                     }
 
-                    // Create row HTML
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="name">${group.name || ''}</td>
@@ -270,25 +284,23 @@
                         <td class="prompt_id">${templateGroupPrompt.name || ''}</td>
                         <td class="ai_summary">${group.ai_summary}</td>
                         <td class="actions" style="width: 20%;">
-                            <a class="btn btn-secondary" href="/template-group?template_group_config=${group.id}">Edit</a>
+                            <a class="btn btn-primary" href="/template-group?template_group_config=${group.id}">Edit</a>
                             <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteGroupModal${group.id}">Delete</a>
                         </td>
                     `;
                     tbody.appendChild(row);
 
-                    // Create modal for delete confirmation
                     const modalDiv = document.createElement('div');
-                    modalDiv.className = 'modal fade';
                     modalDiv.id = `deleteGroupModal${group.id}`;
+                    modalDiv.className = 'modal fade';
                     modalDiv.setAttribute('tabindex', '-1');
-                    modalDiv.setAttribute('aria-labelledby', 'deleteGroupModalLabel');
                     modalDiv.setAttribute('aria-hidden', 'true');
 
                     modalDiv.innerHTML = `
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="deleteGroupModalLabel">Confirm Delete</h5>
+                                    <h5 class="modal-title">Confirm Delete</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
@@ -301,27 +313,29 @@
                             </div>
                         </div>
                     `;
-
                     document.body.appendChild(modalDiv);
                 });
 
-                // Initialize list.js for pagination
-                new List('template-groups', {
-                    valueNames: ['name', 'title', 'template', 'prompt_id', 'ai_summary', 'actions'],
-                    page: 5,
-                    pagination: true
-                });
+                setTimeout(() => {
+                    if (!templateGroupsListJs) {
+                        templateGroupsListJs = new List('template-groups', {
+                            valueNames: ['name', 'title', 'template', 'prompt_id', 'ai_summary', 'actions'],
+                            page: 5,
+                            pagination: true
+                        });
+                    } else {
+                        templateGroupsListJs.reIndex();
+                    }
+                }, 0);
             }
 
             function deleteTemplateGroup(groupId) {
                 apiClient.templateGroups.delete(groupId)
                     .then(response => {
                         showFlashMessage("Template group deleted successfully", "success");
-                        // Close the modal
                         const modalElement = document.getElementById('deleteGroupModal' + groupId);
                         const modal = bootstrap.Modal.getInstance(modalElement);
                         modal.hide();
-                        // Reload the page to refresh the template groups list
                         window.location.reload();
                     })
                     .catch(error => {

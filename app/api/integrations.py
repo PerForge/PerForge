@@ -41,7 +41,7 @@ def get_db_class(integration_type):
         return DBAtlassianConfluence
     elif integration_type == "atlassian_jira":
         return DBAtlassianJira
-    elif integration_type == "azure_wiki":
+    elif integration_type == "azure" or integration_type == "azure_wiki":
         return DBAzureWiki
     elif integration_type == "grafana":
         return DBGrafana

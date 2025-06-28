@@ -44,7 +44,7 @@ class SmtpMail(Integration):
             self.use_tls    = config["use_tls"]
             self.username   = config["username"]
             self.password   = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
-            self.recipients = [value for key, value in config.items() if key.startswith("recipients-")]
+            self.recipients = [recipient['email'] for recipient in config.get('recipients', [])]
         else:
             logging.warning("There's no SMTP Mail integration configured, or you're attempting to send a request from an unsupported location.")
 
@@ -52,8 +52,8 @@ class SmtpMail(Integration):
         mail_settings = {
             'MAIL_SERVER'  : self.server,
             'MAIL_PORT'    : self.port,
-            'MAIL_USE_SSL' : eval(self.use_ssl),
-            'MAIL_USE_TLS' : eval(self.use_tls),
+            'MAIL_USE_SSL' : str(self.use_ssl).lower() in ('true', '1', 't'),
+            'MAIL_USE_TLS' : str(self.use_tls).lower() in ('true', '1', 't'),
             'MAIL_USERNAME': self.username,
             'MAIL_PASSWORD': self.password,
         }

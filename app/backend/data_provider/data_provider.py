@@ -23,7 +23,7 @@ import pandas as pd
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
-from app.backend.data_provider.test_data import TestData, BaseTestData, BackendTestData, FrontendTestData, TestDataFactory
+from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
 import logging
 
 class DataProvider:
@@ -69,9 +69,6 @@ class DataProvider:
     def get_test_log(self) -> Dict[str, Any]:
         """Retrieve test log data from the database."""
         return self.ds_obj.get_test_log()
-
-    def get_aggregated_table(self, test_title: str, start_time: str, end_time: str):
-        return self.ds_obj.get_aggregated_table(test_title, start_time, end_time)
 
     def get_response_time_data(self) -> None:
         """Retrieve response time data (placeholder)."""
@@ -188,10 +185,6 @@ class DataProvider:
         )
         test_obj.set_metric('errors_pct_stats', value)
 
-        # Get aggregated data table
-        if hasattr(test_obj, 'aggregated_table'):
-            test_obj.set_metric('aggregated_table', self.ds_obj.get_aggregated_table(test_title=test_obj.test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
-
 
     def _collect_frontend_test_data(self, test_obj: FrontendTestData) -> None:
         """
@@ -201,8 +194,7 @@ class DataProvider:
             test_obj: FrontendTestData object to populate
         """
         # Get aggregated data table
-        if hasattr(test_obj, 'aggregated_table'):
-            test_obj.set_metric('aggregated_table', "")
+        pass
 
     # Metric initialization and configuration
     def initialize_metrics(self) -> Dict[str, Dict[str, Any]]:
@@ -317,7 +309,7 @@ class DataProvider:
         # If no columns are completely NaN, proceed with normal dropna
         return df.dropna()
 
-    def get_statistics(self, test_title: str, test_obj: TestData = None) -> Dict[str, Any]:
+    def get_statistics(self, test_title: str, test_obj: BaseTestData = None) -> Dict[str, Any]:
         """
         Retrieve aggregated metrics from the test data.
 
@@ -335,7 +327,7 @@ class DataProvider:
             Dictionary containing aggregated metrics with their values
         """
         if not test_obj:
-            test_obj: TestData = self.collect_test_obj(test_title=test_title)
+            test_obj: BaseTestData = self.collect_test_obj(test_title=test_title)
 
         aggregated_results = {
             "vu": test_obj.max_active_users,
@@ -346,7 +338,7 @@ class DataProvider:
         }
         return aggregated_results
 
-    def get_test_details(self, test_title: str, test_obj: TestData = None ) -> Dict[str, str]:
+    def get_test_details(self, test_title: str, test_obj: BaseTestData = None ) -> Dict[str, str]:
         """
         Retrieve basic test execution details.
 
@@ -362,7 +354,7 @@ class DataProvider:
             Dictionary containing test execution details
         """
         if not test_obj:
-            test_obj: TestData = self.collect_test_obj(test_title=test_title)
+            test_obj: BaseTestData = self.collect_test_obj(test_title=test_title)
 
         test_details = {
             "start_time": test_obj.start_time_human,
@@ -371,7 +363,7 @@ class DataProvider:
         }
         return test_details
 
-    def _get_test_results(self, test_obj: TestData):
+    def _get_test_results(self, test_obj: BaseTestData):
         standard_metrics = self.initialize_metrics()
 
         # Fetch and merge the data for all standard metrics
@@ -385,7 +377,7 @@ class DataProvider:
         merged_df = self.df_delete_nan_rows(merged_df)
         return merged_df, standard_metrics
 
-    def get_ml_analysis_to_test_obj(self, test_obj: TestData):
+    def get_ml_analysis_to_test_obj(self, test_obj: BaseTestData):
         """
         Perform machine learning analysis on test data to detect anomalies and patterns.
 
@@ -433,7 +425,7 @@ class DataProvider:
         Args:
             test_title: Name/identifier of the test to analyze
         """
-        test_obj: TestData = self.collect_test_obj(test_title=test_title)
+        test_obj: BaseTestData = self.collect_test_obj(test_title=test_title)
 
         metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
 
@@ -446,6 +438,11 @@ class DataProvider:
 
         pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
+
+        # Collect the aggregated table data
+        metrics_table: MetricsTable = test_obj.get_table('aggregated_data')
+        if metrics_table:
+            test_obj.aggregated_table = metrics_table.format_metrics()
 
         # Collect the outputs
         statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)

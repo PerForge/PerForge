@@ -209,9 +209,10 @@
             const recipientInputs = document.querySelectorAll('.recipientInput');
 
             recipientInputs.forEach((input, index) => {
-                const recipientId = document.querySelector(`input[name='recipients-${index}-id']`).value;
+                const recipientIdInput = document.querySelector(`input[name='recipients-${index}-id']`);
+                const recipientId = recipientIdInput ? recipientIdInput.value : null;
                 formData.recipients.push({
-                    id: recipientId ? recipientId : null,
+                    id: id && recipientId ? recipientId : null,
                     email: document.querySelector(`input[name='recipients-${index}-email']`).value,
                     smtp_mail_id: smtpMailId
                 });

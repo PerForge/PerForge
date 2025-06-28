@@ -151,6 +151,8 @@
     </div>
 
     <script>
+      let listJsInstance;
+
       document.addEventListener('DOMContentLoaded', function() {
         // Load prompts when the page loads
         loadPrompts();
@@ -159,20 +161,9 @@
         const searchInput = document.querySelector('.search-input');
         if (searchInput) {
             searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                const rows = document.querySelectorAll('#prompts-table-body tr');
-
-                rows.forEach(row => {
-                    const name = row.querySelector('.name').textContent.toLowerCase();
-                    const promptText = row.querySelector('.prompt').textContent.toLowerCase();
-                    const place = row.querySelector('.place').textContent.toLowerCase();
-
-                    if (name.includes(searchTerm) || promptText.includes(searchTerm) || place.includes(searchTerm)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
+                if (listJsInstance) {
+                    listJsInstance.search(this.value);
+                }
             });
         }
 
@@ -223,8 +214,7 @@
       function loadPrompts() {
           apiClient.prompts.getAll()
               .then(response => {
-                  if (response.data && response.data.prompts) {
-                      // Split prompts into default and custom
+                  if (response.data && Array.isArray(response.data.prompts)) {
                       const defaultPrompts = response.data.prompts.filter(p => p.type === 'default');
                       const customPrompts = response.data.prompts.filter(p => p.type === 'custom');
 
@@ -232,12 +222,14 @@
                       const showCustom = document.getElementById('selectedTypeSwitch').checked;
                       renderPrompts(showCustom ? customPrompts : defaultPrompts);
                   } else {
-                      showFlashMessage('No prompts found or error loading prompts', 'error');
+                      showFlashMessage('No prompts found.', 'info');
+                      renderPrompts([]);
                   }
               })
               .catch(error => {
                   console.error('Error loading prompts:', error);
                   showFlashMessage(error.message || 'Error loading prompts', 'error');
+                  renderPrompts([]);
               });
       }
 
@@ -250,6 +242,9 @@
               const emptyRow = document.createElement('tr');
               emptyRow.innerHTML = '<td colspan="6" class="text-center">No prompts found</td>';
               tableBody.appendChild(emptyRow);
+              if (listJsInstance) {
+                  listJsInstance.clear();
+              }
               return;
           }
 
@@ -306,7 +301,7 @@
               if (prompt.type === 'default') {
                   // Default prompts can only be viewed
                   const viewButton = document.createElement('button');
-                  viewButton.className = 'btn btn-secondary';
+                  viewButton.className = 'btn btn-primary';
                   viewButton.textContent = 'View';
                   viewButton.setAttribute('data-bs-toggle', 'modal');
                   viewButton.setAttribute('data-bs-target', '#viewPromptModal');
@@ -314,17 +309,39 @@
                       showViewPromptModal(prompt);
                   });
                   actionsCell.appendChild(viewButton);
+
+                  const cloneButton = document.createElement('button');
+                  cloneButton.className = 'btn btn-secondary ms-2';
+                  cloneButton.textContent = 'Clone';
+                  cloneButton.addEventListener('click', function() {
+                      showClonePromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
+                  });
+                  actionsCell.appendChild(cloneButton);
               } else {
                   // Custom prompts can be edited and deleted
                   const editButton = document.createElement('button');
-                  editButton.className = 'btn btn-secondary';
+                  editButton.className = 'btn btn-primary';
                   editButton.textContent = 'Edit';
                   editButton.setAttribute('data-bs-toggle', 'modal');
                   editButton.setAttribute('data-bs-target', '#promptModal');
                   editButton.addEventListener('click', function() {
                       showEditPromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
                   });
                   actionsCell.appendChild(editButton);
+
+                  const cloneButton = document.createElement('button');
+                  cloneButton.className = 'btn btn-secondary ms-2';
+                  cloneButton.textContent = 'Clone';
+                  cloneButton.addEventListener('click', function() {
+                      showClonePromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
+                  });
+                  actionsCell.appendChild(cloneButton);
 
                   const deleteButton = document.createElement('button');
                   deleteButton.className = 'btn btn-danger ms-2';
@@ -338,6 +355,20 @@
               row.appendChild(actionsCell);
               tableBody.appendChild(row);
           });
+
+          const options = {
+              valueNames: ['name', 'prompt', 'place', 'type', 'project_id'],
+              page: 15,
+              pagination: true
+          };
+
+          setTimeout(() => {
+            if (listJsInstance) {
+              listJsInstance.reIndex();
+            } else {
+              listJsInstance = new List('table-id', options);
+            }
+          }, 0);
       }
 
       // Function to show the view prompt modal
@@ -346,6 +377,18 @@
           document.getElementById('view_place').value = prompt.place;
           document.getElementById('view_prompt').value = prompt.prompt;
           document.getElementById('view_scope').value = prompt.project_id ? 'PROJECT' : 'ALL';
+      }
+
+      function showClonePromptModal(prompt) {
+          document.getElementById('prompt_id').value = '';
+          document.getElementById('name').value = prompt.name + ' COPY';
+          document.getElementById('place').value = prompt.place;
+          document.getElementById('prompt').value = prompt.prompt;
+          document.getElementById('prompt_type').value = 'custom';
+          document.getElementById('project_id').value = prompt.project_id ? 'project' : '';
+
+          // Update modal title
+          document.getElementById('addnewpromptLabel').textContent = 'Clone Prompt';
       }
 
       // Function to show the edit prompt modal

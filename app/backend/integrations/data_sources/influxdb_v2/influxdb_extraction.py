@@ -116,7 +116,7 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(er)
             return []
 
-    def _fetch_aggregated_table(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
+    def _fetch_aggregated_data(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
             query = self.queries.get_aggregated_data(test_title, start, end, self.bucket)
             return self._execute_query(query)
@@ -460,18 +460,17 @@ class InfluxdbV2(DataExtractionBase):
     # Frontend metrics extraction methods
     # ===================================================================
 
-    def _fetch_google_web_vitals(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
+    def _fetch_google_web_vitals(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
         """
         Fetch Google Web Vitals metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: List of dictionaries with Google Web Vitals metrics
         """
         try:
-            query = self.queries.get_google_web_vitals(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_google_web_vitals(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -489,18 +488,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting Google Web Vitals: {str(e)}")
             return []
 
-    def _fetch_timings_fully_loaded(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
+    def _fetch_timings_fully_loaded(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
         """
         Fetch fully loaded timing metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: List of dictionaries with fully loaded timing metrics
         """
         try:
-            query = self.queries.get_timings_fully_loaded(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_timings_fully_loaded(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -518,18 +516,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting fully loaded timings: {str(e)}")
             return []
 
-    def _fetch_timings_page_timings(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
+    def _fetch_timings_page_timings(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> List[Dict[str, Any]]:
         """
         Fetch page timing metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: List of dictionaries with page timing metrics
         """
         try:
-            query = self.queries.get_timings_page_timings(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_timings_page_timings(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -547,18 +544,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting page timings: {str(e)}")
             return []
 
-    def _fetch_timings_main_document(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_timings_main_document(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch main document timing metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of main document timing metrics
         """
         try:
-            query = self.queries.get_timings_main_document(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_timings_main_document(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -576,18 +572,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting main document timings: {str(e)}")
             return {}
 
-    def _fetch_cpu_long_tasks(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_cpu_long_tasks(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch CPU long tasks metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of CPU long tasks metrics
         """
         try:
-            query = self.queries.get_cpu_long_tasks(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_cpu_long_tasks(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -605,18 +600,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting CPU long tasks: {str(e)}")
             return {}
 
-    def _fetch_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch JavaScript heap used size metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of JS heap used size metrics
         """
         try:
-            query = self.queries.get_cdp_performance_js_heap_used_size(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_cdp_performance_js_heap_used_size(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -634,18 +628,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting JS heap used size: {str(e)}")
             return {}
 
-    def _fetch_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch JavaScript heap total size metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of JS heap total size metrics
         """
         try:
-            query = self.queries.get_cdp_performance_js_heap_total_size(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_cdp_performance_js_heap_total_size(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -663,18 +656,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting JS heap total size: {str(e)}")
             return {}
 
-    def _fetch_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch content type metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of content type metrics
         """
         try:
-            query = self.queries.get_content_types(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_content_types(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -692,18 +684,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting content types: {str(e)}")
             return {}
 
-    def _fetch_first_party_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_first_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch first party content type metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of first party content type metrics
         """
         try:
-            query = self.queries.get_first_party_content_types(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_first_party_content_types(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -721,18 +712,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting first party content types: {str(e)}")
             return {}
 
-    def _fetch_third_party_content_types(self, test_title: str, start: str, end: str, bucket: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_third_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch third party content type metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
         :param start: Start time
         :param end: End time
-        :param bucket: The InfluxDB bucket to query
         :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
         :return: Dictionary of third party content type metrics
         """
         try:
-            query = self.queries.get_third_party_content_types(test_title, start, end, bucket, aggregation)
+            query = self.queries.get_third_party_content_types(test_title, start, end, self.bucket, aggregation)
             records = self._execute_query(query)
 
             if not records:
