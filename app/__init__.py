@@ -36,8 +36,9 @@ from flask                                       import Flask
 from flask_login                                 import LoginManager
 from flask_bcrypt                                import Bcrypt
 from flask_compress                              import Compress
-from flask_migrate                               import Migrate
+
 from app.api                                     import register_blueprints
+from app.migrations                              import run_migrations
 
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -54,7 +55,7 @@ app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
-migrate = Migrate(app, db)
+
 
 class IgnoreStaticRequests(logging.Filter):
 
@@ -90,9 +91,32 @@ app.config.from_object('app.config.Config')
 bc = Bcrypt(app)  # flask-bcrypt
 
 with app.app_context():
-    from flask_migrate import upgrade
-    # Automatically apply any pending database migrations
-    upgrade()
+    db.metadata.create_all(bind=db.engine, tables=[
+        DBUsers.__table__,
+        DBSecrets.__table__,
+        DBProjects.__table__,
+        DBPrompts.__table__,
+        DBAISupport.__table__,
+        DBAtlassianConfluence.__table__,
+        DBAtlassianJira.__table__,
+        DBAzureWiki.__table__,
+        DBGrafana.__table__,
+        DBInfluxdb.__table__,
+        DBSMTPMail.__table__,
+        DBNFRs.__table__,
+        DBNFRRows.__table__,
+        DBTemplates.__table__,
+        DBTemplateData.__table__,
+        DBTemplateGroups.__table__,
+        DBTemplateGroupData.__table__,
+        DBGraphs.__table__,
+        DBGrafanaDashboards.__table__,
+        DBSMTPMailRecipient.__table__
+        ], checkfirst=True)
+
+    # Run migrations to add/modify columns
+    run_migrations()
+
     DBPrompts.load_default_prompts_from_yaml()
 
 # Register API blueprints
