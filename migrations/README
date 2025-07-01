@@ -1,0 +1,30 @@
+# Database Migrations
+
+This directory contains database migration scripts managed by Alembic and Flask-Migrate.
+
+## How to Create a New Migration
+
+This application is configured to **automatically apply** pending migrations on startup. However, you still need to **manually generate** the migration script whenever you change the database models (e.g., add a new column or table).
+
+To generate a new migration script, follow these steps:
+
+1.  Make sure you have made your changes to the SQLAlchemy models in the code.
+
+2.  Run the following command in your terminal from the project root directory:
+
+    ```bash
+    .\env\Scripts\python.exe -m flask db migrate -m "A short, descriptive message about your changes"
+    ```
+
+    For example:
+    ```bash
+    .\env\Scripts\python.exe -m flask db migrate -m "Add 'last_login' to Users table"
+    ```
+
+3.  A new migration script will be generated in the `migrations/versions` directory.
+
+4.  Review the generated script to ensure it correctly reflects your changes.
+
+5.  Commit the **entire** `migrations` directory to Git along with your code changes.
+
+The application will automatically handle applying the migration the next time it starts.

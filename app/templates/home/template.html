@@ -82,6 +82,15 @@
                                 <div class="d-flex flex-direction-column">
                                     <div class="d-flex justify-content-between mb-3 mt-3">
                                         <div class="d-flex flex-direction-column">
+                                            <label class="form-check-label" for="ml_switch">ML analysis</label>
+                                            <span class="text-description">Enable ML based analysis for test results (only for back-end)</span>
+                                        </div>
+                                        <div class="form-check form-switch min-h-auto mb-0">
+                                            <input v-model="ml_switch" class="form-check-input" id="ml_switch" type="checkbox" checked="">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div class="d-flex flex-direction-column">
                                             <label class="form-check-label" for="ai_switch">AI analysis</label>
                                             <label class="text-description">Test results will be evaluated by leveraging default AI integration and utilizing the provided prompts.</label>
                                         </div>
@@ -307,6 +316,7 @@
                             ai_graph_switch: false,
                             ai_to_graphs_switch: false,
                             nfrs_switch: false,
+                            ml_switch: false,
                             selectedTemplatePrompt: null,
                             selectedAggregatedDataPrompt: null,
                             selectedSystemPrompt: null,
@@ -499,6 +509,7 @@
                                 "ai_graph_switch": this.ai_graph_switch,
                                 "ai_to_graphs_switch": this.ai_to_graphs_switch,
                                 "nfrs_switch": this.nfrs_switch,
+                                "ml_switch": this.ml_switch,
                                 "template_prompt_id": this.template_prompt_id || null,
                                 "aggregated_prompt_id": this.aggregated_prompt_id || null,
                                 "system_prompt_id": this.system_prompt_id || null,
@@ -594,6 +605,7 @@
                                             this.ai_graph_switch = templateData.ai_graph_switch;
                                             this.ai_to_graphs_switch = templateData.ai_to_graphs_switch;
                                             this.nfrs_switch = templateData.nfrs_switch;
+                                            this.ml_switch = templateData.ml_switch;
 
                                             // Set selected options after data is loaded
                                             if (this.template_prompts.length && this.aggregated_data_prompts.length && this.system_prompts.length) {

@@ -79,10 +79,10 @@ class DBAtlassianJira(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, project_id):
+    def get_default_config(cls, project_id, current_config_id=None):
         try:
             config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).one_or_none()
-            if config:
+            if config and config.id != current_config_id:
                 validated_data = AtlassianJiraModel(**config.to_dict())
                 return validated_data.model_dump()
             return None
@@ -107,6 +107,8 @@ class DBAtlassianJira(db.Model):
             config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
             if validated_data.is_default:
                 cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id, validated_data.id):
+                validated_data.is_default = True
 
             for key, value in validated_data.model_dump().items():
                 setattr(config, key, value)

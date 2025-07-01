@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel, Field, model_validator, EmailStr
+from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr
 from typing   import Optional
 from datetime import datetime
 
@@ -183,10 +183,17 @@ class TemplateModel(BaseModelWithStripping):
     ai_graph_switch          : bool
     ai_to_graphs_switch      : bool
     nfrs_switch              : bool
+    ml_switch                : bool = Field(default=False)
     template_prompt_id       : Optional[int]
     aggregated_prompt_id     : Optional[int]
     system_prompt_id         : Optional[int]
     data                     : list[TemplateObjectModel]
+
+    @field_validator('ai_switch', 'ai_aggregated_data_switch', 'ai_graph_switch', 'ai_to_graphs_switch', 'nfrs_switch', 'ml_switch', mode='before')
+    def empty_str_to_false(cls, v):
+        if v is None:
+            return False
+        return v
 
 
 class TemplateGroupObjectModel(BaseModelWithStripping):

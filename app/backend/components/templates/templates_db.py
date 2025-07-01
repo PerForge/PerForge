@@ -31,6 +31,7 @@ class DBTemplates(db.Model):
     ai_graph_switch           = db.Column(db.Boolean, default=False)
     ai_to_graphs_switch       = db.Column(db.Boolean, default=False)
     nfrs_switch               = db.Column(db.Boolean, default=False)
+    ml_switch                 = db.Column(db.Boolean, default=False)
     template_prompt_id        = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
     aggregated_prompt_id      = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
     system_prompt_id          = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))

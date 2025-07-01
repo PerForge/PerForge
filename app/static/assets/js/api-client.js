@@ -88,14 +88,14 @@ const apiClient = {
 
             // Check the content type
             const contentType = response.headers.get('Content-Type');
-            
+
             // Handle binary responses if requested or if content type is PDF
             if (options.responseType === 'blob' || (contentType && contentType.includes('application/pdf'))) {
                 return response.blob().then(blob => {
                     // Try to get result data from header
                     const resultJson = response.headers.get('X-Result-Data');
                     let result = { success: true };
-                    
+
                     if (resultJson) {
                         try {
                             result = JSON.parse(resultJson);
@@ -116,7 +116,7 @@ const apiClient = {
                     };
                 });
             }
-            
+
             // For standard JSON responses
             return response.json();
         });
@@ -548,7 +548,7 @@ const apiClient = {
     prompts: {
         /**
          * Get all prompts
-         * 
+         *
          * @param {Object} params - Optional parameters (place)
          * @returns {Promise} - Promise that resolves with prompts data
          */
@@ -673,7 +673,7 @@ const apiClient = {
             });
         }
     },
-    
+
     /**
      * Tests API
      */
@@ -686,7 +686,7 @@ const apiClient = {
         getConfigurations: function() {
             return apiClient.get('/tests');
         },
-        
+
         /**
          * Get test data for a specific data source
          *
@@ -700,7 +700,7 @@ const apiClient = {
                 id: id
             }, options);
         },
-        
+
         /**
          * Generate a report
          *
@@ -720,7 +720,7 @@ const apiClient = {
                                     // The result is a data URL like 'data:application/pdf;base64,JVBERi0...'
                                     // We need to extract just the base64 part
                                     const base64Content = reader.result.split(',')[1];
-                                    
+
                                     // Return a consistent response format
                                     resolve({
                                         status: 'success',
@@ -739,7 +739,7 @@ const apiClient = {
                         return response; // Pass through other responses
                     });
             }
-            
+
             // For all other report types, use standard JSON handling
             return apiClient.post('/reports', data);
         }
@@ -765,12 +765,12 @@ function showFlashMessage(message, type) {
         }
 
         // Show the message
-        messageContainer.style.display = "flex";
+        messageContainer.style.display = "block";
 
-        // Auto-dismiss after 5 seconds
+        // Auto-dismiss after 4 seconds
         setTimeout(() => {
             messageContainer.style.display = "none";
-        }, 5000);
+        }, 4000);
     }
 }
 

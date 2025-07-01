@@ -36,6 +36,7 @@ from flask                                       import Flask
 from flask_login                                 import LoginManager
 from flask_bcrypt                                import Bcrypt
 from flask_compress                              import Compress
+from flask_migrate                               import Migrate
 from app.api                                     import register_blueprints
 
 # Grabs the folder where the script runs.
@@ -53,6 +54,7 @@ app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+migrate = Migrate(app, db)
 
 class IgnoreStaticRequests(logging.Filter):
 
@@ -74,40 +76,23 @@ handler.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 
-# Add the handler to the logger
-logger = logging.getLogger()
-logger.addHandler(handler)
+# Configure logging
+app.logger.addHandler(handler)
+app.logger.setLevel(logging.INFO)
 
-flask_logger = logging.getLogger('werkzeug')  # Get flask logger
-flask_logger.addFilter(IgnoreStaticRequests())  # Add custom filter to flask logger
+werkzeug_logger = logging.getLogger('werkzeug')
+werkzeug_logger.addFilter(IgnoreStaticRequests())
+# Also send werkzeug logs to the file
+werkzeug_logger.addHandler(handler)
 
 app.config.from_object('app.config.Config')
 
 bc = Bcrypt(app)  # flask-bcrypt
 
 with app.app_context():
-    db.metadata.create_all(bind=db.engine, tables=[
-        DBUsers.__table__,
-        DBSecrets.__table__,
-        DBProjects.__table__,
-        DBPrompts.__table__,
-        DBAISupport.__table__,
-        DBAtlassianConfluence.__table__,
-        DBAtlassianJira.__table__,
-        DBAzureWiki.__table__,
-        DBGrafana.__table__,
-        DBInfluxdb.__table__,
-        DBSMTPMail.__table__,
-        DBNFRs.__table__,
-        DBNFRRows.__table__,
-        DBTemplates.__table__,
-        DBTemplateData.__table__,
-        DBTemplateGroups.__table__,
-        DBTemplateGroupData.__table__,
-        DBGraphs.__table__,
-        DBGrafanaDashboards.__table__,
-        DBSMTPMailRecipient.__table__
-        ], checkfirst=True)
+    from flask_migrate import upgrade
+    # Automatically apply any pending database migrations
+    upgrade()
     DBPrompts.load_default_prompts_from_yaml()
 
 # Register API blueprints
