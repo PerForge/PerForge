@@ -92,10 +92,10 @@ class DBSMTPMail(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, project_id):
+    def get_default_config(cls, project_id, current_config_id=None):
         try:
             config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).options(joinedload(cls.recipients)).one_or_none()
-            if config:
+            if config and config.id != current_config_id:
                 config_dict = config.to_dict()
                 config_dict['recipients'] = [recipient.to_dict() for recipient in config.recipients]
                 validated_data = SmtpMailModel(**config_dict)
@@ -126,6 +126,8 @@ class DBSMTPMail(db.Model):
 
             if validated_data.is_default:
                 cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id, validated_data.id):
+                validated_data.is_default = True
 
             exclude_fields = {'recipients', 'project_id'}
             for field, value in validated_data.model_dump(exclude=exclude_fields).items():

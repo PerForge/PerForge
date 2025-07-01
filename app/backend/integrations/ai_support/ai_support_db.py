@@ -84,10 +84,10 @@ class DBAISupport(db.Model):
             raise
 
     @classmethod
-    def get_default_config(cls, project_id):
+    def get_default_config(cls, project_id, current_config_id=None):
         try:
             config = db.session.query(cls).filter_by(project_id=project_id, is_default=True).one_or_none()
-            if config:
+            if config and config.id != current_config_id:
                 config_dict    = config.to_dict()
                 validated_data = AISupportModel(**config_dict)
                 return validated_data.model_dump()
@@ -117,6 +117,8 @@ class DBAISupport(db.Model):
 
             if validated_data.is_default:
                 cls.reset_default_config(project_id)
+            elif not cls.get_default_config(project_id, validated_data.id):
+                validated_data.is_default = True
 
             for key, value in validated_data.model_dump(exclude={'project_id'}).items():
                 setattr(config, key, value)

@@ -50,17 +50,16 @@ class ReportingBase:
         self.aggregated_prompt_id      = template_obj["aggregated_prompt_id"]
         self.system_prompt_id          = template_obj["system_prompt_id"]
         self.dp_obj                    = DataProvider(project=self.project, source_type=db_id.get("source_type"), id=db_id.get("id"))
-        self.ai_switch                 = template_obj["ai_switch"]
-        if self.dp_obj.test_type == "back_end":
-            self.ml_switch                 = True # Temporary fix for ML switch
-        else:
-            self.ml_switch                 = False
-        self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
         self.nfrs_switch               = template_obj["nfrs_switch"]
-        self.ai_graph_switch           = template_obj["ai_graph_switch"]
-        self.ai_to_graphs_switch       = template_obj["ai_to_graphs_switch"]
+        self.ai_switch                 = template_obj["ai_switch"]
         if self.ai_switch:
             self.ai_support_obj        = AISupport(project=self.project, system_prompt=self.system_prompt_id)
+        self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
+        self.ai_graph_switch           = template_obj["ai_graph_switch"]
+        self.ai_to_graphs_switch       = template_obj["ai_to_graphs_switch"]
+        self.ml_switch                 = template_obj["ml_switch"]
+        if self.dp_obj.test_type == "front_end":
+            self.ml_switch = False # Temporary fix for ML switch
 
     def set_template_group(self, template_group):
         template_group_obj             = DBTemplateGroups.get_config_by_id(project_id=self.project, id=template_group)
