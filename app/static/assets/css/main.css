@@ -1847,12 +1847,6 @@ svg:not(:host).svg-inline--fa, svg:not(:root).svg-inline--fa {
     .tab-pane.active {
         display: block; }
 
-.margin-trl-15 {
-    margin-top: 15px !important;
-    margin-right: 15px !important;
-    margin-left: 15px !important;
-}
-
 .card-integrations {
     display: flex;
     flex-direction: column;
