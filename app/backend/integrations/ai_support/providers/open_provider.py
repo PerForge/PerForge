@@ -140,7 +140,6 @@ class OpenAIProvider(AIProvider):
 
             # Invoke the model
             response = self.text_llm.invoke(messages)
-            print(response)
 
             # Track token usage if available
             self._track_token_usage(response)

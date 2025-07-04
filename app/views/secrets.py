@@ -47,14 +47,9 @@ def add_secret():
 def edit_secret():
     try:
         secret_id = request.args.get('secret_id')
-        secret_type = request.args.get('secret_type')
 
-        if not secret_id or not secret_type:
-            flash("Secret ID and type are required.", "error")
-            return redirect(url_for('get_secrets'))
-
-        if secret_type == "admin" and not current_user.is_admin:
-            flash("You do not have permission to access this page.", "error")
+        if not secret_id:
+            flash("Secret ID is required.", "error")
             return redirect(url_for('get_secrets'))
 
         return render_template('home/secret.html')

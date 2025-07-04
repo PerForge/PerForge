@@ -21,6 +21,17 @@ def run_migrations():
                 connection.execute(alter_command)
                 log.info(f"Migration for '{column_name}' applied successfully.")
 
+            # --- Migration 2: Drop 'type' column from 'secrets' table ---
+            table_name = 'secrets'
+            column_name = 'type'
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+
+            if column_name in columns:
+                log.info(f"Applying migration: Dropping column '{column_name}' from table '{table_name}'")
+                alter_command = text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}")
+                connection.execute(alter_command)
+                log.info(f"Migration for dropping '{column_name}' applied successfully.")
+
             # --- Add future migrations below this line as new blocks ---
 
     except Exception as e:

@@ -14,7 +14,7 @@
                     <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
-                                <h4 class="mb-0">AI support integration
+                                <h4 class="mb-0">AI support
                                     <div class="tooltip-container">
                                       <a href="https://perforge.app/docs/configuration/integrations#ai-support" target="_blank">
                                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -36,51 +36,45 @@
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name">Name:</label>
-                                    {{ form.name(class="form-control") }}
+                                    {{ form.name(class="form-control", placeholder="My AI Support Connection") }}
                                     <label for="ai_provider" class="mt-2">AI Provider:</label>
                                     {{ form.ai_provider(class="form-control") }}
                                     <div id="div_azure_url" style="display: none; width: 100%;">
                                       <label for="azure_url" class="mt-2" style="display: block; text-align: center;">Azure URL:</label>
-                                      {{ form.azure_url(class="form-control", id="azure_url") }}
+                                      {{ form.azure_url(class="form-control", id="azure_url", placeholder="https://api.openai.com") }}
                                     </div>
                                     <div id="div_api_version" style="display: none; width: 100%;">
                                         <label for="api_version" class="mt-2" style="display: block; text-align: center;">Api version:</label>
-                                        {{ form.api_version(class="form-control", id="api_version") }}
+                                        {{ form.api_version(class="form-control", id="api_version", placeholder="2023-06-01") }}
                                       </div>
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        Please note that for ChatGPT, the 'gpt-4o' or higher and for Gemini, the 'gemini-2.5-flash' or higher models have been tested.
-                                      </div>
-                                    </div>
                                     <label for="ai_text_model" class="input-label mt-2">AI Text model:</label>
-                                    {{ form.ai_text_model(class="form-control") }}
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        Please note that for ChatGPT, the 'gpt-4o' or higher and for Gemini, the 'gemini-2.5-flash' or higher models have been tested.
-                                      </div>
-                                    </div>
+                                    {{ form.ai_text_model(class="form-control", placeholder="gpt-4o") }}
                                     <label for="ai_image_model" class="input-label mt-2">AI Image model:</label>
-                                    {{ form.ai_image_model(class="form-control") }}
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;.
-                                      </div>
-                                    </div>
+                                    {{ form.ai_image_model(class="form-control", placeholder="gpt-4o") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
-                                        <option value="">Select the secret</option>
+                                        <option value="">--- Select the secret ---</option>
+                                        <option value="create_new">--- Create a new secret ---</option>
                                         {% for secret in secret_configs %}
-                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                            <option value="{{ secret.id }}" {% if secret.id == form.token.data %}selected{% endif %}>{{ secret.key }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="new_secret_fields" style="display: none; width: 100%;">
+                                        <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="AI_TOKEN">
+                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
+                                        <select class="form-control" id="new_secret_scope">
+                                            <option value="">ALL</option>
+                                            <option value="project">PROJECT</option>
+                                        </select>
+                                        <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="my-super-secret-token">
+                                    </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
                                     <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
-                                    {{ form.temperature(class="form-control") }}
+                                    {{ form.temperature(class="form-control", placeholder="0.2") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>
@@ -135,31 +129,70 @@
             event.preventDefault();
 
             if (!validateForm()) {
-                return false;
+                return;
             }
 
-            // Get form data
             const form = document.getElementById('aiSupportForm');
-            const formData = new FormData(form);
-            const data = {};
+            const data = {
+                name: form.name.value,
+                ai_provider: form.ai_provider.value,
+                ai_text_model: form.ai_text_model.value,
+                ai_image_model: form.ai_image_model.value,
+                temperature: form.temperature.value,
+                is_default: form.is_default.value === 'True',
+                azure_url: form.azure_url.value,
+                api_version: form.api_version.value
+            };
 
-            // Convert FormData to JSON object
-            formData.forEach((value, key) => {
-                // Handle empty values
-                if (key !== "csrf_token"){
-                    // Special handling for is_default to ensure it's a boolean
-                    if (key === "is_default") {
-                        data[key] = value === '' ? false : value === 'True';
-                    } else {
-                        data[key] = value === '' ? null : value;
-                    }
-                }
-            });
-
-            // Handle the API call based on whether we're creating or updating
             const integrationId = document.getElementById('config_id').value;
+            const tokenSelect = document.getElementById('token');
 
+            const saveIntegrationWithToken = (tokenId) => {
+                data.token = tokenId;
+                saveIntegration(integrationId, data);
+            };
+
+            if (tokenSelect.value === 'create_new') {
+                const newSecretName = document.getElementById('new_secret_name').value;
+                const newSecretValue = document.getElementById('new_secret_value').value;
+                const newSecretScope = document.getElementById('new_secret_scope').value;
+
+                if (!newSecretName || !newSecretValue) {
+                    showFlashMessage('Secret name and value are required.', 'error');
+                    return;
+                }
+
+                const secretData = {
+                    key: newSecretName,
+                    value: newSecretValue,
+                    project_id: newSecretScope === 'project' ? true : null
+                };
+
+                apiClient.secrets.create(secretData)
+                    .then(response => {
+                        if (response && response.data && response.data.secret_id) {
+                            saveIntegrationWithToken(response.data.secret_id);
+                        } else {
+                            throw new Error('Failed to get secret ID from response.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error creating secret:', error);
+                        const errorMessage = error.responseJSON?.errors?.[0]?.message || error.message || 'An error occurred while creating the secret.';
+                        showFlashMessage(errorMessage, 'error');
+                    });
+            } else {
+                if (!tokenSelect.value) {
+                    showFlashMessage('Please select a token or create a new one.', 'error');
+                    return;
+                }
+                saveIntegrationWithToken(tokenSelect.value);
+            }
+        }
+
+        function saveIntegration(integrationId, data) {
             let apiPromise;
+
             if (integrationId) {
                 // Update existing integration
                 apiPromise = apiClient.integrations.update(integrationId, data, 'ai_support');
@@ -168,7 +201,6 @@
                 apiPromise = apiClient.integrations.create(data, 'ai_support');
             }
 
-            // Handle the response
             apiPromise
                 .then(response => {
                     // Show success message
@@ -184,8 +216,6 @@
                     console.error('Error:', error);
                     showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
                 });
-
-            return false;
         }
 
         // Handle delete confirmation
@@ -214,6 +244,9 @@
 
         // Add event listener to token select for real-time validation
         document.getElementById('token').addEventListener('change', function() {
+            const newSecretFields = document.getElementById('new_secret_fields');
+            newSecretFields.style.display = this.value === 'create_new' ? 'block' : 'none';
+
             if (this.value) {
                 this.classList.remove('is-invalid');
                 document.getElementById('tokenError').style.display = 'none';

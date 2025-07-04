@@ -71,7 +71,7 @@
                </div>
                <div class="start-section ms-4">
                   {% for project in projects %}
-                      <div class="card card-project center-section">
+                      <div class="card card-project center-section" data-project-id="{{ project.id }}">
                           <a class="mt-3-5" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
                           <button class="badge badge-primary mt-2 fs--2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}">remove</button>
                       </div>
@@ -134,7 +134,7 @@
             function setActiveProject(projectId) {
                 apiClient.projects.setActive(projectId)
                     .then(response => {
-                        showFlashMessage("Project activated successfully", "success");
+                        window.location.reload();
                     })
                     .catch(error => {
                         console.error('Error setting active project:', error);
@@ -184,6 +184,24 @@
                         showFlashMessage("Error deleting project: " + (error.message || 'Unknown error'), "error");
                     });
             }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                function getCookie(name) {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                }
+
+                const activeProjectId = getCookie('project');
+
+                if (activeProjectId) {
+                    const projectCard = document.querySelector(`.card-project[data-project-id='${activeProjectId}']`);
+                    if (projectCard) {
+                        projectCard.classList.add('selected-project');
+                    }
+                }
+            });
         </script>
+      {% include 'includes/project-modal.html' %}
     </main>
 {% endblock content %}

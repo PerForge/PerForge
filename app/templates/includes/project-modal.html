@@ -9,7 +9,7 @@
               <div class="mt-3">
                 <label>Project name</label>
                 <input class="form-control" id="project_name" name="project_name" type="text" value="">
-                <small class="form-text text-muted">Project name will be used as a database schema name. Only alphanumeric characters and underscores are allowed.</small>
+                <small class="form-text text-muted">Only alphanumeric characters and underscores are allowed.</small>
               </div>
               <div class="alert alert-danger mt-3" id="project_error" style="display: none;"></div>
             </div>
@@ -25,40 +25,40 @@
         // Check if event listener is already attached to avoid duplicates
         if (!window.projectModalInitialized) {
             window.projectModalInitialized = true;
-            
+
             var modal = $('#projectModal');
             const saveProject = document.getElementById("saveProject");
             const projectError = document.getElementById("project_error");
-            
+
             // Remove any existing event listeners
             saveProject.replaceWith(saveProject.cloneNode(true));
-            
+
             // Get the fresh reference after replacement
             const newSaveProject = document.getElementById("saveProject");
-            
+
             // Reset error message when modal is opened
             modal.on('show.bs.modal', function() {
                 document.getElementById("project_name").value = "";
                 projectError.style.display = "none";
                 projectError.textContent = "";
             });
-            
+
             // Add the event listener
             newSaveProject.addEventListener('click', (event) => {
                 console.log("Save project button clicked");
                 let projectName_value = document.getElementById("project_name").value;
-                
+
                 // Validate project name - only allow alphanumeric and underscore
                 if (!/^[a-zA-Z0-9_]+$/.test(projectName_value)) {
                     projectError.style.display = "block";
                     projectError.textContent = "Project name can only contain letters, numbers, and underscores.";
                     return;
                 }
-                
+
                 // Show loading state
                 newSaveProject.disabled = true;
                 newSaveProject.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
-                
+
                 if (projectName_value.length > 0) {
                     // Use the API client instead of direct AJAX call
                     apiClient.projects.create({
@@ -67,13 +67,13 @@
                     })
                     .then(response => {
                         console.log("Project created successfully:", response);
-                        
+
                         // Hide the modal
                         modal.modal('hide');
-                        
+
                         // Show success message using showFlashMessage
                         showFlashMessage("Project created successfully", "success");
-                        
+
                         // Redirect after a short delay to allow the message to be seen
                         setTimeout(() => {
                             window.location.replace("/");
@@ -81,11 +81,11 @@
                     })
                     .catch(error => {
                         console.error("Request failed:", error);
-                        
+
                         // Reset button state
                         newSaveProject.disabled = false;
                         newSaveProject.innerHTML = 'Save';
-                        
+
                         // Get error message
                         let errorMessage = 'Failed to create project. Please try again.';
                         if (error.errors && error.errors.length > 0) {
@@ -93,11 +93,11 @@
                         } else if (error.message) {
                             errorMessage = error.message;
                         }
-                        
+
                         // Show error in the modal
                         projectError.style.display = "block";
                         projectError.textContent = errorMessage;
-                        
+
                         // Also show error using showFlashMessage
                         showFlashMessage(errorMessage, "error");
                     });
@@ -105,7 +105,7 @@
                     // Reset button state
                     newSaveProject.disabled = false;
                     newSaveProject.innerHTML = 'Save';
-                    
+
                     // Show error for empty name
                     projectError.style.display = "block";
                     projectError.textContent = "Project name cannot be empty.";

@@ -265,6 +265,7 @@ def set_active_project(project_id):
         # Convert to a Flask response to set the cookie
         flask_response = make_response(response)
         flask_response.set_cookie(key='project', value=project_id, max_age=None)
+        flask_response.set_cookie(key='project_name', value=existing_project['name'], max_age=None)
 
         return flask_response
     except Exception as e:

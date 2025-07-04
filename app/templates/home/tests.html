@@ -345,6 +345,48 @@
             }
             // Check version when the page loads
             checkVersion();
+
+            // --- Logic to save and restore selected data source ---
+            document.addEventListener('DOMContentLoaded', function() {
+                const dataSourceSelect = document.getElementById('dataSourceId');
+                const storedDataSourceId = localStorage.getItem('selectedDataSourceId');
+
+                if (storedDataSourceId) {
+                    let found = false;
+                    for (let i = 0; i < dataSourceSelect.options.length; i++) {
+                        const option = dataSourceSelect.options[i];
+                        try {
+                            const dbConfig = JSON.parse(option.value);
+                            // Use == for type coercion just in case one is a string and the other a number
+                            if (dbConfig.id == storedDataSourceId) {
+                                option.selected = true;
+                                // Trigger the change event to load the tests table
+                                dataSourceSelect.dispatchEvent(new Event('change'));
+                                found = true;
+                                break;
+                            }
+                        } catch (e) {
+                            console.error("Could not parse data source option value:", option.value, e);
+                        }
+                    }
+                    // If the stored ID is not in the list, it was probably deleted.
+                    if (!found) {
+                        localStorage.removeItem('selectedDataSourceId');
+                    }
+                }
+
+                // Add event listener to save the data source ID when the user changes it
+                dataSourceSelect.addEventListener('change', function() {
+                    try {
+                        const selectedDbConfig = JSON.parse(this.value);
+                        if (selectedDbConfig && selectedDbConfig.id) {
+                            localStorage.setItem('selectedDataSourceId', selectedDbConfig.id);
+                        }
+                    } catch (e) {
+                        console.error("Could not parse selected data source value:", this.value, e);
+                    }
+                });
+            });
         </script>
     </main>
 {% endblock content %}
