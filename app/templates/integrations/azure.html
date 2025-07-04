@@ -36,7 +36,7 @@
                                     <input type="hidden" name="id" id="config_id">
                                 {% endif %}
                                 <label for="name">Name:</label>
-                                {{ form.name(class="form-control", placeholder="My Azure Connection") }}
+                                {{ form.name(class="form-control", placeholder="e.g. My Azure Connection") }}
                                 <label for="token" class="input-label mt-2">Token:</label>
                                 <select class="form-control" name="token" id="token" required>
                                     <option value="">--- Select the secret ---</option>
@@ -47,26 +47,26 @@
                                 </select>
                                 <div id="new_secret_fields" style="display: none; width: 100%;">
                                     <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                    <input type="text" id="new_secret_name" class="form-control" placeholder="AZURE_TOKEN">
+                                    <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. AZURE_TOKEN">
                                     <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
                                     <select class="form-control" id="new_secret_scope">
                                         <option value="">ALL</option>
                                         <option value="project">PROJECT</option>
                                     </select>
                                     <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                    <input type="password" id="new_secret_value" class="form-control" placeholder="my-super-secret-token">
+                                    <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
                                 </div>
                                 <div id="tokenError" class="invalid-feedback" style="display: none;">
                                     Please select a token
                                 </div>
                                 <label for="org_url" class="mt-2">Organization url:</label>
-                                {{ form.org_url(class="form-control", placeholder="https://dev.azure.com") }}
+                                {{ form.org_url(class="form-control", placeholder="e.g. https://dev.azure.com") }}
                                 <label for="azure_project_id" class="mt-2">Project:</label>
-                                {{ form.azure_project_id(class="form-control", placeholder="my-project") }}
+                                {{ form.azure_project_id(class="form-control", placeholder="e.g. my-project") }}
                                 <label for="identifier" class="mt-2">Identifier:</label>
-                                {{ form.identifier(class="form-control", placeholder="my-identifier") }}
+                                {{ form.identifier(class="form-control", placeholder="e.g. my-identifier") }}
                                 <label for="path_to_report" class="mt-2">Path To Report:</label>
-                                {{ form.path_to_report(class="form-control", placeholder="my-path-to-report") }}
+                                {{ form.path_to_report(class="form-control", placeholder="e.g. my-path-to-report") }}
                                 <label for="is_default" class="mt-2">Is Default:</label>
                                 {{ form.is_default(class="form-control") }}
                                 <button class="btn btn-primary mt-5" type="submit">Save</button>

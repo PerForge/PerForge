@@ -34,11 +34,11 @@
                                         <input type="hidden" name="id" id="config_id" value="{{ influxdb_config }}">
                                     {% endif %}
                                     <label for="name">Name:</label>
-                                    {{ form.name(class="form-control", placeholder="My InfluxDB Connection") }}
+                                    {{ form.name(class="form-control", placeholder="e.g. My InfluxDB Connection") }}
                                     <label for="url" class="mt-2">Url:</label>
-                                    {{ form.url(class="form-control", placeholder="http://localhost:8086") }}
+                                    {{ form.url(class="form-control", placeholder="e.g. http://localhost:8086") }}
                                     <label for="org_id" class="mt-2">Org:</label>
-                                    {{ form.org_id(class="form-control", placeholder="my-organization") }}
+                                    {{ form.org_id(class="form-control", placeholder="e.g. my-organization") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
                                         <option value="">--- Select the secret ---</option>
@@ -49,22 +49,22 @@
                                     </select>
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control" placeholder="INFLUX_TOKEN">
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. INFLUX_TOKEN">
                                         <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
                                         <select class="form-control" id="new_secret_scope">
                                             <option value="">ALL</option>
                                             <option value="project">PROJECT</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control" placeholder="my-super-secret-token">
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
                                     </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
                                     <label for="timeout" class="mt-2">Timeout:</label>
-                                    {{ form.timeout(class="form-control", placeholder="60000") }}
+                                    {{ form.timeout(class="form-control", placeholder="e.g. 60000") }}
                                     <label for="bucket" class="mt-2">Bucket:</label>
-                                    {{ form.bucket(class="form-control", placeholder="my-bucket") }}
+                                    {{ form.bucket(class="form-control", placeholder="e.g. my-bucket") }}
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -80,7 +80,7 @@
                                       </div>
                                     </div>
                                     <label for="tmz" class="mt-2">Timezone:</label>
-                                    {{ form.tmz(class="form-control", placeholder="UTC") }}
+                                    {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>

@@ -36,9 +36,9 @@
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name">Name:</label>
-                                    {{ form.name(class="form-control", placeholder="My Atlassian Jira Connection") }}
+                                    {{ form.name(class="form-control", placeholder="e.g. My Atlassian Jira Connection") }}
                                     <label for="email" class="input-label mt-2">Email:</label>
-                                    {{ form.email(class="form-control", placeholder="perforge.app@gmail.com") }}
+                                    {{ form.email(class="form-control", placeholder="e.g. perforge.app@gmail.com") }}
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -57,26 +57,26 @@
                                     </select>
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control" placeholder="ATLASSIAN_JIRA_TOKEN">
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. ATLASSIAN_JIRA_TOKEN">
                                         <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
                                         <select class="form-control" id="new_secret_scope">
                                             <option value="">ALL</option>
                                             <option value="project">PROJECT</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control" placeholder="my-super-secret-token">
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
                                     </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
                                     <label for="org_url" class="mt-2">Jira organization url:</label>
-                                    {{ form.org_url(class="form-control", placeholder="https://perforge.atlassian.net") }}
+                                    {{ form.org_url(class="form-control", placeholder="e.g. https://perforge.atlassian.net") }}
                                     <label for="jira_project_key" class="mt-2">Jira Project Key:</label>
-                                    {{ form.jira_project_key(class="form-control", placeholder="PERFORGE") }}
+                                    {{ form.jira_project_key(class="form-control", placeholder="e.g. PERFORGE") }}
                                     <label for="epic_field" class="mt-2">Epic field (optional):</label>
-                                    {{ form.epic_field(class="form-control", placeholder="customfield_123456789") }}
+                                    {{ form.epic_field(class="form-control", placeholder="e.g. customfield_123456789") }}
                                     <label for="epic_name" class="mt-2">Epic name (optional):</label>
-                                    {{ form.epic_name(class="form-control", placeholder="PERFORGE-12345") }}
+                                    {{ form.epic_name(class="form-control", placeholder="e.g. PERFORGE-12345") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>

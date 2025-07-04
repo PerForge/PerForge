@@ -36,21 +36,21 @@
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name">Name:</label>
-                                    {{ form.name(class="form-control", placeholder="My AI Support Connection") }}
+                                    {{ form.name(class="form-control", placeholder="e.g. My AI Support Connection") }}
                                     <label for="ai_provider" class="mt-2">AI Provider:</label>
                                     {{ form.ai_provider(class="form-control") }}
                                     <div id="div_azure_url" style="display: none; width: 100%;">
                                       <label for="azure_url" class="mt-2" style="display: block; text-align: center;">Azure URL:</label>
-                                      {{ form.azure_url(class="form-control", id="azure_url", placeholder="https://api.openai.com") }}
+                                      {{ form.azure_url(class="form-control", id="azure_url", placeholder="e.g. https://api.openai.com") }}
                                     </div>
                                     <div id="div_api_version" style="display: none; width: 100%;">
                                         <label for="api_version" class="mt-2" style="display: block; text-align: center;">Api version:</label>
-                                        {{ form.api_version(class="form-control", id="api_version", placeholder="2023-06-01") }}
+                                        {{ form.api_version(class="form-control", id="api_version", placeholder="e.g. 2023-06-01") }}
                                       </div>
                                     <label for="ai_text_model" class="input-label mt-2">AI Text model:</label>
-                                    {{ form.ai_text_model(class="form-control", placeholder="gpt-4o") }}
+                                    {{ form.ai_text_model(class="form-control", placeholder="e.g. gpt-4o") }}
                                     <label for="ai_image_model" class="input-label mt-2">AI Image model:</label>
-                                    {{ form.ai_image_model(class="form-control", placeholder="gpt-4o") }}
+                                    {{ form.ai_image_model(class="form-control", placeholder="e.g. gpt-4o") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
                                         <option value="">--- Select the secret ---</option>
@@ -61,20 +61,20 @@
                                     </select>
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control" placeholder="AI_TOKEN">
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. AI_TOKEN">
                                         <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
                                         <select class="form-control" id="new_secret_scope">
                                             <option value="">ALL</option>
                                             <option value="project">PROJECT</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control" placeholder="my-super-secret-token">
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
                                     </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
                                     <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
-                                    {{ form.temperature(class="form-control", placeholder="0.2") }}
+                                    {{ form.temperature(class="form-control", placeholder="e.g. 0.2") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>

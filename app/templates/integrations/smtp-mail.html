@@ -36,13 +36,13 @@
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name" class="input-label mt-2">Name:</label>
-                                    {{ form.name(id='name', class_='form-control', placeholder="My SMTP Mail Connection") }}
+                                    {{ form.name(id='name', class_='form-control', placeholder="e.g. My SMTP Mail Connection") }}
 
                                     <label for="server" class="input-label mt-2">Server:</label>
-                                    {{ form.server(id='server', class_='form-control', placeholder="smtp.gmail.com") }}
+                                    {{ form.server(id='server', class_='form-control', placeholder="e.g. smtp.gmail.com") }}
 
                                     <label for="port" class="input-label mt-2">Port:</label>
-                                    {{ form.port(id='port', class_='form-control', placeholder="465") }}
+                                    {{ form.port(id='port', class_='form-control', placeholder="e.g. 465") }}
 
                                     <label for="use_ssl" class="input-label mt-2">UseSsl:</label>
                                     {{ form.use_ssl(id='use_ssl', class_='form-control') }}
@@ -51,7 +51,7 @@
                                     {{ form.use_tls(id='use_tls', class_='form-control') }}
 
                                     <label for="username" class="input-label mt-2">Username:</label>
-                                    {{ form.username(id='username', class_='form-control', placeholder="perforge.app@gmail.com") }}
+                                    {{ form.username(id='username', class_='form-control', placeholder="e.g. perforge.app@gmail.com") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
                                         <option value="">--- Select the secret ---</option>
@@ -62,14 +62,14 @@
                                     </select>
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control" placeholder="SMTP_PASSWORD">
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. SMTP_PASSWORD">
                                         <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
                                         <select class="form-control" id="new_secret_scope">
                                             <option value="">ALL</option>
                                             <option value="project">PROJECT</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control" placeholder="my-super-secret-password">
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-password">
                                     </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
@@ -88,7 +88,7 @@
                                                 required
                                                 name="recipients-{{ loop.index0 }}-email"
                                                 id="recipients-{{ loop.index0 }}-email"
-                                                value="{{ recipient.data.email if recipient.data else '' }}" placeholder="perforge.app@gmail.com">
+                                                value="{{ recipient.data.email if recipient.data else '' }}" placeholder="e.g. perforge.app@gmail.com">
                                             <button type="button" class="btn btn-secondary ms-2 deleteRecipient" onclick="removeRecipient(this)">Delete</button>
                                         </div>
                                         {% endfor %}
@@ -175,7 +175,7 @@
             const container = document.getElementById('recipients-container');
             const newRecipient = `
                 <div class="flex m10-top">
-                    <input type="text" class="form-control recipientInput" placeholder="Recipient's email">
+                    <input type="text" class="form-control recipientInput">
                     <button type="button" class="btn btn-danger ms-2" onclick="removeRecipient(this)">Remove</button>
                 </div>
             `;

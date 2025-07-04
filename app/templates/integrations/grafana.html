@@ -34,9 +34,9 @@
                                         <input type="hidden" name="id" id="config_id" value="{{ grafana_config }}">
                                     {% endif %}
                                     <label for="name" class="input-label mt-2">Name:</label>
-                                    {{ form.name(id='name', class_='form-control', placeholder="My Grafana Connection") }}
+                                    {{ form.name(id='name', class_='form-control', placeholder="e.g. My Grafana Connection") }}
                                     <label for="server" class="input-label mt-2">Server:</label>
-                                    {{ form.server(id='server', class_='form-control', placeholder="http://localhost:3000") }}
+                                    {{ form.server(id='server', class_='form-control', placeholder="e.g. http://localhost:3000") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
                                         <option value="">--- Select the secret ---</option>
@@ -47,21 +47,21 @@
                                     </select>
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control", placeholder="GRAFANA_TOKEN">
+                                        <input type="text" id="new_secret_name" class="form-control", placeholder="e.g. GRAFANA_TOKEN">
                                         <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
                                         <select class="form-control" id="new_secret_scope">
                                             <option value="">ALL</option>
                                             <option value="project">PROJECT</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control", placeholder="my-super-secret-token">
+                                        <input type="password" id="new_secret_value" class="form-control", placeholder="e.g. my-super-secret-token">
                                     </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
 
                                     <label for="org_id" class="input-label mt-2">Organization ID:</label>
-                                    {{ form.org_id(id='org_id', class_='form-control', placeholder="1") }}
+                                    {{ form.org_id(id='org_id', class_='form-control', placeholder="e.g. 1") }}
 
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -70,7 +70,7 @@
                                       </div>
                                     </div>
                                     <label for="test_title" class="input-label mt-2">Test title tag:</label>
-                                    {{ form.test_title(id='test_title', class_='form-control', placeholder="testTitle") }}
+                                    {{ form.test_title(id='test_title', class_='form-control', placeholder="e.g. testTitle") }}
 
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -79,7 +79,7 @@
                                       </div>
                                     </div>
                                     <label for="app" class="input-label mt-2">App name tag:</label>
-                                    {{ form.app(id='app', class_='form-control', placeholder="app") }}
+                                    {{ form.app(id='app', class_='form-control', placeholder="e.g. app") }}
 
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -88,7 +88,7 @@
                                       </div>
                                     </div>
                                     <label for="baseline_test_title" class="input-label mt-2">Baseline test title tag:</label>
-                                    {{ form.baseline_test_title(id='baseline_test_title', class_='form-control', placeholder="baseline_testTitle") }}
+                                    {{ form.baseline_test_title(id='baseline_test_title', class_='form-control', placeholder="e.g. baseline_testTitle") }}
 
                                     <label for="is_default" class="input-label mt-2">Is Default:</label>
                                     {{ form.is_default(id='is_default', class_='form-control') }}
@@ -98,7 +98,7 @@
                                         {% for dashboard in form.dashboards %}
                                         <div class="flex m10-top">
                                             <input type="hidden" name="dashboards-{{ loop.index0 }}-id" value="{{ dashboard.form.id.data or '' }}">
-                                            <input type="text" class="form-control dashboardInput" required="" name="dashboards-{{ loop.index0 }}-content" id="dashboards-{{ loop.index0 }}-content" value="{{ dashboard.form.content.data or '' }}" placeholder="/d/jmeter-test-results/jmeter-test-results">
+                                            <input type="text" class="form-control dashboardInput" required="" name="dashboards-{{ loop.index0 }}-content" id="dashboards-{{ loop.index0 }}-content" value="{{ dashboard.form.content.data or '' }}" placeholder="e.g. /d/jmeter-test-results/jmeter-test-results">
                                             <button type="button" class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
                                         </div>
                                         {% endfor %}
@@ -161,7 +161,7 @@
               var count = document.querySelectorAll('.dashboardInput').length;
               var html = `<div class="flex m10-top">
                               <input type="hidden" name="dashboards-${count}-id" id="dashboards-${count}-id" value="">
-                              <input type="text" class="form-control dashboardInput" required="" name="dashboards-${count}-content" id="dashboards-${count}-content" value="" placeholder="Dashboard UID">
+                              <input type="text" class="form-control dashboardInput" required="" name="dashboards-${count}-content" id="dashboards-${count}-content" value="">
                               <button type="button" class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
                           </div>`;
               var container = document.createElement('div');
