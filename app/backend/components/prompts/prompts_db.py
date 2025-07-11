@@ -21,7 +21,6 @@ from app.config                  import db
 from app.backend.pydantic_models import PromptModel
 from sqlalchemy                  import or_
 
-
 class DBPrompts(db.Model):
     __tablename__  = 'prompts'
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -35,11 +34,10 @@ class DBPrompts(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, project_id, data):
+    def save(cls, data):
         try:
             validated_data = PromptModel(**data)
-            instance = cls(**validated_data.model_dump(exclude={'project_id'}))
-            instance.project_id = project_id
+            instance = cls(**validated_data.model_dump())
             db.session.add(instance)
             db.session.commit()
             return instance.id
@@ -54,7 +52,7 @@ class DBPrompts(db.Model):
             default_query = db.session.query(cls).filter(cls.type == "default").all()
             custom_query = db.session.query(cls).filter(
                 cls.type == "custom",
-                cls.project_id == project_id
+                or_(cls.project_id == project_id, cls.project_id.is_(None))
             ).all()
             default_configs = [PromptModel(**config.to_dict()).model_dump() for config in default_query]
             custom_configs = [PromptModel(**config.to_dict()).model_dump() for config in custom_query]
@@ -97,12 +95,12 @@ class DBPrompts(db.Model):
             raise
 
     @classmethod
-    def update(cls, project_id, data):
+    def update(cls, data):
         try:
             validated_data = PromptModel(**data)
-            config = db.session.query(cls).filter_by(id=validated_data.id, project_id=project_id).one_or_none()
+            config = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
             if config:
-                for key, value in validated_data.model_dump(exclude={'id', 'project_id'}).items():
+                for key, value in validated_data.model_dump(exclude={'id'}).items():
                     setattr(config, key, value)
                 db.session.commit()
         except Exception:
@@ -122,12 +120,14 @@ class DBPrompts(db.Model):
             raise
 
     @classmethod
-    def delete(cls, project_id, id):
+    def delete(cls, id):
         try:
-            config = db.session.query(cls).filter_by(id=id, project_id=project_id).one_or_none()
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()
+                return True
+            return False
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))

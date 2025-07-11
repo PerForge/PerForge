@@ -46,8 +46,10 @@ class DBGrafana(db.Model):
             instance = cls(**instance_data)
 
             if grafana_model_instance.dashboards:
-                for dashboard_data_dict in grafana_model_instance.dashboards:
-                    dashboard = DBGrafanaDashboards(**dashboard_data_dict.model_dump() if hasattr(dashboard_data_dict, 'model_dump') else dashboard_data_dict)
+                for dashboard_data in grafana_model_instance.dashboards:
+                    dashboard_dict = dashboard_data.model_dump() if hasattr(dashboard_data, 'model_dump') else dashboard_data
+                    dashboard_dict.pop('id', None)
+                    dashboard = DBGrafanaDashboards(**dashboard_dict)
                     instance.dashboards.append(dashboard)
 
             if instance.is_default:

@@ -1,9 +1,32 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <!-- API Client -->
 <script>
-    $(document).ready(function() {
-        const currentPath = window.location.pathname;
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+    }
 
+    $(document).ready(function() {
+        // Add project to settings dropdown
+        const projectName = getCookie('project_name');
+
+        // Remove existing project info to prevent duplicates
+        $('.project-specific-item').remove();
+
+        if (projectName) {
+            const projectBlock = `
+                <li class="project-specific-item"><h5 class="dropdown-header" style="text-align: center;">Current project</h5><span class="dropdown-item-text" style="text-align: center; color: grey; display: block; padding: 0.25rem 1rem;">${projectName}</span></li>
+                <li class="project-specific-item"><hr class="dropdown-divider"></li>
+                <li class="project-specific-item"><a class="dropdown-item" href="/choose-project"><i class="fas fa-exchange-alt me-2"></i>Change Project</a></li>
+                <li class="project-specific-item"><hr class="dropdown-divider"></li>
+            `;
+            const settingsMenu = $('.settings-dropdown .dropdown-menu');
+            settingsMenu.prepend(projectBlock);
+        }
+
+        // Highlight active nav link
+        const currentPath = window.location.pathname;
         const navLinks = document.querySelectorAll('.horizontal-sidebar .nav-link');
 
         navLinks.forEach(link => {
@@ -22,7 +45,7 @@
     <div class="sidebar-container">
         <div class="sidebar-header">
             <img src="/static/assets/img/logo.png" height="25" alt="PerForge">
-            <a type="button" href="/">PerForge</a>
+            <a type="button" href="https://perforge.app" target="_blank">PerForge</a>
         </div>
         <div class="nav-links-container">
             <a class="nav-link" type="button" href="/">

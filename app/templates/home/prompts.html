@@ -66,7 +66,7 @@
               <div class="modal-body">
                 <div class="mt-3">
                   <label>Name</label>
-                  <input type="text" class="form-control" id="name" name="name" required>
+                  <input type="text" class="form-control" id="name" name="name" required placeholder="e.g. my-genius-prompt">
                 </div>
                 <div class="mt-3">
                   <label>Place</label>
@@ -80,7 +80,7 @@
                 </div>
                 <div class="mt-3">
                   <label>Prompt</label>
-                  <textarea class="form-control" id="prompt" name="prompt" rows="6" required></textarea>
+                  <textarea class="form-control" id="prompt" name="prompt" rows="6" required placeholder="e.g. GENIUS PROMPT"></textarea>
                 </div>
                 <div class="mt-3">
                   <label>Scope</label>
@@ -328,8 +328,6 @@
                   editButton.setAttribute('data-bs-target', '#promptModal');
                   editButton.addEventListener('click', function() {
                       showEditPromptModal(prompt);
-                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
-                      modal.show();
                   });
                   actionsCell.appendChild(editButton);
 
@@ -421,15 +419,20 @@
 
       // Function to delete a prompt
       function deletePrompt(promptId, modal) {
+          const promptModalEl = document.getElementById('promptModal');
+          const modalInstance = bootstrap.Modal.getInstance(promptModalEl) || new bootstrap.Modal(promptModalEl);
+
           apiClient.prompts.delete(promptId)
               .then(response => {
                   modal.hide();
+                  modalInstance.hide();
                   showFlashMessage('Prompt deleted successfully', 'success');
                   loadPrompts(); // Reload the prompts list
               })
               .catch(error => {
                   console.error('Error deleting prompt:', error);
                   modal.hide();
+                  modalInstance.hide();
                   showFlashMessage(error.message || 'Error deleting prompt', 'error');
               });
       }
@@ -444,20 +447,13 @@
           }
       }
 
-      // Update the URL with the selected type
-      function updateURL(type) {
-          const url = new URL(window.location.href);
-          url.searchParams.set('type', type);
-          window.history.replaceState({}, '', url);
-      }
-
-      // Read the switcher state from the URL on page load
+      // Read the switcher state from localStorage on page load
       function initializeSwitcher() {
-          const urlParams = new URLSearchParams(window.location.search);
-          const type = urlParams.get('type');
-
           const switcher = document.getElementById('selectedTypeSwitch');
-          if (type === 'custom') {
+          const savedType = localStorage.getItem('prompt_view_type');
+
+          // Set switcher state from localStorage or default to 'default'
+          if (savedType === 'custom') {
               switcher.checked = true;
           } else {
               switcher.checked = false;
@@ -465,7 +461,8 @@
 
           // Add event listener to the switcher
           switcher.addEventListener('change', function() {
-              updateURL(this.checked ? 'custom' : 'default');
+              const type = this.checked ? 'custom' : 'default';
+              localStorage.setItem('prompt_view_type', type);
               loadPrompts(); // Reload prompts when switcher changes
           });
       }

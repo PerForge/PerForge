@@ -166,7 +166,6 @@ class GraphModel(BaseModelWithStripping):
 
 class TemplateObjectModel(BaseModelWithStripping):
     id         : Optional[int] = Field(default=None)
-    type       : str
     content    : Optional[str]
     graph_id   : Optional[int]
     template_id: Optional[int] = Field(default=None)
@@ -244,7 +243,6 @@ class PromptModel(BaseModelWithStripping):
 class SecretsModel(BaseModelWithStripping):
     id        : Optional[int]
     key       : str
-    type      : str
     value     : str
     project_id: Optional[int]
 

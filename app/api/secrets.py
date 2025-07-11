@@ -19,7 +19,7 @@ secrets_api = Blueprint('secrets_api', __name__)
 def get_secrets():
     """
     Get all secrets for the current project.
-    
+
     Returns:
         A JSON response with secrets
     """
@@ -31,7 +31,7 @@ def get_secrets():
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_project", "message": "No project selected"}]
             )
-            
+
         project_data = DBProjects.get_config_by_id(id=project_id)
         if not project_data:
             return api_response(
@@ -39,14 +39,14 @@ def get_secrets():
                 status=HTTP_NOT_FOUND,
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
-            
+
         secret_configs = DBSecrets.get_configs(project_id=project_id)
-        
+
         # Remove sensitive data from response
         for secret in secret_configs:
-            if 'secret' in secret:
-                secret['secret'] = '********'
-                
+            if 'value' in secret:
+                secret['value'] = '********'
+
         return api_response(data={"secrets": secret_configs})
     except Exception as e:
         logging.error(f"Error getting secrets: {str(e)}")
@@ -61,10 +61,10 @@ def get_secrets():
 def get_secret(secret_id):
     """
     Get a specific secret by ID.
-    
+
     Args:
         secret_id: The ID of the secret to get
-        
+
     Returns:
         A JSON response with the secret data (without the actual secret value)
     """
@@ -76,7 +76,7 @@ def get_secret(secret_id):
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_project", "message": "No project selected"}]
             )
-            
+
         project_data = DBProjects.get_config_by_id(id=project_id)
         if not project_data:
             return api_response(
@@ -84,7 +84,7 @@ def get_secret(secret_id):
                 status=HTTP_NOT_FOUND,
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
-            
+
         secret_data = DBSecrets.get_config_by_id(project_id=project_id, id=secret_id)
         if not secret_data:
             return api_response(
@@ -92,11 +92,11 @@ def get_secret(secret_id):
                 status=HTTP_NOT_FOUND,
                 errors=[{"code": "not_found", "message": f"Secret with ID {secret_id} not found"}]
             )
-            
+
         # Remove sensitive data from response
-        if 'secret' in secret_data:
-            secret_data['secret'] = '********'
-            
+        if 'value' in secret_data:
+            secret_data['value'] = '********'
+
         return api_response(data={"secret": secret_data})
     except Exception as e:
         logging.error(f"Error getting secret: {str(e)}")
@@ -111,27 +111,11 @@ def get_secret(secret_id):
 def create_secret():
     """
     Create a new secret.
-    
+
     Returns:
         A JSON response with the new secret ID
     """
     try:
-        project_id = get_project_id()
-        if not project_id:
-            return api_response(
-                message="No project selected",
-                status=HTTP_BAD_REQUEST,
-                errors=[{"code": "missing_project", "message": "No project selected"}]
-            )
-            
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        if not project_data:
-            return api_response(
-                message=f"Project with ID {project_id} not found",
-                status=HTTP_NOT_FOUND,
-                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
-            )
-            
         secret_data = request.get_json()
         if not secret_data:
             return api_response(
@@ -139,7 +123,19 @@ def create_secret():
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_data", "message": "No secret data provided"}]
             )
-            
+
+        if secret_data['project_id']:
+            project_id = get_project_id()
+            if not project_id:
+                return api_response(
+                    message="No project selected",
+                    status=HTTP_BAD_REQUEST,
+                    errors=[{"code": "missing_project", "message": "No project selected"}]
+                )
+            secret_data['project_id'] = project_id
+        else:
+            secret_data['project_id'] = None
+
         # Clean up empty values
         for key, value in secret_data.items():
             if isinstance(value, list):
@@ -150,15 +146,14 @@ def create_secret():
                                 item[k] = None
             elif value == '':
                 secret_data[key] = None
-                
+
         # Ensure ID is None for new secret
         secret_data["id"] = None
-        
+
         new_secret_id = DBSecrets.save(
-            project_id=project_id,
             data=secret_data
         )
-        
+
         return api_response(
             data={"secret_id": new_secret_id},
             message="Secret created successfully",
@@ -177,10 +172,10 @@ def create_secret():
 def update_secret(secret_id):
     """
     Update an existing secret.
-    
+
     Args:
         secret_id: The ID of the secret to update
-        
+
     Returns:
         A JSON response with the updated secret
     """
@@ -192,15 +187,7 @@ def update_secret(secret_id):
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_project", "message": "No project selected"}]
             )
-            
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        if not project_data:
-            return api_response(
-                message=f"Project with ID {project_id} not found",
-                status=HTTP_NOT_FOUND,
-                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
-            )
-            
+
         # Check if secret exists
         existing_secret = DBSecrets.get_config_by_id(project_id=project_id, id=secret_id)
         if not existing_secret:
@@ -209,7 +196,7 @@ def update_secret(secret_id):
                 status=HTTP_NOT_FOUND,
                 errors=[{"code": "not_found", "message": f"Secret with ID {secret_id} not found"}]
             )
-            
+
         secret_data = request.get_json()
         if not secret_data:
             return api_response(
@@ -217,7 +204,10 @@ def update_secret(secret_id):
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_data", "message": "No secret data provided"}]
             )
-            
+
+        if secret_data['project_id']:
+            secret_data['project_id'] = project_id
+
         # Clean up empty values
         for key, value in secret_data.items():
             if isinstance(value, list):
@@ -228,19 +218,18 @@ def update_secret(secret_id):
                                 item[k] = None
             elif value == '':
                 secret_data[key] = None
-        
+
         # If value is not provided, keep the existing value
         if 'value' not in secret_data or secret_data['value'] is None:
             secret_data['value'] = existing_secret['value']
-                
+
         # Ensure ID matches URL
         secret_data["id"] = secret_id
-        
+
         DBSecrets.update(
-            project_id=project_id,
             data=secret_data
         )
-        
+
         return api_response(
             data={"secret_id": secret_id},
             message="Secret updated successfully"
@@ -258,41 +247,24 @@ def update_secret(secret_id):
 def delete_secret(secret_id):
     """
     Delete a secret.
-    
+
     Args:
         secret_id: The ID of the secret to delete
-        
+
     Returns:
         A JSON response confirming deletion
     """
     try:
-        project_id = get_project_id()
-        if not project_id:
-            return api_response(
-                message="No project selected",
-                status=HTTP_BAD_REQUEST,
-                errors=[{"code": "missing_project", "message": "No project selected"}]
-            )
-            
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        if not project_data:
-            return api_response(
-                message=f"Project with ID {project_id} not found",
-                status=HTTP_NOT_FOUND,
-                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
-            )
-            
-        # Check if secret exists
-        existing_secret = DBSecrets.get_config_by_id(project_id=project_id, id=secret_id)
-        if not existing_secret:
+        # Delete the secret by its unique ID, regardless of project context
+        deleted = DBSecrets.delete(id=secret_id)
+
+        if not deleted:
             return api_response(
                 message=f"Secret with ID {secret_id} not found",
                 status=HTTP_NOT_FOUND,
                 errors=[{"code": "not_found", "message": f"Secret with ID {secret_id} not found"}]
             )
-            
-        DBSecrets.delete(project_id=project_id, id=secret_id)
-        
+
         return api_response(
             message="Secret deleted successfully",
             status=HTTP_NO_CONTENT

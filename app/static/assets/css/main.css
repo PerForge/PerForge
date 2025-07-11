@@ -673,8 +673,8 @@ body.light-theme .theme-switcher-btn:hover {
 }
 
 .card {
-    --card-spacer-y: 25px;
-    --card-spacer-x: 25px;
+    --card-spacer-y: 15px;
+    --card-spacer-x: 15px;
     --card-title-spacer-y: 15px;
     --card-border-width: 1.5px;
     --card-border-color: var(--border-main-color);
@@ -714,7 +714,7 @@ body.light-theme .theme-switcher-btn:hover {
 }
 
 .card-header {
-    padding: var(--card-cap-padding-y) var(--card-cap-padding-x);
+    padding: 15px 15px;
     margin-bottom: 0;
     color: var(--text-main-color);
     background-color: var(--bs-background-dark);
@@ -3164,4 +3164,24 @@ body.light-theme .theme-switcher-btn {
 .btn:disabled {
     pointer-events: none;
     opacity: 0.65;
+}
+
+.card-project {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+
+.card-project a {
+    white-space: normal;
+    word-wrap: break-word;
+    text-align: center;
+    display: block;
+    width: 100%;
+}
+
+.selected-project {
+    border: 2px solid var(--bs-primary);
 }

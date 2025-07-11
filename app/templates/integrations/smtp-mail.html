@@ -14,7 +14,7 @@
                     <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
-                                <h4 class="mb-0">SMTP Mail integration
+                                <h4 class="mb-0">SMTP Mail
                                     <div class="tooltip-container">
                                       <a href="https://perforge.app/docs/configuration/integrations#smtp-mail" target="_blank">
                                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -36,13 +36,13 @@
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name" class="input-label mt-2">Name:</label>
-                                    {{ form.name(id='name', class_='form-control') }}
+                                    {{ form.name(id='name', class_='form-control', placeholder="e.g. My SMTP Mail Connection") }}
 
                                     <label for="server" class="input-label mt-2">Server:</label>
-                                    {{ form.server(id='server', class_='form-control') }}
+                                    {{ form.server(id='server', class_='form-control', placeholder="e.g. smtp.gmail.com") }}
 
                                     <label for="port" class="input-label mt-2">Port:</label>
-                                    {{ form.port(id='port', class_='form-control') }}
+                                    {{ form.port(id='port', class_='form-control', placeholder="e.g. 465") }}
 
                                     <label for="use_ssl" class="input-label mt-2">UseSsl:</label>
                                     {{ form.use_ssl(id='use_ssl', class_='form-control') }}
@@ -51,21 +51,26 @@
                                     {{ form.use_tls(id='use_tls', class_='form-control') }}
 
                                     <label for="username" class="input-label mt-2">Username:</label>
-                                    {{ form.username(id='username', class_='form-control') }}
-
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;.
-                                      </div>
-                                    </div>
+                                    {{ form.username(id='username', class_='form-control', placeholder="e.g. perforge.app@gmail.com") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
-                                        <option value="">Select the secret</option>
+                                        <option value="">--- Select the secret ---</option>
+                                        <option value="create_new">--- Create a new secret ---</option>
                                         {% for secret in secret_configs %}
                                             <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="new_secret_fields" style="display: none; width: 100%;">
+                                        <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. SMTP_PASSWORD">
+                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
+                                        <select class="form-control" id="new_secret_scope">
+                                            <option value="">ALL</option>
+                                            <option value="project">PROJECT</option>
+                                        </select>
+                                        <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-password">
+                                    </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
@@ -83,7 +88,7 @@
                                                 required
                                                 name="recipients-{{ loop.index0 }}-email"
                                                 id="recipients-{{ loop.index0 }}-email"
-                                                value="{{ recipient.data.email if recipient.data else '' }}">
+                                                value="{{ recipient.data.email if recipient.data else '' }}" placeholder="e.g. perforge.app@gmail.com">
                                             <button type="button" class="btn btn-secondary ms-2 deleteRecipient" onclick="removeRecipient(this)">Delete</button>
                                         </div>
                                         {% endfor %}
@@ -125,72 +130,141 @@
     </main>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            window.addRecipient = function() {
-                var count = document.querySelectorAll('.recipientInput').length;
-                var html = `<div class="flex m10-top">
-                                <input type="hidden" name="recipients-${count}-id" id="recipients-${count}-id" value="">
-                                <input type="text"
-                                    class="form-control recipientInput"
-                                    required
-                                    name="recipients-${count}-email"
-                                    id="recipients-${count}-email"
-                                    value="">
-                                <button type="button" class="btn btn-secondary ms-2 deleteRecipient" onclick="removeRecipient(this)">Delete</button>
-                            </div>`;
-                var container = document.createElement('div');
-                container.innerHTML = html;
-                document.getElementById('recipients-container').appendChild(container.firstChild);
-            };
+            updateRecipientInputs(); // Initial call to set names for existing items
 
-            window.removeRecipient = function(e) {
-                var recipientsContainer = document.getElementById('recipients-container');
-                recipientsContainer.removeChild(e.parentNode);
-                updateRecipientInputs();
-            };
+            const tokenSelect = document.getElementById('token');
+            const newSecretFields = document.getElementById('new_secret_fields');
 
-            function updateRecipientInputs() {
-                var recipientInputs = document.querySelectorAll('.recipientInput');
-                var recipientIds = document.querySelectorAll('[name^="recipients-"][name$="-id"]');
-                for (var i = 0; i < recipientInputs.length; i++) {
-                    recipientInputs[i].name = `recipients-${i}-email`;
-                    recipientInputs[i].id = `recipients-${i}-email`;
-                    recipientIds[i].name = `recipients-${i}-id`;
-                    recipientIds[i].id = `recipients-${i}-id`;
+            tokenSelect.addEventListener('change', function() {
+                if (this.value === 'create_new') {
+                    newSecretFields.style.display = 'block';
+                } else {
+                    newSecretFields.style.display = 'none';
                 }
+            });
+
+            // Set up delete button handler
+            const deleteButton = document.getElementById('deleteButton');
+            if (deleteButton) {
+                deleteButton.addEventListener('click', function() {
+                    const integrationId = document.getElementById('config_id').value;
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+
+                    apiClient.integrations.delete(integrationId, 'smtp_mail')
+                        .then(response => {
+                            modal.hide();
+                            showFlashMessage("Integration deleted successfully.", "success");
+                            setTimeout(() => {
+                                window.location.href = '/integrations?tab=smtp-mail';
+                            }, 1000);
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            showFlashMessage(error.message || "An error occurred while deleting the integration.", "error");
+                        });
+                });
             }
+
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
         });
+
+        function addRecipient() {
+            const container = document.getElementById('recipients-container');
+            const newRecipient = `
+                <div class="flex m10-top">
+                    <input type="text" class="form-control recipientInput">
+                    <button type="button" class="btn btn-danger ms-2" onclick="removeRecipient(this)">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', newRecipient);
+            updateRecipientInputs();
+        }
+
+        function removeRecipient(button) {
+            button.parentElement.remove();
+            updateRecipientInputs();
+        }
+
+        function updateRecipientInputs() {
+            const container = document.getElementById('recipients-container');
+            const items = container.querySelectorAll('.flex');
+            items.forEach((item, index) => {
+                const emailInput = item.querySelector('.recipientInput');
+                if (emailInput) {
+                    emailInput.name = `recipients-${index}-email`;
+                }
+                const idInput = item.querySelector("input[type='hidden']");
+                if (idInput) {
+                    idInput.name = `recipients-${index}-id`;
+                }
+            });
+        }
 
         function validateForm() {
             const tokenSelect = document.getElementById('token');
             const tokenError = document.getElementById('tokenError');
+            let isValid = true;
 
-            if (!tokenSelect.value) {
-                tokenSelect.classList.add('is-invalid');
+            if (tokenSelect.value === "") {
                 tokenError.style.display = 'block';
-                return false;
+                isValid = false;
+            } else {
+                tokenError.style.display = 'none';
             }
 
-            tokenSelect.classList.remove('is-invalid');
-            tokenError.style.display = 'none';
-            return true;
+            if (tokenSelect.value === 'create_new') {
+                const secretName = document.getElementById('new_secret_name').value;
+                const secretValue = document.getElementById('new_secret_value').value;
+                if (!secretName || !secretValue) {
+                    showFlashMessage("Secret Name and Secret Value are required when creating a new secret.", "error");
+                    isValid = false;
+                }
+            }
+            return isValid;
         }
 
-        // Add event listener to token select for real-time validation
-        document.getElementById('token').addEventListener('change', function() {
-            if (this.value) {
-                this.classList.remove('is-invalid');
-                document.getElementById('tokenError').style.display = 'none';
-            }
-        });
-
-        // Function to handle form submission
         function handleFormSubmit(event) {
             event.preventDefault();
 
             if (!validateForm()) {
-                return false;
+                return;
             }
 
+            const tokenSelect = document.getElementById('token');
+
+            if (tokenSelect.value === 'create_new') {
+                const secretName = document.getElementById('new_secret_name').value;
+                const secretValue = document.getElementById('new_secret_value').value;
+                const secretScope = document.getElementById('new_secret_scope').value;
+
+                const secretData = {
+                    key: secretName,
+                    value: secretValue,
+                    project_id: secretScope === 'project' ? '{{ project_id }}' : null
+                };
+
+                apiClient.secrets.create(secretData)
+                    .then(response => {
+                        if (response && response.data && response.data.secret_id) {
+                            saveIntegration(response.data.secret_id);
+                        } else {
+                            throw new Error('Failed to get secret ID from response.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error creating secret:', error);
+                        const errorMessage = error.responseJSON?.message || error.message || 'An error occurred while creating the secret.';
+                        showFlashMessage(errorMessage, 'error');
+                    });
+            } else {
+                saveIntegration(tokenSelect.value);
+            }
+        }
+
+        function saveIntegration(tokenId) {
             const id = document.getElementById('config_id')?.value;
             const formData = {
                 id: id ? id : null,
@@ -200,36 +274,33 @@
                 use_ssl: document.getElementById('use_ssl').value === 'True',
                 use_tls: document.getElementById('use_tls').value === 'True',
                 username: document.getElementById('username').value,
-                token: document.getElementById('token').value,
+                token: tokenId,
                 is_default: document.getElementById('is_default').value === 'True',
                 recipients: []
             };
 
-            const smtpMailId = formData.id;
-            const recipientInputs = document.querySelectorAll('.recipientInput');
-
-            recipientInputs.forEach((input, index) => {
-                const recipientIdInput = document.querySelector(`input[name='recipients-${index}-id']`);
-                const recipientId = recipientIdInput ? recipientIdInput.value : null;
-                formData.recipients.push({
-                    id: id && recipientId ? recipientId : null,
-                    email: document.querySelector(`input[name='recipients-${index}-email']`).value,
-                    smtp_mail_id: smtpMailId
-                });
+            const recipientRows = document.querySelectorAll('#recipients-container .flex');
+            recipientRows.forEach(row => {
+                const emailInput = row.querySelector('.recipientInput');
+                const idInput = row.querySelector("input[type='hidden']");
+                if (emailInput && emailInput.value) {
+                    const recipientId = idInput ? idInput.value : null;
+                    formData.recipients.push({
+                        id: id && recipientId ? recipientId : null,
+                        email: emailInput.value,
+                        smtp_mail_id: id
+                    });
+                }
             });
 
-            // Use the API client to save the integration
             const apiCall = id
                 ? apiClient.integrations.update(id, formData, 'smtp_mail')
                 : apiClient.integrations.create(formData, 'smtp_mail');
 
             apiCall
                 .then(response => {
-                    // Show success message
                     const message = id ? "Integration updated successfully." : "Integration added successfully.";
                     showFlashMessage(message, "success");
-
-                    // Redirect to integrations page after a short delay
                     setTimeout(() => {
                         window.location.href = '/integrations?tab=smtp-mail';
                     }, 1000);
@@ -238,36 +309,6 @@
                     console.error('Error:', error);
                     showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
                 });
-
-            return false;
         }
-
-        // Set up delete button handler
-        document.getElementById('deleteButton')?.addEventListener('click', function() {
-            const integrationId = document.getElementById('config_id').value;
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-
-            apiClient.integrations.delete(integrationId, 'smtp_mail')
-                .then(response => {
-                    modal.hide();
-
-                    // Show success message
-                    showFlashMessage("Integration deleted successfully.", "success");
-
-                    // Redirect to integrations page after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/integrations?tab=smtp-mail';
-                    }, 1000);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showFlashMessage(error.message || "An error occurred while deleting the integration.", "error");
-                });
-        });
-
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
     </script>
 {% endblock content %}

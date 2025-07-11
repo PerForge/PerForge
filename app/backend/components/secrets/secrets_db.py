@@ -19,7 +19,6 @@ from app.config                  import db
 from app.backend.pydantic_models import SecretsModel
 from sqlalchemy                  import or_, UniqueConstraint
 
-
 class DBSecrets(db.Model):
 
     __tablename__  = 'secrets'
@@ -27,7 +26,6 @@ class DBSecrets(db.Model):
 
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
     key            = db.Column(db.String(120), nullable=False)
-    type           = db.Column(db.String(120), nullable=False)
     value          = db.Column(db.String(500), nullable=False)
     project_id     = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), index=True)
 
@@ -35,14 +33,13 @@ class DBSecrets(db.Model):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
     @classmethod
-    def save(cls, project_id, data):
+    def save(cls, data):
         try:
             validated_data = SecretsModel(**data)
-            instance = cls(**validated_data.model_dump(exclude={'project_id'}))
-            instance.project_id = project_id
+            instance = cls(**validated_data.model_dump())
             db.session.add(instance)
             db.session.commit()
-            return instance.key
+            return instance.id
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
@@ -98,15 +95,13 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def update(cls, project_id, data):
+    def update(cls, data):
         try:
             validated_data = SecretsModel(**data)
-            config = db.session.query(cls).filter_by(id=validated_data.id, project_id=project_id).one_or_none()
-            if config:
-                # Exclude id and project_id from being updated
-                for key, value in validated_data.model_dump(exclude={'id', 'project_id'}).items():
-                    setattr(config, key, value)
-                db.session.commit()
+            config = db.session.query(cls).filter_by(id=validated_data.id).one_or_none()
+            for key, value in validated_data.model_dump(exclude={'id'}).items():
+                setattr(config, key, value)
+            db.session.commit()
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))
@@ -124,13 +119,15 @@ class DBSecrets(db.Model):
             raise
 
     @classmethod
-    def delete(cls, project_id, id):
+    def delete(cls, id):
         try:
-            # Only allow deleting secrets that belong to the project
-            config = db.session.query(cls).filter_by(id=id, project_id=project_id).one_or_none()
+            # Find the secret by its unique ID, regardless of project
+            config = db.session.query(cls).filter_by(id=id).one_or_none()
             if config:
                 db.session.delete(config)
                 db.session.commit()
+                return True
+            return False
         except Exception:
             db.session.rollback()
             logging.warning(str(traceback.format_exc()))

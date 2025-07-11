@@ -14,7 +14,7 @@
                     <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
-                                <h4 class="mb-0">Atlassian Confluence integration
+                                <h4 class="mb-0">Atlassian Confluence
                                     <div class="tooltip-container">
                                       <a href="https://perforge.app/docs/configuration/integrations#atlassian-confluence" target="_blank">
                                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -36,9 +36,9 @@
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
                                     <label for="name">Name:</label>
-                                    {{ form.name(class="form-control") }}
+                                    {{ form.name(class="form-control", placeholder="e.g. My Atlassian Confluence Connection") }}
                                     <label for="email" class="input-label mt-2">Email:</label>
-                                    {{ form.email(class="form-control") }}
+                                    {{ form.email(class="form-control", placeholder="e.g. perforge.app@gmail.com") }}
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -47,28 +47,34 @@
                                     </div>
                                     <label for="token_type" class="mt-2">Token type:</label>
                                     {{ form.token_type(class="form-control") }}
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        To hide the token, you can add it to the Secrets page and use it from there as a variable &#123;&#123;secret_example&#125;&#125;.
-                                      </div>
-                                    </div>
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
-                                        <option value="">Select the secret</option>
+                                        <option value="">--- Select the secret ---</option>
+                                        <option value="create_new">--- Create a new secret ---</option>
                                         {% for secret in secret_configs %}
                                             <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
                                         {% endfor %}
                                     </select>
+                                    <div id="new_secret_fields" style="display: none; width: 100%;">
+                                        <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
+                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. ATLASSIAN_CONFLUENCE_TOKEN">
+                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
+                                        <select class="form-control" id="new_secret_scope">
+                                            <option value="">ALL</option>
+                                            <option value="project">PROJECT</option>
+                                        </select>
+                                        <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
+                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
+                                    </div>
                                     <div id="tokenError" class="invalid-feedback" style="display: none;">
                                         Please select a token
                                     </div>
                                     <label for="org_url" class="mt-2">Organization url:</label>
-                                    {{ form.org_url(class="form-control") }}
+                                    {{ form.org_url(class="form-control", placeholder="e.g. https://perforge.atlassian.net") }}
                                     <label for="space_key" class="mt-2">Space key:</label>
-                                    {{ form.space_key(class="form-control") }}
+                                    {{ form.space_key(class="form-control", placeholder="e.g. PERFORGE") }}
                                     <label for="parent_id" class="mt-2">Parent id:</label>
-                                    {{ form.parent_id(class="form-control") }}
+                                    {{ form.parent_id(class="form-control", placeholder="e.g. 123456789") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>
@@ -124,52 +130,89 @@
           return true;
       }
 
-      // Add event listener to token select for real-time validation
       document.getElementById('token').addEventListener('change', function() {
+          const newSecretFields = document.getElementById('new_secret_fields');
+          newSecretFields.style.display = this.value === 'create_new' ? 'block' : 'none';
+
           if (this.value) {
               this.classList.remove('is-invalid');
               document.getElementById('tokenError').style.display = 'none';
           }
       });
 
-      // Function to handle form submission
       function handleFormSubmit(event) {
           event.preventDefault();
 
           if (!validateForm()) {
-              return false;
+              return;
           }
 
           const form = document.getElementById('confluenceForm');
-          const formData = new FormData(form);
-          const integrationId = document.getElementById('config_id').value;
-          const data = {};
+          const data = {
+              name: form.name.value,
+              email: form.email.value,
+              token_type: form.token_type.value,
+              org_url: form.org_url.value,
+              space_key: form.space_key.value,
+              parent_id: form.parent_id.value,
+              is_default: form.is_default.value === 'True'
+          };
 
-          // Convert FormData to JSON object
-          formData.forEach((value, key) => {
-              // Handle empty values
-              if (key !== "csrf_token") {
-                  // Special handling for is_default to ensure it's a boolean
-                  if (key === "is_default") {
-                      data[key] = value === '' ? false : value === 'True';
-                  } else {
-                      data[key] = value === '' ? null : value;
-                  }
+          const integrationId = document.getElementById('config_id')?.value;
+          const tokenSelect = document.getElementById('token');
+
+          const saveIntegrationWithToken = (tokenId) => {
+              data.token = tokenId;
+              saveIntegration(integrationId, data);
+          };
+
+          if (tokenSelect.value === 'create_new') {
+              const newSecretName = document.getElementById('new_secret_name').value;
+              const newSecretValue = document.getElementById('new_secret_value').value;
+              const newSecretScope = document.getElementById('new_secret_scope').value;
+
+              if (!newSecretName || !newSecretValue) {
+                  showFlashMessage('Secret name and value are required.', 'error');
+                  return;
               }
-          });
 
-          // Use the API client to save the integration
+              const secretData = {
+                  key: newSecretName,
+                  value: newSecretValue,
+                  project_id: newSecretScope === 'project' ? true : null
+              };
+
+              apiClient.secrets.create(secretData)
+                  .then(response => {
+                      if (response && response.data && response.data.secret_id) {
+                          saveIntegrationWithToken(response.data.secret_id);
+                      } else {
+                          throw new Error('Failed to get secret ID from response.');
+                      }
+                  })
+                  .catch(error => {
+                      console.error('Error creating secret:', error);
+                      const errorMessage = error.responseJSON?.errors?.[0]?.message || error.message || 'An error occurred while creating the secret.';
+                      showFlashMessage(errorMessage, 'error');
+                  });
+          } else {
+              if (!tokenSelect.value) {
+                  showFlashMessage('Please select a token or create a new one.', 'error');
+                  return;
+              }
+              saveIntegrationWithToken(tokenSelect.value);
+          }
+      }
+
+      function saveIntegration(integrationId, data) {
           const apiCall = integrationId
               ? apiClient.integrations.update(integrationId, data, 'atlassian_confluence')
               : apiClient.integrations.create(data, 'atlassian_confluence');
 
           apiCall
               .then(response => {
-                  // Show success message
                   const message = integrationId ? "Integration updated successfully." : "Integration added successfully.";
                   showFlashMessage(message, "success");
-
-                  // Redirect to integrations page after a short delay
                   setTimeout(() => {
                       window.location.href = '/integrations?tab=atlassian-confluence';
                   }, 1000);
@@ -178,23 +221,13 @@
                   console.error('Error:', error);
                   showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
               });
-
-          return false;
       }
 
-      // Set up delete button handler
       document.getElementById('deleteButton')?.addEventListener('click', function() {
           const integrationId = document.getElementById('config_id').value;
-          const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-
           apiClient.integrations.delete(integrationId, 'atlassian_confluence')
-              .then(response => {
-                  modal.hide();
-
-                  // Show success message
+              .then(() => {
                   showFlashMessage("Integration deleted successfully.", "success");
-
-                  // Redirect to integrations page after a short delay
                   setTimeout(() => {
                       window.location.href = '/integrations?tab=atlassian-confluence';
                   }, 1000);
