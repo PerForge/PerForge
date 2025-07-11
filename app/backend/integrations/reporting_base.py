@@ -142,34 +142,36 @@ class ReportingBase:
         return metrics
 
     def analyze_template(self):
-        overall_summary = ""
-        nfr_summary     = ""
+        # Initialize parameters to ensure they exist
+        self.parameters['nfr_summary'] = ""
+        self.parameters['ml_summary']  = ""
+        self.parameters['ai_summary']  = ""
 
-        # Get all tables for validation and AI analysis
         all_tables = self.current_test_obj.get_all_tables()
         all_tables_json = self.current_test_obj.get_all_tables_json()
 
-        # NFR validation using all tables
+        # 1. NFR validation
         if self.nfrs_switch:
-            nfr_summary = self.validation_obj.create_summary(self.nfr, all_tables)
+            self.parameters['nfr_summary'] = self.validation_obj.create_summary(self.nfr, all_tables)
 
+        # 2. ML analysis
         if self.ml_switch:
-            self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj) # Update ML analysis in TestData object
+            self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj)
+            if self.current_test_obj.ml_anomalies:
+                self.parameters['ml_summary'] = f"ML Anomaly Analysis for {self.test_name}:\n{self.current_test_obj.ml_anomalies}"
 
+        # 3. AI-generated summary
         if self.ai_switch:
             # Use JSON string of all tables for AI analysis
             if self.ai_aggregated_data_switch:
                 self.ai_support_obj.analyze_aggregated_data(all_tables_json, self.aggregated_prompt_id)
 
-            # Generate template summary with ML anomalies if available
-            if self.ml_switch:
-                overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary, self.current_test_obj.ml_anomalies)
-            else:
-                overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
-        else:
-            overall_summary += f"\n\n {nfr_summary}"
-
-        return overall_summary
+            # Generate template summary, including NFR and ML summaries
+            self.parameters['ai_summary'] = self.ai_support_obj.create_template_summary(
+                self.template_prompt_id, 
+                self.parameters['nfr_summary'], 
+                self.parameters['ml_summary']
+            )
 
     def analyze_template_group(self):
         overall_summary = ""

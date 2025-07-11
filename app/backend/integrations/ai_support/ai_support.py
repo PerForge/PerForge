@@ -117,14 +117,14 @@ class AISupport(Integration):
 
     def _initialize_langchain(self) -> None:
         """Initialize LangChain components based on memory configuration."""
-        
+
         # Define a function to process results and track tokens
         def _process_response(response):
             # Track token usage
             if hasattr(self.ai_obj, '_track_token_usage'):
                 self.ai_obj._track_token_usage(response)
             return response.content if hasattr(response, 'content') else response
-        
+
         if self.ENABLE_CONVERSATION_MEMORY:
             # Initialize with conversation memory
             self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
@@ -161,8 +161,8 @@ class AISupport(Integration):
 
             # Create the chain using the pipe syntax with token tracking
             self.chain = (
-                prompt_template 
-                | self.ai_obj.get_model_for_chain() 
+                prompt_template
+                | self.ai_obj.get_model_for_chain()
                 | _process_response  # Add token tracking before string parsing
                 | StrOutputParser()
             )
@@ -249,32 +249,38 @@ class AISupport(Integration):
             result += "\n\n"
         return str(result)
 
-    def create_template_summary(self, prompt_id: str, nfr_summary: str, ml_anomalies: Optional[str] = None) -> str:
+    def create_template_summary(self, prompt_id: str, nfr_summary: str, ml_summary: Optional[str] = None) -> str:
         """
-        Create a summary based on all analyses and NFR results.
+        Create a summary based on all analyses and NFR results using a template prompt.
 
         Args:
-            prompt_id: ID of the prompt to use for summary
-            nfr_summary: NFR analysis summary
-            ml_anomalies: Optional ML anomalies data
+            prompt_id: ID of the prompt to use for the summary.
+            nfr_summary: The NFR analysis summary string.
+            ml_summary: Optional ML analysis summary string.
 
         Returns:
-            Generated summary
+            The generated summary as a string.
         """
         if not self.models_created:
             return "Error: AI failed to initialize."
 
-        prompt_value = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
+        prompt_template = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
-        # Replace placeholders with actual data
-        prompt_value = prompt_value.replace("[aggregated_data_analysis]", self.prepare_list_of_analysis(self.aggregated_data_analysis))
-        prompt_value = prompt_value.replace("[graphs_analysis]", self.prepare_list_of_analysis(self.graph_analysis))
-        prompt_value = prompt_value.replace("[nfr_summary]", nfr_summary)
+        # Prepare a dictionary of replacements
+        replacements = {
+            "aggregated_data_analysis": self.prepare_list_of_analysis(self.aggregated_data_analysis),
+            "graphs_analysis": self.prepare_list_of_analysis(self.graph_analysis),
+            "nfr_summary": nfr_summary,
+            "ml_summary": ml_summary or ""
+        }
 
-        if ml_anomalies:
-            prompt_value = prompt_value.replace("[ml_anomalies]", str(ml_anomalies))
+        # Replace all placeholders in the template
+        prompt_value = prompt_template
+        for key, value in replacements.items():
+            placeholder = f"${{{key}}}"
+            prompt_value = prompt_value.replace(placeholder, str(value))
 
-        # Use the chain with or without memory
+        # Run the chain to get the final summary
         result = self.run_chain(prompt_value)
         self.summary.append(result)
 

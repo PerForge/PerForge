@@ -45,7 +45,6 @@ class DataProvider:
     # Map data source types to test types
     source_to_test_type_map: Dict[str, str] = {
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": "back_end",
-        "mderevyankoaqa": "back_end",
         "sitespeed_influxdb_v2": "front_end",
     }
 

@@ -233,6 +233,8 @@ class AtlassianConfluenceReport(ReportingBase):
         return response
 
     def generate(self, current_run_id, baseline_run_id = None):
+        if self.nfrs_switch or self.ai_switch or self.ml_switch:
+            self.analyze_template()
         report_body = ""
         for obj in self.data:
             if obj["type"] == "text":
@@ -244,7 +246,4 @@ class AtlassianConfluenceReport(ReportingBase):
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
-        if self.nfrs_switch or self.ai_switch:
-            result      = self.analyze_template()
-            report_body = self.add_text(result) + report_body
         return report_body
