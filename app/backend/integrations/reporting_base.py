@@ -157,8 +157,8 @@ class ReportingBase:
         # 2. ML analysis
         if self.ml_switch:
             self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj)
-            if self.current_test_obj.ml_anomalies:
-                self.parameters['ml_summary'] = f"ML Anomaly Analysis for {self.test_name}:\n{self.current_test_obj.ml_anomalies}"
+            if self.current_test_obj.ml_summary:
+                self.parameters['ml_summary'] = self.current_test_obj.ml_summary
 
         # 3. AI-generated summary
         if self.ai_switch:
@@ -168,9 +168,9 @@ class ReportingBase:
 
             # Generate template summary, including NFR and ML summaries
             self.parameters['ai_summary'] = self.ai_support_obj.create_template_summary(
-                self.template_prompt_id, 
-                self.parameters['nfr_summary'], 
-                self.parameters['ml_summary']
+                self.template_prompt_id,
+                self.parameters['nfr_summary'],
+                self.current_test_obj.ml_anomalies
             )
 
     def analyze_template_group(self):

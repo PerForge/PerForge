@@ -374,16 +374,16 @@ class AnomalyDetectionEngine:
 
         return metrics
 
-    def create_html_summary(self, test_type: str, analysis_output: List[Dict[str, Any]]) -> Tuple[str, bool]:
+    def _analyze_results(self, analysis_output: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Create HTML summary of test analysis results.
+        Analyze the test results and return a dictionary of findings.
         """
         failed_checks = [x for x in analysis_output if x['status'] == 'failed']
         metric_anomaly_counts = defaultdict(int)
         trend_issues = []
         ramp_up_status = None
         saturation_point = None
-        performance_status = True
+        performance_status = not failed_checks
 
         for check in analysis_output:
             if check['method'] == 'rolling_correlation':
@@ -392,12 +392,69 @@ class AnomalyDetectionEngine:
                 else:
                     ramp_up_status = check['status'] == 'passed'
             elif check['status'] == 'failed':
-                performance_status = False
                 if check['method'] == 'TrendAnalysis':
                     trend_issues.append(check['description'])
                 elif 'An anomaly was detected in' in check['description']:
                     metric = check['description'].split('in ')[1].split(' from')[0]
                     metric_anomaly_counts[metric] += 1
+        
+        return {
+            'failed_checks': failed_checks,
+            'metric_anomaly_counts': metric_anomaly_counts,
+            'trend_issues': trend_issues,
+            'ramp_up_status': ramp_up_status,
+            'saturation_point': saturation_point,
+            'performance_status': performance_status
+        }
+
+    def create_text_summary(self, test_type: str, analysis_output: List[Dict[str, Any]]) -> str:
+        """
+        Create a plain-text summary of test analysis results.
+        """
+        results = self._analyze_results(analysis_output)
+        metric_anomaly_counts = results['metric_anomaly_counts']
+        trend_issues = results['trend_issues']
+        ramp_up_status = results['ramp_up_status']
+        saturation_point = results['saturation_point']
+        failed_checks = results['failed_checks']
+
+        text_parts = []
+        text_parts.append(f"Test type: {test_type}")
+
+        if test_type.lower() == "ramp up":
+            if saturation_point:
+                text_parts.append(f"- System saturation detected at: {saturation_point} requests per second")
+        elif ramp_up_status is not None:
+            status_text = 'successful' if ramp_up_status else 'issues detected'
+            text_parts.append(f"- Ramp-up period: {status_text}")
+
+        if trend_issues:
+            text_parts.append("\nTrend Analysis Issues:")
+            for issue in trend_issues:
+                text_parts.append(f"  - {issue}")
+
+        if metric_anomaly_counts:
+            text_parts.append("\nAnomalies Detected:")
+            for metric, count in metric_anomaly_counts.items():
+                plural = 'anomaly' if count == 1 else 'anomalies'
+                text_parts.append(f"  - {metric}: {count} {plural}")
+
+        if not failed_checks:
+            text_parts.append("\nNo issues were detected during the test execution.")
+
+        return "\n".join(text_parts)
+
+    def create_html_summary(self, test_type: str, analysis_output: List[Dict[str, Any]]) -> Tuple[str, bool]:
+        """
+        Create HTML summary of test analysis results.
+        """
+        results = self._analyze_results(analysis_output)
+        metric_anomaly_counts = results['metric_anomaly_counts']
+        trend_issues = results['trend_issues']
+        ramp_up_status = results['ramp_up_status']
+        saturation_point = results['saturation_point']
+        failed_checks = results['failed_checks']
+        performance_status = results['performance_status']
 
         html_parts = []
         html_parts.append(f"<p>Test type: <strong>{test_type}</strong></p>")
