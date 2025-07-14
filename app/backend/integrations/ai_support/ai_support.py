@@ -24,7 +24,9 @@ from app.backend.integrations.ai_support.providers.provider_factory import Provi
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
 
 from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.memory import ConversationBufferMemory
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
@@ -63,6 +65,11 @@ class AISupport(Integration):
 
     def __str__(self) -> str:
         return f'Integration id is {self.id}'
+
+    def get_session_history(self, session_id: str) -> BaseChatMessageHistory:
+        if session_id not in self.store:
+            self.store[session_id] = ChatMessageHistory()
+        return self.store[session_id]
 
     def set_config(self, id: Optional[str]) -> None:
         """
@@ -115,62 +122,46 @@ class AISupport(Integration):
         else:
             logging.warning("There's no AI integration configured, or you're attempting to send a request from an unsupported location.")
 
-    def _initialize_langchain(self) -> None:
-        """Initialize LangChain components based on memory configuration."""
-
-        # Define a function to process results and track tokens
+    def _initialize_langchain(self):
+        # Initialize LangChain components based on memory configuration.
         def _process_response(response):
-            # Track token usage
-            if hasattr(self.ai_obj, '_track_token_usage'):
-                self.ai_obj._track_token_usage(response)
-            return response.content if hasattr(response, 'content') else response
+            # This function can be used to process the response if needed
+            # For now, it just returns the content
+            return response.content
 
         if self.ENABLE_CONVERSATION_MEMORY:
-            # Initialize with conversation memory
-            self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+            self.store = {}
 
-            # Create a prompt template that includes the chat history
-            prompt_template = ChatPromptTemplate.from_template(
-                "{chat_history}\nHuman: {prompt}\nAI:"
+            self.prompt = ChatPromptTemplate.from_messages([
+                ("system", self.system_prompt),
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+            ])
+
+            chain = self.prompt | self.ai_obj | StrOutputParser()
+
+            self.chain_with_history = RunnableWithMessageHistory(
+                chain,
+                self.get_session_history,
+                input_messages_key="input",
+                history_messages_key="chat_history",
             )
-
-            # Create the chain using the pipe syntax with token tracking
-            self.chain = (
-                {
-                    "chat_history": lambda x: self.memory.load_memory_variables({})["chat_history"],
-                    "prompt": RunnablePassthrough()
-                }
-                | prompt_template
-                | self.ai_obj.get_model_for_chain()
-                | _process_response  # Add token tracking before string parsing
-                | StrOutputParser()
-            )
-
-            # Create a function to update memory after each run
-            def _update_memory(prompt, response):
-                self.memory.save_context({"input": prompt}, {"output": response})
-                return response
-
-            # Add memory updating to the chain
-            self.run_chain = lambda prompt: _update_memory(prompt, self.chain.invoke(prompt))
-
-            logging.info("AI Support initialized with conversation memory enabled")
         else:
-            # Initialize without conversation memory - simpler chain
-            prompt_template = PromptTemplate.from_template("{prompt}")
+            self.prompt = ChatPromptTemplate.from_messages([
+                ("system", self.system_prompt),
+                ("human", "{input}"),
+            ])
+            self.chain = self.prompt | self.ai_obj | StrOutputParser()
 
-            # Create the chain using the pipe syntax with token tracking
-            self.chain = (
-                prompt_template
-                | self.ai_obj.get_model_for_chain()
-                | _process_response  # Add token tracking before string parsing
-                | StrOutputParser()
-            )
+        self.models_created = True
 
-            # Simple run function that just invokes the chain
-            self.run_chain = lambda prompt: self.chain.invoke(prompt)
-
-            logging.info("AI Support initialized with conversation memory disabled")
+    def run_chain(self, prompt_value: str) -> str:
+        if self.ENABLE_CONVERSATION_MEMORY:
+            return self.chain_with_history.invoke(
+                {"input": prompt_value},
+                config={"configurable": {"session_id": "chat_history"}})
+        else:
+            return self.chain.invoke({"input": prompt_value})
 
     def analyze_graph(self, name: str, graph, prompt_id: str) -> str:
         """
@@ -184,11 +175,8 @@ class AISupport(Integration):
         Returns:
             Analysis result as string
         """
-        if not self.models_created or not self.ai_obj:
-            return "Error: AI models not initialized"
-
-        if not prompt_id or not graph:
-            return ""
+        if not self.models_created:
+            return "Error: AI failed to initialize."
 
         prompt_value = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
@@ -196,11 +184,10 @@ class AISupport(Integration):
         response = self.ai_obj.analyze_graph(graph, prompt_value)
 
         # If memory is enabled, save this interaction to memory
-        if self.ENABLE_CONVERSATION_MEMORY and hasattr(self, 'memory'):
-            self.memory.save_context(
-                {"input": f"[Graph Analysis Request: {name}] {prompt_value}"},
-                {"output": response}
-            )
+        if self.ENABLE_CONVERSATION_MEMORY and hasattr(self, 'chain_with_history'):
+            history = self.get_session_history("chat_history")
+            history.add_user_message(f"[Graph Analysis Request: {name}] {prompt_value}")
+            history.add_ai_message(response)
 
         # Store analysis results
         self.graph_analysis.append(name)
@@ -316,6 +303,7 @@ class AISupport(Integration):
 
         This is useful when starting a new analysis session.
         """
-        if self.ENABLE_CONVERSATION_MEMORY and hasattr(self, 'memory'):
-            self.memory.clear()
-            logging.info("Conversation memory cleared")
+        if self.ENABLE_CONVERSATION_MEMORY and hasattr(self, 'store'):
+            if 'chat_history' in self.store:
+                self.store['chat_history'].clear()
+                logging.info("Conversation memory cleared")

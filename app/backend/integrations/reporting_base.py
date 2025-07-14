@@ -80,7 +80,7 @@ class ReportingBase:
         variables = re.findall(r"\$\{(.*?)\}", text)
         for var in variables:
             # First check if it's a regular parameter
-            if var in self.parameters:
+            if var in self.parameters and self.parameters[var]:
                 text = text.replace("${" + var + "}", str(self.parameters[var]))
                 continue
 
@@ -117,13 +117,14 @@ class ReportingBase:
                             # No baseline, just format current metrics
                             metrics = table.format_metrics()
                         value = self.format_table(metrics)
-                        text = text.replace("${" + var + "}", value)
+                        if value:
+                            text = text.replace("${" + var + "}", value)
                         continue
                 except Exception as e:
                     logging.warning(f"Error loading table '{table_name}' with aggregation '{aggregation}': {e}")
 
             # If we got here, the variable wasn't replaced
-            logging.warning(f"Variable {var} not found in parameters or tables")
+            logging.info(f"Variable {var} not found in parameters or tables")
 
         return text
 
