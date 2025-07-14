@@ -45,7 +45,6 @@ class DataProvider:
     # Map data source types to test types
     source_to_test_type_map: Dict[str, str] = {
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": "back_end",
-        "mderevyankoaqa": "back_end",
         "sitespeed_influxdb_v2": "front_end",
     }
 
@@ -387,6 +386,10 @@ class DataProvider:
         Returns:
             metrics: Dictionary containing analyzed metrics and their characteristics
         """
+        # If ML analysis is already present, do not run it again
+        if test_obj.ml_anomalies is not None:
+            return
+
         merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
 
         # Initialize engine with detectors
@@ -403,9 +406,11 @@ class DataProvider:
             test_obj.test_type = "ramp up"
 
         ml_html_summary, performance_status = self.anomaly_detection_engine.create_html_summary(test_obj.test_type, analysis_output)
+        ml_summary = self.anomaly_detection_engine.create_text_summary(test_obj.test_type, analysis_output)
 
         test_obj.ml_anomalies = analysis_output
         test_obj.ml_html_summary = ml_html_summary
+        test_obj.ml_summary = ml_summary
         test_obj.performance_status = performance_status
 
         return metrics

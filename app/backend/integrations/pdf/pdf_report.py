@@ -393,6 +393,8 @@ class PdfReport(ReportingBase):
         return response
 
     def generate(self, current_run_id, baseline_run_id = None):
+        if self.nfrs_switch or self.ai_switch or self.ml_switch:
+            self.analyze_template()
         for obj in self.data:
             if obj["type"] == "text":
                 self.add_text(obj["content"])
@@ -400,6 +402,3 @@ class PdfReport(ReportingBase):
                 graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 self.add_graph(graph_data, current_run_id, baseline_run_id)
-        if self.nfrs_switch or self.ai_switch:
-            result = self.analyze_template()
-            self.pdf_creator.add_text_summary(result)

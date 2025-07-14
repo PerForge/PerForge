@@ -3185,3 +3185,26 @@ body.light-theme .theme-switcher-btn {
 .selected-project {
     border: 2px solid var(--bs-primary);
 }
+
+
+.template-group {
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    color: var(--text-main-color);
+    border: 1px solid var(--border-main-color);
+    background-color: var(--bs-background-dark);
+    min-height: 50px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    margin-top: 5px;
+}
+
+.var-name {
+    font-size: 12px;
+}
+
+.var-description {
+    font-size: 12px;
+    color: #8e8e8e;
+}
