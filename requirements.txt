@@ -27,6 +27,7 @@ ruptures==1.1.9
 Flask-Compress==1.17
 matplotlib==3.10.3
 langchain-google-genai==2.1.6
+langchain-community==0.3.27
 langchain==0.3.26
 langchain_core==0.3.66
 langchain_openai==0.3.27

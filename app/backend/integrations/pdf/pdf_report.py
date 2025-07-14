@@ -255,36 +255,41 @@ class PdfReport(ReportingBase):
         test_name = self.current_test_obj.application
 
         image = self.grafana_obj.render_image(graph_data, start_timestamp, end_timestamp, test_name, current_run_id, baseline_run_id)
-        self.pdf_creator.add_image(image)
+        ai_support_response = None
         if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-            if self.ai_to_graphs_switch:
-                self.add_text(ai_support_response)
+        return image, ai_support_response
 
     def add_group_text(self, text):
-        self.pdf_creator.add_text(text)
+        self.add_text(text)
 
     def add_text(self, text):
-        text  = self.replace_variables(text)
-        table = self.check_if_table(text)
-        if table == None:
-            self.pdf_creator.add_text(text)
+        text = self.replace_variables(text)
+        # Check if the text is a table
+        is_table, table_data = self.check_if_table(text)
+        if is_table:
+            self.pdf_creator.add_table(table_data)
         else:
-            self.pdf_creator.add_table(table)
+            self.pdf_creator.add_text(text)
+
+    def add_graph_to_pdf(self, image, ai_support_response):
+        self.pdf_creator.add_image(image)
+        if self.ai_to_graphs_switch and ai_support_response:
+            self.add_text(ai_support_response)
 
     def check_if_table(self, text):
         try:
-            # Attempt to parse the input string as a Python literal
+            # Safely evaluate the string to a Python literal
             text   = text.replace('\\"', '"')
             result = ast.literal_eval(text)
 
             # Check if the result is a list of lists
             if isinstance(result, list) and all(isinstance(item, list) for item in result):
-                return result
+                return True, result
             else:
-                return None  # Not a valid list of lists
+                return False, None  # Not a valid list of lists
         except (SyntaxError, ValueError):
-            return None  # Parsing failed
+            return False, None  # Parsing failed
 
     def generate_title(self, isgroup):
         if isgroup:
@@ -314,11 +319,11 @@ class PdfReport(ReportingBase):
             all_keys.update(record.keys())
 
         # Filter out metadata fields (_baseline, _diff, _diff_pct, _color)
-        keys = [k for k in sorted(all_keys) if not (k.endswith('_baseline') or 
-                                k.endswith('_diff') or 
-                                k.endswith('_diff_pct') or 
+        keys = [k for k in sorted(all_keys) if not (k.endswith('_baseline') or
+                                k.endswith('_diff') or
+                                k.endswith('_diff_pct') or
                                 k.endswith('_color'))]
-        
+
         # Make sure transaction is the first column
         if 'transaction' in keys:
             keys.remove('transaction')
@@ -327,7 +332,7 @@ class PdfReport(ReportingBase):
         elif 'page' in keys:
             keys.remove('page')
             keys.insert(0, 'page')
-            
+
         # Create the table data structure with header row
         table_data = [keys]
 
@@ -393,12 +398,24 @@ class PdfReport(ReportingBase):
         return response
 
     def generate(self, current_run_id, baseline_run_id = None):
+        processed_graphs = {}
+
+        # First pass: collect all data from graphs
+        for obj in self.data:
+            if obj["type"] == "graph":
+                graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
+                image, ai_response = self.add_graph(graph_data, current_run_id, baseline_run_id)
+                processed_graphs[obj["graph_id"]] = (image, ai_response)
+
+        # Analyze templates after all data is collected
         if self.nfrs_switch or self.ai_switch or self.ml_switch:
             self.analyze_template()
+
+        # Second pass: build the PDF in the correct order
         for obj in self.data:
             if obj["type"] == "text":
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                self.add_graph(graph_data, current_run_id, baseline_run_id)
+                image, ai_response = processed_graphs[obj["graph_id"]]
+                self.add_graph_to_pdf(image, ai_response)
