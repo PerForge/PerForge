@@ -15,6 +15,7 @@
 import logging
 import traceback
 from typing import List, Optional, Dict, Any
+import uuid
 
 from app.backend.integrations.integration              import Integration
 from app.backend.components.prompts.prompts_db         import DBPrompts
@@ -37,9 +38,6 @@ class AISupport(Integration):
     Supports multiple AI providers through a provider factory architecture.
     """
 
-    # Flag to enable/disable conversation memory
-    ENABLE_CONVERSATION_MEMORY = False
-
     def __init__(self, project, system_prompt, id = None):
         """
         Initialize the AISupport integration.
@@ -55,6 +53,9 @@ class AISupport(Integration):
         self.aggregated_data_analysis: List[str] = []
         self.summary: List[str] = []
         self.ai_obj: Optional[AIProvider] = None
+
+        # Create a unique session ID for this instance using UUID
+        self.session_id: str = f"session_{project}_{uuid.uuid4().hex[:8]}"
 
         # Get system prompt from database
         prompt_config = DBPrompts.get_config_by_id(project_id=self.project, id=system_prompt)
@@ -88,6 +89,7 @@ class AISupport(Integration):
             self.ai_text_model = config["ai_text_model"]
             self.ai_image_model = config["ai_image_model"]
             self.temperature = config["temperature"]
+            self.conversation_memory = False
 
             # Get token from secrets database
             self.token = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
@@ -124,12 +126,8 @@ class AISupport(Integration):
 
     def _initialize_langchain(self):
         # Initialize LangChain components based on memory configuration.
-        def _process_response(response):
-            # This function can be used to process the response if needed
-            # For now, it just returns the content
-            return response.content
 
-        if self.ENABLE_CONVERSATION_MEMORY:
+        if self.conversation_memory:
             self.store = {}
 
             self.prompt = ChatPromptTemplate.from_messages([
@@ -156,10 +154,10 @@ class AISupport(Integration):
         self.models_created = True
 
     def run_chain(self, prompt_value: str) -> str:
-        if self.ENABLE_CONVERSATION_MEMORY:
+        if self.conversation_memory:
             return self.chain_with_history.invoke(
                 {"input": prompt_value},
-                config={"configurable": {"session_id": "chat_history"}})
+                config={"configurable": {"session_id": self.session_id}})
         else:
             return self.chain.invoke({"input": prompt_value})
 
@@ -184,8 +182,8 @@ class AISupport(Integration):
         response = self.ai_obj.analyze_graph(graph, prompt_value)
 
         # If memory is enabled, save this interaction to memory
-        if self.ENABLE_CONVERSATION_MEMORY and hasattr(self, 'chain_with_history'):
-            history = self.get_session_history("chat_history")
+        if self.conversation_memory and hasattr(self, 'chain_with_history'):
+            history = self.get_session_history(self.session_id)
             history.add_user_message(f"[Graph Analysis Request: {name}] {prompt_value}")
             history.add_ai_message(response)
 
@@ -213,6 +211,13 @@ class AISupport(Integration):
 
             # Use the chain with or without memory
             result = self.run_chain(prompt_value)
+
+            # If memory is enabled, manually add this interaction to memory
+            if self.conversation_memory and hasattr(self, 'chain_with_history'):
+                history = self.get_session_history(self.session_id)
+                history.add_user_message(f"[Aggregated Data Analysis Request] {prompt_value}")
+                history.add_ai_message(result)
+
             self.aggregated_data_analysis.append(result)
 
         except Exception as er:
@@ -253,7 +258,6 @@ class AISupport(Integration):
 
         prompt_template = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
-        # Prepare a dictionary of replacements
         replacements = {
             "aggregated_data_analysis": self.prepare_list_of_analysis(self.aggregated_data_analysis),
             "graphs_analysis": self.prepare_list_of_analysis(self.graph_analysis),
@@ -261,7 +265,6 @@ class AISupport(Integration):
             "ml_summary": ml_summary or ""
         }
 
-        # Replace all placeholders in the template
         prompt_value = prompt_template
         for key, value in replacements.items():
             placeholder = f"${{{key}}}"
@@ -303,7 +306,7 @@ class AISupport(Integration):
 
         This is useful when starting a new analysis session.
         """
-        if self.ENABLE_CONVERSATION_MEMORY and hasattr(self, 'store'):
-            if 'chat_history' in self.store:
-                self.store['chat_history'].clear()
-                logging.info("Conversation memory cleared")
+        if self.conversation_memory and hasattr(self, 'store'):
+            if self.session_id in self.store:
+                self.store[self.session_id].clear()
+                logging.info(f"Conversation memory cleared for session: {self.session_id}")
