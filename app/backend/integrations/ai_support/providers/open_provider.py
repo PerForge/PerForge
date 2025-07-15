@@ -17,7 +17,9 @@ import traceback
 import base64
 from typing import Optional, Dict, Any, Union, List
 
-from langchain_openai import ChatOpenAI, AzureChatOpenAI, OpenAIEmbeddings
+import httpx
+
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
 from langchain.prompts import PromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -59,12 +61,6 @@ class OpenAIProvider(AIProvider):
                 max_tokens=300
             )
 
-            # Initialize embeddings for potential future use
-            self.embeddings = OpenAIEmbeddings(
-                model="text-embedding-ada-002",
-                openai_api_key=token
-            )
-
             self.models_created = True
             self.provider_name = "openai"
             # Initialize token tracking attributes
@@ -93,6 +89,9 @@ class OpenAIProvider(AIProvider):
             # Encode image to base64
             graph_b64 = base64.b64encode(graph).decode('utf-8')
 
+            # Detect image format
+            image_format = self._detect_image_format(graph)
+
             # Create messages with system prompt and user prompt + image
             messages = [
                 SystemMessage(content=self.system_prompt),
@@ -101,7 +100,7 @@ class OpenAIProvider(AIProvider):
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/jpeg;base64,{graph_b64}",
+                            "url": f"data:image/{image_format};base64,{graph_b64}",
                         },
                     },
                 ])
@@ -117,6 +116,34 @@ class OpenAIProvider(AIProvider):
 
         except Exception as er:
             return self._handle_request_error(er, prompt)
+
+    def _detect_image_format(self, image_data: bytes) -> str:
+        """
+        Detect the format of an image from its binary data.
+
+        Args:
+            image_data: Raw bytes of the image file
+
+        Returns:
+            String representing the image format ('jpeg', 'png', etc.)
+        """
+        # Check for common image format signatures
+        if image_data.startswith(b'\xff\xd8\xff'):
+            return 'jpeg'
+        elif image_data.startswith(b'\x89PNG\r\n\x1a\n'):
+            return 'png'
+        elif image_data.startswith(b'GIF87a') or image_data.startswith(b'GIF89a'):
+            return 'gif'
+        elif image_data.startswith(b'RIFF') and image_data[8:12] == b'WEBP':
+            return 'webp'
+        elif image_data.startswith(b'BM'):
+            return 'bmp'
+        elif image_data.startswith(b'\x00\x00\x01\x00'):
+            return 'ico'
+        else:
+            # Default to jpeg if we can't detect the format
+            logging.warning("Image format could not be detected, defaulting to jpeg")
+            return 'jpeg'
 
     def send_prompt(self, prompt: str) -> str:
         """
@@ -234,7 +261,8 @@ class AzureOpenAIProvider(OpenAIProvider):
                 openai_api_version=api_version,
                 azure_endpoint=azure_url,
                 openai_api_key=token,
-                temperature=temperature
+                temperature=temperature,
+                http_client=httpx.Client(timeout=30)
             )
 
             self.image_llm = AzureChatOpenAI(
@@ -243,19 +271,16 @@ class AzureOpenAIProvider(OpenAIProvider):
                 azure_endpoint=azure_url,
                 openai_api_key=token,
                 temperature=temperature,
-                max_tokens=300
-            )
-
-            # Initialize embeddings for potential future use
-            self.embeddings = OpenAIEmbeddings(
-                deployment="text-embedding-ada-002",
-                openai_api_version=api_version,
-                azure_endpoint=azure_url,
-                openai_api_key=token
+                max_tokens=300,
+                http_client=httpx.Client(timeout=30)
             )
 
             self.models_created = True
             self.provider_name = "azure_openai"
+            # Initialize token tracking attributes
+            self.input_tokens = 0
+            self.output_tokens = 0
+            self.total_tokens = 0
 
         except Exception as er:
             self._handle_initialization_error(er)

@@ -134,11 +134,11 @@ class AtlassianConfluenceReport(ReportingBase):
                         if len(parts) == 2:
                             first_val = float(parts[0])  # baseline
                             second_val = float(parts[1]) # current
-                            
+
                             # Calculate percentage difference and apply color based on threshold
                             if first_val != 0:
                                 diff_pct = ((second_val - first_val) / first_val) * 100
-                                
+
                                 # Color green if 10% or more faster (improvement)
                                 if diff_pct <= -10:
                                     html.append(f"<td><span style='color: green;'>{value}</span></td>")
