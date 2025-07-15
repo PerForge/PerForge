@@ -65,11 +65,11 @@ class SmtpMailReport(ReportingBase):
     def format_table(self, metrics):
         if not metrics:
             return "<p>No data available</p>"
-        
+
         all_keys = set()
         for record in metrics:
             all_keys.update(record.keys())
-        
+
         keys = sorted(list(all_keys))
 
         # Prioritize 'page' or 'transaction' column
@@ -82,13 +82,13 @@ class SmtpMailReport(ReportingBase):
 
         # Start building the HTML table
         html = ['<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">']
-        
+
         # Header
         html.append('<thead><tr style="background-color: #f2f2f2;">')
         for key in keys:
             html.append(f'<th>{key}</th>')
         html.append('</tr></thead>')
-        
+
         # Body
         html.append('<tbody>')
         for record in metrics:
@@ -129,7 +129,7 @@ class SmtpMailReport(ReportingBase):
 
                 html.append(f'<td {style}>{value_str}</td>')
             html.append('</tr>')
-        
+
         html.append('</tbody></table>')
         return "".join(html)
 
@@ -193,7 +193,11 @@ class SmtpMailReport(ReportingBase):
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
-        if self.nfrs_switch or self.ai_switch:
-            result      = self.analyze_template()
-            report_body = self.add_text(result) + report_body
+
+        # Analyze templates after all data is collected
+        if self.nfrs_switch or self.ai_switch or self.ml_switch:
+            self.analyze_template()
+
+        # Replace variables in the entire report body at the end
+        report_body = self.replace_variables(report_body)
         return report_body

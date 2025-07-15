@@ -80,7 +80,7 @@ class ReportingBase:
         variables = re.findall(r"\$\{(.*?)\}", text)
         for var in variables:
             # First check if it's a regular parameter
-            if var in self.parameters:
+            if var in self.parameters and self.parameters[var]:
                 text = text.replace("${" + var + "}", str(self.parameters[var]))
                 continue
 
@@ -117,13 +117,14 @@ class ReportingBase:
                             # No baseline, just format current metrics
                             metrics = table.format_metrics()
                         value = self.format_table(metrics)
-                        text = text.replace("${" + var + "}", value)
+                        if value:
+                            text = text.replace("${" + var + "}", value)
                         continue
                 except Exception as e:
                     logging.warning(f"Error loading table '{table_name}' with aggregation '{aggregation}': {e}")
 
             # If we got here, the variable wasn't replaced
-            logging.warning(f"Variable {var} not found in parameters or tables")
+            logging.info(f"Variable {var} not found in parameters or tables")
 
         return text
 
@@ -142,34 +143,36 @@ class ReportingBase:
         return metrics
 
     def analyze_template(self):
-        overall_summary = ""
-        nfr_summary     = ""
+        # Initialize parameters to ensure they exist
+        self.parameters['nfr_summary'] = ""
+        self.parameters['ml_summary']  = ""
+        self.parameters['ai_summary']  = ""
 
-        # Get all tables for validation and AI analysis
         all_tables = self.current_test_obj.get_all_tables()
         all_tables_json = self.current_test_obj.get_all_tables_json()
 
-        # NFR validation using all tables
+        # 1. NFR validation
         if self.nfrs_switch:
-            nfr_summary = self.validation_obj.create_summary(self.nfr, all_tables)
+            self.parameters['nfr_summary'] = self.validation_obj.create_summary(self.nfr, all_tables)
 
+        # 2. ML analysis
         if self.ml_switch:
-            self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj) # Update ML analysis in TestData object
+            self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj)
+            if self.current_test_obj.ml_summary:
+                self.parameters['ml_summary'] = self.current_test_obj.ml_summary
 
+        # 3. AI-generated summary
         if self.ai_switch:
             # Use JSON string of all tables for AI analysis
             if self.ai_aggregated_data_switch:
                 self.ai_support_obj.analyze_aggregated_data(all_tables_json, self.aggregated_prompt_id)
 
-            # Generate template summary with ML anomalies if available
-            if self.ml_switch:
-                overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary, self.current_test_obj.ml_anomalies)
-            else:
-                overall_summary = self.ai_support_obj.create_template_summary(self.template_prompt_id, nfr_summary)
-        else:
-            overall_summary += f"\n\n {nfr_summary}"
-
-        return overall_summary
+            # Generate template summary, including NFR and ML summaries
+            self.parameters['ai_summary'] = self.ai_support_obj.create_template_summary(
+                self.template_prompt_id,
+                self.parameters['nfr_summary'],
+                self.current_test_obj.ml_anomalies
+            )
 
     def analyze_template_group(self):
         overall_summary = ""

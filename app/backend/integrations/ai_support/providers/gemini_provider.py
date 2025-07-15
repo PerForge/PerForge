@@ -211,18 +211,44 @@ class GeminiProvider(AIProvider):
         """
         return self.text_llm
 
-    def __call__(self, prompt: str) -> Dict[str, str]:
+    def _track_token_usage(self, response):
+        """Track token usage from the response if available."""
+        try:
+            if hasattr(response, 'response_metadata') and 'token_usage' in response.response_metadata:
+                token_usage = response.response_metadata['token_usage']
+                self.input_tokens += token_usage.get('prompt_tokens', 0)
+                self.output_tokens += token_usage.get('completion_tokens', 0)
+                self.total_tokens += token_usage.get('total_tokens', 0)
+        except Exception as e:
+            logging.warning(f"Error tracking token usage for Gemini: {str(e)}")
+
+    def invoke(self, prompt: Union[str, List[Dict[str, Any]]], **kwargs: Any) -> Any:
         """
-        Make the class callable for compatibility with LangChain.
+        Invoke the AI model with a prompt.
 
         Args:
-            prompt: The prompt to send
+            prompt: The prompt to send to the AI.
+            **kwargs: Additional keyword arguments.
 
         Returns:
-            Dictionary with response
+            The response from the AI.
         """
-        response = self.send_prompt(prompt)
-        return {"text": response}
+        response = self.text_llm.invoke(prompt, **kwargs)
+        self._track_token_usage(response)
+        return response
+
+    def __call__(self, prompt: Union[str, List[Dict[str, Any]]], **kwargs: Any) -> Any:
+        """
+        Makes the class callable for LCEL.
+
+        Args:
+            prompt: The prompt to send to the AI.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            The response from the AI.
+        """
+        return self.invoke(prompt, **kwargs)
 
 
 # For backward compatibility

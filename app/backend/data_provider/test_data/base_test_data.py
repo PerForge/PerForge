@@ -28,7 +28,10 @@ class BaseTestData(ABC):
         'application',
         'test_type',
         'duration',
-        'performance_status'
+        'performance_status',
+        'ml_summary',
+        'ml_html_summary',
+        'ml_anomalies'
     }
 
     # Common aggregation types used for performance metrics across test types
@@ -48,6 +51,9 @@ class BaseTestData(ABC):
         self.duration: Optional[str] = None
         self.aggregated_table: Optional[List[Dict[str, Any]]] = None
         self.performance_status: Optional[bool] = None
+        self.ml_summary: Optional[str] = None
+        self.ml_html_summary: Optional[str] = None
+        self.ml_anomalies: Optional[Dict[str, Any]] = None
 
         # Default aggregation type
         self.aggregation = "median"
@@ -298,36 +304,25 @@ class BaseTestData(ABC):
         import json
         tables = self.get_all_tables()
 
-        # Convert tables to the flat metrics format
-        result = {}
+        # Group metrics by transaction
+        transactions = {}
         for table_name, table in tables.items():
-            # Initialize table entry with metadata
-            table_dict = {
-                'name': table.name,
-                'aggregation': table.aggregation,
-                'metrics': []
-            }
-
-            # Use metrics if available (preferred path)
             if hasattr(table, 'metrics') and table.metrics:
-                # Create a flat list of metrics
                 for metric in table.metrics:
-                    metric_dict = {
-                        'metric': metric.name,
-                        'transaction': metric.scope or 'unknown',
-                        'value': metric.value,
-                        'nfr_status': metric.nfr_status.value if hasattr(metric.nfr_status, 'value') else str(metric.nfr_status)
-                    }
-                    # Add baseline and differences if available
-                    if metric.baseline is not None:
-                        metric_dict['baseline'] = metric.baseline
-                    if metric.difference is not None:
-                        metric_dict['difference'] = metric.difference
-                    if metric.difference_pct is not None:
-                        metric_dict['difference_pct'] = metric.difference_pct
+                    transaction = metric.scope
+                    if transaction not in transactions:
+                        transactions[transaction] = {'transaction': transaction}
+                    transactions[transaction][metric.name] = metric.value
 
-                    table_dict['metrics'].append(metric_dict)
+            elif hasattr(table, 'table') and table.table:
+                for row in table.table:
+                    if 'transaction' in row and 'metric' in row and 'value' in row:
+                        transaction = row['transaction']
+                        if transaction not in transactions:
+                            transactions[transaction] = {'transaction': transaction}
+                        transactions[transaction][row['metric']] = row['value']
 
-            result[table_name] = table_dict
+        # Convert the grouped transactions to a list
+        result = list(transactions.values())
 
         return json.dumps(result, indent=2)

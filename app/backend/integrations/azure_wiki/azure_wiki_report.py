@@ -86,14 +86,14 @@ class AzureWikiReport(ReportingBase):
                         if len(parts) == 2:
                             first_val = float(parts[0])  # baseline
                             second_val = float(parts[1]) # current
-                            
+
                             # Default value string is the original value
                             value_str = value
 
                             # Calculate percentage difference and color the value if threshold is met
                             if first_val != 0:
                                 diff_pct = ((second_val - first_val) / first_val) * 100
-                                
+
                                 # Color for improvement (10% or more faster)
                                 if diff_pct <= -10:
                                     value_str = f'<span style="color:green;font-weight:bold">{value}</span>'
@@ -117,7 +117,7 @@ class AzureWikiReport(ReportingBase):
                     value_str = f"{value:.2f}"
                 else:
                     value_str = str(value)
-                
+
                 # Azure DevOps Wiki markdown tables are sensitive to pipe characters in content.
                 # Replace them to avoid breaking the table structure.
                 value_str = value_str.replace('|', '\\|')
@@ -125,7 +125,7 @@ class AzureWikiReport(ReportingBase):
                 value_str = value_str.replace('\n', '<br/>')
 
                 row_cells.append(value_str)
-            
+
             markdown_table.append("| " + " | ".join(row_cells) + " |")
 
         # Return the complete Markdown table
@@ -201,7 +201,12 @@ class AzureWikiReport(ReportingBase):
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
-        if self.nfrs_switch or self.ai_switch:
-            result      = self.analyze_template()
-            report_body = self.add_text(result) + report_body
+
+        # Analyze templates after all data is collected
+        if self.nfrs_switch or self.ai_switch or self.ml_switch:
+            self.analyze_template()
+
+        # Replace variables in the entire report body at the end
+        report_body = self.replace_variables(report_body)
+
         return report_body

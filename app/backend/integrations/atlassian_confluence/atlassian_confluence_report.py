@@ -244,7 +244,12 @@ class AtlassianConfluenceReport(ReportingBase):
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)
-        if self.nfrs_switch or self.ai_switch:
-            result      = self.analyze_template()
-            report_body = self.add_text(result) + report_body
+
+        # Analyze templates after all data is collected
+        if self.nfrs_switch or self.ai_switch or self.ml_switch:
+            self.analyze_template()
+
+        # Replace variables in the entire report body at the end
+        report_body = self.replace_variables(report_body)
+
         return report_body

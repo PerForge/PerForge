@@ -202,7 +202,11 @@ class NFRValidation:
             elif nfr.scope in all_scopes:
                 applicable_scopes = [nfr.scope]
 
-            if applicable_scopes:
+            if not applicable_scopes:
+                # This NFR was not mapped to any test data, so it fails
+                result = NFRStatus.FAILED
+                self.transaction_result.append(f"NFR '{nfr.description}' failed: No data found for scope '{nfr.scope}'.")
+            else:
                 # Get initial status - default to PASSED if not set
                 result = nfr_result.get("status", NFRStatus.PASSED)
 
@@ -228,11 +232,11 @@ class NFRValidation:
                         if compare_result == NFRStatus.FAILED or result == NFRStatus.FAILED:
                             result = NFRStatus.FAILED
 
-                # Update NFR result
-                nfr_result["status"] = result
-                nfr_result["nfr"] = nfr.description
-                nfr_result["weight"] = float(nfr.weight)
-                self.nfr_result.append(nfr_result)
+            # Update NFR result
+            nfr_result["status"] = result
+            nfr_result["nfr"] = nfr.description
+            nfr_result["weight"] = float(nfr.weight)
+            self.nfr_result.append(nfr_result)
 
     def calculate_apdex(self):
         total_weight = 0
