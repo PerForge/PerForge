@@ -72,6 +72,34 @@ class GeminiProvider(AIProvider):
         except Exception as er:
             self._handle_initialization_error(er)
 
+    def _detect_image_format(self, image_data: bytes) -> str:
+        """
+        Detect the format of an image from its binary data.
+        
+        Args:
+            image_data: Raw bytes of the image file
+            
+        Returns:
+            String representing the image format ('jpeg', 'png', etc.)
+        """
+        # Check for common image format signatures
+        if image_data.startswith(b'\xff\xd8\xff'):
+            return 'jpeg'
+        elif image_data.startswith(b'\x89PNG\r\n\x1a\n'):
+            return 'png'
+        elif image_data.startswith(b'GIF87a') or image_data.startswith(b'GIF89a'):
+            return 'gif'
+        elif image_data.startswith(b'RIFF') and image_data[8:12] == b'WEBP':
+            return 'webp'
+        elif image_data.startswith(b'BM'):
+            return 'bmp'
+        elif image_data.startswith(b'\x00\x00\x01\x00'):
+            return 'ico'
+        else:
+            # Default to jpeg if we can't detect the format
+            logging.warning("Image format could not be detected, defaulting to jpeg")
+            return 'jpeg'
+
     def analyze_graph(self, graph: bytes, prompt: str) -> str:
         """
         Analyze a graph image using the Gemini Vision model.
@@ -87,6 +115,11 @@ class GeminiProvider(AIProvider):
             return self._get_initialization_error_message()
 
         try:
+            # Detect image format
+            image_format = self._detect_image_format(graph)
+            # Encode image to base64
+            graph_b64 = base64.b64encode(graph).decode('utf-8')
+            
             # Create messages with system prompt and user prompt + image
             messages = [
                 SystemMessage(content=self.system_prompt),
@@ -95,7 +128,7 @@ class GeminiProvider(AIProvider):
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64.b64encode(graph).decode('utf-8')}",
+                            "url": f"data:image/{image_format};base64,{graph_b64}",
                         },
                     },
                 ])
@@ -114,13 +147,18 @@ class GeminiProvider(AIProvider):
             try:
                 logging.warning(f"First attempt failed, retrying with different format: {str(er)}")
 
+                # Detect image format
+                image_format = self._detect_image_format(graph)
+                # Encode image to base64
+                graph_b64 = base64.b64encode(graph).decode('utf-8')
+                
                 # Alternative approach for Gemini
                 response = self.image_llm.invoke([
                     {
                         "role": "user",
                         "content": [
                             {"type": "text", "text": f"{self.system_prompt}\n\n{prompt}"},
-                            {"type": "image_url", "image_url": f"data:image/jpeg;base64,{base64.b64encode(graph).decode('utf-8')}"}
+                            {"type": "image_url", "image_url": f"data:image/{image_format};base64,{graph_b64}"}
                         ]
                     }
                 ])

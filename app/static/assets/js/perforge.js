@@ -41,10 +41,10 @@
     return new Promise((resolve, reject) => {
       // Parse the JSON string if it's a string
       const data = typeof json === 'string' ? JSON.parse(json) : json;
-      
+
       // Convert traditional URL to API endpoint
       const endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
-      
+
       // Use the API client for all POST requests
       apiClient.post(endpoint, data)
         .then((response) => {
@@ -90,41 +90,45 @@
 
   const sendDownloadRequest = (url, json) => {
     return new Promise((resolve, reject) => {
-      // Parse the JSON string if it's a string
-      const data = typeof json === 'string' ? JSON.parse(json) : json;
+        const data = typeof json === 'string' ? JSON.parse(json) : json;
 
-      // Use only API client for all report generation
-      apiClient.tests.generateReport(data)
-        .then((response) => {
-          if (response.status === 'success' && response.data.pdf_content) {
-            // Create a Blob from the PDF content
-            const pdfContent = atob(response.data.pdf_content);
-            const byteArray = new Uint8Array(pdfContent.length);
-            for (let i = 0; i < pdfContent.length; i++) {
-              byteArray[i] = pdfContent.charCodeAt(i);
-            }
-            const blob = new Blob([byteArray], { type: "application/pdf" });
-
-            // Create a download link
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = response.data.filename || 'report.pdf';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-
-            // Show the result in the modal
-            showResultModal("Report generated!", response.data);
-            resolve(response.data);
-          } else {
-            showResultModal("Failed!", response.message || "Failed to generate PDF report");
-            reject(new Error(response.message || "Failed to generate PDF report"));
-          }
+        fetch('/api/v1/reports', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cookie': `project=${getCookie('project')}`
+            },
+            body: JSON.stringify(data)
         })
-        .catch((error) => {
-          showResultModal("Failed!", error.message || "An error occurred while generating the PDF report");
-          reject(error);
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'PDF generation failed');
+                });
+            }
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'report.pdf';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                if (filenameMatch && filenameMatch.length > 1) {
+                    filename = filenameMatch[1];
+                }
+            }
+            return response.blob().then(blob => ({ blob, filename }));
+        })
+        .then(({ blob, filename }) => {
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(link.href);
+            resolve();
+        })
+        .catch(error => {
+            showResultModal("Failed!", error.message || "An error occurred while generating the report");
+            reject(error);
         });
     });
   };
@@ -133,7 +137,7 @@
     return new Promise((resolve, reject) => {
       // Convert URL to API endpoint format
       let endpoint;
-      
+
       if (url.startsWith('/api/v1/')) {
         // Already in the correct format
         endpoint = url.replace('/api/v1/', '');
@@ -141,7 +145,7 @@
         // Convert traditional URL to API endpoint
         endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
       }
-      
+
       // Use the API client for all GET requests
       apiClient.get(endpoint)
         .then((response) => {
@@ -181,22 +185,22 @@
     const resultModalLabel = document.getElementById('resultModalLabel');
     resultModalBody.innerHTML = ''; // Clear previous content
     resultModalLabel.innerHTML = message;
-  
+
     if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
       // Filter out binary/large content that shouldn't be displayed
       const filteredResult = {};
-      
+
       for (const [key, value] of Object.entries(result)) {
         // Skip pdf_content and blob properties
         if (key !== 'pdf_content' && key !== 'blob') {
           filteredResult[key] = value;
         }
       }
-      
+
       // Check if we have any properties to display
       if (Object.keys(filteredResult).length > 0) {
         resultModalBody.style.display = 'block';
-        
+
         for (const [key, value] of Object.entries(filteredResult)) {
           const p = document.createElement('p');
           p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
@@ -656,13 +660,39 @@
         return null;
       }
 
-      selectedRows["tests"] = transformedList;
-      selectedRows["db_id"] = JSON.parse(selectedDb.value);
-
       if (output.type === "none") {
         showResultModal("Please choose an output.");
         return null;
       }
+
+      // Validate templates before filtering
+      if(output.type !== "delete"){
+        for (const item of transformedList) {
+          if (!item.template_id || item.template_id === "no data") {
+            showResultModal(`${item.test_title} has an empty template.`);
+            return null;
+          }
+        }
+      }
+
+      // Filter each test object to include required fields, preserving baseline_test_title
+      selectedRows["tests"] = transformedList.map(test => {
+        const newTest = {
+          test_title: test.test_title,
+          template_id: test.template_id
+        };
+        if (test.baseline_test_title && test.baseline_test_title !== "no data") {
+          newTest.baseline_test_title = test.baseline_test_title;
+        }
+        return newTest;
+      });
+
+      // Filter db_id to only include required fields (id and source_type)
+      const fullDbId = JSON.parse(selectedDb.value);
+      selectedRows["db_id"] = {
+        id: fullDbId.id,
+        source_type: fullDbId.source_type
+      };
 
       selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
 
@@ -671,13 +701,10 @@
         selectedRows["integration_type"] = output.integration_type;
       }
 
-      if(output.type !== "delete"){
-        for (const item of selectedRows["tests"]) {
-          if (!item.template_id || item.template_id === "no data") {
-            showResultModal(`${item.test_title} has an empty template.`);
-            return null;
-          }
-        }
+      // Add selected theme for PDF reports
+      if (output.type === 'pdf_report') {
+        const theme = localStorage.getItem('theme') || 'dark';
+        selectedRows['theme'] = theme;
       }
 
       if (selectedTemplateGroup.value !== "") {
