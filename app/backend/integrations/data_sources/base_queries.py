@@ -28,10 +28,6 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_app_name(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
-        pass
-
-    @abstractmethod
     def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
         pass
 
@@ -103,10 +99,6 @@ class FrontEndQueriesBase(ABC):
 
     @abstractmethod
     def get_end_time(self, testTitle: str, bucket: str) -> str:
-        pass
-
-    @abstractmethod
-    def get_app_name(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
         pass
 
     @abstractmethod

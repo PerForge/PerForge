@@ -217,7 +217,6 @@ class ReportingBase:
             'duration': 'duration',
             'start_time': 'start_time_human',
             'end_time': 'end_time_human',
-            'test_name': 'application',
             'test_type': 'test_type'
         }
 
@@ -256,7 +255,6 @@ class ReportingBase:
                 link_param_name: default_grafana_obj.get_grafana_test_link(
                     test_obj.get_metric('start_time_timestamp'),
                     test_obj.get_metric('end_time_timestamp'),
-                    test_obj.get_metric('application'),
                     test_title
                 )
             }
@@ -288,6 +286,7 @@ class ReportingBase:
             # Add baseline parameters with consistent 'baseline_' prefix
             self.parameters.update(self._collect_parameters(self.baseline_test_obj, "baseline_"))
             self.parameters.update(self._create_grafana_link(self.baseline_test_obj, baseline_test_title, "baseline_"))
+            self.parameters['baseline_test_title'] = baseline_test_title
 
         # Now collect the current test object
         self.current_test_obj = self.dp_obj.collect_test_obj(test_title=current_test_title)
@@ -295,8 +294,8 @@ class ReportingBase:
         # Set compatibility attributes for report types that expect them directly on the object
         self.current_start_timestamp = self.current_test_obj.get_metric('start_time_timestamp')
         self.current_end_timestamp = self.current_test_obj.get_metric('end_time_timestamp')
-        self.test_name = self.current_test_obj.get_metric('application')
 
         # Process current test data with 'current_' prefix
         self.parameters.update(self._collect_parameters(self.current_test_obj, "current_"))
         self.parameters.update(self._create_grafana_link(self.current_test_obj, current_test_title, "current_"))
+        self.parameters['current_test_title'] = current_test_title

@@ -23,30 +23,30 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> aggregateWindow(every: 1m, fn: last, createEmpty: false)
 
     max_threads = data
-      |> keep(columns: ["_value", "testTitle", "application"])
+      |> keep(columns: ["_value", "testTitle"])
       |> max()
-      |> group(columns: ["_value", "testTitle", "application"])
+      |> group(columns: ["_value", "testTitle"])
       |> rename(columns: {{_value: "max_threads"}})
 
     end_time = data
       |> max(column: "_time")
-      |> keep(columns: ["_time", "testTitle", "application"])
-      |> group(columns: ["_time", "testTitle", "application"])
+      |> keep(columns: ["_time", "testTitle"])
+      |> group(columns: ["_time", "testTitle"])
       |> rename(columns: {{_time: "end_time"}})
 
     start_time = data
       |> min(column: "_time")
-      |> keep(columns: ["_time", "testTitle", "application"])
-      |> group(columns: ["_time", "testTitle", "application"])
+      |> keep(columns: ["_time", "testTitle"])
+      |> group(columns: ["_time", "testTitle"])
       |> rename(columns: {{_time: "start_time"}})
 
-    join1 = join(tables: {{d1: max_threads, d2: start_time}}, on: ["testTitle", "application"])
-      |> keep(columns: ["start_time","testTitle", "application",  "max_threads"])
-      |> group(columns: ["testTitle", "application"])
+    join1 = join(tables: {{d1: max_threads, d2: start_time}}, on: ["testTitle"])
+      |> keep(columns: ["start_time","testTitle",  "max_threads"])
+      |> group(columns: ["testTitle"])
 
-    join(tables: {{d1: join1, d2: end_time}}, on: ["testTitle", "application"])
+    join(tables: {{d1: join1, d2: end_time}}, on: ["testTitle"])
       |> map(fn: (r) => ({{ r with duration: (int(v: r.end_time)/1000000000 - int(v: r.start_time)/1000000000)}}))
-      |> keep(columns: ["start_time","end_time","testTitle", "application", "max_threads", "duration"])
+      |> keep(columns: ["start_time","end_time","testTitle", "max_threads", "duration"])
       |> group()
       |> rename(columns: {{testTitle: "test_title"}})'''
 
@@ -67,15 +67,6 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
-
-  def get_app_name(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
-      return f'''from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r["_measurement"] == "jmeter")
-      |> filter(fn: (r) => r["_field"] == "maxAT")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> distinct(column: "application")
-      |> keep(columns: ["application"])'''
 
   def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
       return f'''import "join"
@@ -327,9 +318,9 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["_field"] == "count")
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> filter(fn: (r) => r["transaction"] != "all")
-      |> group(columns: ["application", "statut"])
+      |> group(columns: ["statut"])
       |> sum()
       |> filter(fn: (r) => exists r.statut)
-      |> pivot(rowKey: ["application"], columnKey: ["statut"], valueColumn: "_value")
+      |> pivot(rowKey: [], columnKey: ["statut"], valueColumn: "_value")
       |> map(fn: (r) => ({{ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }}))
       |> keep(columns: ["errors"])'''

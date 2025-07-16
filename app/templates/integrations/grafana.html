@@ -75,15 +75,6 @@
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
-                                        The variable name used to select the app name for querying the results. 'app' is default.
-                                      </div>
-                                    </div>
-                                    <label for="app" class="input-label mt-2">App name tag:</label>
-                                    {{ form.app(id='app', class_='form-control', placeholder="e.g. app") }}
-
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
                                         The variable name used to select the baseline test title for querying the results. It is used on comparison dashboard. 'baseline_testTitle' is default.
                                       </div>
                                     </div>
@@ -229,7 +220,6 @@
                 server: form.server.value,
                 org_id: form.org_id.value,
                 test_title: form.test_title.value,
-                app: form.app.value,
                 baseline_test_title: form.baseline_test_title.value,
                 is_default: form.is_default.value === 'True',
                 dashboards: []

@@ -272,13 +272,12 @@ class PdfReport(ReportingBase):
     def set_template(self, template, influxdb):
         super().set_template(template, influxdb)
 
-    def add_graph(self, graph_data, current_run_id, baseline_run_id):
+    def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Use the timestamps from current_test_obj instead of direct attributes
         start_timestamp = self.current_test_obj.start_time_timestamp
         end_timestamp = self.current_test_obj.end_time_timestamp
-        test_name = self.current_test_obj.application
 
-        image = self.grafana_obj.render_image(graph_data, start_timestamp, end_timestamp, test_name, current_run_id, baseline_run_id)
+        image = self.grafana_obj.render_image(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
         ai_support_response = None
         if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
@@ -390,12 +389,12 @@ class PdfReport(ReportingBase):
             template_id = test.get('template_id')
             if template_id:
                 self.set_template(template_id, influxdb)
-                run_id          = test.get('test_title')
-                baseline_run_id = test.get('baseline_test_title')
-                self.collect_data(run_id, baseline_run_id)
+                test_title          = test.get('test_title')
+                baseline_test_title = test.get('baseline_test_title')
+                self.collect_data(test_title, baseline_test_title)
                 title = self.generate_title(False)
                 self.pdf_creator.add_title(title)
-                self.generate(run_id, baseline_run_id)
+                self.generate(test_title, baseline_test_title)
                 if not group_title:
                     templates_title += f'{title}_'
         if template_group:
@@ -424,7 +423,7 @@ class PdfReport(ReportingBase):
         response['filename'] = templates_title
         return response
 
-    def generate(self, current_run_id, baseline_run_id = None):
+    def generate(self, current_test_title, baseline_test_title = None):
         processed_graphs = {}
 
         # First pass: collect all data from graphs
@@ -432,7 +431,7 @@ class PdfReport(ReportingBase):
             if obj["type"] == "graph":
                 graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                image, ai_response = self.add_graph(graph_data, current_run_id, baseline_run_id)
+                image, ai_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 processed_graphs[obj["graph_id"]] = (image, ai_response)
 
         # Analyze templates after all data is collected

@@ -66,7 +66,6 @@ class GrafanaModel(BaseModelWithStripping):
     org_id             : str
     token              : Optional[int]
     test_title         : str
-    app                : str
     baseline_test_title: str
     is_default         : bool
     dashboards         : list[GrafanaObjectModel]

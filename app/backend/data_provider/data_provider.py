@@ -118,8 +118,6 @@ class DataProvider:
             test_obj.set_metric('start_time_timestamp', self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp'))
         if hasattr(test_obj, 'end_time_timestamp'):
             test_obj.set_metric('end_time_timestamp', self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp'))
-        if hasattr(test_obj, 'application'):
-            test_obj.set_metric('application', self.ds_obj.get_application(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
         # Calculate duration
         test_obj.calculate_duration()
 

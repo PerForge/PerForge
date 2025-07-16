@@ -156,19 +156,6 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(er)
             return None
 
-    def _fetch_application(self, test_title: str, start: str, end: str) -> str:
-        try:
-            query       = self.queries.get_app_name(test_title, start, end, self.bucket)
-            flux_tables = self.influxdb_connection.query_api().query(query)
-            for flux_table in flux_tables:
-                for flux_record in flux_table:
-                    appName = flux_record['application']
-            return appName
-        except Exception as er:
-            logging.error(ErrorMessages.ER00062.value.format(self.name))
-            logging.error(er)
-            return ""
-
     def _fetch_rps(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
             query       = self.queries.get_rps(test_title, start, end, self.bucket)

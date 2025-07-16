@@ -21,25 +21,24 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> range(start: 0, stop: now())
       |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint")
       |> filter(fn: (r) => r["_field"] == "median")
-      |> keep(columns: ["_time", "app", "testTitle"])
+      |> keep(columns: ["_time", "testTitle"])
 
     end_time = data
       |> max(column: "_time")
-      |> group(columns: ["_time", "testTitle", "app"])
+      |> group(columns: ["_time", "testTitle"])
       |> rename(columns: {{_time: "end_time"}})
 
     start_time = data
       |> min(column: "_time")
-      |> group(columns: ["_time", "testTitle", "app"])
+      |> group(columns: ["_time", "testTitle"])
       |> rename(columns: {{_time: "start_time"}})
 
-    join(tables: {{d1: start_time, d2: end_time}}, on: ["testTitle", "app"])
+    join(tables: {{d1: start_time, d2: end_time}}, on: ["testTitle"])
       |> map(fn: (r) => ({{ r with duration: (int(v: r.end_time)/1000000000 - int(v: r.start_time)/1000000000)}}))
-      |> keep(columns: ["start_time","end_time","testTitle", "app", "duration"])
+      |> keep(columns: ["start_time","end_time","testTitle", "duration"])
       |> group()
       |> rename(columns: {{testTitle: "test_title"}})
       |> set(key: "max_threads", value: "1")
-      |> rename(columns: {{app: "application"}})
       '''
 
   def get_start_time(self, testTitle: str, bucket: str) -> str:
@@ -59,18 +58,6 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
-
-  def get_app_name(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
-      return f'''from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint")
-      |> filter(fn: (r) => r["_field"] == "median")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> keep(columns: ["app"])
-      |> distinct(column: "app")
-      |> group()
-      |> last()
-      |> rename(columns: {{app: "application"}})'''
 
   def get_google_web_vitals(self, testTitle: str, start: int, stop: int, bucket: str, aggregation: str = 'median') -> str:
       return f'''from(bucket: "{bucket}")

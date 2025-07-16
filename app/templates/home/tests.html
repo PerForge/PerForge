@@ -61,7 +61,6 @@
                                             </th>
                                             <th class="sort" data-sort="test_title">Test title</th>
                                             <th>Template</th>
-                                            <th class="sort" data-sort="application">Application</th>
                                             <th class="sort" data-sort="duration">Duration (sec)</th>
                                             <th class="sort" data-sort="max_threads">Users</th>
                                             <th class="sort" data-sort="start_time">Start time</th>
@@ -214,7 +213,7 @@
                 }
 
                 function updateTable(tests) {
-                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "application", "duration", "max_threads", "start_time", "end_time"], "page": 10, "pagination": true}');
+                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "duration", "max_threads", "start_time", "end_time"], "page": 10, "pagination": true}');
 
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body
@@ -226,7 +225,7 @@
                         const checkboxCell = row.insertCell();
                         const checkboxDiv = document.createElement("div");
                         checkboxDiv.className = "form-check fs-0";
-                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","application":"${test.application}","duration":"${test.duration}","max_threads":"${test.max_threads}","start_time":"${test.start_time}","end_time":"${test.end_time}"}' />`;
+                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","duration":"${test.duration}","max_threads":"${test.max_threads}","start_time":"${test.start_time}","end_time":"${test.end_time}"}' />`;
                         checkboxCell.appendChild(checkboxDiv);
 
                         // Insert cells for each column based on your data structure
@@ -260,11 +259,6 @@
                             checkboxData['template_id'] = value;
                             checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
                         });
-
-                        // Insert Test Name (modify as needed)
-                        const applicationCell = row.insertCell();
-                        applicationCell.className = "application";
-                        applicationCell.textContent = test.application;
 
                         // Insert Duration (modify as needed)
                         const durationCell = row.insertCell();
