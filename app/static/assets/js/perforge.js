@@ -90,41 +90,45 @@
 
   const sendDownloadRequest = (url, json) => {
     return new Promise((resolve, reject) => {
-      // Parse the JSON string if it's a string
-      const data = typeof json === 'string' ? JSON.parse(json) : json;
+        const data = typeof json === 'string' ? JSON.parse(json) : json;
 
-      // Use only API client for all report generation
-      apiClient.tests.generateReport(data)
-        .then((response) => {
-          if (response.status === 'success' && response.data.pdf_content) {
-            // Create a Blob from the PDF content
-            const pdfContent = atob(response.data.pdf_content);
-            const byteArray = new Uint8Array(pdfContent.length);
-            for (let i = 0; i < pdfContent.length; i++) {
-              byteArray[i] = pdfContent.charCodeAt(i);
-            }
-            const blob = new Blob([byteArray], { type: "application/pdf" });
-
-            // Create a download link
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = response.data.filename || 'report.pdf';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-
-            // Show the result in the modal
-            showResultModal("Report generated!", response.data);
-            resolve(response.data);
-          } else {
-            showResultModal("Failed!", response.message || "Failed to generate PDF report");
-            reject(new Error(response.message || "Failed to generate PDF report"));
-          }
+        fetch('/api/v1/reports', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cookie': `project=${getCookie('project')}`
+            },
+            body: JSON.stringify(data)
         })
-        .catch((error) => {
-          showResultModal("Failed!", error.message || "An error occurred while generating the PDF report");
-          reject(error);
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'PDF generation failed');
+                });
+            }
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'report.pdf';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                if (filenameMatch && filenameMatch.length > 1) {
+                    filename = filenameMatch[1];
+                }
+            }
+            return response.blob().then(blob => ({ blob, filename }));
+        })
+        .then(({ blob, filename }) => {
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(link.href);
+            resolve();
+        })
+        .catch(error => {
+            showResultModal("Failed!", error.message || "An error occurred while generating the report");
+            reject(error);
         });
     });
   };
@@ -695,6 +699,12 @@
       // Add integration_type to the request data if it exists in the output object
       if (output.integration_type) {
         selectedRows["integration_type"] = output.integration_type;
+      }
+
+      // Add selected theme for PDF reports
+      if (output.type === 'pdf_report') {
+        const theme = localStorage.getItem('theme') || 'dark';
+        selectedRows['theme'] = theme;
       }
 
       if (selectedTemplateGroup.value !== "") {

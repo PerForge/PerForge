@@ -35,13 +35,22 @@ from datetime                                 import datetime
 
 
 class Pdf:
+    THEMES = {
+        'dark': {
+            'text': Color(206 / 255, 213 / 255, 218 / 255),
+            'header': Color(40 / 255, 40 / 255, 40 / 255),
+            'background': Color(60 / 255, 60 / 255, 60 / 255)
+        },
+        'light': {
+            'text': Color(60 / 255, 60 / 255, 60 / 255),
+            'header': Color(211 / 255, 211 / 255, 211 / 255),
+            'background': Color(255 / 255, 255 / 255, 255 / 255)
+        }
+    }
 
-    def __init__(self, pdf_io, margin=15):
+    def __init__(self, pdf_io, margin=15, theme='dark'):
         self.doc              = BaseDocTemplate(pdf_io, pagesize=landscape(A4), leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
         self.elements         = []
-        self.text_color       = Color(206 / 255, 213 / 255, 218 / 255)
-        self.header_color     = Color(40 / 255, 40 / 255, 40 / 255)
-        self.background_color = Color(60 / 255, 60 / 255, 60 / 255)
         self.logo_path        = os.path.join('app', 'static', 'assets', 'img', 'logo.png')
         registerFont(ttfonts.TTFont('NunitoSans', os.path.join('app', 'static', 'assets', 'fonts', 'NunitoSans_7pt-Regular.ttf')))
         registerFont(ttfonts.TTFont('NunitoSans-Bold', os.path.join('app', 'static', 'assets', 'fonts', 'NunitoSans_7pt-Bold.ttf')))
@@ -97,6 +106,18 @@ class Pdf:
 
         frame = Frame(margin, margin, self.doc.width, self.doc.height, id='normal', showBoundary=0)
         self.doc.addPageTemplates([PageTemplate(id='GrayBackground', frames=frame, onPage=on_page)])
+
+    def set_theme(self, theme):
+        """
+        Set the theme for the PDF.
+
+        Args:
+            theme: The theme to use ('dark' or 'light')
+        """
+        self.theme = theme if theme in self.THEMES else 'dark'
+        self.text_color = self.THEMES[self.theme]['text']
+        self.header_color = self.THEMES[self.theme]['header']
+        self.background_color = self.THEMES[self.theme]['background']
 
     def add_title(self, title_text):
         styles      = getSampleStyleSheet()
@@ -238,12 +259,15 @@ class RoundedImage(Image):
 
 @ReportRegistry.register("pdf_report")
 class PdfReport(ReportingBase):
-
-    def __init__(self, project):
+    def __init__(self, project, theme='dark'):
         super().__init__(project)
         self.pdf_io      = BytesIO()
-        self.pdf_creator = Pdf(self.pdf_io)
+        self.theme       = theme
+        self.pdf_creator = Pdf(self.pdf_io, theme=self.theme)
         self.pdf_creator.elements.append(Spacer(1, self.pdf_creator.header_height))
+
+
+
 
     def set_template(self, template, influxdb):
         super().set_template(template, influxdb)
@@ -356,9 +380,11 @@ class PdfReport(ReportingBase):
         # Return the table data as a JSON string
         return json.dumps(table_data)
 
-    def generate_report(self, tests, influxdb, template_group=None):
+    def generate_report(self, tests, influxdb, template_group=None, theme='dark'):
         templates_title = ""
         group_title     = None
+        self.pdf_creator.set_theme(theme)
+
         def process_test(test):
             nonlocal templates_title
             template_id = test.get('template_id')
@@ -392,6 +418,7 @@ class PdfReport(ReportingBase):
             templates_title += time_str
         else:
             templates_title = group_title + time_str
+
         self.pdf_creator.build()
         response = self.generate_response()
         response['filename'] = templates_title
@@ -412,7 +439,6 @@ class PdfReport(ReportingBase):
         if self.nfrs_switch or self.ai_switch or self.ml_switch:
             self.analyze_template()
 
-        # Second pass: build the PDF in the correct order
         for obj in self.data:
             if obj["type"] == "text":
                 self.add_text(obj["content"])

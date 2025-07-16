@@ -122,14 +122,14 @@ def get_test_data():
 
         ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id)
         tests = ds_obj.get_test_log()
-        
+
         # Format timestamps to sortable format for better table sorting
         for test in tests:
             if 'start_time' in test and test['start_time']:
                 # Convert pandas Timestamp to sortable string format
                 if hasattr(test['start_time'], 'strftime'):
                     test['start_time'] = test['start_time'].strftime('%Y-%m-%d %H:%M:%S')
-            
+
             if 'end_time' in test and test['end_time']:
                 # Convert pandas Timestamp to sortable string format
                 if hasattr(test['end_time'], 'strftime'):
@@ -205,27 +205,20 @@ def generate_report():
         if action_type == "pdf_report":
             # Ensure all report types are loaded before getting the PDF report instance
             _ensure_report_types_loaded()
-
+            project_id = get_project_id()
+            theme = data.get('theme', 'dark')
+            # Get the PDF report instance from the registry
             pdf = ReportRegistry.get_report_instance(action_type, project_id)
+            if not pdf:
+                return api_response("error", "PDF report type not found in registry.", HTTP_NOT_FOUND)
 
-            # Add robust error handling for pandas operations
-            try:
-                result = pdf.generate_report(data["tests"], db_id, template_group)
-            except Exception as e:
-                import traceback
-                error_details = traceback.format_exc()
-                logging.error(f"Detailed PDF generation error: {error_details}")
-                return api_response(
-                    message=f"Error generating PDF report: {str(e)}",
-                    status=HTTP_INTERNAL_SERVER_ERROR,
-                    errors=[{"code": "pdf_generation_error", "message": str(e)}]
-                )
+            # Generate the report
+            result = pdf.generate_report(data["tests"], db_id, template_group, theme=theme)
+
             pdf.pdf_io.seek(0)
-
             # Convert the result to a JSON string and include it in the headers
             result_json = json.dumps(result)
 
-            # Create a custom response with the PDF file and headers
             response = send_file(
                 pdf.pdf_io,
                 mimetype="application/pdf",
