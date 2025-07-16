@@ -17,7 +17,6 @@ import logging
 from enum import Enum
 
 from app.backend.components.nfrs.nfrs_db         import DBNFRs
-from app.backend.components.projects.projects_db import DBProjects
 
 # NFR validation status enum - moved from metric.py
 class NFRStatus(Enum):

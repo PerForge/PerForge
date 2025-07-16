@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from app.backend.integrations.data_sources.base_queries import FrontEndQueriesBase
-from typing import Optional
 
 class SitespeedFluxQueries(FrontEndQueriesBase):
   def get_test_log(self, bucket: str) -> str:

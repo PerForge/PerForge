@@ -15,11 +15,10 @@
 import logging
 import traceback
 import base64
-from typing import Optional, Dict, Any, List, Union
+from typing import Dict, Any, List, Union
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain.schema import HumanMessage, SystemMessage
-from langchain.prompts import PromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
@@ -75,10 +74,10 @@ class GeminiProvider(AIProvider):
     def _detect_image_format(self, image_data: bytes) -> str:
         """
         Detect the format of an image from its binary data.
-        
+
         Args:
             image_data: Raw bytes of the image file
-            
+
         Returns:
             String representing the image format ('jpeg', 'png', etc.)
         """
@@ -119,7 +118,7 @@ class GeminiProvider(AIProvider):
             image_format = self._detect_image_format(graph)
             # Encode image to base64
             graph_b64 = base64.b64encode(graph).decode('utf-8')
-            
+
             # Create messages with system prompt and user prompt + image
             messages = [
                 SystemMessage(content=self.system_prompt),
@@ -151,7 +150,7 @@ class GeminiProvider(AIProvider):
                 image_format = self._detect_image_format(graph)
                 # Encode image to base64
                 graph_b64 = base64.b64encode(graph).decode('utf-8')
-                
+
                 # Alternative approach for Gemini
                 response = self.image_llm.invoke([
                     {

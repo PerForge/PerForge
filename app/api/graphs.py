@@ -2,13 +2,12 @@
 Graphs API endpoints.
 """
 import logging
-from flask import Blueprint, request, current_app
+from flask import Blueprint, request
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.components.graphs.graphs_db import DBGraphs
-from app.backend.errors import ErrorMessages
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
-    HTTP_OK, HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
+    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
 
 # Create a Blueprint for graphs API

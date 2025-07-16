@@ -14,16 +14,11 @@
 
 import re
 import logging
-import json
-
-from sqlalchemy.sql.expression import False_
 
 from app.backend.integrations.ai_support.ai_support                        import AISupport
 from app.backend.integrations.grafana.grafana                              import Grafana
-from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.backend.integrations.grafana.grafana_db                           import DBGrafana
 from app.backend.components.nfrs.nfr_validation                            import NFRValidation
-from app.backend.components.projects.projects_db                           import DBProjects
 from app.backend.components.templates.templates_db                         import DBTemplates
 from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
 from app.backend.data_provider.data_provider                               import DataProvider

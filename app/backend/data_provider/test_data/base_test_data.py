@@ -1,7 +1,7 @@
 # Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 
 import logging
-from typing import Optional, Dict, List, Any, Union, Type
+from typing import Optional, Dict, List, Any
 from abc import ABC
 
 

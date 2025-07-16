@@ -17,7 +17,6 @@ from app.backend.integrations.report_registry       import ReportRegistry
 from app.backend.integrations.azure_wiki.azure_wiki import AzureWiki
 from app.backend.integrations.grafana.grafana       import Grafana
 from app.backend.components.graphs.graphs_db        import DBGraphs
-from datetime                                       import datetime
 
 
 @ReportRegistry.register("azure_wiki")

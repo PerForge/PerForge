@@ -14,7 +14,6 @@
 
 from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr
 from typing   import Optional
-from datetime import datetime
 
 
 # Cleaning functions

@@ -24,7 +24,6 @@ from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction impor
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
-import logging
 
 class DataProvider:
     """

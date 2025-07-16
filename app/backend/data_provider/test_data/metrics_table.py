@@ -1,9 +1,6 @@
 # Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 
 from typing import Dict, Any, Optional, List
-import logging
-import re
-
 from .metric import Metric, NFRStatus
 
 
@@ -213,10 +210,10 @@ class MetricsTable:
 
     def set_baseline_metrics(self, baseline_metrics: List[Metric]) -> None:
         """Set baseline values from a list of Metric objects
-        
+
         This method updates the current metrics with baseline values from the provided metrics list.
         It matches metrics by name and scope to ensure the correct baseline values are applied.
-        
+
         Args:
             baseline_metrics: A list of Metric objects containing baseline values
         """
@@ -226,7 +223,7 @@ class MetricsTable:
             # Create a unique key using name and scope
             key = f"{baseline_metric.name}_{baseline_metric.scope or 'unknown'}"
             baseline_lookup[key] = baseline_metric
-        
+
         # Update current metrics with baseline values
         for metric in self.metrics:
             key = f"{metric.name}_{metric.scope or 'unknown'}"
@@ -238,7 +235,7 @@ class MetricsTable:
                     metric.difference = metric.value - metric.baseline
                     if metric.baseline != 0:
                         metric.difference_pct = (metric.difference / metric.baseline) * 100
-    
+
     def has_baseline(self) -> bool:
         """Check if baseline metrics are available"""
         # Check if any metrics have baseline values

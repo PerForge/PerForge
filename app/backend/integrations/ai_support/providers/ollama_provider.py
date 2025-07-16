@@ -15,13 +15,11 @@
 import logging
 import traceback
 import base64
-from typing import Optional, Dict, Any, Union, List
+from typing import Dict, Any, Union, List
 
-from langchain_community.llms import Ollama
 from langchain_community.chat_models import ChatOllama
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.schema import HumanMessage, SystemMessage
-from langchain.prompts import PromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider

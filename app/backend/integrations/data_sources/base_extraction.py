@@ -15,11 +15,8 @@
 import logging
 import pandas as pd
 
-
-from app.backend.components.projects.projects_db import DBProjects
 from app.backend.errors                          import ErrorMessages
 from abc                                         import ABC, abstractmethod
-from app.backend.integrations.integration        import Integration
 from typing                                      import List, Dict, Any, Callable
 from functools                                   import wraps
 from datetime                                    import datetime

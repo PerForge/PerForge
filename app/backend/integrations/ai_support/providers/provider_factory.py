@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict, Any, Optional, Type
+from typing import Dict, Optional, Type
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
 from app.backend.integrations.ai_support.providers.gemini_provider import GeminiProvider

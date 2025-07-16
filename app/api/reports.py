@@ -4,7 +4,7 @@ Reports API endpoints.
 import json
 import logging
 import importlib
-from flask import Blueprint, request, send_file, current_app
+from flask import Blueprint, request, send_file
 from app.backend.data_provider.data_provider import DataProvider
 from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
@@ -14,7 +14,7 @@ from app.backend.components.templates.template_groups_db import DBTemplateGroups
 from app.backend.errors import ErrorMessages
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
-    HTTP_OK, HTTP_CREATED, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_INTERNAL_SERVER_ERROR
+    HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_INTERNAL_SERVER_ERROR
 )
 
 # Create a Blueprint for reports API

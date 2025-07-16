@@ -2,24 +2,13 @@
 Projects API endpoints.
 """
 import logging
-from flask import Blueprint, request, current_app, make_response
+from flask import Blueprint, request, make_response
 
 from app.api.base import (
-    api_response, api_error_handler, 
-    HTTP_OK, HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND,
-    ResourceNotFoundError, ValidationError
+    api_response, api_error_handler,
+    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
 from app.backend.components.projects.projects_db import DBProjects
-from app.backend.components.graphs.graphs_db import DBGraphs
-from app.backend.components.nfrs.nfrs_db import DBNFRs
-from app.backend.components.templates.templates_db import DBTemplates
-from app.backend.integrations.ai_support.ai_support_db import DBAISupport
-from app.backend.integrations.atlassian_confluence.atlassian_confluence_db import DBAtlassianConfluence
-from app.backend.integrations.atlassian_jira.atlassian_jira_db import DBAtlassianJira
-from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
-from app.backend.integrations.grafana.grafana_db import DBGrafana
-from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
-from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
 from app.backend.errors import ErrorMessages
 from app import db
 
@@ -88,9 +77,9 @@ def create_project():
         # Close any existing sessions before creating a new project
         db.session.close()
         db.engine.dispose()
-        
+
         new_project_id = DBProjects.save(data=project_data)
-        
+
         return api_response(
             data={"project_id": new_project_id},
             message="Project created successfully",

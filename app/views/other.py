@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import traceback
-
 from app         import app
 from app.backend import pkg
 from flask       import render_template, jsonify
