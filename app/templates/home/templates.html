@@ -44,10 +44,8 @@
                                             <tr>
                                                 <th class="sort" data-sort="name">Name</th>
                                                 <th class="sort" data-sort="title">Report Title</th>
-                                                <th class="sort" data-sort="nfr">NFR</th>
+                                                <th class="sort" data-sort="ml-switch">ML Switch</th>
                                                 <th class="sort" data-sort="nfr-switch">NFR Switch</th>
-                                                <th class="sort" data-sort="template_prompt_id">Template prompt</th>
-                                                <th class="sort" data-sort="aggregated_prompt_id">Aggregated data prompt</th>
                                                 <th class="sort" data-sort="ai-switch">AI Switch</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -104,7 +102,6 @@
                                                 <th class="sort" data-sort="name">Name</th>
                                                 <th class="sort" data-sort="title">Report Title</th>
                                                 <th class="sort" data-sort="template">Templates</th>
-                                                <th class="sort" data-sort="prompt_id">Prompt</th>
                                                 <th class="sort" data-sort="ai_summary">AI Switch</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -196,18 +193,12 @@
                 tbody.innerHTML = '';
 
                 templates.forEach(template => {
-                    const nfr = nfrs.find(n => n.id === template.nfr) || { name: '' };
-                    const templatePrompt = templatePrompts.find(p => p.id === template.template_prompt_id) || { name: '' };
-                    const aggregatedPrompt = aggregatedDataPrompts.find(p => p.id === template.aggregated_prompt_id) || { name: '' };
-
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="name">${template.name || ''}</td>
                         <td class="title">${template.title || ''}</td>
-                        <td class="nfr">${nfr.name || ''}</td>
+                        <td class="ml-switch">${template.ml_switch}</td>
                         <td class="nfr-switch">${template.nfrs_switch}</td>
-                        <td class="template_prompt_id">${templatePrompt.name || ''}</td>
-                        <td class="aggregated_prompt_id">${aggregatedPrompt.name || ''}</td>
                         <td class="ai-switch">${template.ai_switch}</td>
                         <td class="actions" style="width: 20%;">
                             <a class="btn btn-primary" href="/template?template_config=${template.id}">Edit</a>
@@ -247,7 +238,7 @@
                 setTimeout(() => {
                     if (!templatesListJs) {
                         templatesListJs = new List('templates', {
-                            valueNames: ['name', 'title', 'nfr', 'nfr-switch', 'template_prompt_id', 'aggregated_prompt_id', 'ai-switch', 'actions'],
+                            valueNames: ['name', 'title', 'ml-switch', 'nfr-switch', 'ai-switch', 'actions'],
                             page: 5,
                             pagination: true
                         });
@@ -262,7 +253,6 @@
                 tbody.innerHTML = '';
 
                 templateGroups.forEach(group => {
-                    const templateGroupPrompt = templateGroupPrompts.find(p => p.id === group.prompt_id) || { name: '' };
                     let templatesHtml = '';
                     if (group.data && Array.isArray(group.data)) {
                         let counter = 0;
@@ -281,7 +271,6 @@
                         <td class="name">${group.name || ''}</td>
                         <td class="title">${group.title || ''}</td>
                         <td class="template">${templatesHtml}</td>
-                        <td class="prompt_id">${templateGroupPrompt.name || ''}</td>
                         <td class="ai_summary">${group.ai_summary}</td>
                         <td class="actions" style="width: 20%;">
                             <a class="btn btn-primary" href="/template-group?template_group_config=${group.id}">Edit</a>
@@ -319,7 +308,7 @@
                 setTimeout(() => {
                     if (!templateGroupsListJs) {
                         templateGroupsListJs = new List('template-groups', {
-                            valueNames: ['name', 'title', 'template', 'prompt_id', 'ai_summary', 'actions'],
+                            valueNames: ['name', 'title', 'template', 'ai_summary', 'actions'],
                             page: 5,
                             pagination: true
                         });

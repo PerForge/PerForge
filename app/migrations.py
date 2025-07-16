@@ -32,6 +32,17 @@ def run_migrations():
                 connection.execute(alter_command)
                 log.info(f"Migration for dropping '{column_name}' applied successfully.")
 
+            # --- Migration 3: Add 'conversation_memory' to 'ai_support' table ---
+            table_name = 'ai_support'
+            column_name = 'conversation_memory'
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+
+            if column_name not in columns:
+                log.info(f"Applying migration: Adding column '{column_name}' to table '{table_name}'")
+                alter_command = text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} BOOLEAN DEFAULT FALSE")
+                connection.execute(alter_command)
+                log.info(f"Migration for '{column_name}' applied successfully.")
+
             # --- Add future migrations below this line as new blocks ---
 
     except Exception as e:

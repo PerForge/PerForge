@@ -37,7 +37,7 @@ class InfluxDBForm(FlaskForm):
     bucket     = StringField('Bucket', validators=[DataRequired()])
     listener   = SelectField('Backend listener', choices=[('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient'), ('sitespeed_influxdb_v2', 'sitespeed_influxdb_v2')], default='InfluxdbBackendListenerClient')
     tmz        = StringField('Timezone', default="UTC")
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class DashboardForm(FlaskForm):
@@ -55,7 +55,7 @@ class GrafanaForm(FlaskForm):
     app                 = StringField('App name', validators=[DataRequired()], default="app")
     baseline_test_title = StringField('Baseline test title', validators=[DataRequired()], default="baseline_testTitle")
     dashboards          = FieldList(FormField(DashboardForm), min_entries=1)
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class AzureWikiForm(FlaskForm):
@@ -66,7 +66,7 @@ class AzureWikiForm(FlaskForm):
     azure_project_id = StringField('Azure DevOps Project Name or ID', validators=[DataRequired()])
     identifier     = StringField('Wiki Identifier', validators=[DataRequired()])
     path_to_report = StringField('Wiki Path To Report', validators=[DataRequired()])
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class GraphForm(FlaskForm):
@@ -90,7 +90,7 @@ class AtlassianConfluenceForm(FlaskForm):
     org_url    = StringField('Organization url', validators=[DataRequired()])
     space_key  = StringField('Space key', validators=[DataRequired()])
     parent_id  = StringField('Parent id', validators=[DataRequired()])
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class AtlassianJiraForm(FlaskForm):
@@ -103,7 +103,7 @@ class AtlassianJiraForm(FlaskForm):
     jira_project_key = StringField('Jira Project Key', validators=[DataRequired()])
     epic_field = StringField('Epic field')
     epic_name  = StringField('Epic name')
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class SMTPMailForm(FlaskForm):
@@ -111,12 +111,12 @@ class SMTPMailForm(FlaskForm):
     name       = StringField('Name', validators=[DataRequired()])
     server     = StringField('Server', validators=[DataRequired()])
     port       = IntegerField('Port', validators=[DataRequired()])
-    use_ssl    = SelectField('Use SSL', choices=[(True, 'Yes'), ('', 'No')], coerce=bool)
-    use_tls    = SelectField('Use TLS', choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    use_ssl    = SelectField('Use SSL', choices=[(True, 'Yes'), (False, 'No')], coerce=bool)
+    use_tls    = SelectField('Use TLS', choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
     username   = StringField('Username', validators=[DataRequired(), Email()])
     token      = StringField('Password', validators=[DataRequired()])
     recipients = FieldList(StringField('Recipient'), min_entries=1, validators=[DataRequired(), Email()])
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class AISupportForm(FlaskForm):
@@ -129,7 +129,8 @@ class AISupportForm(FlaskForm):
     ai_image_model = StringField('AI Image model', validators=[DataRequired()])
     token          = StringField('Token', validators=[DataRequired()])
     temperature    = FloatField('Temperature', validators=[DataRequired(), NumberRange(min=0.1, max=1.0)], default=0.2)
-    is_default = SelectField("Is default", choices=[('', 'No'), (True, 'Yes')], coerce=bool)
+    conversation_memory = SelectField("Conversation Memory", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
+    is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
 class PromptForm(FlaskForm):

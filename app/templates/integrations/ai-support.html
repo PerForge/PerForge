@@ -75,6 +75,16 @@
                                     </div>
                                     <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
                                     {{ form.temperature(class="form-control", placeholder="e.g. 0.2") }}
+                                    <div class="tooltip-container">
+                                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                        <div class="tooltip-content">
+                                          Enabling this allows the LLM to access previous requests for better context when generating reports.
+                                          <br>
+                                          Note: This will increase token consumption.
+                                        </div>
+                                    </div>
+                                    <label for="conversation_memory" class="mt-2">Conversation Memory:</label>
+                                    {{ form.conversation_memory(class="form-control") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>
@@ -139,6 +149,7 @@
                 ai_text_model: form.ai_text_model.value,
                 ai_image_model: form.ai_image_model.value,
                 temperature: form.temperature.value,
+                conversation_memory: form.conversation_memory.value,
                 is_default: form.is_default.value === 'True',
                 azure_url: form.azure_url.value,
                 api_version: form.api_version.value

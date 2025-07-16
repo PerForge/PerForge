@@ -142,6 +142,7 @@ class AISupportModel(BaseModelWithStripping):
     ai_image_model: str
     token         : Optional[int]
     temperature   : float
+    conversation_memory: bool = Field(default=False)
     is_default    : bool
 
 

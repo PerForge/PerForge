@@ -89,7 +89,7 @@ class AISupport(Integration):
             self.ai_text_model = config["ai_text_model"]
             self.ai_image_model = config["ai_image_model"]
             self.temperature = config["temperature"]
-            self.conversation_memory = False
+            self.conversation_memory = config["conversation_memory"]
 
             # Get token from secrets database
             self.token = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]

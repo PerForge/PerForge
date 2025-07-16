@@ -228,6 +228,20 @@ def generate_report():
             response.headers['X-Result-Data'] = result_json
             return response
 
+        elif action_type == "delete":
+            try:
+                dp = DataProvider(project=project_id, source_type=db_id['source_type'], id=db_id['id'])
+                for test in data['tests']:
+                    dp.ds_obj.delete_test_data(test['test_title'])
+                return api_response(message="Tests deleted successfully", status=HTTP_OK)
+            except Exception as e:
+                logging.error(f"Error deleting tests: {str(e)}")
+                return api_response(
+                    message="Error deleting tests",
+                    status=HTTP_BAD_REQUEST,
+                    errors=[{"code": "delete_error", "message": str(e)}]
+                )
+
         # Handle standard report generation using the registry
         elif action_type:
             # Ensure all report types are loaded before validation
