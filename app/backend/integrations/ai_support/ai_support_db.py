@@ -31,6 +31,7 @@ class DBAISupport(db.Model):
     ai_image_model = db.Column(db.String(120), nullable=False)
     token          = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     temperature    = db.Column(db.Float, nullable=False)
+    conversation_memory = db.Column(db.Boolean, default=False)
     is_default     = db.Column(db.Boolean, default=False)
 
     def to_dict(self):

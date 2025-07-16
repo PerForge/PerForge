@@ -42,7 +42,7 @@ All API responses follow this standard format:
 | `/api/v1/projects/<project_id>` | PUT | Update a project |
 | `/api/v1/projects/<project_id>` | DELETE | Delete a project |
 | `/api/v1/projects/<project_id>/output-configs` | GET | Get output configurations for a project |
-| `/api/v1/projects/<project_id>/set-active` | POST | Set a project as the active project |
+| `/api/v1/projects/set-active/<project_id>` | POST | Set a project as the active project |
 
 ### Templates API
 
@@ -66,7 +66,7 @@ All API responses follow this standard format:
 | `/api/v1/tests` | GET | Get all test configurations |
 | `/api/v1/tests/data` | GET | Get test data for a specific data source |
 | `/api/v1/reports` | POST | Generate a report |
-| `/api/v1/reports/data` | GET | Get report data for a specific test |
+| `/api/v1/reports/data` | POST | Get report data for a specific test |
 
 ### Graphs API
 
@@ -117,6 +117,12 @@ All API responses follow this standard format:
 | `/api/v1/integrations` | POST | Create a new integration |
 | `/api/v1/integrations/<integration_id>` | PUT | Update an integration |
 | `/api/v1/integrations/<integration_id>` | DELETE | Delete an integration |
+
+### Base API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/` | GET | Get API status |
 
 ### Other API
 

@@ -728,6 +728,7 @@
             const response = await apiClient.tests.generateReport(parsedData);
             if (response.status === 'success') {
               showFlashMessage('Tests deleted successfully', 'success');
+              location.reload();
             } else {
               showFlashMessage(response.message || 'Failed to delete tests', 'error');
             }

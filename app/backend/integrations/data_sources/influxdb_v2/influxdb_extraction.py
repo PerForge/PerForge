@@ -333,7 +333,7 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(er)
             return 0.0
 
-    def delete_test_data(self, measurement, test_title, start = None, end = None):
+    def delete_test_data(self, test_title, start = None, end = None):
         if start == None: start = "2000-01-01T00:00:00Z"
         else:
             start = datetime.strftime(datetime.fromtimestamp(int(start)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
@@ -341,12 +341,10 @@ class InfluxdbV2(DataExtractionBase):
         else:
             end = datetime.strftime(datetime.fromtimestamp(int(end)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
         try:
-            if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-                self.influxdb_connection.delete_api().delete(start, end, '_measurement="'+measurement+'" AND testTitle="'+test_title+'"',bucket=self.bucket, org=self.org_id)
-            else:
-                self.influxdb_connection.delete_api().delete(start, end, '_measurement="'+measurement+'" AND runId="'+test_title+'"',bucket=self.bucket, org=self.org_id)
+            predicate = f'testTitle="{test_title}"'
+            self.influxdb_connection.delete_api().delete(start, end, predicate, bucket=self.bucket, org=self.org_id)
         except Exception as er:
-            logging.warning('ERROR: deleteTestPoint method failed')
+            logging.warning('ERROR: delete_test_data method failed')
             logging.warning(er)
 
     def delete_custom(self, bucket, filetr):
@@ -357,19 +355,6 @@ class InfluxdbV2(DataExtractionBase):
         except Exception as er:
             logging.warning('ERROR: deleteTestPoint method failed')
             logging.warning(er)
-
-    def delete_test_title(self, test_title, start = None, end = None):
-        response = f'The attempt to delete the {test_title} was successful.'
-        try:
-            if self.listener == "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient":
-                self.delete_test_data("jmeter", test_title, start, end)
-                self.delete_test_data("events", test_title, start, end)
-            else:
-                self.delete_test_data("virtualUsers", test_title, start, end)
-                self.delete_test_data("requestsRaw", test_title, start, end)
-        except Exception as er:
-             return f'The attempt to delete the {test_title} was unsuccessful. Error: {er}'
-        return response
 
     ###HELPER FUNCTIONS
 

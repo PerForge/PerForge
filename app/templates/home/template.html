@@ -97,6 +97,15 @@
                                     </div>
                                     <div class="d-flex justify-content-between mb-3">
                                         <div class="d-flex flex-direction-column">
+                                            <label class="form-check-label" for="nfrs_switch">NFRs</label>
+                                            <label class="text-description">Conduct a comparison of test results against NFRs. Make sure to select the NFRs for this comparison.</label>
+                                        </div>
+                                        <div class="form-check form-switch min-h-auto mb-0">
+                                            <input v-model="nfrs_switch" class="form-check-input" id="nfrs_switch" type="checkbox" checked="">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <div class="d-flex flex-direction-column">
                                             <label class="form-check-label" for="ai_switch">AI analysis</label>
                                             <label class="text-description">Test results will be evaluated by leveraging default AI integration and utilizing the provided prompts.</label>
                                         </div>
@@ -104,7 +113,25 @@
                                             <input v-model="ai_switch" class="form-check-input" id="ai_switch" type="checkbox" checked="">
                                         </div>
                                     </div>
-                                    <div class="d-flex justify-content-between mb-3">
+                                    <div v-if="ai_switch" class="ps-4 mb-3">
+                                        <div class="mt-3">
+                                            <label>System prompt:</label>
+                                            <div class="tooltip-container">
+                                                <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                                <div class="tooltip-content">
+                                                    A system message for AI is essential to establish the context, guidelines, and constraints for the AI's responses. This prompt will be used in addition to all other prompts.
+                                                </div>
+                                            </div>
+                                            <v-select class="vue-select-imput" v-model="selectedSystemPrompt" :options="system_prompts" label="name" @input="updateSystemPrompt"></v-select>
+                                            <textarea v-model="systemPromptText" class="form-control mt-2" rows="3" readonly></textarea>
+                                        </div>
+                                        <div class="mt-3">
+                                            <label>Template prompt:</label>
+                                            <v-select class="vue-select-imput" v-model="selectedTemplatePrompt" :options="template_prompts" label="name" @input="updateTemplatePrompt"></v-select>
+                                            <textarea v-model="templatePromptText" class="form-control mt-2" rows="5" readonly></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
                                         <div class="d-flex flex-direction-column">
                                             <label class="form-check-label" for="ai_aggregated_data_switch">AI aggregated data analysis</label>
                                             <label class="text-description">Clarify if there's a need to conduct an analysis of the aggregated data.</label>
@@ -112,6 +139,11 @@
                                         <div class="form-check form-switch">
                                             <input v-model="ai_aggregated_data_switch" class="form-check-input" id="ai_aggregated_data_switch" type="checkbox" :disabled="!ai_switch" :class="{ 'disabled-checkbox': !ai_switch }" checked="">
                                         </div>
+                                    </div>
+                                    <div v-if="ai_aggregated_data_switch" class="mt-3">
+                                        <label>Aggregated data prompt:</label>
+                                        <v-select class="vue-select-imput" v-model="selectedAggregatedDataPrompt" :options="aggregated_data_prompts" label="name" @input="updateAggregatedDataPrompt"></v-select>
+                                        <textarea v-model="aggregatedPromptText" class="form-control mt-3" rows="5" readonly></textarea>
                                     </div>
                                     <div class="d-flex justify-content-between mb-3">
                                         <div class="d-flex flex-direction-column">
@@ -130,36 +162,6 @@
                                         <div class="form-check form-switch min-h-auto mb-0">
                                             <input v-model="ai_to_graphs_switch" class="form-check-input" id="ai_to_graphs_switch" type="checkbox" :disabled="!ai_switch" :class="{ 'disabled-checkbox': !ai_switch }" checked="">
                                         </div>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <div class="d-flex flex-direction-column">
-                                            <label class="form-check-label" for="nfrs_switch">NFRs</label>
-                                            <label class="text-description">Conduct a comparison of test results against NFRs. Make sure to select the NFRs for this comparison.</label>
-                                        </div>
-                                        <div class="form-check form-switch min-h-auto mb-0">
-                                            <input v-model="nfrs_switch" class="form-check-input" id="nfrs_switch" type="checkbox" checked="">
-                                        </div>
-                                    </div>
-                                    <div v-if="ai_switch" class="mt-3">
-                                        <label>System prompt:</label>
-                                        <div class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <div class="tooltip-content">
-                                                A system message for AI is essential to establish the context, guidelines, and constraints for the AI's responses. This prompt will be used in addition to all other prompts.
-                                            </div>
-                                        </div>
-                                        <v-select class="vue-select-imput" v-model="selectedSystemPrompt" :options="system_prompts" label="name" @input="updateSystemPrompt"></v-select>
-                                        <textarea v-model="systemPromptText" class="form-control mt-2" rows="3" readonly></textarea>
-                                    </div>
-                                    <div v-if="ai_switch" class="mt-3">
-                                        <label>Template prompt:</label>
-                                        <v-select class="vue-select-imput" v-model="selectedTemplatePrompt" :options="template_prompts" label="name" @input="updateTemplatePrompt"></v-select>
-                                        <textarea v-model="templatePromptText" class="form-control mt-2" rows="5" readonly></textarea>
-                                    </div>
-                                    <div v-if="ai_aggregated_data_switch" class="mt-3 mb-5">
-                                        <label>Aggregated data prompt:</label>
-                                        <v-select class="vue-select-imput" v-model="selectedAggregatedDataPrompt" :options="aggregated_data_prompts" label="name" @input="updateAggregatedDataPrompt"></v-select>
-                                        <textarea v-model="aggregatedPromptText" class="form-control mt-2" rows="5" readonly></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -645,6 +647,21 @@
                                 if (this.template.length === 0) {
                                     this.addTextElement();
                                 }
+
+                                // Set default prompts if available
+                                if (this.system_prompts.length > 0) {
+                                    this.selectedSystemPrompt = this.system_prompts[0];
+                                    this.system_prompt_id = this.system_prompts[0].id;
+                                }
+                                if (this.template_prompts.length > 0) {
+                                    this.selectedTemplatePrompt = this.template_prompts[0];
+                                    this.template_prompt_id = this.template_prompts[0].id;
+                                }
+                                if (this.aggregated_data_prompts.length > 0) {
+                                    this.selectedAggregatedDataPrompt = this.aggregated_data_prompts[0];
+                                    this.aggregated_prompt_id = this.aggregated_data_prompts[0].id;
+                                }
+
                                 this.isLoading = false;
                             }
                         })
