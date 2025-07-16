@@ -41,10 +41,10 @@
     return new Promise((resolve, reject) => {
       // Parse the JSON string if it's a string
       const data = typeof json === 'string' ? JSON.parse(json) : json;
-      
+
       // Convert traditional URL to API endpoint
       const endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
-      
+
       // Use the API client for all POST requests
       apiClient.post(endpoint, data)
         .then((response) => {
@@ -133,7 +133,7 @@
     return new Promise((resolve, reject) => {
       // Convert URL to API endpoint format
       let endpoint;
-      
+
       if (url.startsWith('/api/v1/')) {
         // Already in the correct format
         endpoint = url.replace('/api/v1/', '');
@@ -141,7 +141,7 @@
         // Convert traditional URL to API endpoint
         endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
       }
-      
+
       // Use the API client for all GET requests
       apiClient.get(endpoint)
         .then((response) => {
@@ -181,22 +181,22 @@
     const resultModalLabel = document.getElementById('resultModalLabel');
     resultModalBody.innerHTML = ''; // Clear previous content
     resultModalLabel.innerHTML = message;
-  
+
     if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
       // Filter out binary/large content that shouldn't be displayed
       const filteredResult = {};
-      
+
       for (const [key, value] of Object.entries(result)) {
         // Skip pdf_content and blob properties
         if (key !== 'pdf_content' && key !== 'blob') {
           filteredResult[key] = value;
         }
       }
-      
+
       // Check if we have any properties to display
       if (Object.keys(filteredResult).length > 0) {
         resultModalBody.style.display = 'block';
-        
+
         for (const [key, value] of Object.entries(filteredResult)) {
           const p = document.createElement('p');
           p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
@@ -656,28 +656,45 @@
         return null;
       }
 
-      selectedRows["tests"] = transformedList;
-      selectedRows["db_id"] = JSON.parse(selectedDb.value);
-
       if (output.type === "none") {
         showResultModal("Please choose an output.");
         return null;
       }
+
+      // Validate templates before filtering
+      if(output.type !== "delete"){
+        for (const item of transformedList) {
+          if (!item.template_id || item.template_id === "no data") {
+            showResultModal(`${item.test_title} has an empty template.`);
+            return null;
+          }
+        }
+      }
+
+      // Filter each test object to include required fields, preserving baseline_test_title
+      selectedRows["tests"] = transformedList.map(test => {
+        const newTest = {
+          test_title: test.test_title,
+          template_id: test.template_id
+        };
+        if (test.baseline_test_title && test.baseline_test_title !== "no data") {
+          newTest.baseline_test_title = test.baseline_test_title;
+        }
+        return newTest;
+      });
+
+      // Filter db_id to only include required fields (id and source_type)
+      const fullDbId = JSON.parse(selectedDb.value);
+      selectedRows["db_id"] = {
+        id: fullDbId.id,
+        source_type: fullDbId.source_type
+      };
 
       selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
 
       // Add integration_type to the request data if it exists in the output object
       if (output.integration_type) {
         selectedRows["integration_type"] = output.integration_type;
-      }
-
-      if(output.type !== "delete"){
-        for (const item of selectedRows["tests"]) {
-          if (!item.template_id || item.template_id === "no data") {
-            showResultModal(`${item.test_title} has an empty template.`);
-            return null;
-          }
-        }
       }
 
       if (selectedTemplateGroup.value !== "") {
