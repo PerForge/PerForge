@@ -28,7 +28,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="templates">
+                            <div id="templates" data-list='{"valueNames":["name","title","nfr","nfr-switch","template_prompt_id","aggregated_prompt_id","ai-switch","actions"],"page":5,"pagination":true}'>
                                 <div class="d-flex align-items-center justify-content-end mb-3">
                                     <div class="d-flex">
                                         <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
@@ -85,7 +85,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="template-groups">
+                            <div id="template-groups" data-list='{"valueNames":["name","title","template","prompt_id","ai_summary","actions"],"page":10,"pagination":true}'>
                                 <div class="d-flex align-items-center justify-content-end mb-3">
                                     <div class="d-flex">
                                         <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
@@ -132,8 +132,7 @@
             </div>
         </div>
         <script>
-            let templatesListJs;
-            let templateGroupsListJs;
+            // List.js will be initialized after data loading completes
 
             function deleteTemplate(templateId) {
                 apiClient.templates.delete(templateId)
@@ -142,7 +141,19 @@
                         const modalElement = document.getElementById('deleteModal' + templateId);
                         const modal = bootstrap.Modal.getInstance(modalElement);
                         modal.hide();
-                        window.location.reload();
+                        apiClient.templates.get().
+                        then(response => {
+                            const { templates, templatePrompts } = response;
+                            renderTemplates(templates, templatePrompts);
+                        }).catch(error => {
+                            console.error("Error loading data:", error);
+                        }).finally(() => {
+                            // Initialize List.js after the templates data is loaded
+                            if (window.needsTemplatesListInit) {
+                                perforge.utils.listInit();
+                                window.needsTemplatesListInit = false;
+                            }
+                        });
                     })
                     .catch(error => {
                         showFlashMessage(error.message || "Error deleting template", "error");
@@ -176,14 +187,18 @@
                 });
 
                 document.getElementById('templates-search').addEventListener('input', function() {
-                    if (templatesListJs) {
-                        templatesListJs.search(this.value);
+                    // Get the List instance from the container
+                    const templatesList = document.querySelector('#templates');
+                    if (templatesList && templatesList.List) {
+                        templatesList.List.search(this.value);
                     }
                 });
 
                 document.getElementById('template-groups-search').addEventListener('input', function() {
-                    if (templateGroupsListJs) {
-                        templateGroupsListJs.search(this.value);
+                    // Get the List instance from the container
+                    const templateGroupsList = document.querySelector('#template-groups');
+                    if (templateGroupsList && templateGroupsList.List) {
+                        templateGroupsList.List.search(this.value);
                     }
                 });
             });
@@ -202,6 +217,7 @@
                         <td class="ai-switch">${template.ai_switch}</td>
                         <td class="actions" style="width: 20%;">
                             <a class="btn btn-primary" href="/template?template_config=${template.id}">Edit</a>
+                            <a class="btn btn-secondary" href="/template?clone=${template.id}">Clone</a>
                             <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal${template.id}">Delete</a>
                         </td>
                     `;
@@ -274,6 +290,7 @@
                         <td class="ai_summary">${group.ai_summary}</td>
                         <td class="actions" style="width: 20%;">
                             <a class="btn btn-primary" href="/template-group?template_group_config=${group.id}">Edit</a>
+                            <a class="btn btn-secondary" href="/template-group?clone=${group.id}">Clone</a>
                             <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteGroupModal${group.id}">Delete</a>
                         </td>
                     `;
@@ -331,6 +348,18 @@
                         showFlashMessage(error.message || "Error deleting template group", "error");
                         console.error("Error deleting template group:", error);
                     });
+            }
+
+            // Helper function to get URL parameters
+            function getUrlParam(param) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(param);
+            }
+
+            // Check if we're coming from a clone operation
+            if(getUrlParam('clone')) {
+                // The clone action will be handled in the template.html page
+                console.log("Clone parameter detected:", getUrlParam('clone'));
             }
         </script>
     </main>

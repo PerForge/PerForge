@@ -101,11 +101,27 @@
             body: JSON.stringify(data)
         })
         .then(response => {
+            // Get the X-Result-Data header that contains the statistics
+            const resultData = response.headers.get('X-Result-Data');
+
             if (!response.ok) {
                 return response.json().then(err => {
+                    showResultModal("Failed!", err.message || "Failed to generate PDF report");
                     throw new Error(err.message || 'PDF generation failed');
                 });
             }
+
+            // Parse the result data from the header and show it in the modal
+            if (resultData) {
+                try {
+                    const parsedData = JSON.parse(resultData);
+                    showResultModal("Report generated!", parsedData);
+                    resolve(parsedData);
+                } catch (e) {
+                    console.error("Failed to parse result data:", e);
+                }
+            }
+
             const contentDisposition = response.headers.get('content-disposition');
             let filename = 'report.pdf';
             if (contentDisposition) {
@@ -224,17 +240,6 @@
     resultModal.show();
   }
 
-  const extractRunIds = (input) => {
-    const runIds = [];
-    for (const item of input) {
-        const runIdMatch = item.match(/'runId':(.*?)(,|$)/);
-        if (runIdMatch) {
-            runIds.push(runIdMatch[1]);
-        }
-    }
-    return runIds;
-  }
-
 
 
   class DomNode {
@@ -308,14 +313,10 @@
       getSelectedRows() {
         const selectedRows = Array.from(this.bulkSelectRows).filter((row) => row.checked).map((row) => {
             const checkboxData = getData(row, "bulk-select-row");
-            // if (checkboxData.template_id == "no data"){
-            //   checkboxData["template_id"] = checkboxData.testName;
-            // }
             delete checkboxData.duration;
             delete checkboxData.startTime;
             delete checkboxData.endTime;
             delete checkboxData.maxThreads;
-            delete checkboxData.testName;
             return checkboxData;
         });
 
@@ -597,7 +598,6 @@
     validateForm: validateForm,
     sendPostRequest: sendPostRequest,
     sendGetRequest: sendGetRequest,
-    extractRunIds: extractRunIds,
     docReady: docReady,
     camelize: camelize,
     getData: getData,

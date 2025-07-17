@@ -606,15 +606,18 @@
                             this.aggregated_data_prompts = addTypeToName(aggregatedDataPromptsResponse.data.prompts || []);
                             this.system_prompts = addTypeToName(systemPromptsResponse.data.prompts || []);
 
-                            // If template_config is provided, load the template data
-                            const templateId = '{{ template_config }}';
+                            // Check for clone parameter first
+                            const cloneTemplateId = new URLSearchParams(window.location.search).get('clone');
+                            const templateId = cloneTemplateId || '{{ template_config }}';
+                            
                             if (templateId && templateId !== 'None') {
                                 apiClient.templates.getById(templateId)
                                     .then(response => {
                                         const templateData = response.data.template;
                                         if (templateData && templateData.name != null) {
                                             this.title = templateData.title;
-                                            this.name = templateData.name;
+                                            // If this is a clone operation, append COPY to the name
+                                            this.name = cloneTemplateId ? `${templateData.name} COPY` : templateData.name;
                                             this.nfr = this.nfrs.find(nfr => nfr.id === templateData.nfr) || "";
                                             this.template = templateData.data;
                                             this.template_prompt_id = templateData.template_prompt_id;
@@ -626,6 +629,13 @@
                                             this.ai_to_graphs_switch = templateData.ai_to_graphs_switch;
                                             this.nfrs_switch = templateData.nfrs_switch;
                                             this.ml_switch = templateData.ml_switch;
+                                            
+                                            // If cloning, clear the ID so a new template will be created on save
+                                            if (cloneTemplateId) {
+                                                this.template_id = null;
+                                            } else {
+                                                this.template_id = templateData.id;
+                                            }
 
                                             // Set selected options after data is loaded
                                             if (this.template_prompts.length && this.aggregated_data_prompts.length && this.system_prompts.length) {

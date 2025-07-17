@@ -122,8 +122,22 @@ class AIProvider(ABC):
         Args:
             response: The response from the model
         """
-        # Default implementation - should be overridden by subclasses if needed
-        pass
+        try:
+
+            # Direct attribute access for usage_metadata as a dictionary (Gemini style)
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                if isinstance(response.usage_metadata, dict):
+                    self.input_tokens += response.usage_metadata.get('input_tokens', 0)
+                    self.output_tokens += response.usage_metadata.get('output_tokens', 0)
+                    self.total_tokens = response.usage_metadata.get('total_tokens', self.input_tokens + self.output_tokens)
+                else:
+                    # Object-style access
+                    self.input_tokens += getattr(response.usage_metadata, 'input_tokens', 0)
+                    self.output_tokens += getattr(response.usage_metadata, 'output_tokens', 0)
+                    self.total_tokens = getattr(response.usage_metadata, 'total_tokens', self.input_tokens + self.output_tokens)
+                return
+        except Exception as e:
+            logging.warning(f"Error tracking token usage for {self.provider_name}: {str(e)}")
 
     def __call__(self, prompt: str) -> Dict[str, str]:
         """

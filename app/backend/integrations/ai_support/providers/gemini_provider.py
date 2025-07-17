@@ -48,15 +48,13 @@ class GeminiProvider(AIProvider):
             self.text_llm = ChatGoogleGenerativeAI(
                 model=ai_text_model,
                 google_api_key=token,
-                temperature=temperature,
-                convert_system_message_to_human=True
+                temperature=temperature
             )
 
             self.image_llm = ChatGoogleGenerativeAI(
                 model=ai_image_model,
                 google_api_key=token,
-                temperature=temperature,
-                convert_system_message_to_human=True
+                temperature=temperature
             )
 
             # Initialize embeddings for potential future use
@@ -210,16 +208,7 @@ class GeminiProvider(AIProvider):
         """
         return self.text_llm
 
-    def _track_token_usage(self, response):
-        """Track token usage from the response if available."""
-        try:
-            if hasattr(response, 'response_metadata') and 'token_usage' in response.response_metadata:
-                token_usage = response.response_metadata['token_usage']
-                self.input_tokens += token_usage.get('prompt_tokens', 0)
-                self.output_tokens += token_usage.get('completion_tokens', 0)
-                self.total_tokens += token_usage.get('total_tokens', 0)
-        except Exception as e:
-            logging.warning(f"Error tracking token usage for Gemini: {str(e)}")
+    # Using base class implementation for token tracking
 
     def invoke(self, prompt: Union[str, List[Dict[str, Any]]], **kwargs: Any) -> Any:
         """

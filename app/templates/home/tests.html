@@ -229,9 +229,9 @@
                         checkboxCell.appendChild(checkboxDiv);
 
                         // Insert cells for each column based on your data structure
-                        const runIdCell = row.insertCell();
-                        runIdCell.className = "test_title";
-                        runIdCell.textContent = test.test_title;
+                        const testTitleCell = row.insertCell();
+                        testTitleCell.className = "test_title";
+                        testTitleCell.textContent = test.test_title;
 
                         // Create and insert the Test ID dropdown
                         const templateIdCell = row.insertCell();
