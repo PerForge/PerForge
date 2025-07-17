@@ -135,16 +135,15 @@ class DBPrompts(db.Model):
 
     @classmethod
     def load_default_prompts_from_yaml(cls):
-        file_path = os.path.join("app", "data", "prompts.yaml")
-        with open(file_path, 'r') as file:
-            data = yaml.safe_load(file)
+        try:
+            # Delete all existing default prompts first
+            cls.query.filter_by(type='default').delete(synchronize_session=False)
 
-        for item in data.get('prompts', []):
-            prompt = cls.query.filter_by(name=item['name'], type='default').first()
-            if prompt:
-                prompt.place = item['place']
-                prompt.prompt = item['prompt']
-            else:
+            file_path = os.path.join("app", "data", "prompts.yaml")
+            with open(file_path, 'r') as file:
+                data = yaml.safe_load(file)
+
+            for item in data.get('prompts', []):
                 prompt = cls(
                     name=item['name'],
                     project_id=None,
@@ -153,8 +152,6 @@ class DBPrompts(db.Model):
                     prompt=item['prompt']
                 )
                 db.session.add(prompt)
-
-        try:
             db.session.commit()
         except Exception:
             db.session.rollback()

@@ -434,6 +434,12 @@ class PdfReport(ReportingBase):
                 image, ai_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 processed_graphs[obj["graph_id"]] = (image, ai_response)
 
+        # Pre-process all text to trigger replace_variables and load tables
+        for obj in self.data:
+            if obj["type"] == "text":
+                # This is a dry run to ensure all tables are loaded before analysis
+                self.replace_variables(obj["content"])
+
         # Analyze templates after all data is collected
         if self.nfrs_switch or self.ai_switch or self.ml_switch:
             self.analyze_template()

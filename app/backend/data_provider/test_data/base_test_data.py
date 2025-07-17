@@ -271,16 +271,24 @@ class BaseTestData(ABC):
         """
         Preload and return all available tables with their default aggregation.
 
-        This method will load all tables defined in _table_metrics using the default aggregation.
-        If a table is already loaded, it will use the cached version.
+        If the cache (`self._loaded_tables`) is already populated, this method will return
+        only the tables present in the cache. If the cache is empty, it will load all
+        tables defined in `_table_metrics` using the default aggregation.
 
         Returns:
-            Dictionary mapping table names to MetricsTable objects
+            Dictionary mapping table names to MetricsTable objects.
         """
+        # If the cache is not empty, return only the cached tables.
+        if self._loaded_tables:
+            result = {}
+            for key, value in self._loaded_tables.items():
+                table_name = key[0]
+                result[table_name] = value
+            return result
+
+        # If the cache is empty, load all tables with the default aggregation.
         result = {}
         table_metrics = getattr(self, '_table_metrics', [])
-
-        # Load all tables with default aggregation
         for table_name in table_metrics:
             table = self.get_table(table_name, self.aggregation)
             if table:
@@ -311,6 +319,11 @@ class BaseTestData(ABC):
                     if transaction not in transactions:
                         transactions[transaction] = {'transaction': transaction}
                     transactions[transaction][metric.name] = metric.value
+                    # Add baseline and diff values if they exist
+                    if metric.baseline is not None:
+                        transactions[transaction][f"{metric.name}_baseline"] = metric.baseline
+                    if metric.difference_pct is not None:
+                        transactions[transaction][f"{metric.name}_diff_pct"] = metric.difference_pct
 
             elif hasattr(table, 'table') and table.table:
                 for row in table.table:

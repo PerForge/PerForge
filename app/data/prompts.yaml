@@ -1,6 +1,6 @@
 prompts:
 - id: 1
-  name: Response time graph
+  name: "[BE][SINGLE] Response time"
   type: default
   place: graph
   prompt: |
@@ -17,7 +17,7 @@ prompts:
       - The [performance issue description], indicating performance issue.
     ###Input: response time metric graph
 - id: 2
-  name: Throughput graph
+  name: "[BE][SINGLE] Throughput"
   type: default
   place: graph
   prompt: |
@@ -34,7 +34,7 @@ prompts:
       - The [performance issue description], indicating performance issue.
     ###Input: Throughput metric graph
 - id: 3
-  name: CPU usage graph
+  name: "[BE][SINGLE] CPU usage"
   type: default
   place: graph
   prompt: |
@@ -51,7 +51,7 @@ prompts:
         - The [performance issue description], indicating performance issue.
     ###Input: CPU usage metric graph
 - id: 4
-  name: Memory usage graph
+  name: "[BE][SINGLE] Memory usage"
   type: default
   place: graph
   prompt: |
@@ -68,7 +68,7 @@ prompts:
         - The [performance issue description], indicating performance issue.
     ###Input: Memory usage metric graph
 - id: 5
-  name: Response time comparison graph
+  name: "[BE][COMPARISON] Response time"
   type: default
   place: graph
   prompt: |
@@ -83,7 +83,7 @@ prompts:
       - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
       - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
 - id: 6
-  name: Throughput comparison graph
+  name: "[BE][COMPARISON] Throughput"
   type: default
   place: graph
   prompt: |
@@ -98,7 +98,7 @@ prompts:
       - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
       - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
 - id: 7
-  name: Response time comparison table
+  name: "[BE][COMPARISON] Response time table"
   type: default
   place: graph
   prompt: |
@@ -110,7 +110,7 @@ prompts:
         'For most transactions, the response time remained at the same level, except the following transactions:
         - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
 - id: 8
-  name: Template for the test
+  name: "[BE][SINGLE] Template summary"
   type: default
   place: template
   prompt: |
@@ -153,7 +153,7 @@ prompts:
     Observations from ML analysis.
     ${ml_summary}
 - id: 9
-  name: Template for comparing tests
+  name: "[BE][COMPARISON] Template summary"
   type: default
   place: template
   prompt: |
@@ -208,7 +208,7 @@ prompts:
       - [Provide a highlevel overview of the performance issues].
     @@@@
 - id: 11
-  name: Aggregated data
+  name: "[BE][SINGLE] Aggregated data"
   type: default
   place: aggregated_data
   prompt: |
@@ -223,8 +223,175 @@ prompts:
         - Top 5 slowest requests (Based on median):
           - [request name]: median response time of [value] ms.
 - id: 12
+  name: "[BE][COMPARISON] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    ###Task: FOLLOW the instructions below to ANALYZE the json and PROVIDE observations
+    ###Instructions:
+      - Identify transactions where the difference value is more than +300ms and the difference is positive (indicating degradation) and mark them as degraded.
+      - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.'
+      - If there are degraded transactions, then the output should contain only the following statements:
+        'For most transactions, the response time remained at the same level, except the following transactions:
+        - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
+- id: 13
   name: System message
   type: default
   place: system
   prompt: |
     You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results.
+- id: 14
+  name: "[FE][SINGLE] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    Analyze the provided frontend performance data and generate a structured output summary based on the format provided. Your task is to identify correlations between metrics, highlight patterns, and provide actionable recommendations. Ensure that the results are presented in the specified **Output Structure**.
+    Steps to Follow:
+    1. Input Analysis:
+      - Review the given frontend performance data JSON.
+      - Analyze metrics
+    2. Identify Correlations:
+      - Investigate relationships between metrics. For example:
+        - Are higher `TTFB` values associated with longer `fullyLoaded` times?
+        - Does `TBT` variability impact `LCP` or `FCP` values significantly?
+      - Focus on identifying patterns, trends, and correlations within transactions.
+    3. Highlight Patterns:
+      - Identify transactions with extreme values for certain metrics.
+      - Detect recurring trends such as consistently high `fullyLoaded` times or negligible `CLS`.
+    4. Provide Optimization Recommendations:
+      - Based on observed metric values, suggest potential areas for improvement.
+      - Specify which metrics seem to be bottlenecks or contribute to poor performance for specific transactions.
+    Output Structure:
+    Respond in the following format:
+    1. Correlation Analysis
+    - Metric Relationships:
+      - Summarize dependencies or patterns found between metrics.
+      - Example: "High TBT consistently aligns with higher fullyLoaded times."
+    - Outliers:
+      - Identify transactions with notably high or low values across metrics (e.g., "R01_Dashboard has a very high FCP of 4000ms").
+    2. Optimization Suggestions
+    - Provide actionable recommendations for improving performance.
+      - Example: "Reduce TBT for transactions with fullyLoaded values exceeding 10,000ms."
+    - Suggest focus points for each transaction with problematic metrics.
+
+    Example Output:
+    1. Correlation Analysis
+    - Relationships:
+      - "Longer fullyLoaded times frequently coincide with higher `TBT` values."
+      - "Transactions with minimal TBT show better FCP and LCP values."
+    - Outliers:
+      - Transaction `R01_My-Certifications` has an extremely high `fullyLoaded` of 11,500ms.
+      - Transaction `R03_Product-Page` shows very low `CLS` (0.0) but moderate `LCP` (2500ms).
+
+    2. Optimization Suggestions
+    - Optimize TBT for `R01_My-Certifications` to reduce its excessively high `fullyLoaded` time.
+    - Investigate backend processes for transactions with high TTFB (>1000ms) to improve response speeds.
+
+    Frontend Data Input:
+- id: 15
+  name: "[FE][COMPARISON] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    ### Analyze the frontend performance data and generate a structured output summary based on the format provided. Your task is to identify correlations between metrics changes, highlight patterns, and provide actionable recommendations. Ensure the generated results follow the **Output Structure** specified below.
+    ### Steps to Follow:
+    1. Input Analysis:
+      - Review the given frontend performance data JSON.
+      - Compare and analyze metrics along with their baseline values and percentage differences.
+    2. Identify Correlations:
+      - Investigate relationships between metrics. For example:
+        - How changes in `FCP` impact `LCP` or `fullyLoaded`?
+        - Are increases in `TBT` strongly correlated with higher `fullyLoaded` times?
+    3. Highlight Patterns:
+      - Detect recurring patterns (e.g., transactions with significantly high or low changes across metrics).
+      - Identify anomalies or outliers, such as drastic percentage differences across certain transactions.
+    4. Provide Optimization Recommendations:
+      - Based on metric deviations, suggest potential areas for improvement. Specify what metrics should receive focus for particular transactions.
+
+    ### Output Structure:
+    Respond in the following format:
+    Correlation Analysis
+    - Metric Relationships:
+      - Summarize dependencies between metrics (e.g., "An increase in TBT correlates with longer fullyLoaded times").
+      - Highlight significant patterns or trends across transactions.
+    - Outliers:
+      - List transactions with the most dramatic % changes (positive or negative). Specify which metrics are affected.
+    Optimization Suggestions
+    - Specify actionable recommendations for improving performance metrics.
+      - Example: "Optimize TBT for transactions with fullyLoaded > 10,000ms."
+    - Suggest improvements for individual transactions if needed.
+
+    ### Example Output:
+    - Relationships:
+      - "Longer fullyLoaded times consistently occur with higher TBT percentages."
+      - "FCP and LCP mostly align where higher percentage changes are observed."
+    - Outliers:
+      - Transaction `R01_My-certifications` shows `FCP_diff_pct` of +354.03% and `LCP_diff_pct` of +150.24%.
+    Optimization Suggestions
+    - Reduce `TBT` for transactions like `R00_Login`, where large deviations affect fullyLoaded times.
+    - Investigate backend operations contributing to large `FCP` increases for transactions like `R01_My-certifications`.
+
+    ### Frontend Data Input:
+- id: 16
+  name: "[FE][SINGLE] Template summary"
+  type: default
+  place: template
+  prompt: |
+    ### Context: You are provided with a set of frontend performance test observations, including graphs and test data analysis. Task: Create a comprehensive report, that should encapsulate key findings, and actionable recommendations to provide a clear overview of the frontend system's performance and user experience.
+    ### Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues]. The key areas for improvement include [highlight areas, e.g., FCP, LCP, fullyLoaded, or specific transactions].
+
+    Analysis:
+      - [Provide a high-level overview of METRIC trends, including insights into transactions with high deviations].
+      - [Summarize relationships between metrics such as FCP and LCP, or TBT and fullyLoaded].
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+
+    Pages/transactions that do not meet NFRs:
+    - [If there are pages/transactions that don't meet the NFRs, include them]
+
+    Recommendations:
+    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    ### Observations from aggregated data analysis:
+    ${aggregated_data_analysis}
+
+    ### Observations from graphs analysis:
+    ${graphs_analysis}
+
+    ### Observations from NFRs analysis:
+    ${nfr_summary}
+- id: 17
+  name: "[FE][COMPARISON] Template summary"
+  type: default
+  place: template
+  prompt: |
+    ### Context: You are provided with a set of frontend performance regression test results, including analysis of graphs, aggregated data and NFRs.
+    ### Task: Create a detailed regression test report that should present the key regression findings and practical recommendations to gain a clear understanding of the frontend performance and user experience of the system.
+    ### Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      The frontend performance testing results are [comparable with no significant performance issues/comparable with areas for improvement/uncomparable, with significant issues]. The key areas for improvement include [highlight areas].
+
+    Analysis:
+      - [Provide a high-level overview of METRIC trends, including insights into transactions with high deviations].
+      - [Summarize relationships between metrics such as FCP and LCP, or TBT and fullyLoaded].
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+
+    Pages/transactions that do not meet NFRs:
+    - [If there are pages/transactions that don't meet the NFRs, include them]
+
+    Recommendations:
+    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    ### Observations from aggregated data analysis:
+    ${aggregated_data_analysis}
+
+    ### Observations from graphs analysis:
+    ${graphs_analysis}
+
+    ### Observations from NFRs analysis:
+    ${nfr_summary}
