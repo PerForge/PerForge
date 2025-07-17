@@ -85,7 +85,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="template-groups" data-list='{"valueNames":["name","title","template","prompt_id","ai_summary","actions"],"page":10,"pagination":true}'>
+                            <div id="template-groups" data-list='{"valueNames":["name","title","template","prompt_id","ai_summary","actions"],"page":5,"pagination":true}'>
                                 <div class="d-flex align-items-center justify-content-end mb-3">
                                     <div class="d-flex">
                                         <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
@@ -141,10 +141,11 @@
                         const modalElement = document.getElementById('deleteModal' + templateId);
                         const modal = bootstrap.Modal.getInstance(modalElement);
                         modal.hide();
-                        apiClient.templates.get().
+                        apiClient.templates.getAll().
                         then(response => {
-                            const { templates, templatePrompts } = response;
-                            renderTemplates(templates, templatePrompts);
+                            const { data } = response;
+                            const templates = data.templates || [];
+                            renderTemplates(templates);
                         }).catch(error => {
                             console.error("Error loading data:", error);
                         }).finally(() => {
@@ -180,6 +181,9 @@
 
                     renderTemplates(templates, nfrs, templatePrompts, aggregatedDataPrompts);
                     renderTemplateGroups(templateGroups, templateGroupPrompts, templates);
+
+                    // Initialize List.js after all data is rendered - exactly like tests.html
+                    perforge.utils.listInit();
                 })
                 .catch(error => {
                     showFlashMessage(error.message || "Error loading data", "error");
@@ -251,17 +255,7 @@
                     document.body.appendChild(modalDiv);
                 });
 
-                setTimeout(() => {
-                    if (!templatesListJs) {
-                        templatesListJs = new List('templates', {
-                            valueNames: ['name', 'title', 'ml-switch', 'nfr-switch', 'ai-switch', 'actions'],
-                            page: 5,
-                            pagination: true
-                        });
-                    } else {
-                        templatesListJs.reIndex();
-                    }
-                }, 0);
+                // List.js initialization is handled in the API data loading callback
             }
 
             function renderTemplateGroups(templateGroups, templateGroupPrompts, templates) {
@@ -322,17 +316,7 @@
                     document.body.appendChild(modalDiv);
                 });
 
-                setTimeout(() => {
-                    if (!templateGroupsListJs) {
-                        templateGroupsListJs = new List('template-groups', {
-                            valueNames: ['name', 'title', 'template', 'ai_summary', 'actions'],
-                            page: 5,
-                            pagination: true
-                        });
-                    } else {
-                        templateGroupsListJs.reIndex();
-                    }
-                }, 0);
+                // List.js initialization is handled in the API data loading callback
             }
 
             function deleteTemplateGroup(groupId) {
