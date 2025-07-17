@@ -147,7 +147,7 @@ class AzureWikiReport(ReportingBase):
             graph = f'![image.png](/.attachments/{str(fileName)})\n\n'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch:
+        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
             return graph, ai_support_response
         else:

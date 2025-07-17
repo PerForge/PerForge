@@ -95,16 +95,22 @@
                                             <input v-model="ml_switch" class="form-check-input" id="ml_switch" type="checkbox" checked="">
                                         </div>
                                     </div>
-                                    <div class="d-flex justify-content-between mb-3">
+                                    <div class="d-flex justify-content-between" :class="{ 'mb-3': !nfrs_switch }">
                                         <div class="d-flex flex-direction-column">
-                                            <label class="form-check-label" for="nfrs_switch">NFRs</label>
+                                            <label class="form-check-label" for="nfrs_switch">NFR analysis</label>
                                             <label class="text-description">Conduct a comparison of test results against NFRs. Make sure to select the NFRs for this comparison.</label>
                                         </div>
                                         <div class="form-check form-switch min-h-auto mb-0">
                                             <input v-model="nfrs_switch" class="form-check-input" id="nfrs_switch" type="checkbox" checked="">
                                         </div>
                                     </div>
-                                    <div class="d-flex justify-content-between">
+                                    <div v-if="nfrs_switch" class="ps-4 mb-3">
+                                        <div class="mt-3">
+                                            <label>NFR:</label>
+                                            <v-select v-model="nfr" class="vue-select-imput" :options="nfrs" label="name"></v-select>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between" :class="{ 'mb-3': !ai_switch }">
                                         <div class="d-flex flex-direction-column">
                                             <label class="form-check-label" for="ai_switch">AI analysis</label>
                                             <label class="text-description">Test results will be evaluated by leveraging default AI integration and utilizing the provided prompts.</label>
@@ -131,7 +137,7 @@
                                             <textarea v-model="templatePromptText" class="form-control mt-2" rows="5" readonly></textarea>
                                         </div>
                                     </div>
-                                    <div class="d-flex justify-content-between">
+                                    <div class="d-flex justify-content-between" :class="{ 'mb-3': !ai_aggregated_data_switch }">
                                         <div class="d-flex flex-direction-column">
                                             <label class="form-check-label" for="ai_aggregated_data_switch">AI aggregated data analysis</label>
                                             <label class="text-description">Clarify if there's a need to conduct an analysis of the aggregated data.</label>
@@ -173,11 +179,6 @@
                                                 <div class="margin-all-10">
                                                     <label for="template">Template name</label>
                                                     <input v-model="name" id="template-name" class="form-control" type="text" required>
-                                                </div>
-                                                <div v-if="nfrs_switch" class="margin-all-10">
-                                                    <label for="flow">NFR</label>
-                                                    <v-select v-model="nfr" class="vue-select-imput" :options="nfrs" label="name">
-                                                    </v-select>
                                                 </div>
                                                 <div class="margin-all-10">
                                                     <label>Add graphs</label>
@@ -453,6 +454,9 @@
                                 content: '', // Add default empty content for graph elements
                                 id: this.idCounter
                             });
+                            if (this.ai_graph_switch) {
+                                this.validateGraphPrompts();
+                            }
                         },
                         removeElement(element) {
                             this.template = this.template.filter(el => el !== element);
@@ -580,6 +584,38 @@
                         getGraphNameById(graph_id) {
                             const graph = this.graphs.find(graph => graph.id === graph_id);
                             return graph ? graph.name : '';
+                        },
+                        validateGraphPrompts() {
+                            const graphsInTemplate = this.template.filter(el => el.type === 'graph');
+                            if (graphsInTemplate.length === 0) {
+                                return; // No graphs, no problem
+                            }
+
+                            const graphsWithNoPrompts = graphsInTemplate.some(templateGraph => {
+                                const fullGraph = this.graphs.find(g => g.id === templateGraph.graph_id);
+                                return fullGraph && fullGraph.prompt_id === null;
+                            });
+
+                            if (graphsWithNoPrompts) {
+                                showFlashMessage("A graph in the template is missing a prompt. AI graph analysis is disabled.", "error");
+                                this.ai_graph_switch = false;
+                            }
+                        }
+                    },
+                    watch: {
+                        ai_switch(newValue) {
+                            if (!newValue) {
+                                this.ai_aggregated_data_switch = false;
+                                this.ai_graph_switch = false;
+                                this.ai_to_graphs_switch = false;
+                            }
+                        },
+                        ai_graph_switch(newValue) {
+                            if (!newValue) {
+                                this.ai_to_graphs_switch = false;
+                            } else {
+                                this.validateGraphPrompts();
+                            }
                         }
                     },
                     created() {
@@ -609,7 +645,7 @@
                             // Check for clone parameter first
                             const cloneTemplateId = new URLSearchParams(window.location.search).get('clone');
                             const templateId = cloneTemplateId || '{{ template_config }}';
-                            
+
                             if (templateId && templateId !== 'None') {
                                 apiClient.templates.getById(templateId)
                                     .then(response => {
@@ -629,7 +665,7 @@
                                             this.ai_to_graphs_switch = templateData.ai_to_graphs_switch;
                                             this.nfrs_switch = templateData.nfrs_switch;
                                             this.ml_switch = templateData.ml_switch;
-                                            
+
                                             // If cloning, clear the ID so a new template will be created on save
                                             if (cloneTemplateId) {
                                                 this.template_id = null;
