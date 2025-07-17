@@ -73,6 +73,8 @@
                                     </div>
                                     <label for="listener" class="input-label mt-2">Backend listener:</label>
                                     {{ form.listener(class="form-control") }}
+                                    <label for="test_title_tag_name" class="input-label mt-2">Test Title Tag Name:</label>
+                                    {{ form.test_title_tag_name(class="form-control", placeholder="e.g. testTitle") }}
                                     <div class="tooltip-container">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       <div class="tooltip-content">
@@ -156,6 +158,7 @@
                 bucket: document.getElementById('bucket').value,
                 listener: document.getElementById('listener').value,
                 tmz: document.getElementById('tmz').value,
+                test_title_tag_name: document.getElementById('test_title_tag_name').value,
                 is_default: document.getElementById('is_default').value === 'True'
             };
 

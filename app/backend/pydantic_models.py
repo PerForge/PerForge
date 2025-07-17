@@ -14,7 +14,6 @@
 
 from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr
 from typing   import Optional
-from datetime import datetime
 
 
 # Cleaning functions
@@ -44,6 +43,7 @@ class InfluxdbModel(BaseModelWithStripping):
     bucket    : str
     listener  : str
     tmz       : str = Field(default="UTC")
+    test_title_tag_name: str = Field(default="testTitle")
     is_default: bool
 
 
@@ -66,7 +66,6 @@ class GrafanaModel(BaseModelWithStripping):
     org_id             : str
     token              : Optional[int]
     test_title         : str
-    app                : str
     baseline_test_title: str
     is_default         : bool
     dashboards         : list[GrafanaObjectModel]

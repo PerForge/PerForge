@@ -286,7 +286,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"Median\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"Median\")",
           "refId": "A"
         },
         {
@@ -295,7 +295,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"pct75\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"pct75\")",
           "refId": "B"
         },
         {
@@ -304,7 +304,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"pct90\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"pct90\")",
           "refId": "C"
         },
         {
@@ -313,7 +313,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${send_interval}s, fn: sum, createEmpty: true)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${send_interval}))}))\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"RPS\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${send_interval}s, fn: sum, createEmpty: true)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${send_interval}))}))\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> median()\r\n  |> set(key: \"_field\", value: \"RPS\")",
           "refId": "D"
         },
         {
@@ -322,7 +322,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> sum()\r\n  |> set(key: \"_field\", value: \"Total requests\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"_field\"])\r\n  |> keep(columns: [\"_value\", \"_field\"])\r\n  |> sum()\r\n  |> set(key: \"_field\", value: \"Total requests\")",
           "refId": "E"
         },
         {
@@ -331,7 +331,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"request\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"application\", \"statut\"])\r\n  |> sum()\r\n  |> filter(fn: (r) => exists r.statut)\r\n  |> pivot(rowKey: [\"application\"], columnKey: [\"statut\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"errors\"])",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"request\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"statut\"])\r\n  |> sum()\r\n  |> filter(fn: (r) => exists r.statut)\r\n  |> pivot(rowKey: [], columnKey: [\"statut\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"errors\"])",
           "refId": "F"
         }
       ],
@@ -426,7 +426,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r._field == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"ko\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> set(key: \"_field\", value: \"Errors Per Second\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r._field == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"ko\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> set(key: \"_field\", value: \"Errors Per Second\")",
           "refId": "A"
         }
       ],
@@ -531,7 +531,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"rb\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> set(key: \"_field\", value: \"Received\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"rb\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> set(key: \"_field\", value: \"Received\")",
           "refId": "A"
         },
         {
@@ -540,7 +540,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"sb\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> set(key: \"_field\", value: \"Sent\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"sb\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> keep(columns: [\"_time\", \"_field\", \"_value\"])\r\n  |> set(key: \"_field\", value: \"Sent\")",
           "refId": "B"
         }
       ],
@@ -650,7 +650,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r._field == \"maxAT\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: last, createEmpty: false)\r\n  |> set(key: \"_field\", value: \"Active threads\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r._field == \"maxAT\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: last, createEmpty: false)\r\n  |> set(key: \"_field\", value: \"Active threads\")",
           "refId": "A"
         },
         {
@@ -659,7 +659,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] =~ /${transaction_mark}/)\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))\r\n  |> set(key: \"_field\", value: \"Transactions per second\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] =~ /${transaction_mark}/)\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))\r\n  |> set(key: \"_field\", value: \"Transactions per second\")",
           "refId": "B"
         },
         {
@@ -668,7 +668,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))\r\n  |> set(key: \"_field\", value: \"Requests per second\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))\r\n  |> set(key: \"_field\", value: \"Requests per second\")",
           "refId": "C"
         }
       ],
@@ -762,7 +762,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r._field == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> set(key: \"_field\",value: \"Median\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r._field == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> set(key: \"_field\",value: \"Median\")",
           "refId": "A"
         },
         {
@@ -771,7 +771,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r._field == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value:\"pct75\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r._field == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value:\"pct75\")",
           "refId": "B"
         },
         {
@@ -780,7 +780,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r._field == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value:\"pct90\")",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r._field == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns:[\"_field\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)\r\n  |> keep(columns: [\"_time\",\"_field\", \"_value\"])\r\n  |> set(key: \"_field\",value:\"pct90\")",
           "refId": "C"
         }
       ],
@@ -788,7 +788,7 @@
       "type": "timeseries"
     },
     {
-      "collapsed": true,
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -836,7 +836,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -914,7 +915,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"avg\" or r._field == \"max\" or r._field == \"min\" or r._field == \"pct50.0\" or r._field == \"pct75.0\" or r._field == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> keep(columns: [\"_value\", \"transaction\", \"_field\"])\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"transaction\",\"_field\"])\r\n  |> median()\r\n  |> group()\r\n  |> pivot(rowKey: [\"transaction\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n  |> rename(columns: {\"pct50.0\": \"pct50\"})\r\n  |> rename(columns: {\"pct75.0\": \"pct75\"})\r\n  |> rename(columns: {\"pct90.0\": \"pct90\"})",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"avg\" or r._field == \"max\" or r._field == \"min\" or r._field == \"pct50.0\" or r._field == \"pct75.0\" or r._field == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> keep(columns: [\"_value\", \"transaction\", \"_field\"])\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"transaction\",\"_field\"])\r\n  |> median()\r\n  |> group()\r\n  |> pivot(rowKey: [\"transaction\"], columnKey: [\"_field\"], valueColumn: \"_value\")\r\n  |> rename(columns: {\"pct50.0\": \"pct50\"})\r\n  |> rename(columns: {\"pct75.0\": \"pct75\"})\r\n  |> rename(columns: {\"pct90.0\": \"pct90\"})",
           "refId": "G"
         },
         {
@@ -923,7 +924,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: 60s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 60))}))\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"RPS\"})\r\n  |> keep(columns: [\"RPS\", \"transaction\"])",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: 60s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 60))}))\r\n  |> median()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"RPS\"})\r\n  |> keep(columns: [\"RPS\", \"transaction\"])",
           "refId": "D"
         },
         {
@@ -932,7 +933,7 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"count\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"transaction\", \"statut\"])\r\n  |> sum()\r\n  |> filter(fn: (r) => exists r.statut)\r\n  |> pivot(rowKey: [\"transaction\"], columnKey: [\"statut\"], valueColumn: \"_value\")\r\n  |> group()\r\n  |> map(fn: (r) => ({ r with Errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }))\r\n  |> rename(columns: {\"all\": \"Count\"})\r\n  |> keep(columns: [\"transaction\",\"Errors\",\"Count\"])",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"count\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"transaction\", \"statut\"])\r\n  |> sum()\r\n  |> filter(fn: (r) => exists r.statut)\r\n  |> pivot(rowKey: [\"transaction\"], columnKey: [\"statut\"], valueColumn: \"_value\")\r\n  |> group()\r\n  |> map(fn: (r) => ({ r with Errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }))\r\n  |> rename(columns: {\"all\": \"Count\"})\r\n  |> keep(columns: [\"transaction\",\"Errors\",\"Count\"])",
           "refId": "E"
         },
         {
@@ -941,11 +942,11 @@
             "uid": "${DS_INFLUXDB}"
           },
           "hide": false,
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"avg\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> stddev()\r\n  |> toInt()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"stddev\"})",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"avg\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> stddev()\r\n  |> toInt()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"stddev\"})",
           "refId": "A"
         }
       ],
-      "title": "Panel Title",
+      "title": "Aggregate report",
       "transformations": [
         {
           "id": "merge",
@@ -1055,7 +1056,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1127,7 +1129,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: ${aggregation}))}))",
           "refId": "A"
         }
       ],
@@ -1209,7 +1211,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1248,7 +1251,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"avg\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"avg\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -1304,7 +1307,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1343,7 +1347,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -1399,7 +1403,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1438,7 +1443,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -1494,7 +1499,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1533,7 +1539,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r._field == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"_time\", \"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: median, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -1612,7 +1618,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1651,7 +1658,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"ko\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: true)",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"ko\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"transaction\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: true)",
           "refId": "A"
         }
       ],
@@ -1681,7 +1688,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1719,7 +1727,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"transaction\"] != \"all\")\r\n  |> filter(fn: (r) => r[\"responseCode\"] != \"\")\r\n  |> filter(fn: (r) => r[\"responseCode\"] != \"0\")\r\n  |> group(columns: [\"transaction\", \"responseCode\", \"responseMessage\"])\r\n  |> keep(columns: [\"_value\", \"transaction\", \"responseCode\", \"responseMessage\"])\r\n  |> sum()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"Count\"})",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"transaction\"] != \"all\")\r\n  |> filter(fn: (r) => r[\"responseCode\"] != \"\")\r\n  |> filter(fn: (r) => r[\"responseCode\"] != \"0\")\r\n  |> group(columns: [\"transaction\", \"responseCode\", \"responseMessage\"])\r\n  |> keep(columns: [\"_value\", \"transaction\", \"responseCode\", \"responseMessage\"])\r\n  |> sum()\r\n  |> group()\r\n  |> rename(columns: {\"_value\": \"Count\"})",
           "refId": "A"
         }
       ],
@@ -1773,7 +1781,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1812,7 +1821,7 @@
             "type": "influxdb",
             "uid": "${DS_INFLUXDB}"
           },
-          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"application\"] == \"${app}\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"responseCode\"] != \"\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"transaction\", \"responseCode\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> group(columns: [\"transaction\", \"responseCode\"])",
+          "query": "from(bucket: v.bucket)\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._measurement == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"responseCode\"] != \"\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"transaction\", \"responseCode\"])\r\n  |> aggregateWindow(every: ${aggregation}s, fn: sum, createEmpty: false)\r\n  |> group(columns: [\"transaction\", \"responseCode\"])",
           "refId": "A"
         }
       ],
@@ -1820,7 +1829,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "",
+  "refresh": false,
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -1835,34 +1844,14 @@
           "type": "influxdb",
           "uid": "${DS_INFLUXDB}"
         },
-        "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"application\",\r\n    predicate: (r) => r._measurement == \"events\",\r\n    start: 0\r\n  )",
-        "hide": 0,
-        "includeAll": false,
-        "label": "app",
-        "multi": false,
-        "name": "app",
-        "options": [],
-        "query": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"application\",\r\n    predicate: (r) => r._measurement == \"events\",\r\n    start: 0\r\n  )",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
-        },
-        "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"testTitle\",\r\n    predicate: (r) => r._measurement == \"events\" and r.application == \"${app}\",\r\n    start: -1000d\r\n  )",
+        "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"testTitle\",\r\n    predicate: (r) => r._measurement == \"events\",\r\n    start: -1000d\r\n  )",
         "hide": 0,
         "includeAll": false,
         "label": "testTitle",
         "multi": false,
         "name": "testTitle",
         "options": [],
-        "query": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"testTitle\",\r\n    predicate: (r) => r._measurement == \"events\" and r.application == \"${app}\",\r\n    start: -1000d\r\n  )",
+        "query": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"testTitle\",\r\n    predicate: (r) => r._measurement == \"events\",\r\n    start: -1000d\r\n  )",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -1943,18 +1932,18 @@
       {
         "hide": 2,
         "name": "send_interval",
-        "query": "5",
+        "query": "${VAR_SEND_INTERVAL}",
         "skipUrlSync": false,
         "type": "constant",
         "current": {
-          "value": "5",
-          "text": "5",
+          "value": "${VAR_SEND_INTERVAL}",
+          "text": "${VAR_SEND_INTERVAL}",
           "selected": false
         },
         "options": [
           {
-            "value": "5",
-            "text": "5",
+            "value": "${VAR_SEND_INTERVAL}",
+            "text": "${VAR_SEND_INTERVAL}",
             "selected": false
           }
         ]
@@ -1981,8 +1970,8 @@
     ]
   },
   "time": {
-    "from": "2024-05-28T10:54:21.035Z",
-    "to": "2024-05-28T11:04:36.340Z"
+    "from": "2025-06-27T11:46:59.120Z",
+    "to": "2025-06-27T11:57:09.642Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1995,6 +1984,6 @@
   "timezone": "",
   "title": "JMeter test results STANDARD LISTENER",
   "uid": "jmeter-test-results-standard-listener",
-  "version": 1,
+  "version": 6,
   "weekStart": ""
 }

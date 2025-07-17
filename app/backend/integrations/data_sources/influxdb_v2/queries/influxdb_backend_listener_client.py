@@ -15,7 +15,7 @@
 from app.backend.integrations.data_sources.base_queries import BackEndQueriesBase
 
 class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
-  def get_test_log(self, bucket: str) -> str:
+  def get_test_log(self, bucket: str, test_title_tag_name: str) -> str:
     return f'''data = from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
@@ -23,66 +23,57 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> aggregateWindow(every: 1m, fn: last, createEmpty: false)
 
     max_threads = data
-      |> keep(columns: ["_value", "testTitle", "application"])
+      |> keep(columns: ["_value", "{test_title_tag_name}"])
       |> max()
-      |> group(columns: ["_value", "testTitle", "application"])
+      |> group(columns: ["_value", "{test_title_tag_name}"])
       |> rename(columns: {{_value: "max_threads"}})
 
     end_time = data
       |> max(column: "_time")
-      |> keep(columns: ["_time", "testTitle", "application"])
-      |> group(columns: ["_time", "testTitle", "application"])
+      |> keep(columns: ["_time", "{test_title_tag_name}"])
+      |> group(columns: ["_time", "{test_title_tag_name}"])
       |> rename(columns: {{_time: "end_time"}})
 
     start_time = data
       |> min(column: "_time")
-      |> keep(columns: ["_time", "testTitle", "application"])
-      |> group(columns: ["_time", "testTitle", "application"])
+      |> keep(columns: ["_time", "{test_title_tag_name}"])
+      |> group(columns: ["_time", "{test_title_tag_name}"])
       |> rename(columns: {{_time: "start_time"}})
 
-    join1 = join(tables: {{d1: max_threads, d2: start_time}}, on: ["testTitle", "application"])
-      |> keep(columns: ["start_time","testTitle", "application",  "max_threads"])
-      |> group(columns: ["testTitle", "application"])
+    join1 = join(tables: {{d1: max_threads, d2: start_time}}, on: ["{test_title_tag_name}"])
+      |> keep(columns: ["start_time","{test_title_tag_name}",  "max_threads"])
+      |> group(columns: ["{test_title_tag_name}"])
 
-    join(tables: {{d1: join1, d2: end_time}}, on: ["testTitle", "application"])
+    join(tables: {{d1: join1, d2: end_time}}, on: ["{test_title_tag_name}"])
       |> map(fn: (r) => ({{ r with duration: (int(v: r.end_time)/1000000000 - int(v: r.start_time)/1000000000)}}))
-      |> keep(columns: ["start_time","end_time","testTitle", "application", "max_threads", "duration"])
+      |> keep(columns: ["start_time","end_time","{test_title_tag_name}", "max_threads", "duration"])
       |> group()
       |> rename(columns: {{testTitle: "test_title"}})'''
 
-  def get_start_time(self, testTitle: str, bucket: str) -> str:
+  def get_start_time(self, testTitle: str, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "maxAT")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> keep(columns: ["_time"])
       |> min(column: "_time")'''
 
-  def get_end_time(self, testTitle: str, bucket: str) -> str:
+  def get_end_time(self, testTitle: str, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "maxAT")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
 
-  def get_app_name(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
-      return f'''from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r["_measurement"] == "jmeter")
-      |> filter(fn: (r) => r["_field"] == "maxAT")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
-      |> distinct(column: "application")
-      |> keep(columns: ["application"])'''
-
-  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''import "join"
       rpm_set = from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r._field == "count")
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "_time", "transaction"])
@@ -96,7 +87,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       errors_set = from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r._field == "count")
       |> filter(fn: (r) => r["statut"] == "ko" or r["statut"] == "all")
       |> group(columns: ["transaction", "statut"])
@@ -120,7 +111,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       stats2 = from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "transaction", "_field"])
@@ -149,7 +140,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       stddev = from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r._field == "avg")
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "transaction"])
@@ -168,12 +159,12 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
         }},
       )'''
 
-  def get_rps(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "count")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] !~ /TR/ and r["transaction"] != "all")
       |> keep(columns: ["_field", "_value", "_time"])
@@ -181,44 +172,44 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
       |> set(key: "_field", value: "Requests per second")'''
 
-  def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "maxAT")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> keep(columns: ["_field", "_value", "_time"])
       |> aggregateWindow(every: 30s, fn: max, createEmpty: false)
       |> set(key: "_field", value: "Active threads")'''
 
-  def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "avg")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)
       |> set(key: "_field", value: "Average response time")'''
 
-  def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct50.0")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: median, createEmpty: false)
       |> set(key: "_field", value: "Median response time")'''
 
-  def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct90.0")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> group(columns: ["_field"])
       |> aggregateWindow(
@@ -229,42 +220,42 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       createEmpty: false)
       |> set(key: "_field", value: "Pct response time")'''
 
-  def get_error_count(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_error_count(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "countError")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
       |> set(key: "_field", value: "Errors Per Second")'''
 
-  def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "avg")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)'''
 
-  def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct50.0")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(every: 30s, fn: median, createEmpty: false)'''
 
-  def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct90.0")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(
@@ -274,20 +265,20 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
               |> quantile(q: 0.90, method: "exact_selector"),
           createEmpty: false)'''
 
-  def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "maxAT")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> keep(columns: ["_value"])
       |> max(column: "_value")'''
 
-  def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_field"] == "count")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
       |> keep(columns: ["_field", "_value", "_time"])
@@ -296,40 +287,40 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> keep(columns: ["_value"])
       |> median(column: "_value")'''
 
-  def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "pct50.0")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''
 
-  def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "pct90.0")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''
 
-  def get_errors_pct_stats(self, testTitle: str, start: int, stop: int, bucket: str) -> str:
+  def get_errors_pct_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "count")
-      |> filter(fn: (r) => r["testTitle"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["transaction"] != "all")
-      |> group(columns: ["application", "statut"])
+      |> group(columns: ["statut"])
       |> sum()
       |> filter(fn: (r) => exists r.statut)
-      |> pivot(rowKey: ["application"], columnKey: ["statut"], valueColumn: "_value")
+      |> pivot(rowKey: [], columnKey: ["statut"], valueColumn: "_value")
       |> map(fn: (r) => ({{ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }}))
       |> keep(columns: ["errors"])'''

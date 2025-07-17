@@ -24,7 +24,6 @@ from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction impor
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
-import logging
 
 class DataProvider:
     """
@@ -118,8 +117,6 @@ class DataProvider:
             test_obj.set_metric('start_time_timestamp', self.ds_obj.get_start_time(test_title=test_title, time_format='timestamp'))
         if hasattr(test_obj, 'end_time_timestamp'):
             test_obj.set_metric('end_time_timestamp', self.ds_obj.get_end_time(test_title=test_title, time_format='timestamp'))
-        if hasattr(test_obj, 'application'):
-            test_obj.set_metric('application', self.ds_obj.get_application(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso))
         # Calculate duration
         test_obj.calculate_duration()
 

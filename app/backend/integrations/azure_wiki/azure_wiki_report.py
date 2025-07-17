@@ -17,7 +17,6 @@ from app.backend.integrations.report_registry       import ReportRegistry
 from app.backend.integrations.azure_wiki.azure_wiki import AzureWiki
 from app.backend.integrations.grafana.grafana       import Grafana
 from app.backend.components.graphs.graphs_db        import DBGraphs
-from datetime                                       import datetime
 
 
 @ReportRegistry.register("azure_wiki")
@@ -141,14 +140,14 @@ class AzureWikiReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        image         = self.grafana_obj.render_image(graph_data, self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, self.current_test_obj.application, current_test_title, baseline_test_title)
+        image         = self.grafana_obj.render_image(graph_data, self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, current_test_title, baseline_test_title)
         encoded_image = self.grafana_obj.encode_image(image)
         fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["name"])
         if(fileName):
             graph = f'![image.png](/.attachments/{str(fileName)})\n\n'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch:
+        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
             return graph, ai_support_response
         else:

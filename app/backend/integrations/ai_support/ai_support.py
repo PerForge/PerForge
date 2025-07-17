@@ -14,7 +14,7 @@
 
 import logging
 import traceback
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Any
 import uuid
 
 from app.backend.integrations.integration              import Integration
@@ -24,11 +24,10 @@ from app.backend.components.secrets.secrets_db         import DBSecrets
 from app.backend.integrations.ai_support.providers.provider_factory import ProviderFactory
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
 
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 

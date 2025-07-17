@@ -4,7 +4,6 @@ from sklearn.preprocessing import MinMaxScaler
 from typing import List, Dict, Any, Literal, Tuple
 import logging
 from app.backend.errors import ErrorMessages
-from .detectors.base import BaseDetector
 from collections import defaultdict
 from app.backend.data_provider.data_analysis.detectors import (
     IsolationForestDetector,
@@ -16,19 +15,19 @@ from app.backend.data_provider.data_analysis.detectors import (
 class AnomalyDetectionEngine:
     """
     A class for detecting anomalies in time-series data.
-    
+
     This engine supports multiple detection methods and can process various metrics
     to identify anomalous behavior in the data.
     """
     def __init__(self, params: Dict[str, Any]):
         """
         Initialize the Anomaly Detection Engine
-        
+
         Args:
             params: Configuration parameters for the engine
             detectors: List of detector instances to use
         """
-        self.output = []       
+        self.output = []
         # Define default parameters
         default_params = {
             'contamination': 0.001,
@@ -43,10 +42,10 @@ class AnomalyDetectionEngine:
             'numpy_var_threshold': 0.003,
             'cv_threshold': 0.07
         }
-        
+
         # Validate and update parameters
         self._validate_and_set_params(params, default_params)
-        
+
         self.detectors = [
             IsolationForestDetector(),
             ZScoreDetector(),
@@ -56,17 +55,17 @@ class AnomalyDetectionEngine:
                 base_metric="overalUsers"
             )
         ]
-        self.anomaly_detectors = self.detectors if self.detectors is not None else [] 
+        self.anomaly_detectors = self.detectors if self.detectors is not None else []
 
     def _validate_and_set_params(self, params: Dict[str, Any], default_params: Dict[str, Any]):
         if not isinstance(params, dict):
             logging.warning(ErrorMessages.ER00072.value)
             params = {}
-            
+
         for key in params:
             if key not in default_params:
                 logging.error(ErrorMessages.ER00073.value.format(key))
-                
+
         final_params = {**default_params, **params}
         for key, value in final_params.items():
             setattr(self, key, value)
@@ -74,7 +73,7 @@ class AnomalyDetectionEngine:
     def add_output(self, status: Literal['passed', 'failed'], method: str, description: str, value: Any = None):
         """
         Add a new output entry to the anomaly detection results
-        
+
         Args:
             status: Status of the anomaly (must be either 'passed' or 'failed')
             method: Name of the detection method
@@ -105,15 +104,15 @@ class AnomalyDetectionEngine:
         scaler = MinMaxScaler()
         df[columns] = scaler.fit_transform(df[columns])
         return df
-    
+
     def normalize_metric(self, df, metric: str):
         """
         Normalize a specific metric column by setting min=0 and max=1
-        
+
         Args:
             df: Input DataFrame or numpy array
             metric: Name of the column (for DataFrame) or None (for numpy array)
-            
+
         Returns:
             DataFrame or numpy array with normalized values (min=0, max=1)
         """
@@ -121,12 +120,12 @@ class AnomalyDetectionEngine:
             if metric not in df.columns:
                 logging.error(f"Column {metric} not found in DataFrame")
                 return df
-                
+
             df = df.copy()
             max_val = df[metric].max()
             df[metric] = df[metric] / max_val if max_val != 0 else df[metric]
             return df
-            
+
         elif isinstance(df, np.ndarray):
             max_val = np.max(df)
             return df / max_val if max_val != 0 else df
@@ -137,7 +136,7 @@ class AnomalyDetectionEngine:
     def delete_columns(self, df, columns):
         df.drop(columns=columns, inplace=True)
         return df
-    
+
     def process_anomalies(self, merged_df):
         # Iterate over the columns to find metric and anomaly columns
         for col in merged_df.columns:
@@ -151,24 +150,24 @@ class AnomalyDetectionEngine:
     def collect_anomalies(self, df, metric, anomaly_cl):
         """
         Collect and analyze anomalies in the time series data.
-        
+
         Args:
             df (DataFrame): Input dataframe containing time series data
             metric (str): Name of the metric column to analyze
             anomaly_cl (str): Name of the column containing anomaly flags
-            
+
         The method tracks consecutive anomalies and combines them into single events
         when they occur close to each other (within the buffer_size window).
         """
         def format_time_range(start, end):
             """Format the time range for anomaly description.
-            
+
             Returns only time if start and end dates are the same,
             otherwise returns full datetime.
             """
             start_date = start.strftime('%Y-%m-%d')
             end_date = end.strftime('%Y-%m-%d')
-            
+
             if start_date == end_date:
                 return (f"{start.strftime('%H:%M:%S')} to "
                        f"{end.strftime('%H:%M:%S')}")
@@ -200,7 +199,7 @@ class AnomalyDetectionEngine:
                 # Extract detection methods from anomaly flag
                 methods = set(row[anomaly_cl].replace('Anomaly: ', '').split(', '))
                 current_methods.update(methods)
-                
+
                 if not anomaly_started:
                     # Start of new anomaly period
                     anomaly_started = True
@@ -212,7 +211,7 @@ class AnomalyDetectionEngine:
                         baseline_value = calculate_baseline(prev_values)
                     else:
                         baseline_value = current_value
-                    
+
                 anomaly_values.append(current_value)
                 end_time = index
                 normal_points_buffer = []  # Reset buffer
@@ -229,7 +228,7 @@ class AnomalyDetectionEngine:
                             min_val = min(anomaly_values)
                             is_increase = max_val > baseline_value
                             significant_value = max_val if is_increase else min_val
-                            
+
                             # Generate description
                             description = (
                                 f"An anomaly was detected in {metric} from "
@@ -237,7 +236,7 @@ class AnomalyDetectionEngine:
                                 f"with the metric {'increasing' if is_increase else 'dropping'} "
                                 f"to {significant_value:.2f}."
                             )
-                            
+
                             # Record the anomaly
                             self.output.append({
                                 'status': 'failed',
@@ -245,7 +244,7 @@ class AnomalyDetectionEngine:
                                 'description': description,
                                 'value': significant_value
                             })
-                            
+
                         # Reset tracking variables
                         anomaly_started = False
                         anomaly_values = []
@@ -258,14 +257,14 @@ class AnomalyDetectionEngine:
             min_val = min(anomaly_values)
             is_increase = max_val > baseline_value
             significant_value = max_val if is_increase else min_val
-            
+
             description = (
                 f"An anomaly was detected in {metric} from "
                 f"{format_time_range(start_time, end_time)}, "
                 f"with the metric {'increasing' if is_increase else 'dropping'} "
                 f"to {significant_value:.2f}."
             )
-            
+
             self.output.append({
                 'status': 'failed',
                 'method': ', '.join(current_methods),
@@ -397,7 +396,7 @@ class AnomalyDetectionEngine:
                 elif 'An anomaly was detected in' in check['description']:
                     metric = check['description'].split('in ')[1].split(' from')[0]
                     metric_anomaly_counts[metric] += 1
-        
+
         return {
             'failed_checks': failed_checks,
             'metric_anomaly_counts': metric_anomaly_counts,
@@ -495,7 +494,7 @@ class AnomalyDetectionEngine:
     def analyze_test_data(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]]):
         """
         Analyze test data and prepare results.
-        
+
         Args:
             merged_df: DataFrame containing all metrics
             standard_metrics: Dictionary of standard metrics configuration
@@ -532,5 +531,5 @@ class AnomalyDetectionEngine:
 
         if is_fixed_load:
             self.process_anomalies(merged_df)
-            
+
         return metrics, is_fixed_load, self.output

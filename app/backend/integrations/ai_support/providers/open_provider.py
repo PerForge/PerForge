@@ -13,15 +13,13 @@
 # limitations under the License.
 
 import logging
-import traceback
 import base64
-from typing import Optional, Dict, Any, Union, List
+from typing import Dict, Any, Union, List
 
 import httpx
 
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
-from langchain.prompts import PromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
@@ -176,27 +174,7 @@ class OpenAIProvider(AIProvider):
         except Exception as er:
             return self._handle_request_error(er, prompt)
 
-    def _track_token_usage(self, response):
-        """Track token usage from the response if available."""
-        try:
-            # For LCEL, token usage is in response_metadata
-            if hasattr(response, 'response_metadata') and 'token_usage' in response.response_metadata:
-                token_usage = response.response_metadata['token_usage']
-                self.input_tokens += token_usage.get('prompt_tokens', 0)
-                self.output_tokens += token_usage.get('completion_tokens', 0)
-                self.total_tokens += token_usage.get('total_tokens', 0)
-            # Fallback for older/different response structures
-            elif hasattr(response, 'usage_metadata') and response.usage_metadata is not None:
-                if isinstance(response.usage_metadata, dict):
-                    self.input_tokens += response.usage_metadata.get('input_tokens', 0)
-                    self.output_tokens += response.usage_metadata.get('output_tokens', 0)
-                    self.total_tokens += response.usage_metadata.get('total_tokens', 0)
-                else:  # Assuming it's an object
-                    self.input_tokens += getattr(response.usage_metadata, 'input_tokens', 0)
-                    self.output_tokens += getattr(response.usage_metadata, 'output_tokens', 0)
-                    self.total_tokens += getattr(response.usage_metadata, 'total_tokens', 0)
-        except Exception as e:
-            logging.warning(f"Error tracking token usage: {str(e)}")
+    # Using base class implementation for token tracking
 
     def get_model_for_chain(self) -> BaseChatModel:
         """

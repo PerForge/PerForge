@@ -101,11 +101,27 @@
             body: JSON.stringify(data)
         })
         .then(response => {
+            // Get the X-Result-Data header that contains the statistics
+            const resultData = response.headers.get('X-Result-Data');
+
             if (!response.ok) {
                 return response.json().then(err => {
+                    showResultModal("Failed!", err.message || "Failed to generate PDF report");
                     throw new Error(err.message || 'PDF generation failed');
                 });
             }
+
+            // Parse the result data from the header and show it in the modal
+            if (resultData) {
+                try {
+                    const parsedData = JSON.parse(resultData);
+                    showResultModal("Report generated!", parsedData);
+                    resolve(parsedData);
+                } catch (e) {
+                    console.error("Failed to parse result data:", e);
+                }
+            }
+
             const contentDisposition = response.headers.get('content-disposition');
             let filename = 'report.pdf';
             if (contentDisposition) {
@@ -224,17 +240,6 @@
     resultModal.show();
   }
 
-  const extractRunIds = (input) => {
-    const runIds = [];
-    for (const item of input) {
-        const runIdMatch = item.match(/'runId':(.*?)(,|$)/);
-        if (runIdMatch) {
-            runIds.push(runIdMatch[1]);
-        }
-    }
-    return runIds;
-  }
-
 
 
   class DomNode {
@@ -308,14 +313,10 @@
       getSelectedRows() {
         const selectedRows = Array.from(this.bulkSelectRows).filter((row) => row.checked).map((row) => {
             const checkboxData = getData(row, "bulk-select-row");
-            // if (checkboxData.template_id == "no data"){
-            //   checkboxData["template_id"] = checkboxData.testName;
-            // }
             delete checkboxData.duration;
             delete checkboxData.startTime;
             delete checkboxData.endTime;
             delete checkboxData.maxThreads;
-            delete checkboxData.testName;
             return checkboxData;
         });
 
@@ -424,8 +425,65 @@
             const viewLess = el.querySelector('[data-list-view="less"]');
             const listInfo = el.querySelector('[data-list-info]');
             const listFilter = document.querySelector('[data-list-filter]');
-            const list = new List(el, options);
+            
+            // Handle List.js initialization with proper error handling
+            try {
+              // Add a dummy row if needed - List.js requires at least one item during initialization
+              const listBody = el.querySelector('.list');
+              let dummyRowAdded = false;
+              
+              if (listBody && listBody.children.length === 0) {
+                const dummyRow = document.createElement('tr');
+                dummyRow.id = 'dummy-list-row';
+                dummyRow.style.display = 'none';
+                
+                // Add cells with appropriate classes based on valueNames
+                if (options.valueNames && Array.isArray(options.valueNames)) {
+                  options.valueNames.forEach(name => {
+                    const cell = document.createElement('td');
+                    cell.className = name;
+                    cell.textContent = 'dummy';
+                    dummyRow.appendChild(cell);
+                  });
+                } else {
+                  // Fallback if no valueNames
+                  dummyRow.innerHTML = '<td>dummy</td>';
+                }
+                
+                listBody.appendChild(dummyRow);
+                dummyRowAdded = true;
+              }
+              
+              // Initialize List.js
+              const list = new List(el, options);
+              
+              // Store the list instance on the element for later access
+              el.List = list;
+              
+              // Remove the dummy row if we added one
+              if (dummyRowAdded) {
+                const dummyRow = listBody.querySelector('#dummy-list-row');
+                if (dummyRow) {
+                  dummyRow.remove();
+                }
+                
+                // Reset the items array after removing the dummy
+                if (list.items && list.items.length === 1) {
+                  list.items = [];
+                  list.visibleItems = [];
+                  list.matchingItems = [];
+                }
+              }
+              
+            } catch (error) {
+              console.error('List.js initialization error:', error);
+              return; // Exit if initialization fails
+            }
 
+            // Get the list instance from the element
+            const list = el.List;
+            if (!list) return; // Skip the rest if list initialization failed
+            
             // -------fallback-----------
 
             list.on('updated', item => {
@@ -597,7 +655,6 @@
     validateForm: validateForm,
     sendPostRequest: sendPostRequest,
     sendGetRequest: sendGetRequest,
-    extractRunIds: extractRunIds,
     docReady: docReady,
     camelize: camelize,
     getData: getData,

@@ -46,17 +46,17 @@ class SmtpMailReport(ReportingBase):
         text = text.replace('\n', '<br>')
         return text
 
-    def add_graph(self, graph_data, current_run_id, baseline_run_id):
-        image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
+    def add_graph(self, graph_data, current_test_title, baseline_test_title):
+        image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
         if image:
             timestamp  = str(round(time.time() * 1000))
-            content_id = f'{self.test_name}_{graph_data["id"]}_{timestamp}'.replace(" ", "_")
+            content_id = f'{graph_data["id"]}_{timestamp}'.replace(" ", "_")
             file_name  = f'{content_id}.png'
             self.images.append({'file_name':file_name, 'data': image, 'content_id': content_id})
             graph = f'<img src="cid:{content_id}" width="900" alt="{content_id}" /><br>'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch:
+        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
             return graph, ai_support_response
         else:
@@ -144,12 +144,12 @@ class SmtpMailReport(ReportingBase):
             template_id = test.get('template_id')
             if template_id:
                 self.set_template(template_id, influxdb, action_id)
-                run_id            = test.get('test_title')
-                baseline_run_id   = test.get('baseline_test_title')
-                self.collect_data(run_id, baseline_run_id)
+                test_title            = test.get('test_title')
+                baseline_test_title   = test.get('baseline_test_title')
+                self.collect_data(test_title, baseline_test_title)
                 title             = self.generate_path(False)
                 self.report_body += f'<h3>{title}</h3>'
-                self.report_body += self.generate(run_id, baseline_run_id)
+                self.report_body += self.generate(test_title, baseline_test_title)
                 if not group_title:
                     templates_title += f'{title} | '
         if template_group:
@@ -181,7 +181,7 @@ class SmtpMailReport(ReportingBase):
         response['title'] = title
         return response
 
-    def generate(self, current_run_id, baseline_run_id = None):
+    def generate(self, current_test_title, baseline_test_title = None):
         report_body = ""
         for obj in self.data:
             if obj["type"] == "text":
@@ -189,7 +189,7 @@ class SmtpMailReport(ReportingBase):
             elif obj["type"] == "graph":
                 graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
                 self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                graph, ai_support_response = self.add_graph(graph_data, current_run_id, baseline_run_id)
+                graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:
                     report_body += self.add_text(ai_support_response)

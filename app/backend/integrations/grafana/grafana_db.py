@@ -29,7 +29,6 @@ class DBGrafana(db.Model):
     org_id              = db.Column(db.String(120), nullable=False)
     token               = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     test_title          = db.Column(db.String(120), nullable=False)
-    app                 = db.Column(db.String(120), nullable=False)
     baseline_test_title = db.Column(db.String(120), nullable=False)
     is_default          = db.Column(db.Boolean, default=False)
     dashboards          = db.relationship('DBGrafanaDashboards', backref='grafana', cascade='all, delete-orphan', lazy=True)

@@ -15,11 +15,10 @@
 import logging
 import traceback
 import base64
-from typing import Optional, Dict, Any, List, Union
+from typing import Dict, Any, List, Union
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain.schema import HumanMessage, SystemMessage
-from langchain.prompts import PromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
@@ -49,15 +48,13 @@ class GeminiProvider(AIProvider):
             self.text_llm = ChatGoogleGenerativeAI(
                 model=ai_text_model,
                 google_api_key=token,
-                temperature=temperature,
-                convert_system_message_to_human=True
+                temperature=temperature
             )
 
             self.image_llm = ChatGoogleGenerativeAI(
                 model=ai_image_model,
                 google_api_key=token,
-                temperature=temperature,
-                convert_system_message_to_human=True
+                temperature=temperature
             )
 
             # Initialize embeddings for potential future use
@@ -75,10 +72,10 @@ class GeminiProvider(AIProvider):
     def _detect_image_format(self, image_data: bytes) -> str:
         """
         Detect the format of an image from its binary data.
-        
+
         Args:
             image_data: Raw bytes of the image file
-            
+
         Returns:
             String representing the image format ('jpeg', 'png', etc.)
         """
@@ -119,7 +116,7 @@ class GeminiProvider(AIProvider):
             image_format = self._detect_image_format(graph)
             # Encode image to base64
             graph_b64 = base64.b64encode(graph).decode('utf-8')
-            
+
             # Create messages with system prompt and user prompt + image
             messages = [
                 SystemMessage(content=self.system_prompt),
@@ -151,7 +148,7 @@ class GeminiProvider(AIProvider):
                 image_format = self._detect_image_format(graph)
                 # Encode image to base64
                 graph_b64 = base64.b64encode(graph).decode('utf-8')
-                
+
                 # Alternative approach for Gemini
                 response = self.image_llm.invoke([
                     {
@@ -211,16 +208,7 @@ class GeminiProvider(AIProvider):
         """
         return self.text_llm
 
-    def _track_token_usage(self, response):
-        """Track token usage from the response if available."""
-        try:
-            if hasattr(response, 'response_metadata') and 'token_usage' in response.response_metadata:
-                token_usage = response.response_metadata['token_usage']
-                self.input_tokens += token_usage.get('prompt_tokens', 0)
-                self.output_tokens += token_usage.get('completion_tokens', 0)
-                self.total_tokens += token_usage.get('total_tokens', 0)
-        except Exception as e:
-            logging.warning(f"Error tracking token usage for Gemini: {str(e)}")
+    # Using base class implementation for token tracking
 
     def invoke(self, prompt: Union[str, List[Dict[str, Any]]], **kwargs: Any) -> Any:
         """

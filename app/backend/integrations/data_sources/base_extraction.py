@@ -15,11 +15,8 @@
 import logging
 import pandas as pd
 
-
-from app.backend.components.projects.projects_db import DBProjects
 from app.backend.errors                          import ErrorMessages
 from abc                                         import ABC, abstractmethod
-from app.backend.integrations.integration        import Integration
 from typing                                      import List, Dict, Any, Callable
 from functools                                   import wraps
 from datetime                                    import datetime
@@ -184,20 +181,20 @@ class DataExtractionBase(ABC):
         """
         pass
 
-    @validate_output(expected_keys={'application', 'duration', 'end_time', 'max_threads', 'start_time', 'test_title'})
+    @validate_output(expected_keys={'duration', 'end_time', 'max_threads', 'start_time', 'test_title'})
     def get_test_log(self) -> List[Dict[str, Any]]:
         """
         Retrieve the test log data, validated to ensure required fields are present.
         Results are sorted by test_title in descending order.
-        
+
         :return: A list of dictionaries containing test log data, sorted by test_title in descending order.
         """
         test_log = self._fetch_test_log()
-        
+
         # Sort by test_title in descending order
         if test_log:
             test_log.sort(key=lambda x: x.get('test_title', ''), reverse=True)
-        
+
         return test_log
 
     @abstractmethod
@@ -239,33 +236,6 @@ class DataExtractionBase(ABC):
         :return: The end time in the specified format.
         """
         return self._fetch_end_time(test_title, **kwargs)
-
-    @abstractmethod
-    def _fetch_application(self, test_title: str, start: str, end: str) -> str:
-        """
-        Fetch the application name for a specific test.
-        :param test_title: The title of the test.
-        :param start: The start time.
-        :param end: The end time.
-        :return: The application name.
-        """
-        pass
-
-    @validate_string_output
-    def get_application(self, test_title: str, start: str, end: str) -> str:
-        """
-        Retrieve the application name for the specified test.
-        :param test_title: The title of the test.
-        :param start: The start time.
-        :param end: The end time.
-        :return: The application name.
-        """
-        try:
-            application = self._fetch_application(test_title, start, end)
-        except Exception as e:
-            logging.warning(f"Error getting application name: {str(e)}")
-            application = "Application not found"
-        return application
 
     # ===================================================================
     # Backend metrics extraction methods

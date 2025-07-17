@@ -2,7 +2,7 @@
 Integrations API endpoints.
 """
 import logging
-from flask import Blueprint, request, current_app
+from flask import Blueprint, request
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.integrations.ai_support.ai_support_db import DBAISupport
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
@@ -11,10 +11,9 @@ from app.backend.integrations.atlassian_jira.atlassian_jira_db import DBAtlassia
 from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
-from app.backend.errors import ErrorMessages
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
-    HTTP_OK, HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
+   HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
 
 # Create a Blueprint for integrations API

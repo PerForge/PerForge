@@ -29,8 +29,6 @@ from app.backend.integrations.atlassian_jira.atlassian_jira_db             impor
 from app.backend.integrations.azure_wiki.azure_wiki_db                     import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db                           import DBGrafana
 from app.backend.pydantic_models                                           import ProjectModel
-from sqlalchemy                                                            import text, MetaData
-from itertools                                                             import chain
 
 
 class DBProjects(db.Model):

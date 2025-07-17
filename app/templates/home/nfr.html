@@ -21,7 +21,7 @@
                                             <label class="col-form-nfr-label mb-0">Name:</label>
                                         </div>
                                         <div class="marging-10 flex-grow-1 me-3">
-                                            <input name="test_name" id="test_name" class="form-control" required placeholder="e.g. my-nfr">
+                                            <input name="nfr_name" id="nfr_name" class="form-control" required placeholder="e.g. my-nfr">
                                         </div>
 
                                         <!-- New Switcher UI -->
@@ -174,7 +174,7 @@
               const formData = {};
               const nfrConfig = '{{ nfr_config }}';
               formData.id = nfrConfig && nfrConfig !== 'None' ? nfrConfig : null;
-              formData.name = document.querySelector('[name="test_name"]').value;
+              formData.name = document.querySelector('[name="nfr_name"]').value;
               formData.metric_type = document.getElementById('metricTypeSwitch').checked ? 'frontend' : 'backend';
               const nfrs = document.querySelectorAll('.nfr-row');
               const data = Array.from(nfrs).map(element => ({
@@ -191,7 +191,7 @@
             }
 
             const nfrsPanel = document.getElementById("nfrs-panel");
-            const name = document.getElementById("test_name");
+            const name = document.getElementById("nfr_name");
             const nfrsJson = JSON.parse('{{ nfr_data | tojson }}');
 
             if (nfrsJson && nfrsJson.name != null) {

@@ -4,7 +4,7 @@ Base module for API endpoints.
 import functools
 import traceback
 import logging
-from flask import jsonify, request, current_app
+from flask import jsonify, request
 from werkzeug.exceptions import HTTPException
 
 # HTTP Status Codes
@@ -27,38 +27,38 @@ def get_project_id():
 def api_response(data=None, message=None, status=HTTP_OK, errors=None):
     """
     Create a standardized API response.
-    
+
     Args:
         data: The data to return
         message: A message to include in the response
         status: HTTP status code
         errors: Any errors to include in the response
-        
+
     Returns:
         A JSON response with the standard format
     """
     response = {
         "status": "success" if status < 400 else "error",
     }
-    
+
     if data is not None:
         response["data"] = data
-        
+
     if message:
         response["message"] = message
-        
+
     if errors:
         response["errors"] = errors
-        
+
     return jsonify(response), status
 
 def api_error_handler(f):
     """
     Decorator to handle exceptions in API endpoints.
-    
+
     Args:
         f: The function to decorate
-        
+
     Returns:
         The decorated function
     """

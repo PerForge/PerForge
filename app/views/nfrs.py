@@ -19,14 +19,14 @@ from app                                         import app
 from app.backend.components.nfrs.nfrs_db         import DBNFRs
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.errors                          import ErrorMessages
-from flask                                       import render_template, request, url_for, redirect, flash, jsonify
+from flask                                       import render_template, request, url_for, redirect, flash
 
 
 @app.route('/nfrs', methods=['GET'])
 def get_nfrs():
     """
     Render the NFRs list page.
-    
+
     Returns:
         Rendered template for the NFRs list page
     """
@@ -44,7 +44,7 @@ def get_nfrs():
 def get_nfr():
     """
     Render the NFR edit/create page.
-    
+
     Returns:
         Rendered template for the NFR edit/create page
     """

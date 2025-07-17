@@ -13,17 +13,15 @@
 # limitations under the License.
 
 import traceback
-import json
 import logging
 
 from app                                                                       import app
 from app.backend.components.projects.projects_db                               import DBProjects
 from app.backend.components.templates.templates_db                             import DBTemplates
 from app.backend.components.templates.template_groups_db                       import DBTemplateGroups
-from app.backend.data_provider.data_provider                                   import DataProvider
 from app.backend.errors                                                        import ErrorMessages
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db             import DBInfluxdb
-from flask                                                                     import render_template, request, url_for, redirect, flash, jsonify
+from flask                                                                     import render_template, request, url_for, redirect, flash
 
 
 @app.route('/tests', methods=['GET'])
@@ -36,7 +34,6 @@ def get_tests():
     """
     try:
         project_id             = request.cookies.get('project')
-        project_data           = DBProjects.get_config_by_id(id=project_id)
         influxdb_configs       = DBInfluxdb.get_configs(project_id=project_id)
         db_configs = []
         for config in influxdb_configs:

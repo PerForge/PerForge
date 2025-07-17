@@ -1,7 +1,7 @@
 # Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 
 import logging
-from typing import Optional, Dict, List, Any, Union, Type
+from typing import Optional, Dict, List, Any
 from abc import ABC
 
 
@@ -25,7 +25,6 @@ class BaseTestData(ABC):
         'end_time_iso',
         'start_time_timestamp',
         'end_time_timestamp',
-        'application',
         'test_type',
         'duration',
         'performance_status',
@@ -46,7 +45,6 @@ class BaseTestData(ABC):
         self.end_time_iso: Optional[str] = None
         self.start_time_timestamp: Optional[float] = None
         self.end_time_timestamp: Optional[float] = None
-        self.application: Optional[str] = None
         self.test_type: Optional[str] = None
         self.duration: Optional[str] = None
         self.aggregated_table: Optional[List[Dict[str, Any]]] = None

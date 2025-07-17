@@ -13,8 +13,7 @@
 # limitations under the License.
 
 
-from app.backend.components.projects.projects_db import DBProjects
-from abc                                         import ABC, abstractmethod
+from abc import ABC, abstractmethod
 
 
 class Integration(ABC):

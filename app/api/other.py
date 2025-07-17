@@ -4,11 +4,9 @@ Other miscellaneous API endpoints.
 import logging
 import os
 from flask import Blueprint, request, current_app, send_from_directory
-from app.backend.components.projects.projects_db import DBProjects
-from app.backend.errors import ErrorMessages
 from app.api.base import (
-    api_response, api_error_handler, get_project_id,
-    HTTP_OK, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
+    api_response, api_error_handler,
+    HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
 
 # Create a Blueprint for other API
@@ -19,7 +17,7 @@ other_api = Blueprint('other_api', __name__)
 def health_check():
     """
     Health check endpoint.
-    
+
     Returns:
         A JSON response with health status
     """
@@ -41,7 +39,7 @@ def health_check():
 def get_version():
     """
     Get application version.
-    
+
     Returns:
         A JSON response with version information
     """
@@ -64,7 +62,7 @@ def get_version():
 def get_config():
     """
     Get application configuration.
-    
+
     Returns:
         A JSON response with configuration information
     """
@@ -77,7 +75,7 @@ def get_config():
             'UPLOAD_FOLDER': current_app.config.get('UPLOAD_FOLDER', ''),
             'ALLOWED_EXTENSIONS': current_app.config.get('ALLOWED_EXTENSIONS', [])
         }
-        
+
         return api_response(
             data={"config": safe_config},
             message="Configuration information"
@@ -95,10 +93,10 @@ def get_config():
 def get_uploaded_file(filename):
     """
     Get an uploaded file.
-    
+
     Args:
         filename: The name of the file to get
-        
+
     Returns:
         The file content
     """
@@ -118,7 +116,7 @@ def get_uploaded_file(filename):
 def upload_file():
     """
     Upload a file.
-    
+
     Returns:
         A JSON response with the uploaded file information
     """
@@ -130,9 +128,9 @@ def upload_file():
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_file", "message": "No file part in the request"}]
             )
-            
+
         file = request.files['file']
-        
+
         # If the user does not select a file, the browser submits an
         # empty file without a filename.
         if file.filename == '':
@@ -141,18 +139,18 @@ def upload_file():
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_filename", "message": "No selected file"}]
             )
-            
+
         if file:
             filename = file.filename
             upload_folder = current_app.config['UPLOAD_FOLDER']
-            
+
             # Create upload folder if it doesn't exist
             if not os.path.exists(upload_folder):
                 os.makedirs(upload_folder)
-                
+
             file_path = os.path.join(upload_folder, filename)
             file.save(file_path)
-            
+
             return api_response(
                 data={"filename": filename, "path": file_path},
                 message="File uploaded successfully"

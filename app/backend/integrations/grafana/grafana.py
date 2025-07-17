@@ -41,19 +41,18 @@ class Grafana(Integration):
             self.org_id              = config["org_id"]
             self.token               = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.test_title          = config["test_title"]
-            self.app                 = config["app"]
             self.baseline_test_title = config["baseline_test_title"]
             self.dashboards          = config["dashboards"]
         else:
             logging.warning("There's no Grafana integration configured, or you're attempting to send a request from an unsupported location.")
 
-    def get_grafana_link(self, start, end, test_name, dash_id = None):
+    def get_grafana_link(self, start, end, dash_id = None):
         dashboard_content = next((dashboard['content'] for dashboard in self.dashboards if dashboard['id'] == dash_id), self.dashboards[0]['content'])
-        return self.server + dashboard_content + '?orgId=' + self.org_id + '&from='+str(start)+'&to='+str(end)+f'&var-{self.app}='+str(test_name)
+        return self.server + dashboard_content + '?orgId=' + self.org_id + '&from='+str(start)+'&to='+str(end)
 
-    def get_grafana_test_link(self, start, end, test_name, run_id, dash_id = None):
-        url = self.get_grafana_link(start, end, test_name, dash_id)
-        url = f'{url}&var-{self.test_title}={run_id}'
+    def get_grafana_test_link(self, start, end, test_title, dash_id = None):
+        url = self.get_grafana_link(start, end, dash_id)
+        url = f'{url}&var-{self.test_title}={test_title}'
         return url
 
     def dash_id_to_render(self, url):
@@ -75,20 +74,20 @@ class Grafana(Integration):
                 url += custom_vars
         return url
 
-    def render_image(self, graph_data, start, stop, test_name, run_id, baseline_run_id = None):
+    def render_image(self, graph_data, start, stop, test_title, baseline_test_title = None):
         image = None
         url = (
-            self.get_grafana_link(start, stop, test_name, graph_data["dash_id"])
+            self.get_grafana_link(start, stop, graph_data["dash_id"])
             + "&panelId=" + str(graph_data["view_panel"])
             + "&width=" + str(graph_data["width"])
             + "&height=" + str(graph_data["height"])
             + "&scale=3"
         )
         url   = self.dash_id_to_render(url)
-        if baseline_run_id:
-            url = url+f'&var-{self.test_title}='+run_id+f'&var-{self.baseline_test_title}='+baseline_run_id
+        if baseline_test_title:
+            url = url+f'&var-{self.test_title}='+test_title+f'&var-{self.baseline_test_title}='+baseline_test_title
         else:
-            url = url+f'&var-{self.test_title}='+run_id
+            url = url+f'&var-{self.test_title}='+test_title
         url = self.add_custom_tags(url=url, graph_json=graph_data)
         try:
             response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180)

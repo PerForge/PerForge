@@ -1,8 +1,5 @@
 # Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 
-from typing import Dict, Any, List
-import logging
-
 from .base_test_data import BaseTestData
 
 

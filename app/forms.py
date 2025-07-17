@@ -37,6 +37,7 @@ class InfluxDBForm(FlaskForm):
     bucket     = StringField('Bucket', validators=[DataRequired()])
     listener   = SelectField('Backend listener', choices=[('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient'), ('sitespeed_influxdb_v2', 'sitespeed_influxdb_v2')], default='InfluxdbBackendListenerClient')
     tmz        = StringField('Timezone', default="UTC")
+    test_title_tag_name = StringField('Test Title Tag Name', default="testTitle")
     is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 
 
@@ -52,7 +53,6 @@ class GrafanaForm(FlaskForm):
     token               = StringField('Token', validators=[DataRequired()])
     org_id              = StringField('OrgId', validators=[DataRequired()])
     test_title          = StringField('Test title', validators=[DataRequired()], default="testTitle")
-    app                 = StringField('App name', validators=[DataRequired()], default="app")
     baseline_test_title = StringField('Baseline test title', validators=[DataRequired()], default="baseline_testTitle")
     dashboards          = FieldList(FormField(DashboardForm), min_entries=1)
     is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)

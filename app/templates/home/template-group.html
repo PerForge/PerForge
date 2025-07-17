@@ -7,6 +7,9 @@
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/report.css" rel="stylesheet">
 <style>
+    [v-cloak] {
+        display: none;
+    }
     .drag-handle {
         cursor: move;
         padding: 10px;
@@ -28,6 +31,12 @@
     .sortable-chosen {
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     }
+    .center-section {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 300px;
+    }
 </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -37,8 +46,11 @@
             <div class="main-body">
                 <div class="full-screen-section margin-all-10">
                     {% raw %}
-                    <div id="app" style="width: 100%;">
-                        <form class="needs-validation" novalidate="">
+                    <div id="app" style="width: 100%;" v-cloak>
+                        <div v-if="isLoading" class="center-section">
+                            <div class="spinner-border text-info" role="status"></div>
+                        </div>
+                        <form v-else class="needs-validation" novalidate="">
                             <div class="row flex-between-end pl-5 pr-5">
                                 <div class="col-auto">
                                     <h2 class="mb-2">Template group page
@@ -149,6 +161,7 @@
                     el: '#app',
                     data() {
                         return {
+                            isLoading: true,
                             templates: [],
                             name: "",
                             title: "",
@@ -267,6 +280,8 @@
                             return prompts;
                         }
 
+                        // Start loading
+                        this.isLoading = true;
                         Promise.all([
                             apiClient.templates.getAll(),
                             apiClient.prompts.getAll({ place: 'template_group' })
@@ -275,17 +290,30 @@
                             this.templates = templatesResponse.data.templates || [];
                             this.template_group_prompts = addTypeToName(templateGroupPromptsResponse.data.prompts || []);
 
-                            const templateGroupId = '{{ template_group_config }}';
+                            // Check for clone parameter first
+                            const cloneTemplateGroupId = new URLSearchParams(window.location.search).get('clone');
+                            const templateGroupId = cloneTemplateGroupId || '{{ template_group_config }}';
+                            
                             if (templateGroupId && templateGroupId !== 'None') {
                                 apiClient.templateGroups.getById(templateGroupId)
                                     .then(response => {
                                         const templateGroupData = response.data.template_group;
                                         if (templateGroupData && templateGroupData.name != null) {
                                             this.title = templateGroupData.title;
-                                            this.name = templateGroupData.name;
+                                            // If this is a clone operation, append COPY to the name
+                                            this.name = cloneTemplateGroupId ? `${templateGroupData.name} COPY` : templateGroupData.name;
                                             this.template = templateGroupData.data;
                                             this.ai_summary = templateGroupData.ai_summary;
                                             this.prompt_id = templateGroupData.prompt_id;
+                                            
+                                            // If cloning, clear the ID so a new template group will be created on save
+                                            if (cloneTemplateGroupId) {
+                                                this.template_group_id = null;
+                                                this.id = null;
+                                            } else {
+                                                this.template_group_id = templateGroupData.id;
+                                                this.id = templateGroupData.id;
+                                            }
 
                                             if (this.template_group_prompts.length) {
                                                 this.selectedTemplateGroupPrompt = this.template_group_prompts.find(prompt => prompt.id === this.prompt_id);
@@ -303,12 +331,19 @@
                                     .catch(error => {
                                         showFlashMessage(error.message || "Error loading template group", "error");
                                         console.error("Error loading template group:", error);
+                                    })
+                                    .finally(() => {
+                                        this.isLoading = false;
                                     });
+                            } else {
+                                // If no template group to load, end the loading state
+                                this.isLoading = false;
                             }
                         })
                         .catch(error => {
                             showFlashMessage(error.message || "Error loading data", "error");
                             console.error("Error loading data:", error);
+                            this.isLoading = false;
                         });
                     },
                 });
