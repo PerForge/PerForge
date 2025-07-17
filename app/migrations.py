@@ -45,6 +45,18 @@ def run_migrations():
 
             # --- Add future migrations below this line as new blocks ---
 
+            # --- Migration 5: Add 'test_title_tag_name' to 'influxdb' table ---
+            table_name = 'influxdb'
+            column_name = 'test_title_tag_name'
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+
+            if column_name not in columns:
+                log.info(f"Applying migration: Adding column '{column_name}' to table '{table_name}'")
+                alter_command = text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} VARCHAR(120) NOT NULL DEFAULT 'testTitle'")
+                connection.execute(alter_command)
+                log.info(f"Migration for '{column_name}' applied successfully.")
+
+
             # --- Migration 4: Drop 'app' from 'grafana' table ---
             table_name = 'grafana'
             column_name = 'app'

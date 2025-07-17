@@ -79,6 +79,7 @@ class InfluxdbV2(DataExtractionBase):
             self.timeout  = config["timeout"]
             self.bucket   = config["bucket"]
             self.listener = config["listener"]
+            self.test_title_tag_name = config["test_title_tag_name"]
             self.tmz      = config["tmz"]
         else:
             logging.warning("There's no InfluxDB integration configured, or you're attempting to send a request from an unsupported location.")
@@ -102,7 +103,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_test_log(self) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_test_log(self.bucket)
+            query = self.queries.get_test_log(self.bucket, self.test_title_tag_name)
             records = self._execute_query(query)
 
             df = pd.DataFrame(records)
@@ -115,7 +116,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_aggregated_data(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_aggregated_data(test_title, start, end, self.bucket)
+            query = self.queries.get_aggregated_data(test_title, start, end, self.bucket, self.test_title_tag_name)
             return self._execute_query(query)
         except Exception as er:
             logging.error(ErrorMessages.ER00058.value.format(self.name))
@@ -124,7 +125,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_start_time(self, test_title: str, time_format: str) -> Any:
         try:
-            query       = self.queries.get_start_time(test_title, self.bucket)
+            query = self.queries.get_start_time(test_title, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
@@ -141,7 +142,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_end_time(self, test_title: str, time_format: str) -> Any:
         try:
-            query       = self.queries.get_end_time(test_title, self.bucket)
+            query = self.queries.get_end_time(test_title, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
@@ -158,9 +159,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_rps(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query       = self.queries.get_rps(test_title, start, end, self.bucket)
+            query = self.queries.get_rps(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            df          = self.process_data(flux_tables)
+            df = self.process_data(flux_tables)
             return df
         except Exception as er:
             logging.error(ErrorMessages.ER00063.value.format(self.name))
@@ -169,9 +170,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_active_threads(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query       = self.queries.get_active_threads(test_title, start, end, self.bucket)
+            query = self.queries.get_active_threads(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            df          = self.process_data(flux_tables)
+            df = self.process_data(flux_tables)
             return df
         except Exception as er:
             logging.error(ErrorMessages.ER00064.value.format(self.name))
@@ -180,9 +181,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_average_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query       = self.queries.get_average_response_time(test_title, start, end, self.bucket)
+            query = self.queries.get_average_response_time(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            df          = self.process_data(flux_tables)
+            df = self.process_data(flux_tables)
             return df
         except Exception as er:
             logging.error(ErrorMessages.ER00065.value.format(self.name))
@@ -191,9 +192,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query       = self.queries.get_median_response_time(test_title, start, end, self.bucket)
+            query = self.queries.get_median_response_time(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            df          = self.process_data(flux_tables)
+            df = self.process_data(flux_tables)
             return df
         except Exception as er:
             logging.error(ErrorMessages.ER00066.value.format(self.name))
@@ -202,9 +203,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_pct90_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query       = self.queries.get_pct90_response_time(test_title, start, end, self.bucket)
+            query = self.queries.get_pct90_response_time(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            df          = self.process_data(flux_tables)
+            df = self.process_data(flux_tables)
             return df
         except Exception as er:
             logging.error(ErrorMessages.ER00067.value.format(self.name))
@@ -213,9 +214,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_error_count(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query       = self.queries.get_error_count(test_title, start, end, self.bucket)
+            query = self.queries.get_error_count(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            df          = self.process_data(flux_tables)
+            df = self.process_data(flux_tables)
             return df
         except Exception as er:
             logging.error(ErrorMessages.ER00068.value.format(self.name))
@@ -224,9 +225,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_average_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query       = self.queries.get_average_response_time_per_req(test_title, start, end, self.bucket)
+            query = self.queries.get_average_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            result      = self.transform_flux_tables_to_dict(flux_tables)
+            result = self.transform_flux_tables_to_dict(flux_tables)
             return result
         except Exception as er:
             logging.error(ErrorMessages.ER00069.value.format(self.name))
@@ -235,9 +236,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query       = self.queries.get_median_response_time_per_req(test_title, start, end, self.bucket)
+            query = self.queries.get_median_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            result      = self.transform_flux_tables_to_dict(flux_tables)
+            result = self.transform_flux_tables_to_dict(flux_tables)
             return result
         except Exception as er:
             logging.error(ErrorMessages.ER00070.value.format(self.name))
@@ -246,9 +247,9 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_pct90_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query       = self.queries.get_pct90_response_time_per_req(test_title, start, end, self.bucket)
+            query = self.queries.get_pct90_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
-            result      = self.transform_flux_tables_to_dict(flux_tables)
+            result = self.transform_flux_tables_to_dict(flux_tables)
             return result
         except Exception as er:
             logging.error(ErrorMessages.ER00071.value.format(self.name))
@@ -257,7 +258,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
         try:
-            query       = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket)
+            query = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table:
@@ -270,7 +271,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
         try:
-            query       = self.queries.get_median_throughput_stats(test_title, start, end, self.bucket)
+            query = self.queries.get_median_throughput_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table:
@@ -283,7 +284,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
         try:
-            query       = self.queries.get_median_response_time_stats(test_title, start, end, self.bucket)
+            query = self.queries.get_median_response_time_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
@@ -296,7 +297,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
         try:
-            query       = self.queries.get_pct90_response_time_stats(test_title, start, end, self.bucket)
+            query = self.queries.get_pct90_response_time_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
@@ -309,7 +310,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
         try:
-            query       = self.queries.get_errors_pct_stats(test_title, start, end, self.bucket)
+            query = self.queries.get_errors_pct_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
@@ -439,7 +440,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: List of dictionaries with Google Web Vitals metrics
         """
         try:
-            query = self.queries.get_google_web_vitals(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_google_web_vitals(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -467,7 +468,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: List of dictionaries with fully loaded timing metrics
         """
         try:
-            query = self.queries.get_timings_fully_loaded(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_timings_fully_loaded(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -495,7 +496,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: List of dictionaries with page timing metrics
         """
         try:
-            query = self.queries.get_timings_page_timings(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_timings_page_timings(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -523,7 +524,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of main document timing metrics
         """
         try:
-            query = self.queries.get_timings_main_document(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_timings_main_document(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -551,7 +552,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of CPU long tasks metrics
         """
         try:
-            query = self.queries.get_cpu_long_tasks(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_cpu_long_tasks(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -579,7 +580,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of JS heap used size metrics
         """
         try:
-            query = self.queries.get_cdp_performance_js_heap_used_size(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_cdp_performance_js_heap_used_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -607,7 +608,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of JS heap total size metrics
         """
         try:
-            query = self.queries.get_cdp_performance_js_heap_total_size(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_cdp_performance_js_heap_total_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -635,7 +636,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of content type metrics
         """
         try:
-            query = self.queries.get_content_types(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_content_types(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -663,7 +664,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of first party content type metrics
         """
         try:
-            query = self.queries.get_first_party_content_types(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_first_party_content_types(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -691,7 +692,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of third party content type metrics
         """
         try:
-            query = self.queries.get_third_party_content_types(test_title, start, end, self.bucket, aggregation)
+            query = self.queries.get_third_party_content_types(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:

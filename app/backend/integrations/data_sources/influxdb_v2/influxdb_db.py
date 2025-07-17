@@ -31,6 +31,7 @@ class DBInfluxdb(db.Model):
     bucket        = db.Column(db.String(120), nullable=False)
     listener      = db.Column(db.String(120), nullable=False)
     tmz           = db.Column(db.String(120), nullable=False)
+    test_title_tag_name = db.Column(db.String(120), nullable=False)
     is_default    = db.Column(db.Boolean, default=False)
 
     def to_dict(self):

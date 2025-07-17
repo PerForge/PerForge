@@ -34,7 +34,6 @@ def get_tests():
     """
     try:
         project_id             = request.cookies.get('project')
-        project_data           = DBProjects.get_config_by_id(id=project_id)
         influxdb_configs       = DBInfluxdb.get_configs(project_id=project_id)
         db_configs = []
         for config in influxdb_configs:
