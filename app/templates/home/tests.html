@@ -14,29 +14,32 @@
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
                     <div class="card-body">
                         <div id="table-id">
-                            <div class="d-flex align-items-center justify-content-end mb-3">
-                                <div class="d-flex" id="bulk-select-actions">
-                                    <div>
-                                        <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
-                                            <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" />
-                                            <span class="fas fa-search search-box-icon"></span>
-                                        </div>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="d-flex">
+                                    <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
+                                        <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" style="min-width: 300px;"/>
+                                        <span class="fas fa-search search-box-icon"></span>
                                     </div>
-                                    <select class="form-select ms-2" id="dataSourceId">
-                                        {% for db in db_configs %}
-                                            <option value='{{ db | tojson | safe }}'>{{ db.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <select class="form-select ms-2" id="selectedAction">
-                                        <option value='{"type": "none"}' selected="selected">Choose output</option>
+                                    <div class="d-flex align-items-center ms-2">
+                                        <label for="dataSourceId" class="form-label mb-0 me-2">Datasource:</label>
+                                        <select class="form-select" id="dataSourceId">
+                                            {% for db in db_configs %}
+                                                <option value='{{ db | tojson | safe }}'>{{ db.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-flex" id="bulk-select-actions">
+                                    <select class="form-select ms-2" id="selectedAction" style="min-width: 180px;">
+                                        <option value='{"type": "none"}' selected="selected">Select an action</option>
                                         {% for output in output_configs %}
                                             <option value='{{ output | tojson | safe }}'>{{ output.name }}</option>
                                         {% endfor %}
-                                        <option value='{"type": "pdf_report"}'>PDF report</option>
-                                        <option value='{"type": "delete"}'>Delete</option>
+                                        <option value='{"type": "pdf_report"}'>PDF file</option>
+                                        <option value='{"type": "delete"}'>Delete test</option>
                                     </select>
-                                    <select class="form-select ms-2" id="templateGroupName">
-                                        <option value='' selected="selected">Template group</option>
+                                    <select class="form-select ms-2" id="templateGroupName" style="min-width: 310px;">
+                                        <option value='' selected="selected">Select a template group (optional)</option>
                                         {% for template_group in template_groups %}
                                             <option value="{{ template_group.id }}">{{ template_group.name }}</option>
                                         {% endfor %}
@@ -60,12 +63,12 @@
                                                 </div>
                                             </th>
                                             <th class="sort" data-sort="test_title">Test title</th>
-                                            <th>Template</th>
                                             <th class="sort" data-sort="duration">Duration (sec)</th>
                                             <th class="sort" data-sort="max_threads">Users</th>
                                             <th class="sort" data-sort="start_time">Start time</th>
                                             <th class="sort" data-sort="end_time">End time</th>
-                                            <th>Compare</th>
+                                            <th>Template</th>
+                                            <th>Baseline test</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -233,33 +236,6 @@
                         testTitleCell.className = "test_title";
                         testTitleCell.textContent = test.test_title;
 
-                        // Create and insert the Test ID dropdown
-                        const templateIdCell = row.insertCell();
-                        const selectTemplate = document.createElement("select");
-                        selectTemplate.className = "form-select";
-
-                        // Create a default "Choose for comparison" option
-                        const defaultTemplateOption = document.createElement("option");
-                        defaultTemplateOption.value = "no data"; // Set an empty value for the default option
-                        defaultTemplateOption.textContent = "For report generation";
-                        selectTemplate.appendChild(defaultTemplateOption);
-                        selectTemplate.setAttribute("template-test-id", test.test_title)
-                        templates.forEach(tmp => {
-                            const option = document.createElement("option");
-                            option.value = tmp.id;
-                            option.textContent = tmp.name;
-                            selectTemplate.appendChild(option);
-                        });
-                        templateIdCell.appendChild(selectTemplate);
-
-                        selectTemplate.addEventListener('change', (event) => {
-                            const value = event.target.value;
-                            const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
-                            let checkboxData = JSON.parse(checkbox.getAttribute('data-bulk-select-row'));
-                            checkboxData['template_id'] = value;
-                            checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
-                        });
-
                         // Insert Duration (modify as needed)
                         const durationCell = row.insertCell();
                         durationCell.className = "duration";
@@ -281,6 +257,33 @@
                         end_timeCell.textContent = test.end_time;
 
                         // Create and insert the Test ID dropdown
+                        const templateIdCell = row.insertCell();
+                        const selectTemplate = document.createElement("select");
+                        selectTemplate.className = "form-select";
+
+                        // Create a default "Choose for comparison" option
+                        const defaultTemplateOption = document.createElement("option");
+                        defaultTemplateOption.value = "no data"; // Set an empty value for the default option
+                        defaultTemplateOption.textContent = "Select a template";
+                        selectTemplate.appendChild(defaultTemplateOption);
+                        selectTemplate.setAttribute("template-test-id", test.test_title)
+                        templates.forEach(tmp => {
+                            const option = document.createElement("option");
+                            option.value = tmp.id;
+                            option.textContent = tmp.name;
+                            selectTemplate.appendChild(option);
+                        });
+                        templateIdCell.appendChild(selectTemplate);
+
+                        selectTemplate.addEventListener('change', (event) => {
+                            const value = event.target.value;
+                            const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
+                            let checkboxData = JSON.parse(checkbox.getAttribute('data-bulk-select-row'));
+                            checkboxData['template_id'] = value;
+                            checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
+                        });
+
+                        // Create and insert the Test ID dropdown
                         const testIdCell = row.insertCell();
                         const select = document.createElement("select");
                         select.className = "form-select";
@@ -288,7 +291,7 @@
                         // Create a default "Choose for comparison" option
                         const defaultOption = document.createElement("option");
                         defaultOption.value = "no data"; // Set an empty value for the default option
-                        defaultOption.textContent = "For comparison";
+                        defaultOption.textContent = "Select a test to compare (optional)";
                         select.appendChild(defaultOption);
                         select.setAttribute("data-test-id", test.test_title)
                         tests.forEach(test => {
@@ -312,7 +315,7 @@
                         btn.className = 'btn btn-danger';
                         const dataSource = document.getElementById('dataSourceId').value;
                         const dataSourceJson = JSON.parse(dataSource);
-                        btn.textContent = 'Report';
+                        btn.textContent = 'ML Report';
                         if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
                             btn.classList.add('disabled');
                         } else {
@@ -325,20 +328,6 @@
                 }
             });
 
-            async function checkVersion() {
-                const response = await fetch('/check_new_version');
-                const data = await response.json();
-                const versionInfo = document.getElementById('version-info');
-
-                if (data.new_version_released) {
-                    versionInfo.innerHTML = `
-                        New<span class="text-primary fw-bold ms-2">${data.new_version}</span> version is available!
-                        <a href="https://github.com/PerForge/PerForge/releases/tag/${data.new_version}" class="text-primary fw-bold" target="_blank">Click to check out the release notes and update.</a>
-                    `;
-                }
-            }
-            // Check version when the page loads
-            checkVersion();
 
             // --- Logic to save and restore selected data source ---
             document.addEventListener('DOMContentLoaded', function() {

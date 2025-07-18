@@ -425,18 +425,18 @@
             const viewLess = el.querySelector('[data-list-view="less"]');
             const listInfo = el.querySelector('[data-list-info]');
             const listFilter = document.querySelector('[data-list-filter]');
-            
+
             // Handle List.js initialization with proper error handling
             try {
               // Add a dummy row if needed - List.js requires at least one item during initialization
               const listBody = el.querySelector('.list');
               let dummyRowAdded = false;
-              
+
               if (listBody && listBody.children.length === 0) {
                 const dummyRow = document.createElement('tr');
                 dummyRow.id = 'dummy-list-row';
                 dummyRow.style.display = 'none';
-                
+
                 // Add cells with appropriate classes based on valueNames
                 if (options.valueNames && Array.isArray(options.valueNames)) {
                   options.valueNames.forEach(name => {
@@ -449,24 +449,24 @@
                   // Fallback if no valueNames
                   dummyRow.innerHTML = '<td>dummy</td>';
                 }
-                
+
                 listBody.appendChild(dummyRow);
                 dummyRowAdded = true;
               }
-              
+
               // Initialize List.js
               const list = new List(el, options);
-              
+
               // Store the list instance on the element for later access
               el.List = list;
-              
+
               // Remove the dummy row if we added one
               if (dummyRowAdded) {
                 const dummyRow = listBody.querySelector('#dummy-list-row');
                 if (dummyRow) {
                   dummyRow.remove();
                 }
-                
+
                 // Reset the items array after removing the dummy
                 if (list.items && list.items.length === 1) {
                   list.items = [];
@@ -474,7 +474,7 @@
                   list.matchingItems = [];
                 }
               }
-              
+
             } catch (error) {
               console.error('List.js initialization error:', error);
               return; // Exit if initialization fails
@@ -483,7 +483,7 @@
             // Get the list instance from the element
             const list = el.List;
             if (!list) return; // Skip the rest if list initialization failed
-            
+
             // -------fallback-----------
 
             list.on('updated', item => {
@@ -718,7 +718,7 @@
       }
 
       if (output.type === "none") {
-        showResultModal("Please choose an output.");
+        showResultModal("Please choose an action.");
         return null;
       }
 

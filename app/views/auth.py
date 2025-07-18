@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -180,13 +180,13 @@ def index(path):
             # Close and reset database connections to ensure schema changes take effect
             db.session.close()
             db.engine.dispose()
-            
+
             # Force a complete reset of all SQLAlchemy connections
             with app.app_context():
                 projects = DBProjects.get_configs()
                 project_stats = DBProjects.get_project_stats(project)
                 current_version = pkg.get_current_version_from_file()
-            
+
             return render_template('home/' + path, projects=projects, project_stats=project_stats, current_version=current_version)
         else:
             return redirect(url_for('choose_project'))
