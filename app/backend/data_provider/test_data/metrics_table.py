@@ -235,6 +235,8 @@ class MetricsTable:
                     metric.difference = round(metric.value - metric.baseline, 2)
                     if metric.baseline != 0:
                         metric.difference_pct = round((metric.difference / metric.baseline) * 100, 2)
+                    else:
+                        metric.difference_pct = 0.00
 
     def has_baseline(self) -> bool:
         """Check if baseline metrics are available"""

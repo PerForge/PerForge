@@ -298,14 +298,13 @@ class BaseTestData(ABC):
 
     def get_all_tables_json(self) -> str:
         """
-        Get all tables as a JSON string representation in an optimized format.
+        Get all tables as a JSON string representation in the specified nested format.
 
-        This method collects all tables and converts them to a flat list of metrics,
-        where each metric contains: metric name, transaction/scope, value, NFR status,
-        baseline (if available), and difference calculations.
+        This method collects all tables and formats them into a list of transactions,
+        where each transaction has a 'metrics' object containing detailed metric data.
 
         Returns:
-            JSON string containing all tables with their metrics in a flat format
+            JSON string containing all tables in the new structured format.
         """
         import json
         tables = self.get_all_tables()
@@ -315,25 +314,25 @@ class BaseTestData(ABC):
         for table_name, table in tables.items():
             if hasattr(table, 'metrics') and table.metrics:
                 for metric in table.metrics:
-                    transaction = metric.scope
-                    if transaction not in transactions:
-                        transactions[transaction] = {'transaction': transaction}
-                    transactions[transaction][metric.name] = metric.value
-                    # Add baseline and diff values if they exist
-                    if metric.baseline is not None:
-                        transactions[transaction][f"{metric.name}_baseline"] = metric.baseline
-                    if metric.difference_pct is not None:
-                        transactions[transaction][f"{metric.name}_diff_pct"] = metric.difference_pct
+                    transaction_name = metric.scope
+                    if transaction_name not in transactions:
+                        transactions[transaction_name] = {
+                            'transaction': transaction_name,
+                            'metrics': {}
+                        }
 
-            elif hasattr(table, 'table') and table.table:
-                for row in table.table:
-                    if 'transaction' in row and 'metric' in row and 'value' in row:
-                        transaction = row['transaction']
-                        if transaction not in transactions:
-                            transactions[transaction] = {'transaction': transaction}
-                        transactions[transaction][row['metric']] = row['value']
+                    if table_name not in transactions[transaction_name]['metrics']:
+                        transactions[transaction_name]['metrics'][table_name] = {}
+
+                    metric_data = {'value': metric.value}
+                    if metric.baseline is not None:
+                        metric_data['baseline'] = metric.baseline
+                    if metric.difference_pct is not None:
+                        metric_data['diff_pct'] = metric.difference_pct
+
+                    transactions[transaction_name]['metrics'][table_name][metric.name] = metric_data
 
         # Convert the grouped transactions to a list
         result = list(transactions.values())
 
-        return json.dumps(result, indent=2)
+        return json.dumps(result)

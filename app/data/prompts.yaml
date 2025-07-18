@@ -171,11 +171,8 @@ prompts:
       - [Provide a highlevel overview of the behavior of Memory usage only in one sentence]
       - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
-    Top 5 slowest requests:
-      - [request name]: median response time of [value] ms.
-
-    Requests with high error rate:
-      [If there are requests with a high error rate, include them]
+    Top 5 degraded transactions:
+      - {transaction}: median response time of {value} ms.
 
     Requests that do not meet NFRs:
       [If there are requests that don't meet the NFRs, include them]
@@ -216,24 +213,24 @@ prompts:
     ###Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
     ###Instructions:
       - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
-        - The request [request name] has a notably high percentage of errors at [percent value]%.
+        - The request {transaction} has a notably high percentage of errors at {value}%.
       - If all requests have an error rate less than 2%, use this structure:
         - No requests with high error rate.
       - Provide the top 5 slowest requests. Structure in a bullet list:
         - Top 5 slowest requests (Based on median):
-          - [request name]: median response time of [value] ms.
+          - {transaction}: median response time of {value} ms.
 - id: 12
   name: "[BE][COMPARISON] Aggregated data"
   type: default
   place: aggregated_data
   prompt: |
-    ###Task: FOLLOW the instructions below to ANALYZE the json and PROVIDE observations
+    ###Task: FOLLOW the instructions below to ANALYZE the json with back-end performance test results and PROVIDE observations
     ###Instructions:
-      - Identify transactions where the difference value is more than +300ms and the difference is positive (indicating degradation) and mark them as degraded.
+     - Identify {transaction} where the {diff_pct} value shows significant degradation.
       - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.'
       - If there are degraded transactions, then the output should contain only the following statements:
-        'For most transactions, the response time remained at the same level, except the following transactions:
-        - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
+        'Transactions with declining performance:
+        - The {metric} for {transaction} has declined by {diff_pct}, dropping from {baseline} to {value}.
 - id: 13
   name: System message
   type: default
@@ -245,93 +242,51 @@ prompts:
   type: default
   place: aggregated_data
   prompt: |
-    Analyze the provided frontend performance data and generate a structured output summary based on the format provided. Your task is to identify correlations between metrics, highlight patterns, and provide actionable recommendations. Ensure that the results are presented in the specified **Output Structure**.
-    Steps to Follow:
-    1. Input Analysis:
-      - Review the given frontend performance data JSON.
-      - Analyze metrics
-    2. Identify Correlations:
-      - Investigate relationships between metrics. For example:
-        - Are higher `TTFB` values associated with longer `fullyLoaded` times?
-        - Does `TBT` variability impact `LCP` or `FCP` values significantly?
-      - Focus on identifying patterns, trends, and correlations within transactions.
-    3. Highlight Patterns:
-      - Identify transactions with extreme values for certain metrics.
-      - Detect recurring trends such as consistently high `fullyLoaded` times or negligible `CLS`.
-    4. Provide Optimization Recommendations:
-      - Based on observed metric values, suggest potential areas for improvement.
-      - Specify which metrics seem to be bottlenecks or contribute to poor performance for specific transactions.
-    Output Structure:
-    Respond in the following format:
-    1. Correlation Analysis
-    - Metric Relationships:
-      - Summarize dependencies or patterns found between metrics.
-      - Example: "High TBT consistently aligns with higher fullyLoaded times."
-    - Outliers:
-      - Identify transactions with notably high or low values across metrics (e.g., "R01_Dashboard has a very high FCP of 4000ms").
-    2. Optimization Suggestions
-    - Provide actionable recommendations for improving performance.
-      - Example: "Reduce TBT for transactions with fullyLoaded values exceeding 10,000ms."
-    - Suggest focus points for each transaction with problematic metrics.
-
-    Example Output:
-    1. Correlation Analysis
-    - Relationships:
-      - "Longer fullyLoaded times frequently coincide with higher `TBT` values."
-      - "Transactions with minimal TBT show better FCP and LCP values."
-    - Outliers:
-      - Transaction `R01_My-Certifications` has an extremely high `fullyLoaded` of 11,500ms.
-      - Transaction `R03_Product-Page` shows very low `CLS` (0.0) but moderate `LCP` (2500ms).
-
-    2. Optimization Suggestions
-    - Optimize TBT for `R01_My-Certifications` to reduce its excessively high `fullyLoaded` time.
-    - Investigate backend processes for transactions with high TTFB (>1000ms) to improve response speeds.
-
-    Frontend Data Input:
+    ###Task: FOLLOW the instructions below to ANALYZE the json with front-end performance metrics and PROVIDE observations
+    ###Instructions:
+      - Identify {transaction} with pure performance and suggest a reason based on other metrics, as some metrics can influence one another.
+      - If there aren't transactions with pure performance, then the output should contain only the following statement: 'Performance is good across all transactions.'
+      - If there are transactions with pure performance, then the output should contain only the following statements:
+        'Transactions with pure performance:
+        - The {metric} for {transaction} is {value}.{Suggest a reason based on other metrics, as some metrics can influence one another.}'
+    ###Example correlations:
+    - TTFB & FCP/LCP: A slow Time to First Byte (TTFB) directly delays First Contentful Paint (FCP) and Largest Contentful Paint (LCP), as nothing can be rendered until the first byte of the HTML is received.
+    - Backend/Network & TTFB: TTFB is the result of redirectionTime, dns (domainLookupTime), connect (serverConnectionTime), ssl, and wait (serverResponseTime). A slow backEndTime is a major contributor to serverResponseTime and thus, a high TTFB.
+    - Resource Size & FCP/LCP: Large transfer sizes of render-blocking resources like css and javascript increase pageDownloadTime and frontEndTime, which in turn delays FCP and LCP.
+    - LCP Element & LCP: The transfer size of the specific image or font that is the LCP element directly impacts its load duration, and therefore the LCP score.
+    - JavaScript Size & TBT/FID: Large javascript transfer sizes lead to longer tasks, which increases totalBlockingTime (TBT). A high TBT is a primary cause of poor First Input Delay (FID), as it measures main-thread blocking.
+    - Dynamic Content & CLS: CLS (Cumulative Layout Shift) is worsened by image elements without defined dimensions, dynamically injected ads, or web font files that cause a flash of unstyled or invisible text.
+    - HTML Size & DOM Timings: A large html transfer size increases the time it takes to download and parse the document, delaying domInteractiveTime and domContentLoadedTime.
+    - Total Resources & Load Times: The cumulative transfer size of all resources (css, javascript, image, etc.) increases the overall pageLoadTime and the time to reach fullyLoaded.
+    - Long Tasks & TBT: TBT is the sum of the blocking portions (time over 50ms) of all long tasks that occur between FCP and Time To Interactive.
+    - JS Memory & Responsiveness: High JSHeapUsedSize can lead to more frequent garbage collection events, which are blocking tasks that increase TBT and make the page less responsive.
+    - Network Contention & Loading: High _queued or blocked times for critical assets, often due to network contention, will delay their download and negatively impact FCP and LCP.
+    - DOM Timings & Load Event: domContentLoadedTime occurs when the HTML is parsed, but pageLoadTime (the load event) is delayed until all resources, including image and css, have finished downloading.
 - id: 15
   name: "[FE][COMPARISON] Aggregated data"
   type: default
   place: aggregated_data
   prompt: |
-    ### Analyze the frontend performance data and generate a structured output summary based on the format provided. Your task is to identify correlations between metrics changes, highlight patterns, and provide actionable recommendations. Ensure the generated results follow the **Output Structure** specified below.
-    ### Steps to Follow:
-    1. Input Analysis:
-      - Review the given frontend performance data JSON.
-      - Compare and analyze metrics along with their baseline values and percentage differences.
-    2. Identify Correlations:
-      - Investigate relationships between metrics. For example:
-        - How changes in `FCP` impact `LCP` or `fullyLoaded`?
-        - Are increases in `TBT` strongly correlated with higher `fullyLoaded` times?
-    3. Highlight Patterns:
-      - Detect recurring patterns (e.g., transactions with significantly high or low changes across metrics).
-      - Identify anomalies or outliers, such as drastic percentage differences across certain transactions.
-    4. Provide Optimization Recommendations:
-      - Based on metric deviations, suggest potential areas for improvement. Specify what metrics should receive focus for particular transactions.
-
-    ### Output Structure:
-    Respond in the following format:
-    Correlation Analysis
-    - Metric Relationships:
-      - Summarize dependencies between metrics (e.g., "An increase in TBT correlates with longer fullyLoaded times").
-      - Highlight significant patterns or trends across transactions.
-    - Outliers:
-      - List transactions with the most dramatic % changes (positive or negative). Specify which metrics are affected.
-    Optimization Suggestions
-    - Specify actionable recommendations for improving performance metrics.
-      - Example: "Optimize TBT for transactions with fullyLoaded > 10,000ms."
-    - Suggest improvements for individual transactions if needed.
-
-    ### Example Output:
-    - Relationships:
-      - "Longer fullyLoaded times consistently occur with higher TBT percentages."
-      - "FCP and LCP mostly align where higher percentage changes are observed."
-    - Outliers:
-      - Transaction `R01_My-certifications` shows `FCP_diff_pct` of +354.03% and `LCP_diff_pct` of +150.24%.
-    Optimization Suggestions
-    - Reduce `TBT` for transactions like `R00_Login`, where large deviations affect fullyLoaded times.
-    - Investigate backend operations contributing to large `FCP` increases for transactions like `R01_My-certifications`.
-
-    ### Frontend Data Input:
+    ###Task: FOLLOW the instructions below to ANALYZE the json with front-end performance metrics and PROVIDE observations
+    ###Instructions:
+      - Identify {transaction} where the {diff_pct} value shows significant degradation (for example more than 10%).
+      - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, front-end performance remained at the same level.'
+      - If there are degraded transactions, then the output should contain only the following statements:
+        'Transactions with declining performance:
+        - The {metric} for {transaction} has declined by {diff_pct}, dropping from {baseline} to {value}.{Suggest a reason based on other metrics, as some metrics can influence one another.}'
+    ###Example correlations:
+    - TTFB & FCP/LCP: A slow Time to First Byte (TTFB) directly delays First Contentful Paint (FCP) and Largest Contentful Paint (LCP), as nothing can be rendered until the first byte of the HTML is received.
+    - Backend/Network & TTFB: TTFB is the result of redirectionTime, dns (domainLookupTime), connect (serverConnectionTime), ssl, and wait (serverResponseTime). A slow backEndTime is a major contributor to serverResponseTime and thus, a high TTFB.
+    - Resource Size & FCP/LCP: Large transfer sizes of render-blocking resources like css and javascript increase pageDownloadTime and frontEndTime, which in turn delays FCP and LCP.
+    - LCP Element & LCP: The transfer size of the specific image or font that is the LCP element directly impacts its load duration, and therefore the LCP score.
+    - JavaScript Size & TBT/FID: Large javascript transfer sizes lead to longer tasks, which increases totalBlockingTime (TBT). A high TBT is a primary cause of poor First Input Delay (FID), as it measures main-thread blocking.
+    - Dynamic Content & CLS: CLS (Cumulative Layout Shift) is worsened by image elements without defined dimensions, dynamically injected ads, or web font files that cause a flash of unstyled or invisible text.
+    - HTML Size & DOM Timings: A large html transfer size increases the time it takes to download and parse the document, delaying domInteractiveTime and domContentLoadedTime.
+    - Total Resources & Load Times: The cumulative transfer size of all resources (css, javascript, image, etc.) increases the overall pageLoadTime and the time to reach fullyLoaded.
+    - Long Tasks & TBT: TBT is the sum of the blocking portions (time over 50ms) of all long tasks that occur between FCP and Time To Interactive.
+    - JS Memory & Responsiveness: High JSHeapUsedSize can lead to more frequent garbage collection events, which are blocking tasks that increase TBT and make the page less responsive.
+    - Network Contention & Loading: High _queued or blocked times for critical assets, often due to network contention, will delay their download and negatively impact FCP and LCP.
+    - DOM Timings & Load Event: domContentLoadedTime occurs when the HTML is parsed, but pageLoadTime (the load event) is delayed until all resources, including image and css, have finished downloading.
 - id: 16
   name: "[FE][SINGLE] Template summary"
   type: default
@@ -341,11 +296,10 @@ prompts:
     ### Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
     @@@@
     Summary:
-      The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues]. The key areas for improvement include [highlight areas, e.g., FCP, LCP, fullyLoaded, or specific transactions].
-
+      The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues].
     Analysis:
-      - [Provide a high-level overview of METRIC trends, including insights into transactions with high deviations].
-      - [Summarize relationships between metrics such as FCP and LCP, or TBT and fullyLoaded].
+      - [Provide all detailed observations from aggregated data analysis].
+      - [Provide all detailed observations from graphs analysis].
       - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
     Pages/transactions that do not meet NFRs:
@@ -373,11 +327,10 @@ prompts:
     ### Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
     @@@@
     Summary:
-      The frontend performance testing results are [comparable with no significant performance issues/comparable with areas for improvement/uncomparable, with significant issues]. The key areas for improvement include [highlight areas].
-
+      The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues].
     Analysis:
-      - [Provide a high-level overview of METRIC trends, including insights into transactions with high deviations].
-      - [Summarize relationships between metrics such as FCP and LCP, or TBT and fullyLoaded].
+      - [Provide all detailed observations from aggregated data analysis].
+      - [Provide all detailed observations from graphs analysis].
       - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
     Pages/transactions that do not meet NFRs:

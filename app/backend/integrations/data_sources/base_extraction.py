@@ -805,7 +805,7 @@ class DataExtractionBase(ABC):
         return result
 
     @abstractmethod
-    def _fetch_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_count_per_content_type(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch content type metrics from frontend test.
         :param test_title: The title of the test
@@ -816,7 +816,7 @@ class DataExtractionBase(ABC):
         """
         pass
 
-    def get_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_count_per_content_type(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve content type metrics from frontend test.
         :param test_title: The title of the test
@@ -826,14 +826,14 @@ class DataExtractionBase(ABC):
         :return: Dictionary of content type metrics
         """
         try:
-            result = self._fetch_content_types(test_title, start, end, aggregation)
+            result = self._fetch_count_per_content_type(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting content types: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_first_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_first_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch first party content type metrics from frontend test.
         :param test_title: The title of the test
@@ -844,7 +844,7 @@ class DataExtractionBase(ABC):
         """
         pass
 
-    def get_first_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_first_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve first party content type metrics from frontend test.
         :param test_title: The title of the test
@@ -854,14 +854,14 @@ class DataExtractionBase(ABC):
         :return: Dictionary of first party content type metrics
         """
         try:
-            result = self._fetch_first_party_content_types(test_title, start, end, aggregation)
+            result = self._fetch_first_party_transfer_size(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting first party content types: {str(e)}")
             result = {}
         return result
 
     @abstractmethod
-    def _fetch_third_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_third_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch third party content type metrics from frontend test.
         :param test_title: The title of the test
@@ -872,7 +872,7 @@ class DataExtractionBase(ABC):
         """
         pass
 
-    def get_third_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def get_third_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Retrieve third party content type metrics from frontend test.
         :param test_title: The title of the test
@@ -882,7 +882,7 @@ class DataExtractionBase(ABC):
         :return: Dictionary of third party content type metrics
         """
         try:
-            result = self._fetch_third_party_content_types(test_title, start, end, aggregation)
+            result = self._fetch_third_party_transfer_size(test_title, start, end, aggregation)
         except Exception as e:
             logging.warning(f"Error getting third party content types: {str(e)}")
             result = {}
