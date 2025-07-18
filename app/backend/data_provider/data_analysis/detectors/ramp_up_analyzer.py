@@ -1,3 +1,17 @@
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from .base import BaseDetector
 import pandas as pd
 from typing import Literal, Callable
@@ -10,7 +24,7 @@ class RampUpPeriodAnalyzer(BaseDetector):
     def __init__(self, threshold_condition: Callable, base_metric: str):
         """
         Initialize the analyzer with detection parameters.
-        
+
         Args:
             threshold_condition: Function that evaluates if correlation crosses threshold
             base_metric: Reference metric to correlate against (typically 'users')
@@ -19,26 +33,26 @@ class RampUpPeriodAnalyzer(BaseDetector):
         self._name = 'Ramp-Up Analysis'
         self.threshold_condition = threshold_condition
         self.base_metric = base_metric
-    
+
     @property
     def type(self) -> Literal['fixed_load', 'ramp_up']:
         """Returns the analyzer type identifier."""
         return self._type
-        
+
     @property
     def name(self) -> str:
         """Returns the human-readable name of the analyzer."""
         return self._name
-    
+
     def detect(self, df: pd.DataFrame, metric: str, engine) -> pd.DataFrame:
         """
         Analyzes the data to detect potential system saturation points during ramp-up.
-        
+
         Args:
             df: Input DataFrame containing performance metrics
             metric: Name of the metric to analyze
             engine: Analysis engine providing configuration and output handling
-            
+
         Returns:
             DataFrame with added anomaly detection results
         """
@@ -92,7 +106,7 @@ class RampUpPeriodAnalyzer(BaseDetector):
                     description='Users ramped up successfully.',
                     value=None
                 )
-        
+
         # Clean up temporary analysis columns
         df = engine.delete_columns(df=df.copy(), columns=['rolling_correlation'])
         return df

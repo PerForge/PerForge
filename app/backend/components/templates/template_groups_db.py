@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ class DBTemplateGroups(db.Model):
             config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
             if not config:
                 return
-            
+
             exclude_fields = {'data', 'project_id', 'id'}
 
             for field, value in validated_data.model_dump().items():
