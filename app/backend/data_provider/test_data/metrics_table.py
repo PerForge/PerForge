@@ -48,9 +48,9 @@ class MetricsTable:
 
                     metric = Metric(
                         name=field_name,
-                        value=value,
+                        value=round(value, 2),
                         scope=current_row.get('page') or current_row.get('transaction'),
-                        baseline=baseline_value
+                        baseline=round(baseline_value, 2) if baseline_value is not None else None
                     )
                     self.add_metric(metric)
 
@@ -229,12 +229,14 @@ class MetricsTable:
             key = f"{metric.name}_{metric.scope or 'unknown'}"
             if key in baseline_lookup:
                 # Set baseline value from matching baseline metric
-                metric.baseline = baseline_lookup[key].value
+                metric.baseline = round(baseline_lookup[key].value, 2)
                 # Recalculate differences
                 if metric.baseline is not None and metric.value is not None:
-                    metric.difference = metric.value - metric.baseline
+                    metric.difference = round(metric.value - metric.baseline, 2)
                     if metric.baseline != 0:
-                        metric.difference_pct = (metric.difference / metric.baseline) * 100
+                        metric.difference_pct = round((metric.difference / metric.baseline) * 100, 2)
+                    else:
+                        metric.difference_pct = 0.00
 
     def has_baseline(self) -> bool:
         """Check if baseline metrics are available"""

@@ -626,7 +626,7 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting JS heap total size: {str(e)}")
             return {}
 
-    def _fetch_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_count_per_content_type(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch content type metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
@@ -636,7 +636,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of content type metrics
         """
         try:
-            query = self.queries.get_content_types(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_count_per_content_type(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -654,7 +654,7 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting content types: {str(e)}")
             return {}
 
-    def _fetch_first_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_first_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch first party content type metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
@@ -664,7 +664,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of first party content type metrics
         """
         try:
-            query = self.queries.get_first_party_content_types(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_first_party_transfer_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:
@@ -682,7 +682,7 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(f"Error getting first party content types: {str(e)}")
             return {}
 
-    def _fetch_third_party_content_types(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+    def _fetch_third_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
         """
         Fetch third party content type metrics from frontend test using SitespeedFluxQueries.
         :param test_title: The title of the test
@@ -692,7 +692,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of third party content type metrics
         """
         try:
-            query = self.queries.get_third_party_content_types(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_third_party_transfer_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
             records = self._execute_query(query)
 
             if not records:

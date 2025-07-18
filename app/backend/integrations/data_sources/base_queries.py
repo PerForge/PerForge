@@ -130,13 +130,13 @@ class FrontEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_content_types(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_count_per_content_type(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
         pass
 
     @abstractmethod
-    def get_first_party_content_types(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_first_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
         pass
 
     @abstractmethod
-    def get_third_party_content_types(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
         pass

@@ -24,9 +24,9 @@ class FrontendTestData(BaseTestData):
         'cpu_long_tasks',
         'cdp_performance_js_heap_used_size',
         'cdp_performance_js_heap_total_size',
-        'content_types',
-        'first_party_content_types',
-        'third_party_content_types'
+        'count_per_content_type',
+        'first_party_transfer_size',
+        'third_party_transfer_size'
     ]
 
     def __init__(self) -> None:

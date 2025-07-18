@@ -160,7 +160,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> group()
       '''
 
-  def get_content_types(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+  def get_count_per_content_type(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "requests")
@@ -176,7 +176,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> group()
       '''
 
-  def get_first_party_content_types(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+  def get_first_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["party"] == "firstParty")
@@ -190,7 +190,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> group()
       '''
 
-  def get_third_party_content_types(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+  def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["party"] == "thirdParty")
