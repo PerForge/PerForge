@@ -732,24 +732,25 @@
         }
       }
 
+      // Filter db_id to only include required fields (id and source_type)
+      const fullDbId = JSON.parse(selectedDb.value);
+      const dbId = {
+        id: fullDbId.id,
+        source_type: fullDbId.source_type
+      };
+
       // Filter each test object to include required fields, preserving baseline_test_title
       selectedRows["tests"] = transformedList.map(test => {
         const newTest = {
           test_title: test.test_title,
-          template_id: test.template_id
+          template_id: test.template_id,
+          db_id: dbId
         };
         if (test.baseline_test_title && test.baseline_test_title !== "no data") {
           newTest.baseline_test_title = test.baseline_test_title;
         }
         return newTest;
       });
-
-      // Filter db_id to only include required fields (id and source_type)
-      const fullDbId = JSON.parse(selectedDb.value);
-      selectedRows["db_id"] = {
-        id: fullDbId.id,
-        source_type: fullDbId.source_type
-      };
 
       selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
 

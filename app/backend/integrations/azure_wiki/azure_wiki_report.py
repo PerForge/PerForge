@@ -157,12 +157,13 @@ class AzureWikiReport(ReportingBase):
         title = self.output_obj.get_path() + (self.group_title if isgroup else self.replace_variables(self.title))
         return title
 
-    def generate_report(self, tests, db_id, action_id, template_group=None):
+    def generate_report(self, tests, action_id, template_group=None):
         path = None
         def process_test(test, isgroup):
             nonlocal path
             template_id = test.get('template_id')
             if template_id:
+                db_id = test.get('db_id')
                 self.set_template(template_id, db_id, action_id)
                 test_title            = test.get('test_title')
                 baseline_test_title   = test.get('baseline_test_title')

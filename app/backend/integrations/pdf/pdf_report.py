@@ -267,10 +267,8 @@ class PdfReport(ReportingBase):
         self.pdf_creator.elements.append(Spacer(1, self.pdf_creator.header_height))
 
 
-
-
-    def set_template(self, template, influxdb):
-        super().set_template(template, influxdb)
+    def set_template(self, template, db_id):
+        super().set_template(template, db_id)
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Use the timestamps from current_test_obj instead of direct attributes
@@ -379,7 +377,7 @@ class PdfReport(ReportingBase):
         # Return the table data as a JSON string
         return json.dumps(table_data)
 
-    def generate_report(self, tests, influxdb, template_group=None, theme='dark'):
+    def generate_report(self, tests, template_group=None, theme='dark'):
         templates_title = ""
         group_title     = None
         self.pdf_creator.set_theme(theme)
@@ -388,7 +386,8 @@ class PdfReport(ReportingBase):
             nonlocal templates_title
             template_id = test.get('template_id')
             if template_id:
-                self.set_template(template_id, influxdb)
+                db_id = test.get('db_id')
+                self.set_template(template_id, db_id)
                 test_title          = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
