@@ -31,8 +31,8 @@ class SmtpMailReport(ReportingBase):
         self.report_body = ""
         self.images      = []
 
-    def set_template(self, template, influxdb, action_id):
-        super().set_template(template, influxdb)
+    def set_template(self, template, db_config, action_id):
+        super().set_template(template, db_config)
         self.output_obj = SmtpMail(project=self.project, id=action_id)
 
     def add_group_text(self, text):
@@ -136,14 +136,15 @@ class SmtpMailReport(ReportingBase):
     def generate_path(self, isgroup):
         return self.group_title if isgroup else self.replace_variables(self.title)
 
-    def generate_report(self, tests, influxdb, action_id, template_group=None):
+    def generate_report(self, tests, action_id, template_group=None):
         templates_title = ""
         group_title     = None
         def process_test(test):
             nonlocal templates_title
             template_id = test.get('template_id')
             if template_id:
-                self.set_template(template_id, influxdb, action_id)
+                db_config = test.get('db_config')
+                self.set_template(template_id, db_config, action_id)
                 test_title            = test.get('test_title')
                 baseline_test_title   = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)

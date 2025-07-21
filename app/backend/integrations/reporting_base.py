@@ -36,7 +36,7 @@ class ReportingBase:
         self.current_test_obj: BaseTestData    = None
         self.baseline_test_obj: BaseTestData   = None
 
-    def set_template(self, template, db_id: Dict[str, str]):
+    def set_template(self, template, db_config: Dict[str, str]):
         template_obj                   = DBTemplates.get_config_by_id(project_id=self.project, id=template)
         self.nfr                       = template_obj["nfr"]
         self.title                     = template_obj["title"]
@@ -44,7 +44,7 @@ class ReportingBase:
         self.template_prompt_id        = template_obj["template_prompt_id"]
         self.aggregated_prompt_id      = template_obj["aggregated_prompt_id"]
         self.system_prompt_id          = template_obj["system_prompt_id"]
-        self.dp_obj                    = DataProvider(project=self.project, source_type=db_id.get("source_type"), id=db_id.get("id"))
+        self.dp_obj                    = DataProvider(project=self.project, source_type=db_config.get("source_type"), id=db_config.get("id"))
         self.nfrs_switch               = template_obj["nfrs_switch"]
         self.ai_switch                 = template_obj["ai_switch"]
         if self.ai_switch:

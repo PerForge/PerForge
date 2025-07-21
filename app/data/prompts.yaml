@@ -298,8 +298,8 @@ prompts:
     Summary:
       The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues].
     Analysis:
-      - [Provide all detailed observations from aggregated data analysis].
-      - [Provide all detailed observations from graphs analysis].
+      - [Put here all observations from aggregated data analysis in bullet point list].
+      - [Put here all observations from graphs analysis in bullet point list].
       - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
     Pages/transactions that do not meet NFRs:
@@ -329,8 +329,8 @@ prompts:
     Summary:
       The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues].
     Analysis:
-      - [Provide all detailed observations from aggregated data analysis].
-      - [Provide all detailed observations from graphs analysis].
+      - [Put here all observations from aggregated data analysis in bullet point list].
+      - [Put here all observations from graphs analysis in bullet point list].
       - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
 
     Pages/transactions that do not meet NFRs:

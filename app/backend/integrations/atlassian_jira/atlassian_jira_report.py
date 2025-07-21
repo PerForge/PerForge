@@ -29,8 +29,8 @@ class AtlassianJiraReport(ReportingBase):
         self.report_body = ""
         self.issue_id    = None
 
-    def set_template(self, template, influxdb, action_id):
-        super().set_template(template, influxdb)
+    def set_template(self, template, db_config, action_id):
+        super().set_template(template, db_config)
         self.output_obj = AtlassianJira(project=self.project, id=action_id)
 
     def add_group_text(self, text):
@@ -122,7 +122,7 @@ class AtlassianJiraReport(ReportingBase):
         self.issue_id = self.output_obj.put_page_to_jira(title=issue_title)
         return self.issue_id
 
-    def generate_report(self, tests, influxdb, action_id, template_group=None):
+    def generate_report(self, tests, action_id, template_group=None):
         templates_title = ""
         group_title = None
         def process_test(test, isgroup):
@@ -130,7 +130,8 @@ class AtlassianJiraReport(ReportingBase):
             nonlocal group_title
             template_id = test.get('template_id')
             if template_id:
-                self.set_template(template_id, influxdb, action_id)
+                db_config = test.get('db_config')
+                self.set_template(template_id, db_config, action_id)
                 test_title          = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)

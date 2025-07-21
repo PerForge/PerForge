@@ -732,11 +732,19 @@
         }
       }
 
+      // Filter db_config to only include required fields (id and source_type)
+      const fullDbId = JSON.parse(selectedDb.value);
+      const dbId = {
+        id: fullDbId.id,
+        source_type: fullDbId.source_type
+      };
+
       // Filter each test object to include required fields, preserving baseline_test_title
       selectedRows["tests"] = transformedList.map(test => {
         const newTest = {
           test_title: test.test_title,
-          template_id: test.template_id
+          template_id: test.template_id,
+          db_config: dbId
         };
         if (test.baseline_test_title && test.baseline_test_title !== "no data") {
           newTest.baseline_test_title = test.baseline_test_title;
@@ -744,24 +752,19 @@
         return newTest;
       });
 
-      // Filter db_id to only include required fields (id and source_type)
-      const fullDbId = JSON.parse(selectedDb.value);
-      selectedRows["db_id"] = {
-        id: fullDbId.id,
-        source_type: fullDbId.source_type
+      selectedRows["output_config"] = {
+        "output_id": (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id
       };
-
-      selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
 
       // Add integration_type to the request data if it exists in the output object
       if (output.integration_type) {
-        selectedRows["integration_type"] = output.integration_type;
+        selectedRows["output_config"]["integration_type"] = output.integration_type;
       }
 
       // Add selected theme for PDF reports
       if (output.type === 'pdf_report') {
         const theme = localStorage.getItem('theme') || 'dark';
-        selectedRows['theme'] = theme;
+        selectedRows["output_config"]["theme"] = theme;
       }
 
       if (selectedTemplateGroup.value !== "") {

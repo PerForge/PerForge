@@ -166,7 +166,7 @@ def generate_report():
 
     Request Body:
         tests: List of tests to include in the report
-        db_id: Database ID
+        db_config: Database ID
         template_group: Template group ID
         output_id: Output ID
         integration_type: Integration type
@@ -191,17 +191,18 @@ def generate_report():
                 errors=[{"code": "missing_data", "message": "No data provided"}]
             )
 
-        if "output_id" not in data:
+        output_config = data.get('output_config', {})
+
+        if "output_id" not in output_config:
             return api_response(
                 message="Missing output_id parameter",
                 status=HTTP_BAD_REQUEST,
                 errors=[{"code": "missing_param", "message": "Missing output_id parameter"}]
             )
 
-        db_id = data.get("db_id")
         template_group = data.get("template_group")
-        action_id = data.get("output_id")
-        integration_type = data.get("integration_type")
+        action_id = output_config.get("output_id")
+        integration_type = output_config.get("integration_type")
 
         # Determine action type
         if action_id == "pdf_report" or action_id == "delete":
@@ -220,14 +221,14 @@ def generate_report():
             # Ensure all report types are loaded before getting the PDF report instance
             _ensure_report_types_loaded()
             project_id = get_project_id()
-            theme = data.get('theme', 'dark')
+            theme = output_config.get('theme', 'dark')
             # Get the PDF report instance from the registry
             pdf = ReportRegistry.get_report_instance(action_type, project_id)
             if not pdf:
                 return api_response("error", "PDF report type not found in registry.", HTTP_NOT_FOUND)
 
             # Generate the report
-            result = pdf.generate_report(data["tests"], db_id, template_group, theme=theme)
+            result = pdf.generate_report(data["tests"], template_group, theme=theme)
 
             pdf.pdf_io.seek(0)
             # Convert the result to a JSON string and include it in the headers
@@ -244,8 +245,9 @@ def generate_report():
 
         elif action_type == "delete":
             try:
-                dp = DataProvider(project=project_id, source_type=db_id['source_type'], id=db_id['id'])
                 for test in data['tests']:
+                    db_config = test.get('db_config')
+                    dp = DataProvider(project=project_id, source_type=db_config['source_type'], id=db_config['id'])
                     dp.ds_obj.delete_test_data(test['test_title'])
                 return api_response(message="Tests deleted successfully", status=HTTP_OK)
             except Exception as e:
@@ -263,7 +265,7 @@ def generate_report():
 
             if ReportRegistry.is_valid_report_type(action_type):
                 report_instance = ReportRegistry.get_report_instance(action_type, project_id)
-                result = report_instance.generate_report(data["tests"], db_id, action_id, template_group)
+                result = report_instance.generate_report(data["tests"], action_id, template_group)
                 return api_response(data=result)
             else:
                 return api_response(
