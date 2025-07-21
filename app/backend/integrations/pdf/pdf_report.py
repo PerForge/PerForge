@@ -378,48 +378,64 @@ class PdfReport(ReportingBase):
         return json.dumps(table_data)
 
     def generate_report(self, tests, template_group=None, theme='dark'):
-        templates_title = ""
-        group_title     = None
+        # Align title generation with AtlassianConfluenceReport logic
+        page_title  = None
+        group_title = None
         self.pdf_creator.set_theme(theme)
 
-        def process_test(test):
-            nonlocal templates_title
+        def process_test(test, isgroup):
+            nonlocal page_title, group_title
             template_id = test.get('template_id')
             if template_id:
-                db_config = test.get('db_config')
+                db_config            = test.get('db_config')
                 self.set_template(template_id, db_config)
-                test_title          = test.get('test_title')
-                baseline_test_title = test.get('baseline_test_title')
+                test_title           = test.get('test_title')
+                baseline_test_title  = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
+
+                # Determine overall PDF title once
+                if page_title is None:
+                    if isgroup:
+                        group_title = self.generate_title(True)
+                        page_title  = group_title
+                    else:
+                        page_title = self.generate_title(False)
+
+                # Section title for this specific template
                 title = self.generate_title(False)
                 self.pdf_creator.add_title(title)
                 self.generate(test_title, baseline_test_title)
-                if not group_title:
-                    templates_title += f'{title}_'
+
+        # Handle template groups or individual templates
         if template_group:
             self.set_template_group(template_group)
-            group_title           = self.generate_title(True)
-            self.pdf_creator.add_title(group_title)
+            title = self.generate_title(True)
+            self.pdf_creator.add_title(title)
+
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
                         if obj.get('id') == test.get('template_id'):
-                            process_test(test)
+                            process_test(test, True)
+
+            # Add AI/ML/NFR summary for the whole group at the top
+            summary_text = self.analyze_template_group()
+            if summary_text:
+                self.pdf_creator.add_text_summary(summary_text)
         else:
             for test in tests:
-                process_test(test)
-        current_time = datetime.now()
-        time_str     = current_time.strftime("%d%m%Y-%H%M")
-        if not group_title:
-            templates_title += time_str
-        else:
-            templates_title = group_title + time_str
+                process_test(test, False)
 
+        # Build filename using the resolved page_title (or group title) with timestamp
+        filename_prefix = page_title if page_title else "report"
+        filename = f"{filename_prefix}"
+
+        # Finalize PDF document
         self.pdf_creator.build()
         response = self.generate_response()
-        response['filename'] = templates_title
+        response['filename'] = filename
         return response
 
     def generate(self, current_test_title, baseline_test_title = None):

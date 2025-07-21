@@ -181,7 +181,7 @@ class AtlassianConfluenceReport(ReportingBase):
         return ''.join(html)
 
     def generate_report(self, tests, action_id, template_group=None):
-        page_title  = None  # final title used for both creation and update
+        page_title  = None
         group_title = None
         def process_test(test, isgroup):
             nonlocal page_title
