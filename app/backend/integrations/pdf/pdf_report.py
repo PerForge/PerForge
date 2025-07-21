@@ -267,8 +267,8 @@ class PdfReport(ReportingBase):
         self.pdf_creator.elements.append(Spacer(1, self.pdf_creator.header_height))
 
 
-    def set_template(self, template, db_id):
-        super().set_template(template, db_id)
+    def set_template(self, template, db_config):
+        super().set_template(template, db_config)
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Use the timestamps from current_test_obj instead of direct attributes
@@ -386,8 +386,8 @@ class PdfReport(ReportingBase):
             nonlocal templates_title
             template_id = test.get('template_id')
             if template_id:
-                db_id = test.get('db_id')
-                self.set_template(template_id, db_id)
+                db_config = test.get('db_config')
+                self.set_template(template_id, db_config)
                 test_title          = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)

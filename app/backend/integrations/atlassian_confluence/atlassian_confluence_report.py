@@ -28,8 +28,8 @@ class AtlassianConfluenceReport(ReportingBase):
         self.report_body = ""
         self.page_id     = None
 
-    def set_template(self, template, db_id, action_id):
-        super().set_template(template, db_id)
+    def set_template(self, template, db_config, action_id):
+        super().set_template(template, db_config)
         self.output_obj = AtlassianConfluence(project=self.project, id=action_id)
 
     def add_group_text(self, text):
@@ -188,8 +188,8 @@ class AtlassianConfluenceReport(ReportingBase):
             nonlocal group_title
             template_id = test.get('template_id')
             if template_id:
-                db_id = test.get('db_id')
-                self.set_template(template_id, db_id, action_id)
+                db_config = test.get('db_config')
+                self.set_template(template_id, db_config, action_id)
                 test_title          = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)

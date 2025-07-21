@@ -166,7 +166,7 @@ def generate_report():
 
     Request Body:
         tests: List of tests to include in the report
-        db_id: Database ID
+        db_config: Database ID
         template_group: Template group ID
         output_id: Output ID
         integration_type: Integration type
@@ -244,8 +244,8 @@ def generate_report():
         elif action_type == "delete":
             try:
                 for test in data['tests']:
-                    db_id = test.get('db_id')
-                    dp = DataProvider(project=project_id, source_type=db_id['source_type'], id=db_id['id'])
+                    db_config = test.get('db_config')
+                    dp = DataProvider(project=project_id, source_type=db_config['source_type'], id=db_config['id'])
                     dp.ds_obj.delete_test_data(test['test_title'])
                 return api_response(message="Tests deleted successfully", status=HTTP_OK)
             except Exception as e:

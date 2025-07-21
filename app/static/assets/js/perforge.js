@@ -732,7 +732,7 @@
         }
       }
 
-      // Filter db_id to only include required fields (id and source_type)
+      // Filter db_config to only include required fields (id and source_type)
       const fullDbId = JSON.parse(selectedDb.value);
       const dbId = {
         id: fullDbId.id,
@@ -744,7 +744,7 @@
         const newTest = {
           test_title: test.test_title,
           template_id: test.template_id,
-          db_id: dbId
+          db_config: dbId
         };
         if (test.baseline_test_title && test.baseline_test_title !== "no data") {
           newTest.baseline_test_title = test.baseline_test_title;
