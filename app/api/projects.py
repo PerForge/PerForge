@@ -23,6 +23,12 @@ from app.api.base import (
     HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
 from app.backend.components.projects.projects_db import DBProjects
+from app.backend.components.secrets.secrets_db import DBSecrets
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
+from app.backend.components.nfrs.nfrs_db import DBNFRs
+from app.backend.components.graphs.graphs_db import DBGraphs
+from app.backend.integrations.grafana.grafana_db import DBGrafana
+from app.backend.components.templates.templates_db import DBTemplates
 from app.backend.errors import ErrorMessages
 from app import db
 
@@ -92,7 +98,16 @@ def create_project():
         db.session.close()
         db.engine.dispose()
 
+        # Extract flag whether to create example secrets
+        create_examples_flag = project_data.pop("create_examples", False)
+
         new_project_id = DBProjects.save(data=project_data)
+
+        # If requested, generate example data for the new project
+        if create_examples_flag:
+            _create_example_data(new_project_id)
+
+
 
         return api_response(
             data={"project_id": new_project_id},
@@ -278,3 +293,144 @@ def set_active_project(project_id):
             status=HTTP_BAD_REQUEST,
             errors=[{"code": "project_error", "message": str(e)}]
         )
+
+def _create_example_data(project_id: str) -> None:
+    """Create example secrets and integrations for a newly created project.
+
+    Args:
+        project_id: The ID of the project that the examples belong to.
+    """
+    try:
+        influxdb_token_example = DBSecrets.save({
+            "id": None,
+            "key": "[EXAMPLE] INFLUXDB TOKEN FROM DOCKER-COMPOSE",
+            "value": "DqwGq5e7Avv9gKYi2NtRtRenOxbvEqXMtg-r4WjNxYlerHMfikeLtCTJwSTzk-5NheVXTOFi0qug5jRGuh8-mw==",
+            "project_id": project_id
+        })
+
+        fake_token_example = DBSecrets.save({
+            "id": None,
+            "key": "[EXAMPLE] FAKE TOKEN",
+            "value": "123",
+            "project_id": project_id
+        })
+
+        # InfluxDB integration example
+        DBInfluxdb.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] INTEGRATION WITH INFLUXDB FROM DOCKER-COMPOSE",
+            "url": "http://influxdb:8086",
+            "org_id": "perforge",
+            "token": influxdb_token_example,
+            "timeout": 60000,
+            "bucket": "jmeter",
+            "listener": "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient",
+            "tmz": "UTC",
+            "test_title_tag_name": "testTitle",
+            "is_default": True
+        })
+
+        # Grafana integration example
+        grafana_integration_example = DBGrafana.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] INTEGRATION WITH GRAFANA FROM DOCKER-COMPOSE",
+            "server": "http://grafana:8086",
+            "org_id": "1",
+            "token": fake_token_example,
+            "test_title": "testTitle",
+            "baseline_test_title": "baseline_testTitle",
+            "is_default": True,
+            "dashboards": [
+                {
+                    "id": 1,
+                    "content": "/d/jmeter-test-results-standard-listener/jmeter-test-results-standard-listener",
+                    "grafana_id": None
+                },
+                {
+                    "id": 2,
+                    "content": "/d/jmeter-test-comparison-standard-listener/jmeter-tests-comparison-standard-listener",
+                    "grafana_id": None
+                }
+            ]
+        })
+
+        # NFR example
+        nfr_example_id = DBNFRs.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] NFR",
+            "metric_type": "backend",
+            "rows": [
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "avg",
+                    "operation": "<",
+                    "threshold": 500,
+                    "weight": None
+                },
+                {
+                    "regex": False,
+                    "scope": "Dummy Sampler 1",
+                    "metric": "pct50",
+                    "operation": "<",
+                    "threshold": 700,
+                    "weight": None
+                },
+                {
+                    "regex": True,
+                    "scope": "Dummy.*",
+                    "metric": "pct90",
+                    "operation": "<",
+                    "threshold": 1000,
+                    "weight": None
+                }
+            ]
+        })
+
+        grafana_dashboard_id = DBGrafana.get_config_by_id(project_id, id=grafana_integration_example)['dashboards'][0]['id']
+        # Graph example
+        graph_example_id = DBGraphs.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] TOTAL THROUGHPUT",
+            "grafana_id": grafana_integration_example,
+            "dash_id": grafana_dashboard_id,
+            "view_panel": "6",
+            "width": "1000",
+            "height": "500",
+            "custom_vars": "",
+            "prompt_id": None
+        })
+
+        # Template example
+        DBTemplates.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] TEMPLATE COPY",
+            "nfr": nfr_example_id,
+            "title": "[EXAMPLE] REPORT",
+            "ai_switch": False,
+            "ai_aggregated_data_switch": False,
+            "ai_graph_switch": False,
+            "ai_to_graphs_switch": False,
+            "nfrs_switch": True,
+            "ml_switch": True,
+            "template_prompt_id": 8,
+            "aggregated_prompt_id": 11,
+            "system_prompt_id": 13,
+            "data": [
+                {
+                    "content": "Available variables:\nCommon variables:\n${current_test_title} Name of the current test.\n${current_duration} Duration of the current test in seconds.\n${current_start_time} Start time of the current test.\n${current_end_time} End time of the current test.\n${baseline_test_title} Name of the baseline test.\n${baseline_duration} Duration of the baseline test in seconds.\n${baseline_start_time} Start time of the baseline test.\n${baseline_end_time} End time of the baseline test.\nBackend variables:\n${current_max_active_users} Max active users for the current test.\n${current_errors_pct_stats} Error percentage for the current test.\n${current_median_response_time_stats} Median response time for the current test.\n${current_median_throughput} Median throughput for the current test.\n${current_pct90_response_time_stats} 90th percentile response time for the current test.\n${current_grafana_link} Grafana link for the current test.\n${baseline_max_active_users} Max active users for the baseline test.\n${baseline_errors_pct_stats} Error percentage for the baseline test.\n${baseline_median_response_time_stats} Median response time for the baseline test.\n${baseline_median_throughput} Median throughput for the baseline test.\n${baseline_pct90_response_time_stats} 90th percentile response time for the baseline test.\n${baseline_grafana_link} Grafana link for the baseline test.\nSummary variables:\n${nfr_summary} Summary of Non-Functional Requirements validation.\n${ml_summary} Summary of ML-based anomaly detection.\n${ai_summary} Summary generated by AI based on test results.",
+                    "graph_id": None,
+                    "template_id": None,
+                    "type": "text"
+                },
+                {
+                    "content": None,
+                    "graph_id": graph_example_id,
+                    "template_id": None,
+                    "type": "graph"
+                }
+            ]
+        })
+
+    except Exception as exc:
+        logging.warning(f"Failed to create example data for project {project_id}: {exc}")

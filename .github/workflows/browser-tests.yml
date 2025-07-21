@@ -2,7 +2,7 @@ name: Browser Auto Tests
 
 on:
   push:
-    branches: [ "dev", "v2", "main", "PF-230" ]
+    branches: [ "dev", "main"]
 
 jobs:
   test:

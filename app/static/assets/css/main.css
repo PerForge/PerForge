@@ -1852,10 +1852,30 @@ svg:not(:host).svg-inline--fa, svg:not(:root).svg-inline--fa {
     flex-direction: column;
     align-items: center;
     width: 300px !important;
-    height: 300px !important;
+    min-height: 300px !important;
+    height: auto !important;
     margin: 5px;
     border-radius: 16px !important;
 }
+/* -------- Integration card overflow fix -------- */
+.card-integrations p {
+    word-break: break-word;
+    white-space: normal;
+    text-align: center;
+    width: 100%;
+}
+.card-integrations .d-flex {
+    width: 100%;
+    margin-top: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+.card-integrations .btn {
+    white-space: nowrap;
+    margin: 2px;
+}
+/* -------- End overflow fix -------- */
 
 .card-project {
     width: 200px !important;
