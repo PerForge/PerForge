@@ -96,6 +96,7 @@
                                     </div>
                                     <div>
                                         <button class="btn btn-primary mt-5" type="button" id="addDashboardButton" onclick="addDashboard()">Add Dashboard</button>
+                                        <button class="btn btn-secondary ms-2 mt-5" type="button" id="testGrafanaBtn" onclick="testGrafana()">Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                         <button class="btn btn-primary ms-2 mt-5" type="submit">Save</button>
                                         {% if grafana_config %}
                                             <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
@@ -328,5 +329,63 @@
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
           return new bootstrap.Tooltip(tooltipTriggerEl)
         });
+
+        // Test Grafana connectivity using current form inputs
+        window.testGrafana = function() {
+            const testBtn = document.getElementById('testGrafanaBtn');
+            const spinner = testBtn.querySelector('.spinner-border');
+            testBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            const serverInput = document.getElementById('server').value.trim();
+            if (!serverInput) {
+                showFlashMessage('Please enter the Grafana server URL before testing.', 'error');
+                return;
+            }
+
+            const tokenSelect = document.getElementById('token');
+            const orgIdInput = document.getElementById('org_id').value.trim();
+    const payload = { url: serverInput };
+    if (orgIdInput) {
+        payload.org_id = orgIdInput;
+    }
+
+            if (tokenSelect.value === 'create_new') {
+                const newTokenValue = document.getElementById('new_secret_value').value;
+                if (!newTokenValue) {
+                    showFlashMessage('Enter the new secret value before testing.', 'error');
+                    return;
+                }
+                payload.token = newTokenValue;
+            } else {
+                if (!tokenSelect.value) {
+                    showFlashMessage('Please select a token or create a new one before testing.', 'error');
+                    return;
+                }
+                payload.token_id = tokenSelect.value;
+            }
+
+            fetch('/api/v1/integrations/grafana/ping', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json().then(body => ({ status: response.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300) {
+                        showFlashMessage('Connection successful.', 'success');
+                    } else {
+                        const errorMessage = body?.errors?.[0]?.message || body.message || 'Ping failed.';
+                        showFlashMessage(errorMessage, 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showFlashMessage('Ping failed.', 'error');
+                })
+                .finally(() => {
+                    testBtn.disabled = false;
+                    spinner.style.display = 'none';
+                });
+        };
     </script>
 {% endblock content %}

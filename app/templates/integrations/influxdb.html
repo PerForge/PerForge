@@ -85,6 +85,7 @@
                                     {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
+                                    <button class="btn btn-secondary mt-5 me-2" type="button" id="testIntegrationBtn" onclick="testIntegration()">Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>
                                     {% if influxdb_config %}
                                         <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
@@ -224,6 +225,69 @@
                 .catch(error => {
                     console.error('Error:', error);
                     showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
+                });
+        }
+
+        function testIntegration() {
+    const testBtn = document.getElementById('testIntegrationBtn');
+    const spinner = testBtn.querySelector('.spinner-border');
+    testBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+            const urlInput = document.getElementById('url');
+            const orgInput = document.getElementById('org_id');
+            const bucketInput = document.getElementById('bucket');
+            const tokenSelect = document.getElementById('token');
+
+            if (!urlInput.value || !orgInput.value || !bucketInput.value) {
+                showFlashMessage('Please fill URL, Org and Bucket fields before testing.', 'error');
+                return;
+            }
+
+            const payload = {
+                url: urlInput.value,
+                org_id: orgInput.value,
+                bucket: bucketInput.value
+            };
+
+            if (!tokenSelect.value) {
+                showFlashMessage('Please select a token or create a new one before testing.', 'error');
+                return;
+            }
+
+            if (tokenSelect.value === 'create_new') {
+                const newTokenValue = document.getElementById('new_secret_value').value;
+                if (!newTokenValue) {
+                    showFlashMessage('Enter the new secret value before testing.', 'error');
+                    return;
+                }
+                payload.token = newTokenValue;
+            } else {
+                payload.token_id = tokenSelect.value;
+            }
+
+            fetch('/api/v1/integrations/influxdb/ping', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json().then(body => ({ status: response.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300) {
+                        showFlashMessage('Connection successful.', 'success');
+                    } else {
+                        const errorMessage = body?.errors?.[0]?.message || body.message || 'Ping failed.';
+                        showFlashMessage(errorMessage, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ping error:', error);
+                    showFlashMessage(error.message || 'Ping failed.', 'error');
+                })
+                .finally(() => {
+                    testBtn.disabled = false;
+                    spinner.style.display = 'none';
                 });
         }
 

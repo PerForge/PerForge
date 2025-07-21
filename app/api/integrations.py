@@ -25,6 +25,8 @@ from app.backend.integrations.atlassian_jira.atlassian_jira_db import DBAtlassia
 from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
+from app.backend.components.secrets.secrets_db import DBSecrets
+from influxdb_client import InfluxDBClient
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
@@ -408,6 +410,147 @@ def update_integration(integration_id):
         logging.error(f"Error updating integration: {str(e)}")
         return api_response(
             message="Error updating integration",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
+@integrations_api.route('/api/v1/integrations/grafana/ping', methods=['POST'])
+@api_error_handler
+def ping_grafana():
+    """Ping Grafana by calling its /api/health endpoint with provided URL and optional API key."""
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(message="No project selected", status=HTTP_BAD_REQUEST,
+                                 errors=[{"code": "missing_project", "message": "No project selected"}])
+
+        data = request.get_json(silent=True) or {}
+        url = data.get('url')
+        token = data.get('token')
+        token_id = data.get('token_id')
+        org_id = data.get('org_id')
+
+        if not url or (not token and not token_id):
+            return api_response(message="Required parameters are missing (url, token/token_id)", status=HTTP_BAD_REQUEST,
+                                 errors=[{"code": "missing_params", "message": "url and token/token_id are required"}])
+
+        if not token and token_id:
+            secret = DBSecrets.get_config_by_id(project_id=project_id, id=token_id)
+            if not secret:
+                return api_response(message=f"Secret with ID {token_id} not found", status=HTTP_NOT_FOUND,
+                                     errors=[{"code": "not_found", "message": f"Secret with ID {token_id} not found"}])
+            token = secret['value']
+
+        try:
+            import requests
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            resp = requests.get(f"{url.rstrip('/')}/api/org", headers=headers, timeout=5)
+            if resp.status_code == 200:
+                if org_id:
+                    try:
+                        expected = str(org_id)
+                        actual = str(resp.json().get('id'))
+                    except Exception:
+                        raise RuntimeError("Unable to parse organization id from response")
+                    if expected != actual:
+                        raise RuntimeError(f"Organization ID mismatch (expected {expected}, got {actual})")
+                return api_response(message="Ping successful")
+            elif resp.status_code in (401, 403):
+                raise RuntimeError("Invalid token")
+            else:
+                raise RuntimeError(f"Unexpected response: {resp.status_code} {resp.text}")
+        except Exception as e:
+            logging.error(f"Grafana ping failed: {str(e)}")
+            return api_response(message="Unable to reach Grafana", status=HTTP_BAD_REQUEST,
+                                 errors=[{"code": "ping_failed", "message": str(e)}])
+    except Exception as e:
+        logging.error(f"Error pinging Grafana: {str(e)}")
+        return api_response(message="Error pinging Grafana", status=HTTP_BAD_REQUEST,
+                             errors=[{"code": "integration_error", "message": str(e)}])
+
+
+@integrations_api.route('/api/v1/integrations/influxdb/ping', methods=['POST'])
+@api_error_handler
+def ping_influxdb():
+    """Ping InfluxDB using connection parameters supplied in the request body.
+    Expected JSON payload:
+        {
+            "url": "http://localhost:8086",
+            "org_id": "my-org",
+            "bucket": "my-bucket",
+            "token": "<optional: raw token>",
+            "token_id": "<optional: id of secret>"
+        }
+    """
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        data = request.get_json(silent=True) or {}
+        url = data.get('url')
+        org_id = data.get('org_id')
+        bucket = data.get('bucket')
+        token = data.get('token')
+        token_id = data.get('token_id')
+        org_id = data.get('org_id')
+
+        if not all([url, org_id, bucket]) or (not token and not token_id):
+            return api_response(
+                message="Required parameters are missing (url, org_id, bucket, token/token_id)",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "url, org_id, bucket and token/token_id are required"}]
+            )
+
+        # Retrieve token value from DB if token_id provided
+        if not token and token_id:
+            secret = DBSecrets.get_config_by_id(project_id=project_id, id=token_id)
+            if not secret:
+                return api_response(
+                    message=f"Secret with ID {token_id} not found",
+                    status=HTTP_NOT_FOUND,
+                    errors=[{"code": "not_found", "message": f"Secret with ID {token_id} not found"}]
+                )
+            token = secret['value']
+
+        # Attempt connection
+        try:
+            client = InfluxDBClient(url=url, org=org_id, token=token, timeout=5000)
+            # Simple health check plus bucket existence validation
+            health = client.health()
+            if health.status != 'pass':
+                raise RuntimeError(f"Health check failed: {health.message}")
+
+            # Validate organization exists
+            org_api = client.organizations_api()
+            orgs_res = org_api.find_organizations()
+            org_list = orgs_res if isinstance(orgs_res, list) else getattr(orgs_res, 'orgs', [])
+            org_obj = next((o for o in org_list if getattr(o, 'name', None) == org_id), None)
+            if not org_obj:
+                raise RuntimeError(f"Organization '{org_id}' not found or not accessible with provided credentials")
+
+            buckets_api = client.buckets_api()
+            bucket_obj = next((b for b in buckets_api.find_buckets().buckets if b.name == bucket), None)
+            if not bucket_obj:
+                raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
+
+            client.close()
+            return api_response(message="Ping successful")
+        except Exception as e:
+            logging.error(f"InfluxDB ping failed: {str(e)}")
+            return api_response(
+                message="Unable to reach InfluxDB",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "ping_failed", "message": str(e)}]
+            )
+    except Exception as e:
+        logging.error(f"Error pinging InfluxDB: {str(e)}")
+        return api_response(
+            message="Error pinging InfluxDB",
             status=HTTP_BAD_REQUEST,
             errors=[{"code": "integration_error", "message": str(e)}]
         )
