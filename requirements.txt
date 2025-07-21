@@ -31,3 +31,4 @@ langchain-community==0.3.27
 langchain==0.3.26
 langchain_core==0.3.66
 langchain_openai==0.3.27
+lxml==6.0.0

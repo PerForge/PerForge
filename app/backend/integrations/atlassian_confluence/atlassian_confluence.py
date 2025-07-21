@@ -16,7 +16,8 @@ import logging
 import uuid
 import traceback
 import time
-
+from typing import Optional
+from lxml import etree
 from app.backend.integrations.integration                                  import Integration
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_db import DBAtlassianConfluence
 from app.backend.components.secrets.secrets_db                             import DBSecrets
@@ -108,9 +109,59 @@ class AtlassianConfluence(Integration):
             time.sleep(10)
 
     def update_page(self, page_id, title, content):
+        """Update a Confluence page, fixing XHTML if possible before sending."""
+
+        sanitized = self._sanitize_xhtml(content)
+        if sanitized is None:
+            msg = f"XHTML content is invalid and could not be auto-corrected; aborting Confluence page update for page '{title}'."
+            logging.warning(msg)
+            return {"status": "error", "message": msg}
+
         try:
-            response = self.confluence_auth.update_page(page_id=page_id, title=title, body=content)
+            response = self.confluence_auth.update_page(page_id=page_id, title=title, body=sanitized)
             return response
         except Exception as er:
             logging.warning(er)
             return {"status":"error", "message":er}
+
+    # ------------------------------------------------------------------
+    # XHTML helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _sanitize_xhtml(content: str) -> Optional[str]:
+        """Return a well-formed XHTML fragment or *None* if it cannot be fixed.
+
+        Strategy:
+        1. Attempt *strict* parsing (recover=False). If valid, return original.
+        2. Otherwise parse with *recover=True* which tells *lxml* to try to
+           repair common issues (unclosed tags, illegal nesting, etc.).  The
+           repaired tree is then serialised back to an XHTML string.
+        3. If recovery also fails, return *None*.
+        """
+        if not content:
+            return None
+
+        wrapper = f"<div>{content}</div>"
+
+        # First try strict validation.
+        try:
+            etree.fromstring(wrapper, etree.XMLParser(recover=False, resolve_entities=False, no_network=True))
+            return content  # already valid
+        except etree.XMLSyntaxError:
+            pass  # will try to recover below
+
+        # Attempt to recover/fix the markup.
+        try:
+            tree = etree.fromstring(wrapper, etree.XMLParser(recover=True, resolve_entities=False, no_network=True))
+            # Serialise children of the wrapper div back to string
+            fixed_parts = [etree.tostring(child, encoding='unicode', method='xml') for child in tree]
+            fixed_content = ''.join(fixed_parts)
+
+            # Double-check the repaired output is now valid.
+            etree.fromstring(f"<div>{fixed_content}</div>", etree.XMLParser(recover=False, resolve_entities=False, no_network=True))
+            logging.info("XHTML content was auto-corrected before update.")
+            return fixed_content
+        except etree.XMLSyntaxError as exc:
+            logging.warning(f"XHTML recovery failed: {exc}")
+            return None

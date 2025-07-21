@@ -18,6 +18,7 @@ Reports API endpoints.
 import json
 import logging
 import importlib
+import traceback
 from flask import Blueprint, request, send_file
 from app.backend.data_provider.data_provider import DataProvider
 from app.backend.integrations.report_registry import ReportRegistry
@@ -280,11 +281,11 @@ def generate_report():
                 errors=[{"code": "invalid_action", "message": f"Invalid action type: {action_type}"}]
             )
     except Exception as e:
-        logging.error(f"Error generating report: {str(e)}")
+        logging.error(f"Error generating report: {traceback.format_exc()}")
         return api_response(
             message=ErrorMessages.ER00011.value,
             status=HTTP_INTERNAL_SERVER_ERROR,
-            errors=[{"code": "report_error", "message": str(e)}]
+            errors=[{"code": "report_error", "message": str(traceback.format_exc())}]
         )
 
 @reports_api.route('/api/v1/reports/data', methods=['POST'])
