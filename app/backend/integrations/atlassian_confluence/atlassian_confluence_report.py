@@ -181,10 +181,10 @@ class AtlassianConfluenceReport(ReportingBase):
         return ''.join(html)
 
     def generate_report(self, tests, action_id, template_group=None):
-        templates_title = ""
-        group_title     = None
+        page_title  = None  # final title used for both creation and update
+        group_title = None
         def process_test(test, isgroup):
-            nonlocal templates_title
+            nonlocal page_title
             nonlocal group_title
             template_id = test.get('template_id')
             if template_id:
@@ -196,15 +196,14 @@ class AtlassianConfluenceReport(ReportingBase):
                 if not self.page_id:
                     if isgroup:
                         group_title = self.generate_path(True)
-                        self.create_page_id(group_title)
+                        page_title  = group_title
                     else:
-                        temporary_title = self.generate_path(False)
-                        self.create_page_id(temporary_title)
+                        page_title = self.generate_path(False)
+                    # Create the Confluence page once using the final title
+                    self.create_page_id(page_title)
                 title             = self.generate_path(False)
                 self.report_body += self.add_group_text(title)
                 self.report_body += self.generate(test_title, baseline_test_title)
-                if not group_title:
-                    templates_title += f'{title} | '
         if template_group:
             self.set_template_group(template_group)
             title             = self.generate_path(True)
@@ -221,14 +220,8 @@ class AtlassianConfluenceReport(ReportingBase):
         else:
             for test in tests:
                 process_test(test, False)
-        current_time = datetime.now()
-        time_str     = current_time.strftime("%d.%m.%Y %H:%M")
-        if not group_title:
-            templates_title += time_str
-            self.output_obj.update_page(page_id=self.page_id, title=templates_title, content=self.report_body)
-        else:
-            group_title += f' {time_str}'
-            self.output_obj.update_page(page_id=self.page_id, title=group_title, content=self.report_body)
+        # Final update with the same title used during page creation
+        self.output_obj.update_page(page_id=self.page_id, title=page_title, content=self.report_body)
         response = self.generate_response()
         response["Page id"] = self.page_id
         return response

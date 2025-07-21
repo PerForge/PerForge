@@ -58,13 +58,43 @@ class AtlassianConfluence(Integration):
             logging.warning("There's no Confluence integration configured, or you're attempting to send a request from an unsupported location.")
 
     def put_page(self, title, content):
+        """Create a new Confluence page or update it if it already exists.
+
+        The Atlassian REST API returns an error when a page with the same
+        title already exists within the same parent.  In this situation we
+        interpret the error as an *expected* condition and simply update the
+        existing page instead of treating it as a failure.
+        """
         try:
-            response = self.confluence_auth.create_page(space=self.space_key, title=title, body=content, parent_id=self.parent_id)
-            return response
+            # Try to create a brand-new page first.
+            return self.confluence_auth.create_page(
+                space=self.space_key,
+                title=title,
+                body=content,
+                parent_id=self.parent_id,
+            )
         except Exception as er:
-            logging.warning("An error occurred: " + str(er))
-            err_info = traceback.format_exc()
-            logging.warning("Detailed error info: " + err_info)
+            err_msg = str(er).lower()
+
+            # Confluence responds with messages like
+            # "A page with this title already exists" when the title clashes.
+            if "already exists" in err_msg and "title" in err_msg:
+                # Retrieve existing page id and perform an update instead.
+                try:
+                    page_id = self.confluence_auth.get_page_id(self.space_key, title)
+                    if page_id:
+                        return self.update_page(page_id=page_id, title=title, content=content)
+                    # If for some reason the page id cannot be found, fall
+                    # through to logging so the user can take action.
+                except Exception as update_error:
+                    logging.warning(f"Failed to update existing Confluence page '{title}': {update_error}")
+                    logging.debug(traceback.format_exc())
+                    return None
+
+            # Any other exception is unexpected – log it as before.
+            logging.warning(f"An error occurred while creating Confluence page '{title}': {er}")
+            logging.debug(traceback.format_exc())
+            return None
 
     def put_image_to_confl(self, image, name, page_id):
         name = f'{uuid.uuid4()}.png'
