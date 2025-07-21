@@ -65,7 +65,7 @@
                                 <img src="/static/assets/img/blog/influxdb.svg" class="card-img-top"
                                     alt="InfluxDB" height="200">
                                 <p style="margin-top: 10px;">{{ influxdb_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/influxdb?influxdb_config={{ influxdb_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/influxdb?influxdb_config={{ influxdb_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ influxdb_config.id }}" data-config-name="{{ influxdb_config.name }}" data-config-type="influxdb" data-tab-id="influxdb">Delete</button>
@@ -76,7 +76,7 @@
                                 <img src="/static/assets/img/blog/influxdb.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/influxdb" class="btn btn-primary">Add</a>
+                                <a href="/influxdb" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
@@ -88,7 +88,7 @@
                                 <img src="/static/assets/img/blog/grafana.svg" class="card-img-top"
                                     alt="Grafana" height="200">
                                 <p style="margin-top: 10px;">{{ grafana_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/grafana?grafana_config={{ grafana_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/grafana?grafana_config={{ grafana_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ grafana_config.id }}" data-config-name="{{ grafana_config.name }}" data-config-type="grafana" data-tab-id="grafana">Delete</button>
@@ -99,7 +99,7 @@
                                 <img src="/static/assets/img/blog/grafana.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/grafana" class="btn btn-primary">Add</a>
+                                <a href="/grafana" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
@@ -111,7 +111,7 @@
                                 <img src="/static/assets/img/blog/azure.svg" class="card-img-top"
                                     alt="Azure" height="200">
                                 <p style="margin-top: 10px;">{{ azure_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/azure?azure_config={{ azure_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/azure?azure_config={{ azure_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ azure_config.id }}" data-config-name="{{ azure_config.name }}" data-config-type="azure" data-tab-id="azure">Delete</button>
@@ -122,7 +122,7 @@
                                 <img src="/static/assets/img/blog/azure.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/azure" class="btn btn-primary">Add</a>
+                                <a href="/azure" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
@@ -134,7 +134,7 @@
                                 <img src="/static/assets/img/blog/confluence.svg" class="card-img-top"
                                     alt="confl" height="200">
                                 <p style="margin-top: 10px;">{{ atlassian_confluence_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/atlassian-confluence?atlassian_confluence_config={{ atlassian_confluence_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/atlassian-confluence?atlassian_confluence_config={{ atlassian_confluence_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ atlassian_confluence_config.id }}" data-config-name="{{ atlassian_confluence_config.name }}" data-config-type="atlassian_confluence" data-tab-id="confluence">Delete</button>
@@ -145,7 +145,7 @@
                                 <img src="/static/assets/img/blog/confluence.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/atlassian-confluence" class="btn btn-primary">Add</a>
+                                <a href="/atlassian-confluence" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
@@ -157,7 +157,7 @@
                                 <img src="/static/assets/img/blog/jira.svg" class="card-img-top"
                                     alt="confljira" height="200">
                                 <p style="margin-top: 10px;">{{ atlassian_jira_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/atlassian-jira?atlassian_jira_config={{ atlassian_jira_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/atlassian-jira?atlassian_jira_config={{ atlassian_jira_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ atlassian_jira_config.id }}" data-config-name="{{ atlassian_jira_config.name }}" data-config-type="atlassian_jira" data-tab-id="jira">Delete</button>
@@ -168,7 +168,7 @@
                                 <img src="/static/assets/img/blog/jira.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/atlassian-jira" class="btn btn-primary">Add</a>
+                                <a href="/atlassian-jira" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
@@ -180,7 +180,7 @@
                                 <img src="/static/assets/img/blog/mail.svg" class="card-img-top"
                                     alt="smtpmail" height="200">
                                 <p style="margin-top: 10px;">{{ smtp_mail_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/smtp-mail?smtp_mail_config={{ smtp_mail_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/smtp-mail?smtp_mail_config={{ smtp_mail_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ smtp_mail_config.id }}" data-config-name="{{ smtp_mail_config.name }}" data-config-type="smtp_mail" data-tab-id="smtp-mail">Delete</button>
@@ -191,7 +191,7 @@
                                 <img src="/static/assets/img/blog/mail.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/smtp-mail" class="btn btn-primary">Add</a>
+                                <a href="/smtp-mail" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
@@ -203,7 +203,7 @@
                                 <img src="/static/assets/img/blog/ai_support.svg" class="card-img-top"
                                     alt="aisupport" height="200">
                                 <p style="margin-top: 10px;">{{ ai_support_config.name }}</p>
-                                <div class="d-flex justify-content-center" style="gap: 10px;">
+                                <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                                     <a href="/ai-support?ai_support_config={{ ai_support_config.id }}" class="btn btn-primary">Edit</a>
                                     <a class="btn btn-secondary" href="/ai-support?ai_support_config={{ ai_support_config.id }}&clone=true">Clone</a>
                                     <button class="btn btn-danger delete-btn" data-config-id="{{ ai_support_config.id }}" data-config-name="{{ ai_support_config.name }}" data-config-type="ai_support" data-tab-id="ai-support">Delete</button>
@@ -214,7 +214,7 @@
                                 <img src="/static/assets/img/blog/ai_support.svg" class="card-img-top"
                                     alt="New" height="200">
                                 <p style="margin-top: 10px;">New config</p>
-                                <a href="/ai-support" class="btn btn-primary">Add</a>
+                                <a href="/ai-support" class="btn btn-primary mb-2">Add</a>
                             </div>
                         </div>
                     </div>
