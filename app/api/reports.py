@@ -191,7 +191,9 @@ def generate_report():
                 errors=[{"code": "missing_data", "message": "No data provided"}]
             )
 
-        if "output_id" not in data:
+        output_config = data.get('output_config', {})
+
+        if "output_id" not in output_config:
             return api_response(
                 message="Missing output_id parameter",
                 status=HTTP_BAD_REQUEST,
@@ -199,8 +201,8 @@ def generate_report():
             )
 
         template_group = data.get("template_group")
-        action_id = data.get("output_id")
-        integration_type = data.get("integration_type")
+        action_id = output_config.get("output_id")
+        integration_type = output_config.get("integration_type")
 
         # Determine action type
         if action_id == "pdf_report" or action_id == "delete":
@@ -219,7 +221,7 @@ def generate_report():
             # Ensure all report types are loaded before getting the PDF report instance
             _ensure_report_types_loaded()
             project_id = get_project_id()
-            theme = data.get('theme', 'dark')
+            theme = output_config.get('theme', 'dark')
             # Get the PDF report instance from the registry
             pdf = ReportRegistry.get_report_instance(action_type, project_id)
             if not pdf:

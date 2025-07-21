@@ -752,17 +752,19 @@
         return newTest;
       });
 
-      selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
+      selectedRows["output_config"] = {
+        "output_id": (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id
+      };
 
       // Add integration_type to the request data if it exists in the output object
       if (output.integration_type) {
-        selectedRows["integration_type"] = output.integration_type;
+        selectedRows["output_config"]["integration_type"] = output.integration_type;
       }
 
       // Add selected theme for PDF reports
       if (output.type === 'pdf_report') {
         const theme = localStorage.getItem('theme') || 'dark';
-        selectedRows['theme'] = theme;
+        selectedRows["output_config"]["theme"] = theme;
       }
 
       if (selectedTemplateGroup.value !== "") {
