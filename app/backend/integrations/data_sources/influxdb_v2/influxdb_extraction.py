@@ -73,7 +73,7 @@ class InfluxdbV2(DataExtractionBase):
         if config["id"]:
             self.id       = config["id"]
             self.name     = config["name"]
-            self.url      = config["url"].replace("influxdb", "localhost")
+            self.url      = config["url"]
             self.org_id   = config["org_id"]
             self.token    = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.timeout  = config["timeout"]
