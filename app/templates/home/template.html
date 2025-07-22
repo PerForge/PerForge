@@ -511,9 +511,7 @@
                                 }
 
                                 if (item.type === 'text') {
-                                    if (item.content) {
-                                        item.content = item.content.replace(/"/g, '\\\"');
-                                    } else {
+                                    if (!item.content) {
                                         console.error("Text content is required");
                                         showFlashMessage("Text content is required", "error");
                                         return;
