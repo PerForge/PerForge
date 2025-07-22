@@ -204,7 +204,7 @@ class ReportingBase:
         # First, collect all available metrics that are not considered metadata
         for metric_name in test_obj.get_available_metrics():
             param_name = f"{prefix}{metric_name}"
-            parameters[param_name] = test_obj.get_metric(metric_name)
+            parameters[param_name] = str(test_obj.get_metric(metric_name))
 
         # Then, explicitly collect common parameters that might be filtered out as metadata
         # This ensures that essential variables for reporting are always present.
@@ -218,8 +218,17 @@ class ReportingBase:
         for report_name, attr_name in common_params_to_collect.items():
             if test_obj.has_metric(attr_name):
                 param_name = f"{prefix}{report_name}"
-                parameters[param_name] = test_obj.get_metric(attr_name)
+                parameters[param_name] = str(test_obj.get_metric(attr_name))
 
+        # Add a single, global report generation timestamp (no prefix)
+        # Use the DataProvider helper to honour data source timezones.
+        if hasattr(self, "dp_obj") and "report_timestamp" not in parameters:
+            try:
+                parameters["report_timestamp"] = self.dp_obj.get_current_timestamp()
+            except Exception:
+                # Fallback to a simple UTC timestamp if anything goes wrong
+                from datetime import datetime, timezone
+                parameters["report_timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         return parameters
 
     def _create_grafana_link(self, test_obj: BaseTestData, test_title: str, prefix: str = "") -> Dict[str, str]:

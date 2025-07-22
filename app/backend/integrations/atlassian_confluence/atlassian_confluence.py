@@ -68,31 +68,26 @@ class AtlassianConfluence(Integration):
         """
         try:
             # Try to create a brand-new page first.
-            return self.confluence_auth.create_page(
+            response = self.confluence_auth.create_page(
                 space=self.space_key,
                 title=title,
                 body=content,
                 parent_id=self.parent_id,
             )
+            # Normalise to a simple dict with id key for downstream code.
+            page_id = response.get("id") if isinstance(response, dict) else response
+            return {"id": page_id}
         except Exception as er:
-            err_msg = str(er).lower()
+            # On failure, attempt to find an existing page with the same title
+            try:
+                page_id = self.confluence_auth.get_page_id(self.space_key, title)
+                if page_id:
+                    return {"id": page_id}
+            except Exception as fetch_error:
+                logging.warning(f"Failed to retrieve existing Confluence page id for '{title}': {fetch_error}")
+                logging.debug(traceback.format_exc())
+                # fall through to generic logging below
 
-            # Confluence responds with messages like
-            # "A page with this title already exists" when the title clashes.
-            if "already exists" in err_msg and "title" in err_msg:
-                # Retrieve existing page id and perform an update instead.
-                try:
-                    page_id = self.confluence_auth.get_page_id(self.space_key, title)
-                    if page_id:
-                        return self.update_page(page_id=page_id, title=title, content=content)
-                    # If for some reason the page id cannot be found, fall
-                    # through to logging so the user can take action.
-                except Exception as update_error:
-                    logging.warning(f"Failed to update existing Confluence page '{title}': {update_error}")
-                    logging.debug(traceback.format_exc())
-                    return None
-
-            # Any other exception is unexpected – log it as before.
             logging.warning(f"An error occurred while creating Confluence page '{title}': {er}")
             logging.debug(traceback.format_exc())
             return None
@@ -111,18 +106,14 @@ class AtlassianConfluence(Integration):
     def update_page(self, page_id, title, content):
         """Update a Confluence page, fixing XHTML if possible before sending."""
 
+        # Will raise ValueError if sanitization fails
         sanitized = self._sanitize_xhtml(content)
-        if sanitized is None:
-            msg = f"XHTML content is invalid and could not be auto-corrected; aborting Confluence page update for page '{title}'."
-            logging.warning(msg)
-            return {"status": "error", "message": msg}
 
         try:
-            response = self.confluence_auth.update_page(page_id=page_id, title=title, body=sanitized)
-            return response
+            return self.confluence_auth.update_page(page_id=page_id, title=title, body=sanitized)
         except Exception as er:
             logging.warning(er)
-            return {"status":"error", "message":er}
+            raise RuntimeError(f"Confluence API update_page failed: {er}")
 
     # ------------------------------------------------------------------
     # XHTML helpers
@@ -140,14 +131,26 @@ class AtlassianConfluence(Integration):
         3. If recovery also fails, return *None*.
         """
         if not content:
-            return None
+            raise ValueError("No content provided for XHTML sanitization")
 
-        wrapper = f"<div>{content}</div>"
+        # Replace any newline characters with HTML <br/> tags so that multi-line
+        # template variables (e.g. $\{nfr_summary\}) render as separate lines
+        # in Confluence instead of being collapsed into a single paragraph. We
+        # handle all common newline variants (\r, \n, \r\n) before validation.
+
+        sanitized_content = (
+            content.replace("\r\n", "\n")  # normalise Windows newlines
+                   .replace("\r", "\n")      # macOS (older) newlines
+                   .replace("\n", "<br/>")    # convert to XHTML line breaks
+        )
+
+        wrapper = f"<div>{sanitized_content}</div>"
 
         # First try strict validation.
         try:
             etree.fromstring(wrapper, etree.XMLParser(recover=False, resolve_entities=False, no_network=True))
-            return content  # already valid
+            # Return the newline-sanitised content
+            return sanitized_content
         except etree.XMLSyntaxError:
             pass  # will try to recover below
 
@@ -164,4 +167,4 @@ class AtlassianConfluence(Integration):
             return fixed_content
         except etree.XMLSyntaxError as exc:
             logging.warning(f"XHTML recovery failed: {exc}")
-            return None
+            raise ValueError(f"XHTML recovery failed: {exc}")

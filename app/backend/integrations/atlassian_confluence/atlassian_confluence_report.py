@@ -18,6 +18,8 @@ from app.backend.integrations.report_registry                           import R
 from app.backend.integrations.atlassian_confluence.atlassian_confluence import AtlassianConfluence
 from app.backend.integrations.grafana.grafana                           import Grafana
 from app.backend.components.graphs.graphs_db                            import DBGraphs
+from lxml import etree
+from lxml.builder import ElementMaker
 
 
 @ReportRegistry.register("atlassian_confluence")
@@ -33,26 +35,26 @@ class AtlassianConfluenceReport(ReportingBase):
         self.output_obj = AtlassianConfluence(project=self.project, id=action_id)
 
     def add_group_text(self, text):
+        text = text.replace("\r\n", "")
+        text = text.replace("\r", "")
+        text = text.replace("\n", "")
         text = self.replace_variables(text)
-        text = f'<h1>{text}</h1><br/>'
-        text = text.replace('\\"', '"')
         text = text.replace('&', '&amp;')
-        text = text.replace('\n', '<br/>')
         return text
 
     def add_text(self, text):
+        text = text.replace("\r\n", "")
+        text = text.replace("\r", "")
+        text = text.replace("\n", "")
         text = self.replace_variables(text)
-        text = f'<p>{text}</p>'
-        text = text.replace('\\"', '"')
         text = text.replace('&', '&amp;')
-        text = text.replace('\n', '<br/>')
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
         fileName = self.output_obj.put_image_to_confl(image, graph_data["id"], self.page_id)
-        if(fileName):
-            graph = f'<br/><ac:image ac:align="center" ac:layout="center" ac:original-height="500" ac:original-width="1000"><ri:attachment ri:filename="{str(fileName)}" /></ac:image><br/>'
+        if fileName:
+            graph = f'<br/>{self._build_confluence_image(str(fileName), graph_data.get("width", 1000), graph_data.get("height", 500))}<br/>'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
         if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
@@ -61,12 +63,38 @@ class AtlassianConfluenceReport(ReportingBase):
         else:
             return graph, ""
 
-    def generate_path(self, isgroup):
-        if isgroup:
-            title = self.group_title
-        else:
-            title = self.replace_variables(self.title)
-        return title
+    def generate_path(self):
+        return self.replace_variables(self.title)
+
+    def _build_confluence_image(self, filename, width=1000, height=500):
+        """Build a Confluence image macro with proper XML namespaces.
+
+        Args:
+            filename: Attachment filename stored on the Confluence page.
+
+        Returns:
+            Unicode string containing the <ac:image> macro.
+        """
+        AC_NS = "http://atlassian.com/schema/confluence/4/ac"
+        RI_NS = "http://atlassian.com/schema/confluence/4/ri"
+
+        # Element makers for the two namespaces
+        AC = ElementMaker(namespace=AC_NS, nsmap={'ac': AC_NS, 'ri': RI_NS})
+
+        # Build <ac:image> root element
+        ac_image = AC('image')
+        ac_image.set(f"{{{AC_NS}}}align", "center")
+        ac_image.set(f"{{{AC_NS}}}layout", "center")
+        ac_image.set(f"{{{AC_NS}}}original-height", str(height))
+        ac_image.set(f"{{{AC_NS}}}original-width", str(width))
+
+        # Build nested <ri:attachment> element
+        ri_attachment = etree.Element(f"{{{RI_NS}}}attachment")
+        ri_attachment.set(f"{{{RI_NS}}}filename", filename)
+        ac_image.append(ri_attachment)
+
+        # Serialize to string and return
+        return etree.tostring(ac_image, encoding='unicode')
 
     def create_page_id(self, page_title):
         response     = self.output_obj.put_page(title=page_title, content="")
@@ -194,20 +222,12 @@ class AtlassianConfluenceReport(ReportingBase):
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
                 if not self.page_id:
-                    if isgroup:
-                        group_title = self.generate_path(True)
-                        page_title  = group_title
-                    else:
-                        page_title = self.generate_path(False)
+                    page_title = self.generate_path()
                     # Create the Confluence page once using the final title
                     self.create_page_id(page_title)
-                title             = self.generate_path(False)
-                self.report_body += self.add_group_text(title)
                 self.report_body += self.generate(test_title, baseline_test_title)
         if template_group:
             self.set_template_group(template_group)
-            title             = self.generate_path(True)
-            self.report_body += self.add_group_text(title)
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.report_body += self.add_group_text(obj["content"])
@@ -245,5 +265,4 @@ class AtlassianConfluenceReport(ReportingBase):
 
         # Replace variables in the entire report body at the end
         report_body = self.replace_variables(report_body)
-
         return report_body

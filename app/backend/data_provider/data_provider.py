@@ -18,6 +18,8 @@ from typing import List, Dict, Any, Tuple, Optional, Type
 
 # Third-party imports
 import pandas as pd
+from datetime import datetime
+from dateutil import tz
 
 # Local application imports
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
@@ -62,6 +64,25 @@ class DataProvider:
 
         # Determine the test type based on the source type
         self.test_type = self.source_to_test_type_map.get(self.ds_obj.listener, "back_end")
+
+    # Timestamp helper
+    def get_current_timestamp(self, fmt: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
+        """Generate the current timestamp in human-readable form.
+
+        The timezone is taken from the underlying data source object (``ds_obj``),
+        which should expose a ``tmz_human`` attribute like the InfluxdbV2 class.
+        If the data source does not provide timezone information, UTC is used.
+
+        Args:
+            fmt: Optional strftime format string. Defaults to
+                 "%Y-%m-%d %H:%M:%S %Z".
+
+        Returns:
+            str: Human-readable timestamp in the configured timezone.
+        """
+        human_tz = getattr(self.ds_obj, "tmz_human", tz.tzutc()) or tz.tzutc()
+        now_utc = datetime.now(tz=tz.tzutc())
+        return now_utc.astimezone(human_tz).strftime(fmt)
 
     # Basic data retrieval methods
     def get_test_log(self) -> Dict[str, Any]:
