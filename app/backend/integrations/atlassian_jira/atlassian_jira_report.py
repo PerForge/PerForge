@@ -114,8 +114,10 @@ class AtlassianJiraReport(ReportingBase):
         return header + "".join(body) + "\n"
 
     def generate_path(self, isgroup):
-        if isgroup: title = self.group_title
-        else: title = self.replace_variables(self.title)
+        if isgroup:
+            title = self.replace_variables(self.group_title)
+        else:
+            title = self.replace_variables(self.title)
         return title
 
     def create_issue(self, issue_title):
@@ -124,11 +126,9 @@ class AtlassianJiraReport(ReportingBase):
 
     def generate_report(self, tests, action_id, template_group=None):
         page_title  = None
-        group_title = None
 
         def process_test(test, isgroup):
             nonlocal page_title
-            nonlocal group_title
             template_id = test.get('template_id')
             if template_id:
                 db_config = test.get('db_config')
@@ -140,21 +140,17 @@ class AtlassianJiraReport(ReportingBase):
                 # Create the Jira issue once using the final title
                 if not self.issue_id:
                     if isgroup:
-                        group_title = self.generate_path(True)
-                        page_title  = group_title
+                        page_title  = self.generate_path(True)
                     else:
                         page_title = self.generate_path(False)
                     self.create_issue(page_title)
 
-                title = self.generate_path(False)
-                self.report_body += self.add_text(title)
                 self.report_body += self.generate(test_title, baseline_test_title)
 
         # Handle template group if provided
         if template_group:
             self.set_template_group(template_group)
-            title             = self.generate_path(True)
-            self.report_body += self.add_group_text(title)
+
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.report_body += self.add_group_text(obj["content"])
