@@ -401,10 +401,10 @@ def _create_example_data(project_id: str) -> None:
             "prompt_id": None
         })
 
-        # Template example
+        # Template example for Confluence
         DBTemplates.save(project_id, {
             "id": None,
-            "name": "[EXAMPLE] TEMPLATE",
+            "name": "[EXAMPLE] REPORT for Confluence",
             "nfr": nfr_example_id,
             "title": "[EXAMPLE] REPORT for Confluence",
             "ai_switch": False,
@@ -422,6 +422,28 @@ def _create_example_data(project_id: str) -> None:
                 {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
                 {"content":"</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"},
                 {"content":"<h2>Aggregated data example in Expand</h2>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${aggregated_data_table_}\n</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"}]
+        })
+
+        # Template example for Azure
+        DBTemplates.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] REPORT for Azure",
+            "nfr": nfr_example_id,
+            "title": "[EXAMPLE] REPORT for Azure",
+            "ai_switch": False,
+            "ai_aggregated_data_switch": False,
+            "ai_graph_switch": False,
+            "ai_to_graphs_switch": False,
+            "nfrs_switch": True,
+            "ml_switch": True,
+            "template_prompt_id": None,
+            "aggregated_prompt_id": None,
+            "system_prompt_id": None,
+            "data": [
+                {"content":"# Executive summaries\nTimestamp when report was generated: ${report_timestamp}  \n**Current run:** from ${current_start_time} to ${current_end_time}  \n**Baseline run:** from ${baseline_start_time} to ${baseline_end_time}  \n\n# Summary\n---\n## AI insights  \n${ai_summary}  \n\n## NFR compliance  \n```${nfr_summary}```\n\n## ML anomalies  \n```${ml_summary}```\n\n## Key KPI comparison  \n| KPI                      | Baseline                      | Current                       |\n|---------------------------|-------------------------------|-------------------------------|\n| Max active users         | ${baseline_max_active_users}  | ${current_max_active_users}  |\n| Median throughput (RPS)  | ${baseline_median_throughput} | ${current_median_throughput} |\n| Median response time (ms)| ${baseline_median_response_time_stats} | ${current_median_response_time_stats} |\n| P90 response time (ms)   | ${baseline_pct90_response_time_stats} | ${current_pct90_response_time_stats} |\n| Error rate %             | ${baseline_errors_pct_stats} | ${current_errors_pct_stats}  |\n\n### Grafana dashboards  \n- **Baseline:** [baseline_grafana_link](${baseline_grafana_link})  \n- **Current:** [current_grafana_link](${current_grafana_link})","graph_id":None,"template_id":None,"type":"text"},
+                {"content":"## Throughput graph:","graph_id":None,"template_id":None,"type":"text"},
+                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
+                {"content":"## Aggregated data:\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}]
         })
 
     except Exception as exc:

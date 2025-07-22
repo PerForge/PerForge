@@ -63,8 +63,11 @@ class AtlassianConfluenceReport(ReportingBase):
         else:
             return graph, ""
 
-    def generate_path(self):
-        return self.replace_variables(self.title)
+    def generate_path(self, isgroup):
+        if isgroup:
+            return self.replace_variables(self.group_title)
+        else:
+            return self.replace_variables(self.title)
 
     def _build_confluence_image(self, filename, width=1000, height=500):
         """Build a Confluence image macro with proper XML namespaces.
@@ -210,10 +213,8 @@ class AtlassianConfluenceReport(ReportingBase):
 
     def generate_report(self, tests, action_id, template_group=None):
         page_title  = None
-        group_title = None
         def process_test(test, isgroup):
             nonlocal page_title
-            nonlocal group_title
             template_id = test.get('template_id')
             if template_id:
                 db_config = test.get('db_config')
@@ -222,7 +223,10 @@ class AtlassianConfluenceReport(ReportingBase):
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
                 if not self.page_id:
-                    page_title = self.generate_path()
+                    if isgroup:
+                        page_title = self.generate_path(True)
+                    else:
+                        page_title = self.generate_path(False)
                     # Create the Confluence page once using the final title
                     self.create_page_id(page_title)
                 self.report_body += self.generate(test_title, baseline_test_title)

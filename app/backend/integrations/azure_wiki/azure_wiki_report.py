@@ -154,16 +154,16 @@ class AzureWikiReport(ReportingBase):
             return graph, ""
 
     def generate_path(self, isgroup):
-        title = self.output_obj.get_path() + (self.group_title if isgroup else self.replace_variables(self.title))
-        return title
+        if isgroup:
+            return self.output_obj.get_path() + self.replace_variables(self.group_title)
+        else:
+            return self.output_obj.get_path() +self.replace_variables(self.title)
 
     def generate_report(self, tests, action_id, template_group=None):
-        page_title  = None  # Final wiki page title/path (including base path prefix)
-        group_title = None  # Stores the group title when using grouped templates
-
+        page_title  = None
+        
         def process_test(test, isgroup):
             nonlocal page_title
-            nonlocal group_title
 
             template_id = test.get('template_id')
             if template_id:
@@ -177,21 +177,13 @@ class AzureWikiReport(ReportingBase):
                 # Determine the final wiki page title once
                 if page_title is None:
                     if isgroup:
-                        group_title = self.generate_path(True)
-                        page_title  = group_title
+                        page_title  = self.generate_path(True)
                     else:
                         page_title = self.generate_path(False)
 
-                # Add heading for this particular test/template
-                title = self.generate_path(False)
-                self.report_body += self.add_group_text(title)
-                self.report_body += self.generate_content(test_title, baseline_test_title)
-
+                self.report_body += self.generate(test_title, baseline_test_title)
         if template_group:
             self.set_template_group(template_group)
-            # Add the top-level group title once (similar to Confluence behaviour)
-            title             = self.generate_path(True)
-            self.report_body += self.add_group_text(title)
 
             for obj in self.template_order:
                 if obj["type"] == "text":
@@ -212,7 +204,7 @@ class AzureWikiReport(ReportingBase):
         response = self.generate_response()
         return response
 
-    def generate_content(self, current_test_title, baseline_test_title = None):
+    def generate(self, current_test_title, baseline_test_title = None):
         report_body = ""
         for obj in self.data:
             if obj["type"] == "text":
