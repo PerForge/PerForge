@@ -15,6 +15,7 @@
 import os
 import ast
 import json
+import re
 
 from app.backend.integrations.reporting_base   import ReportingBase
 from app.backend.integrations.report_registry  import ReportRegistry
@@ -150,7 +151,7 @@ class Pdf:
         img.save(resized_image_io, format=img.format)
         resized_image_io.seek(0)
         img = RoundedImage(resized_image_io, width=img_width, height=img_height)
-        self.elements.append(Spacer(1, 0.25 * inch))
+        self.elements.append(Spacer(1, 0.1 * inch))
         self.elements.append(img)
 
     def add_table(self, table_data):
@@ -220,7 +221,7 @@ class Pdf:
             ('RIGHTPADDING', (0, 0), (-1, -1), 4),
         ]))
 
-        self.elements.append(Spacer(1, 0.25 * inch))
+        self.elements.append(Spacer(1, 0.1 * inch))
         self.elements.append(table)
 
     def add_text(self, text):
@@ -229,7 +230,6 @@ class Pdf:
         normal_style.fontName  = self.regular_font
         normal_style.textColor = self.text_color
         text                   = text.replace('\n', '<br/>')
-        self.elements.append(Spacer(1, 0.25 * inch))
         self.elements.append(Paragraph(text, normal_style))
 
     def add_text_summary(self, text):
@@ -285,8 +285,22 @@ class PdfReport(ReportingBase):
         self.add_text(text)
 
     def add_text(self, text):
+        """Add a block of text to the PDF.
+
+        If *text* is just a single title (wrapped in `<title>`, `<h1>`, or
+        `<h2>` tags) it is rendered via :pymeth:`Pdf.add_title`. Otherwise the
+        block is considered either a table payload or a normal paragraph.
+        """
+        # Replace template variables early.
         text = self.replace_variables(text)
-        # Check if the text is a table
+
+        # Use helper to detect a stand-alone title.
+        title = self.extract_title(text)
+        if title:
+            self.pdf_creator.add_title(title)
+            return  # Title consumes the whole block
+
+        # Not a title – render as table or paragraph.
         is_table, table_data = self.check_if_table(text)
         if is_table:
             self.pdf_creator.add_table(table_data)
@@ -311,6 +325,19 @@ class PdfReport(ReportingBase):
                 return False, None  # Not a valid list of lists
         except (SyntaxError, ValueError):
             return False, None  # Parsing failed
+
+    def extract_title(self, text):
+        """Return inner text if *text* is a stand-alone title block.
+
+        Supported tags (case-insensitive): ``<title>``, ``<h1>``, ``<h2>``.
+        The pattern must occupy the entire string aside from surrounding
+        whitespace. Returns ``None`` when the input is not a pure title block.
+        """
+        pattern = re.compile(r'^\s*<(?:title|h1|h2)>(.*?)</?(?:title|h1|h2)>\s*$', re.IGNORECASE | re.DOTALL)
+        match   = pattern.match(text)
+        if match:
+            return match.group(1).strip()
+        return None
 
     def generate_title(self, isgroup):
         if isgroup:
@@ -378,13 +405,11 @@ class PdfReport(ReportingBase):
         return json.dumps(table_data)
 
     def generate_report(self, tests, template_group=None, theme='dark'):
-        # Align title generation with AtlassianConfluenceReport logic
         page_title  = None
-        group_title = None
         self.pdf_creator.set_theme(theme)
 
         def process_test(test, isgroup):
-            nonlocal page_title, group_title
+            nonlocal page_title
             template_id = test.get('template_id')
             if template_id:
                 db_config            = test.get('db_config')
@@ -396,21 +421,15 @@ class PdfReport(ReportingBase):
                 # Determine overall PDF title once
                 if page_title is None:
                     if isgroup:
-                        group_title = self.generate_title(True)
-                        page_title  = group_title
+                        page_title  = self.generate_title(True)
                     else:
                         page_title = self.generate_title(False)
 
-                # Section title for this specific template
-                title = self.generate_title(False)
-                self.pdf_creator.add_title(title)
                 self.generate(test_title, baseline_test_title)
 
         # Handle template groups or individual templates
         if template_group:
             self.set_template_group(template_group)
-            title = self.generate_title(True)
-            self.pdf_creator.add_title(title)
 
             for obj in self.template_order:
                 if obj["type"] == "text":
