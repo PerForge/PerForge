@@ -1,0 +1,350 @@
+prompts:
+- id: 1
+  name: "[BE][SINGLE] Response time"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+    ###Instructions:
+    - Assess the trends of each response time line.
+    - Response times should remain stable. Minor fluctuations in response times are acceptable.
+    - Explicitly identify any spikes or significant deviations in each metric.
+    ###Constraints:
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
+    - Your output should follow the following structure if there is no performance issue for a metric:
+      - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
+    - Your output should follow the following structure if there is performance issue for a metric:
+      - The [performance issue description], indicating performance issue.
+    ###Input: response time metric graph
+- id: 2
+  name: "[BE][SINGLE] Throughput"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+    ###Instructions:
+    - Assess the trends of each throughput line.
+    - Throughput should remain stable. Minor fluctuations in throughput are acceptable.
+    - Explicitly identify any performance issue in each metric.
+    ###Constraints:
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
+    - Your output should follow the following structure if there is no performance issue for a metric:
+      - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
+    - Your output should follow the following structure if there is performance issue for a metric:
+      - The [performance issue description], indicating performance issue.
+    ###Input: Throughput metric graph
+- id: 3
+  name: "[BE][SINGLE] CPU usage"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+    ###Instructions:
+    - Assess the trends of each CPU usage line.
+    - CPU usage line should remain stable. Minor fluctuations in CPU usage are acceptable.
+    - Explicitly identify any performance issue in each metric.
+    ###Constraints:
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
+    - Your output should follow the following structure if there is no performance issue for a metric:
+        - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
+    - Your output should follow the following structure if there is performance issue for a metric:
+        - The [performance issue description], indicating performance issue.
+    ###Input: CPU usage metric graph
+- id: 4
+  name: "[BE][SINGLE] Memory usage"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+    ###Instructions:
+    - Assess the trends of each Memory usage line.
+    - Memory usage line should remain stable. Minor fluctuations in Memory usage are acceptable.
+    - Explicitly identify any performance issue in each metric.
+    ###Constraints:
+    - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
+    - Your output should follow the following structure if there is no performance issue for a metric:
+        - The [metric] is consistently stable [with minimal fluctuations/without fluctuations].
+    - Your output should follow the following structure if there is performance issue for a metric:
+        - The [performance issue description], indicating performance issue.
+    ###Input: Memory usage metric graph
+- id: 5
+  name: "[BE][COMPARISON] Response time"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: Follow the instructions below to analyze the graph, COMPARE the current test against a baseline, and PROVIDE observations corresponding to constraints and concerning the current test in relation to the baseline.
+    ###Context: You are provided with a performance testing graph featuring two lines: a solid line indicating the current test and a dotted line representing the baseline test.
+    ###Instructions:
+      - Assess the trends of each response time line.
+      - Evaluate if the current response time level is comparable to the baseline.
+      - Assess the stability of the current response time line. Minor fluctuations are acceptable.
+    ###Constraints:
+      - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
+      - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
+      - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
+- id: 6
+  name: "[BE][COMPARISON] Throughput"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: Follow the instructions below to analyze the graph, COMPARE the current test against a baseline, and PROVIDE observations corresponding to constraints and concerning the current test in relation to the baseline.
+    ###Context: You are provided with a performance testing graph featuring two lines: a solid line indicating the current test and a dotted line representing the baseline test.
+    ###Instructions:
+      - Assess the trends of each throughput line.
+      - Evaluate if the current throughput level is comparable to the baseline.
+      - Assess the stability of the current throughput line. Minor fluctuations are acceptable.
+    ###Constraints:
+      - Be concise and provide your observation in one sentence, without introductory statements or conclusions.
+      - If the metric is comparable and there are no observed degradations, the test is considered successful. In this case, the observation should follow the following structure: [Metric name] is comparable with the baseline test and the overall trend of the current test is stable.
+      - If the current test isn't comparable or there are observed degradations, the observation should follow the following structure: [Metric name] is not comparable with the baseline test since [describe performance issue].
+- id: 7
+  name: "[BE][COMPARISON] Response time table"
+  type: default
+  place: graph
+  prompt: |
+    ###Task: FOLLOW the instructions below to ANALYZE the table and PROVIDE observations
+    ###Instructions:
+      - Identify transactions where the absolute difference value (Diff) is more than +300ms and the difference is positive (indicating degradation) and mark them as degraded. Ensure to consider the units (ms or s) for both baseline and current values.
+      - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.'
+      - If there are degraded transactions, then the output should contain only the following statements:
+        'For most transactions, the response time remained at the same level, except the following transactions:
+        - {{Transaction name}} shows a degradation of {{degradation milliseconds}} milliseconds.'
+- id: 8
+  name: "[BE][SINGLE] Template summary"
+  type: default
+  place: template
+  prompt: |
+    Context: You are provided with a set of performance test observations, including graphs and test data analysis.
+    Task: Create a comprehensive report, that should encapsulate key findings, and actionable recommendations to provide a clear overview of the system's performance and stability.
+    Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      The performance testing results indicate that the system [performs well with no significant performance issues/shows both strengths and areas for improvement/performs very poorly, with significant issues]. The key areas for improvement include [highlight areas].
+
+    Analysis:
+      - [Provide a highlevel overview of the behavior of throughput]
+      - [Provide a highlevel overview of the behavior of response times]
+      - [Provide a highlevel overview of the behavior of CPU usage]
+      - [Provide a highlevel overview of the behavior of Memory usage]
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+
+    Top 5 slowest requests:
+      - [request name]: median response time of [value] ms.
+
+    Requests with high error rate:
+    [If there are requests with a high error rate, include them]
+
+    Requests that do not meet NFRs:
+    [If there are requests that don't meet the NFRs, include them]
+
+    Recommendations:
+      - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    Observations from aggregated data analysis:
+    ${aggregated_data_analysis}
+
+    Observations from graphs analysis:
+    ${graphs_analysis}
+
+    Observations from NFRs comparison.
+    ${nfr_summary}
+
+    Observations from ML analysis.
+    ${ml_summary}
+- id: 9
+  name: "[BE][COMPARISON] Template summary"
+  type: default
+  place: template
+  prompt: |
+    Context: You are provided with a set of stability performance regression test results, including analysis of graphs, aggregated data and NFRs.
+    Task: Create a detailed regression test report that should present the key regression findings and practical recommendations to gain a clear understanding of the performance and stability of the system.
+    Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      The performance testing results are [comparable with no significant performance issues/comparable with areas for improvement/uncomparable, with significant issues]. The key areas for improvement include [highlight areas].
+
+    Analysis:
+      - [Provide a highlevel overview of the behavior of throughput]
+      - [Provide a highlevel comparing overview of the behavior of response times only in one sentence]
+      - [Provide a highlevel overview of the behavior of CPU usage only in one sentence]
+      - [Provide a highlevel overview of the behavior of Memory usage only in one sentence]
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+
+    Top 5 degraded transactions:
+      - {transaction}: median response time of {value} ms.
+
+    Requests that do not meet NFRs:
+      [If there are requests that don't meet the NFRs, include them]
+
+    Recommendations:
+      - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    Observations from aggregated data analysis:
+    ${aggregated_data_analysis}
+
+    Observations from graphs analysis:
+    ${graphs_analysis}
+
+    Observations from NFRs analysis:
+    ${nfr_summary}
+
+    Observations from ML analysis:
+    ${ml_summary}
+- id: 10
+  name: Template group
+  type: default
+  place: template_group
+  prompt: |
+    Task: Review the results of multiple tests provided below and create short high-level summary of each test.
+    Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      - The tests results are [satisfactory/not satisfactory].
+      - [Provide a highlevel overview of the performance issues].
+    @@@@
+- id: 11
+  name: "[BE][SINGLE] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    ###Task: follow the instructions below to ANALYZE the metrics and PROVIDE observations corresponding to constraints
+    ###Constraints: Provide your output using the following structure; do not use any other format. Replace [] with real values.
+    ###Instructions:
+      - Provide requests with high error rate. If there are requests with an error rate greater than 2%, follow this structure:
+        - The request {transaction} has a notably high percentage of errors at {value}%.
+      - If all requests have an error rate less than 2%, use this structure:
+        - No requests with high error rate.
+      - Provide the top 5 slowest requests. Structure in a bullet list:
+        - Top 5 slowest requests (Based on median):
+          - {transaction}: median response time of {value} ms.
+- id: 12
+  name: "[BE][COMPARISON] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    ###Task: FOLLOW the instructions below to ANALYZE the json with back-end performance test results and PROVIDE observations
+    ###Instructions:
+     - Identify {transaction} where the {diff_pct} value shows significant degradation.
+      - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, the response time remained at the same level.'
+      - If there are degraded transactions, then the output should contain only the following statements:
+        'Transactions with declining performance:
+        - The {metric} for {transaction} has declined by {diff_pct}, dropping from {baseline} to {value}.
+- id: 13
+  name: System message
+  type: default
+  place: system
+  prompt: |
+    You are a skilled Performance Analyst with strong data analysis expertise. Please help analyze the performance test results.
+- id: 14
+  name: "[FE][SINGLE] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    ###Task: FOLLOW the instructions below to ANALYZE the json with front-end performance metrics and PROVIDE observations
+    ###Instructions:
+      - Identify {transaction} with pure performance and suggest a reason based on other metrics, as some metrics can influence one another.
+      - If there aren't transactions with pure performance, then the output should contain only the following statement: 'Performance is good across all transactions.'
+      - If there are transactions with pure performance, then the output should contain only the following statements:
+        'Transactions with pure performance:
+        - The {metric} for {transaction} is {value}.{Suggest a reason based on other metrics, as some metrics can influence one another.}'
+    ###Example correlations:
+    - TTFB & FCP/LCP: A slow Time to First Byte (TTFB) directly delays First Contentful Paint (FCP) and Largest Contentful Paint (LCP), as nothing can be rendered until the first byte of the HTML is received.
+    - Backend/Network & TTFB: TTFB is the result of redirectionTime, dns (domainLookupTime), connect (serverConnectionTime), ssl, and wait (serverResponseTime). A slow backEndTime is a major contributor to serverResponseTime and thus, a high TTFB.
+    - Resource Size & FCP/LCP: Large transfer sizes of render-blocking resources like css and javascript increase pageDownloadTime and frontEndTime, which in turn delays FCP and LCP.
+    - LCP Element & LCP: The transfer size of the specific image or font that is the LCP element directly impacts its load duration, and therefore the LCP score.
+    - JavaScript Size & TBT/FID: Large javascript transfer sizes lead to longer tasks, which increases totalBlockingTime (TBT). A high TBT is a primary cause of poor First Input Delay (FID), as it measures main-thread blocking.
+    - Dynamic Content & CLS: CLS (Cumulative Layout Shift) is worsened by image elements without defined dimensions, dynamically injected ads, or web font files that cause a flash of unstyled or invisible text.
+    - HTML Size & DOM Timings: A large html transfer size increases the time it takes to download and parse the document, delaying domInteractiveTime and domContentLoadedTime.
+    - Total Resources & Load Times: The cumulative transfer size of all resources (css, javascript, image, etc.) increases the overall pageLoadTime and the time to reach fullyLoaded.
+    - Long Tasks & TBT: TBT is the sum of the blocking portions (time over 50ms) of all long tasks that occur between FCP and Time To Interactive.
+    - JS Memory & Responsiveness: High JSHeapUsedSize can lead to more frequent garbage collection events, which are blocking tasks that increase TBT and make the page less responsive.
+    - Network Contention & Loading: High _queued or blocked times for critical assets, often due to network contention, will delay their download and negatively impact FCP and LCP.
+    - DOM Timings & Load Event: domContentLoadedTime occurs when the HTML is parsed, but pageLoadTime (the load event) is delayed until all resources, including image and css, have finished downloading.
+- id: 15
+  name: "[FE][COMPARISON] Aggregated data"
+  type: default
+  place: aggregated_data
+  prompt: |
+    ###Task: FOLLOW the instructions below to ANALYZE the json with front-end performance metrics and PROVIDE observations
+    ###Instructions:
+      - Identify {transaction} where the {diff_pct} value shows significant degradation (for example more than 10%).
+      - If there aren't degraded transactions, then the output should contain only the following statement: 'For all transactions, front-end performance remained at the same level.'
+      - If there are degraded transactions, then the output should contain only the following statements:
+        'Transactions with declining performance:
+        - The {metric} for {transaction} has declined by {diff_pct}, dropping from {baseline} to {value}.{Suggest a reason based on other metrics, as some metrics can influence one another.}'
+    ###Example correlations:
+    - TTFB & FCP/LCP: A slow Time to First Byte (TTFB) directly delays First Contentful Paint (FCP) and Largest Contentful Paint (LCP), as nothing can be rendered until the first byte of the HTML is received.
+    - Backend/Network & TTFB: TTFB is the result of redirectionTime, dns (domainLookupTime), connect (serverConnectionTime), ssl, and wait (serverResponseTime). A slow backEndTime is a major contributor to serverResponseTime and thus, a high TTFB.
+    - Resource Size & FCP/LCP: Large transfer sizes of render-blocking resources like css and javascript increase pageDownloadTime and frontEndTime, which in turn delays FCP and LCP.
+    - LCP Element & LCP: The transfer size of the specific image or font that is the LCP element directly impacts its load duration, and therefore the LCP score.
+    - JavaScript Size & TBT/FID: Large javascript transfer sizes lead to longer tasks, which increases totalBlockingTime (TBT). A high TBT is a primary cause of poor First Input Delay (FID), as it measures main-thread blocking.
+    - Dynamic Content & CLS: CLS (Cumulative Layout Shift) is worsened by image elements without defined dimensions, dynamically injected ads, or web font files that cause a flash of unstyled or invisible text.
+    - HTML Size & DOM Timings: A large html transfer size increases the time it takes to download and parse the document, delaying domInteractiveTime and domContentLoadedTime.
+    - Total Resources & Load Times: The cumulative transfer size of all resources (css, javascript, image, etc.) increases the overall pageLoadTime and the time to reach fullyLoaded.
+    - Long Tasks & TBT: TBT is the sum of the blocking portions (time over 50ms) of all long tasks that occur between FCP and Time To Interactive.
+    - JS Memory & Responsiveness: High JSHeapUsedSize can lead to more frequent garbage collection events, which are blocking tasks that increase TBT and make the page less responsive.
+    - Network Contention & Loading: High _queued or blocked times for critical assets, often due to network contention, will delay their download and negatively impact FCP and LCP.
+    - DOM Timings & Load Event: domContentLoadedTime occurs when the HTML is parsed, but pageLoadTime (the load event) is delayed until all resources, including image and css, have finished downloading.
+- id: 16
+  name: "[FE][SINGLE] Template summary"
+  type: default
+  place: template
+  prompt: |
+    ### Context: You are provided with a set of frontend performance test observations, including graphs and test data analysis. Task: Create a comprehensive report, that should encapsulate key findings, and actionable recommendations to provide a clear overview of the frontend system's performance and user experience.
+    ### Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues].
+    Analysis:
+      - [Put here all observations from aggregated data analysis in bullet point list].
+      - [Put here all observations from graphs analysis in bullet point list].
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+
+    Pages/transactions that do not meet NFRs:
+    - [If there are pages/transactions that don't meet the NFRs, include them]
+
+    Recommendations:
+    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    ### Observations from aggregated data analysis:
+    ${aggregated_data_analysis}
+
+    ### Observations from graphs analysis:
+    ${graphs_analysis}
+
+    ### Observations from NFRs analysis:
+    ${nfr_summary}
+- id: 17
+  name: "[FE][COMPARISON] Template summary"
+  type: default
+  place: template
+  prompt: |
+    ### Context: You are provided with a set of frontend performance regression test results, including analysis of graphs, aggregated data and NFRs.
+    ### Task: Create a detailed regression test report that should present the key regression findings and practical recommendations to gain a clear understanding of the frontend performance and user experience of the system.
+    ### Constraints: Provide your output using the following structure, shared below between @@@@ characters; do not use any other format. Do not include @@@@ markers in the output. Replace the square brackets [] with the actual values.
+    @@@@
+    Summary:
+      The performance testing results indicate that the frontend [performs well with no significant performance issues / shows both strengths and areas for improvement / performs very poorly, with significant issues].
+    Analysis:
+      - [Put here all observations from aggregated data analysis in bullet point list].
+      - [Put here all observations from graphs analysis in bullet point list].
+      - The test results are [satisfactory/not satisfactory] as only [value]% of the Non-Functional Requirements (NFRs) are met.
+
+    Pages/transactions that do not meet NFRs:
+    - [If there are pages/transactions that don't meet the NFRs, include them]
+
+    Recommendations:
+    - [Provide recommendations for addressing any identified issues. Ensure that each recommendation is clearly stated and supported by the data].
+    @@@@
+
+    ### Observations from aggregated data analysis:
+    ${aggregated_data_analysis}
+
+    ### Observations from graphs analysis:
+    ${graphs_analysis}
+
+    ### Observations from NFRs analysis:
+    ${nfr_summary}

@@ -39,125 +39,148 @@
 
   const sendPostRequest = (url, json) => {
     return new Promise((resolve, reject) => {
-      $.ajax({
-        url: url,
-        type: "POST",
-        data: json,
-        contentType: "application/json",
-        success: function (data) {
-          resolve(data.redirect_url);
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-          reject({ jqXHR, textStatus, errorThrown });
-        },
-      });
+      // Parse the JSON string if it's a string
+      const data = typeof json === 'string' ? JSON.parse(json) : json;
+
+      // Convert traditional URL to API endpoint
+      const endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
+
+      // Use the API client for all POST requests
+      apiClient.post(endpoint, data)
+        .then((response) => {
+          if (response.status === 'success') {
+            // Handle redirect if available
+            if (response.redirect_url) {
+              resolve(response.redirect_url);
+            } else {
+              resolve(response);
+            }
+          } else {
+            reject(new Error(response.message || 'Request failed'));
+          }
+        })
+        .catch((error) => {
+          reject(error);
+        });
     });
   };
 
   const sendPostRequestReport = (url, json) => {
     return new Promise((resolve, reject) => {
-      $.ajax({
-        url: url,
-        type: "POST",
-        data: json,
-        contentType: "application/json",
-        success: function (data) {
-          showResultModal("Report generated!", JSON.parse(data));
-          resolve();
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-          reject({ jqXHR, textStatus, errorThrown });
-        },
-      });
+      // Parse the JSON string if it's a string
+      const data = typeof json === 'string' ? JSON.parse(json) : json;
+
+      // Use the API client for report generation
+      apiClient.tests.generateReport(data)
+          .then((response) => {
+            if (response.status === 'success') {
+              showResultModal("Report generated!", response.data);
+              resolve();
+            } else {
+              showResultModal("Failed!", response.message);
+              reject(new Error(response.message));
+            }
+          })
+          .catch((error) => {
+            showResultModal("Failed!", error.message || "An error occurred while generating the report");
+            reject(error);
+          });
     });
   };
 
-  function showResultModal(message, result=null) {
-    // Populate the modal with the result data using a loop
-    const resultModalBody = document.getElementById('resultModalBody');
-    const resultModalLabel = document.getElementById('resultModalLabel');
-    resultModalBody.innerHTML = ''; // Clear previous content
-    resultModalLabel.innerHTML = message
-    if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
-      for (const [key, value] of Object.entries(result)) {
-        resultModalBody.style.display = 'block';
-        const p = document.createElement('p');
-        p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
-        resultModalBody.appendChild(p);
-      }
-    }else if (typeof result === 'string') {
-      resultModalBody.style.display = 'block';
-      const p = document.createElement('p');
-      p.textContent = result; // Set the text content to the string result
-      p.style.whiteSpace = 'pre-wrap'; // Preserve new lines and wrap text
-      resultModalBody.appendChild(p);
-    }else{
-      resultModalBody.style.display = 'none';
-    }
-
-    // Show the modal
-    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
-    resultModal.show();
-  }
-
   const sendDownloadRequest = (url, json) => {
     return new Promise((resolve, reject) => {
-      $.ajax({
-        url: url,
-        type: "POST",
-        data: json,
-        contentType: "application/json",
-        success: function (data, textStatus, request) {
-          const contentType = request.getResponseHeader("Content-Type");
-          if (contentType === "application/pdf") {
-            const resultJson = request.getResponseHeader("X-Result-Data");
-            const result = JSON.parse(resultJson);
+        const data = typeof json === 'string' ? JSON.parse(json) : json;
 
-            // Create a Blob from the response data
-            const blob = new Blob([data], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = result.filename + '.pdf';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+        fetch('/api/v1/reports', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cookie': `project=${getCookie('project')}`
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            // Get the X-Result-Data header that contains the statistics
+            const resultData = response.headers.get('X-Result-Data');
 
-            // Show the result in the modal
-            showResultModal("Report generated!", result);
-            
-            resolve(result);
-          } else {
-            resolve(data.redirect_url);
-          }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-          reject({ jqXHR, textStatus, errorThrown });
-        },
-        xhrFields: {
-          responseType: "blob", // Set the responseType to handle binary data
-        },
-      });
+            if (!response.ok) {
+                return response.json().then(err => {
+                    showResultModal("Failed!", err.message || "Failed to generate PDF report");
+                    throw new Error(err.message || 'PDF generation failed');
+                });
+            }
+
+            // Parse the result data from the header and show it in the modal
+            if (resultData) {
+                try {
+                    const parsedData = JSON.parse(resultData);
+                    showResultModal("Report generated!", parsedData);
+                    resolve(parsedData);
+                } catch (e) {
+                    console.error("Failed to parse result data:", e);
+                }
+            }
+
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'report.pdf';
+            if (contentDisposition) {
+                // Support both standard and RFC 5987 (filename*) forms.
+                // This regex captures the first occurrence of filename or filename* and stops at the next semicolon.
+                const filenameRegex = /filename\*?=(?:UTF-8''|"?)([^";\n]*)/i;
+                const match = filenameRegex.exec(contentDisposition);
+                if (match && match[1]) {
+                    // Decode RFC 5987 encoding and trim surrounding quotes/spaces
+                    filename = decodeURIComponent(match[1]).replace(/^\s+|\s+$/g, '').replace(/"/g, '');
+                }
+            }
+            return response.blob().then(blob => ({ blob, filename }));
+        })
+        .then(({ blob, filename }) => {
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(link.href);
+            resolve();
+        })
+        .catch(error => {
+            showResultModal("Failed!", error.message || "An error occurred while generating the report");
+            reject(error);
+        });
     });
   };
 
   const sendGetRequest = (url) => {
     return new Promise((resolve, reject) => {
-      $.ajax({
-        url: url,
-        type: "GET",
-        dataType: 'json',
-        success: function (data) {
-          resolve(data);
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-          reject({ jqXHR, textStatus, errorThrown });
-        },
-      });
+      // Convert URL to API endpoint format
+      let endpoint;
+
+      if (url.startsWith('/api/v1/')) {
+        // Already in the correct format
+        endpoint = url.replace('/api/v1/', '');
+      } else {
+        // Convert traditional URL to API endpoint
+        endpoint = url.replace(/^\//, '').replace(/\/(\w+)$/, '');
+      }
+
+      // Use the API client for all GET requests
+      apiClient.get(endpoint)
+        .then((response) => {
+          resolve(response);
+        })
+        .catch((error) => {
+          reject(error);
+        });
     });
   };
 
   const validateForm = (form, event, callback) => {
+    console.log("validateForm called with form:", form);
+    console.log("validateForm called with event:", event);
+
     form.classList.add('was-validated');
     if (!form.checkValidity()) {
         event.preventDefault();
@@ -176,15 +199,49 @@
     }
   };
 
-  function extractRunIds(input) {
-    const runIds = [];
-    for (const item of input) {
-        const runIdMatch = item.match(/'runId':(.*?)(,|$)/);
-        if (runIdMatch) {
-            runIds.push(runIdMatch[1]);
+  function showResultModal(message, result=null) {
+    // Populate the modal with the result data using a loop
+    const resultModalBody = document.getElementById('resultModalBody');
+    const resultModalLabel = document.getElementById('resultModalLabel');
+    resultModalBody.innerHTML = ''; // Clear previous content
+    resultModalLabel.innerHTML = message;
+
+    if (typeof result === 'object' && result !== null && !Array.isArray(result)) {
+      // Filter out binary/large content that shouldn't be displayed
+      const filteredResult = {};
+
+      for (const [key, value] of Object.entries(result)) {
+        // Skip pdf_content and blob properties
+        if (key !== 'pdf_content' && key !== 'blob') {
+          filteredResult[key] = value;
         }
+      }
+
+      // Check if we have any properties to display
+      if (Object.keys(filteredResult).length > 0) {
+        resultModalBody.style.display = 'block';
+
+        for (const [key, value] of Object.entries(filteredResult)) {
+          const p = document.createElement('p');
+          p.innerHTML = `<strong>${key}:</strong> <span style="float: right; text-align: right;">${value}</span>`;
+          resultModalBody.appendChild(p);
+        }
+      } else {
+        resultModalBody.style.display = 'none';
+      }
+    } else if (typeof result === 'string') {
+      resultModalBody.style.display = 'block';
+      const p = document.createElement('p');
+      p.textContent = result; // Set the text content to the string result
+      p.style.whiteSpace = 'pre-wrap'; // Preserve new lines and wrap text
+      resultModalBody.appendChild(p);
+    } else {
+      resultModalBody.style.display = 'none';
     }
-    return runIds;
+
+    // Show the modal
+    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    resultModal.show();
   }
 
 
@@ -260,17 +317,13 @@
       getSelectedRows() {
         const selectedRows = Array.from(this.bulkSelectRows).filter((row) => row.checked).map((row) => {
             const checkboxData = getData(row, "bulk-select-row");
-            // if (checkboxData.template_id == "no data"){
-            //   checkboxData["template_id"] = checkboxData.testName;
-            // }
             delete checkboxData.duration;
             delete checkboxData.startTime;
             delete checkboxData.endTime;
             delete checkboxData.maxThreads;
-            delete checkboxData.testName;
             return checkboxData;
         });
-    
+
         return selectedRows;
     }
       attachNodes() {
@@ -278,7 +331,7 @@
           this.actions = new DomNode(document.getElementById(t)),
           this.replacedElement = new DomNode(document.getElementById(s)),
           this.bulkSelectRows = document.getElementById(e).querySelectorAll("[data-bulk-select-row]");
-          
+
       }
       attachRowNodes(e) {
           this.bulkSelectRows = e;
@@ -344,18 +397,18 @@
       button.disabled = disabled;
       button.classList[disabled ? 'add' : 'remove']('disabled');
   };
-    
+
   const listInit = () => {
       const { getData } = window.perforge.utils;
       if (window.List) {
         const lists = document.querySelectorAll('[data-list]');
-    
+
         if (lists.length) {
           lists.forEach(el => {
             const bulkSelect = el.querySelector('[data-bulk-select]');
-    
+
             let options = getData(el, 'list');
-    
+
             if (options.pagination) {
               options = {
                 ...options,
@@ -365,7 +418,7 @@
                 }
               };
             }
-    
+
             const paginationButtonNext = el.querySelector(
               '[data-list-pagination="next"]'
             );
@@ -376,15 +429,72 @@
             const viewLess = el.querySelector('[data-list-view="less"]');
             const listInfo = el.querySelector('[data-list-info]');
             const listFilter = document.querySelector('[data-list-filter]');
-            const list = new List(el, options);
-    
+
+            // Handle List.js initialization with proper error handling
+            try {
+              // Add a dummy row if needed - List.js requires at least one item during initialization
+              const listBody = el.querySelector('.list');
+              let dummyRowAdded = false;
+
+              if (listBody && listBody.children.length === 0) {
+                const dummyRow = document.createElement('tr');
+                dummyRow.id = 'dummy-list-row';
+                dummyRow.style.display = 'none';
+
+                // Add cells with appropriate classes based on valueNames
+                if (options.valueNames && Array.isArray(options.valueNames)) {
+                  options.valueNames.forEach(name => {
+                    const cell = document.createElement('td');
+                    cell.className = name;
+                    cell.textContent = 'dummy';
+                    dummyRow.appendChild(cell);
+                  });
+                } else {
+                  // Fallback if no valueNames
+                  dummyRow.innerHTML = '<td>dummy</td>';
+                }
+
+                listBody.appendChild(dummyRow);
+                dummyRowAdded = true;
+              }
+
+              // Initialize List.js
+              const list = new List(el, options);
+
+              // Store the list instance on the element for later access
+              el.List = list;
+
+              // Remove the dummy row if we added one
+              if (dummyRowAdded) {
+                const dummyRow = listBody.querySelector('#dummy-list-row');
+                if (dummyRow) {
+                  dummyRow.remove();
+                }
+
+                // Reset the items array after removing the dummy
+                if (list.items && list.items.length === 1) {
+                  list.items = [];
+                  list.visibleItems = [];
+                  list.matchingItems = [];
+                }
+              }
+
+            } catch (error) {
+              console.error('List.js initialization error:', error);
+              return; // Exit if initialization fails
+            }
+
+            // Get the list instance from the element
+            const list = el.List;
+            if (!list) return; // Skip the rest if list initialization failed
+
             // -------fallback-----------
-    
+
             list.on('updated', item => {
               const fallback =
                 el.querySelector('.fallback') ||
                 document.getElementById(options.fallback);
-    
+
               if (fallback) {
                 if (item.matchingItems.length === 0) {
                   fallback.classList.remove('d-none');
@@ -393,75 +503,69 @@
                 }
               }
             });
-    
+
             // ---------------------------------------
-    
+
             const totalItem = list.items.length;
             const itemsPerPage = list.page;
             const btnDropdownClose = list.listContainer.querySelector('.btn-close');
             let pageQuantity = Math.ceil(totalItem / itemsPerPage);
             let numberOfcurrentItems = list.visibleItems.length;
             let pageCount = 1;
-    
+
             btnDropdownClose &&
               btnDropdownClose.addEventListener('search.close', () => {
                 list.fuzzySearch('');
               });
-    
+
             const updateListControls = () => {
               listInfo &&
-                (listInfo.innerHTML = `${list.i} to ${numberOfcurrentItems} <span> Items of </span>${totalItem}`);
-    
+                (listInfo.innerHTML = `${list.i} to ${list.i + list.visibleItems.length - 1} <span> Items of </span>${totalItem}`);
+
               paginationButtonPrev &&
                 togglePaginationButtonDisable(
                   paginationButtonPrev,
-                  pageCount === 1
+                  list.i === 1
                 );
               paginationButtonNext &&
                 togglePaginationButtonDisable(
                   paginationButtonNext,
-                  pageCount === pageQuantity
+                  list.i + list.visibleItems.length >= totalItem
                 );
-    
-              if (pageCount > 1 && pageCount < pageQuantity) {
-                togglePaginationButtonDisable(paginationButtonNext, false);
-                togglePaginationButtonDisable(paginationButtonPrev, false);
-              }
             };
-    
+
             // List info
             updateListControls();
-    
+
+            list.on('updated', item => {
+              updateListControls();
+            });
+
             if (paginationButtonNext) {
               paginationButtonNext.addEventListener('click', e => {
                 e.preventDefault();
-                pageCount += 1;
-    
                 const nextInitialIndex = list.i + itemsPerPage;
-                nextInitialIndex <= list.size() &&
+                if (nextInitialIndex <= list.size()) {
                   list.show(nextInitialIndex, itemsPerPage);
-                numberOfcurrentItems += list.visibleItems.length;
-                updateListControls();
+                }
               });
             }
-    
+
             if (paginationButtonPrev) {
               paginationButtonPrev.addEventListener('click', e => {
                 e.preventDefault();
-                pageCount -= 1;
-    
-                numberOfcurrentItems -= list.visibleItems.length;
                 const prevItem = list.i - itemsPerPage;
-                prevItem > 0 && list.show(prevItem, itemsPerPage);
-                updateListControls();
+                if (prevItem > 0) {
+                  list.show(prevItem, itemsPerPage);
+                }
               });
             }
-    
+
             const toggleViewBtn = () => {
               viewLess.classList.toggle('d-none');
               viewAll.classList.toggle('d-none');
             };
-    
+
             if (viewAll) {
               viewAll.addEventListener('click', () => {
                 list.show(1, totalItem);
@@ -517,7 +621,7 @@
                 });
               });
             }
-    
+
             //bulk-select
             if (bulkSelect) {
               const bulkSelectInstance = window.perforge.BulkSelect.getInstance(bulkSelect);
@@ -526,7 +630,7 @@
                   item.elm.querySelector('[data-bulk-select-row]')
                 )
               );
-    
+
               bulkSelect.addEventListener('change', () => {
                 if (list) {
                   if (bulkSelect.checked) {
@@ -555,7 +659,6 @@
     validateForm: validateForm,
     sendPostRequest: sendPostRequest,
     sendGetRequest: sendGetRequest,
-    extractRunIds: extractRunIds,
     docReady: docReady,
     camelize: camelize,
     getData: getData,
@@ -574,18 +677,18 @@
     const selectedRowsBtn = document.querySelector('[data-selected-rows]');
     const selectedAction = document.getElementById('selectedAction');
     const showApiBtn = document.getElementById('show-api');
-    const selectedInfluxdb = document.getElementById('influxdbId');
+    const selectedDb = document.getElementById('dataSourceId');
     const selectedTemplateGroup = document.getElementById('templateGroupName');
     const spinner = document.getElementById("spinner-apply");
     const spinnerText = document.getElementById("spinner-apply-text");
-  
+
     // Utility Functions
     const getCookieValue = (name) => {
       const value = `; ${document.cookie}`;
       const parts = value.split(`; ${name}=`);
       return parts.length === 2 ? parts.pop().split(';').shift() : null;
     };
-  
+
     const copyToClipboard = async (text) => {
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -605,31 +708,27 @@
         console.error('Error copying to clipboard: ', err);
       }
     };
-  
+
     const get_tests_data = () => {
       const bulkSelectEl = document.getElementById('bulk-select-example');
       const bulkSelectInstance = window.perforge.BulkSelect.getInstance(bulkSelectEl);
       const transformedList = bulkSelectInstance.getSelectedRows();
       const selectedRows = {};
       const output = JSON.parse(selectedAction.value.toString());
-  
+
       if (transformedList.length === 0) {
         showResultModal("Please choose at least one test.");
         return null;
       }
-  
-      selectedRows["tests"] = transformedList;
-      selectedRows["influxdb_id"] = selectedInfluxdb.value;
-  
-      if (output.type === undefined || output.type === "none") {
-        showResultModal("Please choose an output.");
+
+      if (output.type === "none") {
+        showResultModal("Please choose an action.");
         return null;
       }
-  
-      selectedRows["output_id"] = (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id;
-      
+
+      // Validate templates before filtering
       if(output.type !== "delete"){
-        for (const item of selectedRows["tests"]) {
+        for (const item of transformedList) {
           if (!item.template_id || item.template_id === "no data") {
             showResultModal(`${item.test_title} has an empty template.`);
             return null;
@@ -637,22 +736,69 @@
         }
       }
 
+      // Filter db_config to only include required fields (id and source_type)
+      const fullDbId = JSON.parse(selectedDb.value);
+      const dbId = {
+        id: fullDbId.id,
+        source_type: fullDbId.source_type
+      };
+
+      // Filter each test object to include required fields, preserving baseline_test_title
+      selectedRows["tests"] = transformedList.map(test => {
+        const newTest = {
+          test_title: test.test_title,
+          template_id: test.template_id,
+          db_config: dbId
+        };
+        if (test.baseline_test_title && test.baseline_test_title !== "no data") {
+          newTest.baseline_test_title = test.baseline_test_title;
+        }
+        return newTest;
+      });
+
+      selectedRows["output_config"] = {
+        "output_id": (output.type === "pdf_report" || output.type === "delete") ? output.type : output.id
+      };
+
+      // Add integration_type to the request data if it exists in the output object
+      if (output.integration_type) {
+        selectedRows["output_config"]["integration_type"] = output.integration_type;
+      }
+
+      // Add selected theme for PDF reports
+      if (output.type === 'pdf_report') {
+        const theme = localStorage.getItem('theme') || 'dark';
+        selectedRows["output_config"]["theme"] = theme;
+      }
+
       if (selectedTemplateGroup.value !== "") {
         selectedRows["template_group"] = selectedTemplateGroup.value;
       }
-  
+
       return selectedRows;
     };
-  
+
     const handleRequest = async (url, data, requestType) => {
       try {
         spinner.style.display = "inline-block";
         spinnerText.style.display = "none";
-  
+
         if (requestType === 'download') {
           await sendDownloadRequest(url, data);
         } else if (requestType === 'delete') {
-          await sendPostRequest(url, data);
+          // For delete operations, use the API client directly
+          if (url === '/generate') {
+            const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+            const response = await apiClient.tests.generateReport(parsedData);
+            if (response.status === 'success') {
+              showFlashMessage('Tests deleted successfully', 'success');
+              location.reload();
+            } else {
+              showFlashMessage(response.message || 'Failed to delete tests', 'error');
+            }
+          } else {
+            await sendPostRequest(url, data);
+          }
         } else {
           await sendPostRequestReport(url, data);
         }
@@ -661,36 +807,37 @@
         spinnerText.style.display = "";
       }
     };
-  
+
     // Event Listeners
     if (selectedRowsBtn) {
       selectedRowsBtn.addEventListener('click', async () => {
         const selectedRows = get_tests_data();
         if (!selectedRows) return;
-  
+
         const selectedActionValue = JSON.parse(selectedAction.value.toString());
         const requestType = selectedActionValue.type === "pdf_report" ? 'download' : selectedActionValue.type === "delete" ? 'delete' : 'report';
-  
+
         await handleRequest('/generate', JSON.stringify(selectedRows), requestType);
       });
     }
-  
+
     if (showApiBtn) {
       showApiBtn.addEventListener('click', () => {
         const selectedRows = get_tests_data();
         if (!selectedRows) return;
-  
+
         const projectCookieValue = getCookieValue('project');
         const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
-  
+
+        // Use the new API endpoint
         const post_request = `
 curl -k --fail-with-body --request POST \\
---url ${baseUrl}/generate \\
+--url ${baseUrl}/api/v1/reports \\
 -H "Content-Type: application/json" \\
 -H "Cookie: project=${projectCookieValue}" \\
 --data '${JSON.stringify(selectedRows, null, 2)}'
 `;
-  
+
         copyToClipboard(post_request.trim());
       });
     }

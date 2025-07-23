@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,52 +15,51 @@
 import traceback
 import logging
 
-from app                                    import app
-from app.backend.errors                     import ErrorMessages
-from app.backend.components.nfrs.nfr_config import NFRConfig
-from flask                                  import render_template, request, url_for, redirect, flash, jsonify
+from app                                         import app
+from app.backend.components.nfrs.nfrs_db         import DBNFRs
+from app.backend.components.projects.projects_db import DBProjects
+from app.backend.errors                          import ErrorMessages
+from flask                                       import render_template, request, url_for, redirect, flash
 
 
 @app.route('/nfrs', methods=['GET'])
 def get_nfrs():
+    """
+    Render the NFRs list page.
+
+    Returns:
+        Rendered template for the NFRs list page
+    """
     try:
-        project   = request.cookies.get('project')
-        nfrs_list = NFRConfig.get_all_nfrs(project)
+        project_id   = request.cookies.get('project')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        nfrs_list    = DBNFRs.get_configs(project_id=project_id)
         return render_template('home/nfrs.html', nfrs_list=nfrs_list)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_NFRS.value, "error")
-    return redirect(url_for('get_nfrs'))
+        flash(ErrorMessages.ER00019.value, "error")
+        return redirect(url_for('get_nfrs'))
 
-@app.route('/nfr', methods=['GET', 'POST'])
+@app.route('/nfr', methods=['GET'])
 def get_nfr():
+    """
+    Render the NFR edit/create page.
+
+    Returns:
+        Rendered template for the NFR edit/create page
+    """
     try:
-        nfr_data   = {}
-        project    = request.cookies.get('project')
-        nfr_config = request.args.get('nfr_config')
-        if nfr_config is not None:
-            nfr_data = NFRConfig.get_nfr_values_by_id(project, nfr_config)
-        if request.method == "POST":
-            original_nfr_config = request.get_json().get("id")
-            nfr_config          = NFRConfig.save_nfr_config(project, request.get_json())
-            if original_nfr_config == nfr_config:
-                flash("NFR updated.", "info")
-            else:
-                flash("NFR added.", "info")
-            return jsonify({'redirect_url': 'nfrs'})
+        project_id   = request.cookies.get('project')
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        nfr_id       = request.args.get('nfr_config')
+        clone        = request.args.get('clone')
+        nfr_data     = {}
+        if nfr_id:
+            nfr_data = DBNFRs.get_config_by_id(project_id=project_id, id=nfr_id)
+            if clone:
+                nfr_data['name'] = f"{nfr_data.get('name', '')} COPY"
+                nfr_id = None
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SAVE_NFR.value, "error")
-    return render_template('home/nfr.html', nfr_config=nfr_config,nfr_data=nfr_data)
-
-@app.route('/delete/nfr', methods=['GET'])
-def delete_nfrs():
-    try:
-        project = request.cookies.get('project')
-        NFRConfig.delete_nfr_config(project, request.args.get('nfr_config'))
-        flash("NFR deleted.", "info")
-        return redirect(url_for('get_nfrs'))
-    except Exception as er:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_NFR.value, "error")
-        return redirect(url_for('get_nfrs'))
+        flash(ErrorMessages.ER00020.value, "error")
+    return render_template('home/nfr.html', nfr_config=nfr_id, nfr_data=nfr_data)

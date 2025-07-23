@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} NFR {% endblock %} 
+{% block title %} NFR {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -11,32 +11,27 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header">
-                </div> 
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-                    <div class="card-header">
-                      <div class="justify-content-between align-items-center">
-                        <h4 class="mb-0">NFR
-                            <div class="tooltip-container">
-                              <a href="https://perforge.app/docs/configuration/nfrs" target="_blank">
-                                  <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                              </a>
-                              <div class="tooltip-content" style="font-size: 16px;">
-                                  Click to learn more
-                              </div>
-                            </div>
-                        </h4>
-                      </div>
-                    </div>
                     <div class="card-body">
-                        <form class="needs-validation" novalidate="">
+                        <form class="needs-validation" novalidate="" id="nfrForm">
                             <div class="flex-direction-column" id="nfrs-container">
                                 <div class="full-screen-section">
-                                    <div class="marging-10 mt-3">
-                                        <label class="col-form-nfr-label">Name:</label>
-                                    </div>
-                                    <div class="marging-10">
-                                        <input name="test_name" id="test_name" class="form-control" required>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="marging-10 mt-0 me-2">
+                                            <label class="col-form-nfr-label mb-0">Name:</label>
+                                        </div>
+                                        <div class="marging-10 flex-grow-1 me-3">
+                                            <input name="nfr_name" id="nfr_name" class="form-control" required placeholder="e.g. my-nfr">
+                                        </div>
+
+                                        <!-- New Switcher UI -->
+                                        <div class="d-flex align-items-center" role="group" aria-label="Metric Type Switcher">
+                                            <label class="mb-0 me-2" for="metricTypeSwitch">Backend</label>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="metricTypeSwitch">
+                                            </div>
+                                            <label class="mb-0 ms-1" for="metricTypeSwitch">Frontend Metrics </label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="full-screen-section">
@@ -80,11 +75,13 @@
                                 </div>
                             </div>
                         </form>
-                        {% with msgs = get_flashed_messages() %}
-                            {% include 'includes/flashed-msg.html' %}
-                        {% endwith %}
                     </div>
                 </div>
+            </div>
+            <div class="center-section">
+              {% with msgs = get_flashed_messages() %}
+              {% include 'includes/flashed-msg.html' %}
+              {% endwith %}
             </div>
         </div>
         <script>
@@ -96,18 +93,14 @@
                   </div>
                 </div>
                 <div class="nfr-col-l padding-10">
-                  <input name="scope" class="form-control scope-nfr-field" required>
+                  <input name="scope" class="form-control scope-nfr-field" required placeholder="e.g. my-request">
                   <div class="valid-feedback">Looks good!</div>
                   <div class="invalid-feedback">Please provide a valid data.</div>
                 </div>
                 <div class="nfr-col-s padding-10">
-                  <select class="form-select metric-nfr-field" required>
-                    <option value="avg" selected>avg</option>
-                    <option value="pct50">50%-tile</option>
-                    <option value="pct75">75%-tile</option>
-                    <option value="pct90">90%-tile</option>
-                    <option value="count">count</option>
-                    <option value="rpm">rpm</option>
+                  <select name="metric" class="form-select metric-nfr-field" required>
+                    <option selected disabled value="">Choose...</option>
+                    <!-- Options will be dynamically populated by JavaScript -->
                   </select>
                   <div class="valid-feedback">Looks good!</div>
                   <div class="invalid-feedback">Please provide a valid data.</div>
@@ -123,7 +116,7 @@
                   <div class="invalid-feedback">Please provide a valid data.</div>
                 </div>
                 <div class="nfr-col-m padding-10">
-                  <input name="threshold" class="form-control threshold-nfr-field" step="0.001" type="number" required>
+                  <input name="threshold" class="form-control threshold-nfr-field" step="0.001" type="number" required placeholder="e.g. 100">
                   <div class="valid-feedback">Looks good!</div>
                   <div class="invalid-feedback">Please provide a valid data.</div>
                 </div>
@@ -137,20 +130,52 @@
                 </div>
               </div>
             `;
-          
+
+            const backendMetrics = ["avg", "pct50", "pct75", "pct90", "count", "rpm"];
+            const frontendMetrics = [
+              "CLS", "FCP", "FID", "LCP", "TBT", "TTFB", "fullyLoaded", "backEndTime",
+              "domContentLoadedTime", "domInteractiveTime", "domainLookupTime", "frontEndTime",
+              "pageDownloadTime", "pageLoadTime", "redirectionTime", "serverConnectionTime",
+              "serverResponseTime", "_queued", "blocked", "connect", "dns", "receive",
+              "send", "ssl", "wait", "durations", "lastLongTask", "maxPotentialFid",
+              "tasks", "totalBlockingTime", "totalDuration", "JSHeapUsedSize",
+              "JSHeapTotalSize", "css", "font", "html", "image", "javascript", "json",
+              "plain", "favicon", "svg", "other"
+            ];
+            const allMetrics = [...new Set([...backendMetrics, ...frontendMetrics])].sort();
+
             function addNfrRow() {
               const container = document.getElementById("nfrs-container");
               container.insertAdjacentHTML("beforeend", rowTemplate);
+              const newRow = container.querySelector('.nfr-row:last-child');
+              const metricSelect = newRow.querySelector('.metric-nfr-field');
+
+              const selectedMetricType = document.getElementById('metricTypeSwitch').checked ? 'frontend' : 'backend';
+              const metricsToUse = selectedMetricType === 'frontend' ? frontendMetrics : backendMetrics;
+
+              // Clear any existing options except the placeholder
+              while (metricSelect.options.length > 1) {
+                metricSelect.remove(1);
+              }
+
+              metricsToUse.forEach(metric => {
+                const option = document.createElement('option');
+                option.value = metric;
+                option.textContent = metric;
+                metricSelect.appendChild(option);
+              });
             }
-          
+
             function deleteNfrRow(elem) {
               elem.parentNode.parentNode.remove();
             }
-          
-            function getNFRs() {
+
+            function getNFRData() {
               const formData = {};
-              formData.id = '{{ nfr_config }}' ? '{{ nfr_config }}' : '';
-              formData.name = document.querySelector('[name="test_name"]').value;
+              const nfrConfig = '{{ nfr_config }}';
+              formData.id = nfrConfig && nfrConfig !== 'None' ? nfrConfig : null;
+              formData.name = document.querySelector('[name="nfr_name"]').value;
+              formData.metric_type = document.getElementById('metricTypeSwitch').checked ? 'frontend' : 'backend';
               const nfrs = document.querySelectorAll('.nfr-row');
               const data = Array.from(nfrs).map(element => ({
                 regex: element.querySelector('.regex-nfr-field').checked,
@@ -158,61 +183,154 @@
                 metric: element.querySelector('.metric-nfr-field').value,
                 operation: element.querySelector('.operation-nfr-field').value,
                 threshold: parseInt(element.querySelector('.threshold-nfr-field').value),
-                weight: element.querySelector('.weight-nfr-field').value
+                weight: element.querySelector('.weight-nfr-field').value || null
               }));
-          
+
               formData.rows = data;
-              return JSON.stringify(formData);
+              return formData;
             }
-          
+
             const nfrsPanel = document.getElementById("nfrs-panel");
-            const name = document.getElementById("test_name");
+            const name = document.getElementById("nfr_name");
             const nfrsJson = JSON.parse('{{ nfr_data | tojson }}');
 
             if (nfrsJson && nfrsJson.name != null) {
                 name.value = nfrsJson.name;
+
+                // Determine metric type from the first row and set the switcher
+                if (nfrsJson.rows && nfrsJson.rows.length > 0) {
+                    const firstMetric = nfrsJson.rows[0].metric;
+                    if (frontendMetrics.includes(firstMetric)) {
+                        document.getElementById('metricTypeSwitch').checked = true;
+                    } else {
+                        document.getElementById('metricTypeSwitch').checked = false;
+                    }
+                    // Update all dropdowns to reflect the new switcher state *before* populating rows
+                    // This ensures new rows added in the loop get the correct metric list initially.
+                    updateAllMetricDropdowns();
+                }
+
                 for (const row of nfrsJson.rows) {
                     addNfrRow();
                     const newRow = document.querySelector('.nfr-row:last-child');
+                    const metricSelect = newRow.querySelector('.metric-nfr-field');
+
+                    while (metricSelect.options.length > 1) {
+                        metricSelect.remove(1);
+                    }
+
+                    allMetrics.forEach(metric => {
+                        const option = document.createElement('option');
+                        option.value = metric;
+                        option.textContent = metric;
+                        metricSelect.appendChild(option);
+                    });
+
                     newRow.querySelector('.regex-nfr-field').checked = row.regex;
                     newRow.querySelector('.scope-nfr-field').value = row.scope;
-                    newRow.querySelector('.metric-nfr-field').value = row.metric;
+                    metricSelect.value = row.metric;
                     newRow.querySelector('.operation-nfr-field').value = row.operation;
                     newRow.querySelector('.threshold-nfr-field').value = row.threshold;
-                    newRow.querySelector('.weight-nfr-field').value = row.weight;
+                    newRow.querySelector('.weight-nfr-field').value = row.weight || '';
                 }
+                // Call updateAllMetricDropdowns again after all rows are loaded and values set
+                // This ensures all dropdowns are correctly populated and values preserved if possible.
+                updateAllMetricDropdowns();
             }
-          
+
             const container = document.getElementById("nfrs-container");
             const nfRows = container.getElementsByClassName("nfr-row");
             if (nfRows.length === 0) {
               addNfrRow();
             }
 
-            (() => {
-                "use strict";
-                const forms = document.querySelectorAll(".needs-validation");
-                Array.from(forms).forEach((form) => {
-                    form.addEventListener(
-                        "submit",
-                        (event) => {
-                            perforge.utils.validateForm(form, event, (result) => {
-                            if (result) {
-                                perforge.utils
-                                .sendPostRequest("/nfr", getNFRs())
-                                .then((redirectUrl) => {
-                                    window.location.replace(redirectUrl);
-                                })
-                                .catch((error) => {
-                                    console.error("Request failed:", error);
-                                });
-                            }
+            // Function to update all metric dropdowns based on switcher
+            function updateAllMetricDropdowns() {
+                const metricSwitch = document.getElementById('metricTypeSwitch');
+                const selectedType = metricSwitch.checked ? 'frontend' : 'backend';
+                const metricsToUse = selectedType === 'frontend' ? frontendMetrics : backendMetrics;
+
+                const allRows = document.querySelectorAll('.nfr-row');
+
+                allRows.forEach(row => {
+                    const metricSelect = row.querySelector('.metric-nfr-field');
+                    if (metricSelect) {
+                        const currentValue = metricSelect.value;
+                        // Clear existing options (keeping the placeholder if it exists)
+                        let placeholderOption = null;
+                        if (metricSelect.options.length > 0 && metricSelect.options[0].disabled && metricSelect.options[0].value === "") {
+                            placeholderOption = metricSelect.options[0].cloneNode(true);
+                        }
+                        metricSelect.innerHTML = ''; // Clear all options
+                        if (placeholderOption) {
+                            metricSelect.appendChild(placeholderOption);
+                        }
+
+                        metricsToUse.forEach(metric => {
+                            const option = document.createElement('option');
+                            option.value = metric;
+                            option.textContent = metric;
+                            metricSelect.appendChild(option);
                         });
-                    },
-                    false
-                    );
+
+                        // Try to re-select the previous value if it's valid in the new list
+                        if (metricsToUse.includes(currentValue)) {
+                            metricSelect.value = currentValue;
+                        } else if (placeholderOption && metricSelect.options.length > 1) {
+                            metricSelect.selectedIndex = 1; // Select first actual metric after placeholder
+                        } else if (!placeholderOption && metricSelect.options.length > 0) {
+                            metricSelect.selectedIndex = 0; // Select first actual metric
+                        } else if (placeholderOption && metricSelect.options.length === 1){
+                            metricSelect.selectedIndex = 0; // Only placeholder left
+                        } else {
+                            metricSelect.value = ""; // No valid options, clear selection or rely on placeholder
+                        }
+                    }
                 });
-                })();
+            }
+
+            // Add event listener to the new switcher
+            const metricSwitch = document.getElementById('metricTypeSwitch');
+            if (metricSwitch) {
+                metricSwitch.addEventListener('change', updateAllMetricDropdowns);
+            }
+
+            // Form validation and submission
+            document.getElementById('nfrForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                // Basic form validation
+                const form = this;
+                if (!form.checkValidity()) {
+                    event.stopPropagation();
+                    form.classList.add('was-validated');
+                    return;
+                }
+
+                const nfrData = getNFRData();
+                const nfrId = nfrData.id;
+
+                // Use the API client to save the NFR
+                const apiCall = nfrId
+                    ? apiClient.nfrs.update(nfrId, nfrData)
+                    : apiClient.nfrs.create(nfrData);
+
+                apiCall
+                    .then(response => {
+                        // Show success message
+                        const message = nfrId ? "NFR updated successfully." : "NFR created successfully.";
+                        showFlashMessage(message, "success");
+
+                        // Redirect to NFRs list page after a short delay
+                        setTimeout(() => {
+                            window.location.href = '/nfrs';
+                        }, 1000);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showFlashMessage(error.message || "An error occurred while saving the NFR.", "error");
+                    });
+            });
           </script>
     </main>
 {% endblock content %}

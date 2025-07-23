@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc        import ABC, abstractmethod
-from app.config import config_path
+
+from abc import ABC, abstractmethod
 
 
 class Integration(ABC):
 
     def __init__(self, project):
         self.project     = project
-        self.config_path = config_path
 
     @abstractmethod
     def set_config(self):

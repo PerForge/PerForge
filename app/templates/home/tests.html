@@ -11,49 +11,35 @@
         <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <div class="main-body-header flex-center-center">
-                    <div id="version-info"></div>
-                </div>
                 <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-                    <div class="card-header">
-                      <div class="justify-content-between align-items-center">
-                        <h4 class="mb-0">Test log
-                            <div class="tooltip-container">
-                              <a href="https://perforge.app/docs/tutorial-extras/reporting-ui" target="_blank">
-                                  <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                              </a>
-                              <div class="tooltip-content" style="font-size: 16px;">
-                                  Click to learn more
-                              </div>
-                            </div>
-                        </h4>
-                      </div>
-                    </div>
                     <div class="card-body">
                         <div id="table-id">
-                            <div class="d-flex align-items-center justify-content-end mb-3">
-                                <div class="d-flex" id="bulk-select-actions">
-                                    <div>
-                                        <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
-                                            <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" />
-                                            <span class="fas fa-search search-box-icon"></span>
-                                        </div>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="d-flex">
+                                    <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
+                                        <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" style="min-width: 300px;"/>
+                                        <span class="fas fa-search search-box-icon"></span>
                                     </div>
-                                    <select class="form-select ms-2" id="influxdbId">
-                                        {% for influxdb in influxdb_configs %}
-                                            <option value="{{ influxdb.id }}">{{ influxdb.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <select class="form-select ms-2" id="selectedAction">
-                                        <option value='{"type": "none"}' selected="selected">Choose output</option>
+                                    <div class="d-flex align-items-center ms-2">
+                                        <label for="dataSourceId" class="form-label mb-0 me-2">Datasource:</label>
+                                        <select class="form-select" id="dataSourceId">
+                                            {% for db in db_configs %}
+                                                <option value='{{ db | tojson | safe }}'>{{ db.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-flex" id="bulk-select-actions">
+                                    <select class="form-select ms-2" id="selectedAction" style="min-width: 180px;">
+                                        <option value='{"type": "none"}' selected="selected">Select an action</option>
                                         {% for output in output_configs %}
                                             <option value='{{ output | tojson | safe }}'>{{ output.name }}</option>
                                         {% endfor %}
-                                        <option value='{"type": "pdf_report"}'>PDF report</option>
-                                        <option value='{"type": "delete"}'>Delete</option>
+                                        <option value='{"type": "pdf_report"}'>PDF file</option>
+                                        <option value='{"type": "delete"}'>Delete test</option>
                                     </select>
-                                    <select class="form-select ms-2" id="templateGroupName">
-                                        <option value='' selected="selected">Template group</option>
+                                    <select class="form-select ms-2" id="templateGroupName" style="min-width: 310px;">
+                                        <option value='' selected="selected">Select a template group (optional)</option>
                                         {% for template_group in template_groups %}
                                             <option value="{{ template_group.id }}">{{ template_group.name }}</option>
                                         {% endfor %}
@@ -77,17 +63,18 @@
                                                 </div>
                                             </th>
                                             <th class="sort" data-sort="test_title">Test title</th>
-                                            <th>Template</th>
-                                            <th class="sort" data-sort="testName">Application</th>
                                             <th class="sort" data-sort="duration">Duration (sec)</th>
-                                            <th class="sort" data-sort="maxThreads">Users</th>
-                                            <th class="sort" data-sort="startTime">Start time</th>
-                                            <th class="sort" data-sort="endTime">End time</th>
-                                            <th>Compare</th>
+                                            <th class="sort" data-sort="max_threads">Users</th>
+                                            <th class="sort" data-sort="start_time">Start time</th>
+                                            <th class="sort" data-sort="end_time">End time</th>
+                                            <th>Template</th>
+                                            <th>Baseline test</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="list" id="bulk-select-body">
                                         <tr>
+                                            <th></th>
                                             <th></th>
                                             <th></th>
                                             <th></th>
@@ -142,76 +129,146 @@
         </div>
         <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
-            $(document).ready(function() {
-                const influxdb_select = document.getElementById("influxdbId");
-                influxdb_select.addEventListener("change", loadData);
-        
+            $(document).ready(function(){
+                // Cookie handling functions
+                function setCookie(name, value, days) {
+                    let expires = "";
+                    if (days) {
+                        const date = new Date();
+                        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                        expires = "; expires=" + date.toUTCString();
+                    }
+                    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+                }
+
+                function getCookie(name) {
+                    const nameEQ = name + "=";
+                    const ca = document.cookie.split(';');
+                    for(let i = 0; i < ca.length; i++) {
+                        let c = ca[i];
+                        while (c.charAt(0) === ' ') c = c.substring(1);
+                        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                    }
+                    return null;
+                }
+
+                const dataSource_select = document.getElementById("dataSourceId");
+                let currentAbortController = null;
+
+                // Initialize from cookie if exists
+                const savedDataSource = getCookie("selectedDataSource");
+                if (savedDataSource) {
+                    dataSource_select.value = savedDataSource;
+                }
+
+                // Update cookie when selection changes
+                dataSource_select.addEventListener("change", function() {
+                    setCookie("selectedDataSource", this.value, 7);
+                    loadData();
+                });
+
                 const templates = JSON.parse('{{ templates | tojson }}');
                 if (!templates) {
                     templates = []
                 }
-        
+
+                // Initial load after everything is initialized
                 loadData();
-        
-                function loadData() {
-                    var influxdb = $("#influxdbId").val();
+
+                function loadData(){
+                    // If there's a pending request, abort it.
+                    if (currentAbortController) {
+                        currentAbortController.abort();
+                    }
+                    // Create a new AbortController for the new request.
+                    currentAbortController = new AbortController();
+                    const signal = currentAbortController.signal;
+
+                    var dataSource = $("#dataSourceId").val();
+                    const dataSourceJson = JSON.parse(dataSource);
+                    const sourceType = encodeURIComponent(dataSourceJson.source_type);
+                    const id = encodeURIComponent(dataSourceJson.id);
                     $("#spinner").show();
-                    perforge.utils
-                        .sendGetRequest('/load_tests?influxdb=' + influxdb)
-                        .then((data) => {
-                            if (data.status === 'success') {
-                                updateTable(data.tests);
+
+                    // Use the API client instead of direct fetch, passing the signal
+                    apiClient.tests.getTestData(sourceType, id, { signal })
+                        .then((response) => {
+                            if(response.status === 'success'){
+                                updateTable(response.data.tests);
                             } else {
-                                const badmsg = document.getElementById("bad-msg");
-                                badmsg.style.display = "flex";
-                                const msg = badmsg.querySelector("#msg");
-                                msg.textContent = data.message;
+                                var tableBody = document.getElementById("bulk-select-body");
+                                tableBody.innerHTML = ''; // Clear the table body
+                                showFlashMessage(response.message, 'error');
                             }
                             $("#spinner").hide();
-        
+
                             // Initialize List.js after updating the table
                             perforge.utils.listInit();
 
                         })
                         .catch((error) => {
-                            const badmsg = document.getElementById("bad-msg");
-                            badmsg.style.display = "flex";
-                            const msg = badmsg.querySelector("#msg");
-                            msg.textContent = error;
+                            // If the error is an AbortError, it means we cancelled it intentionally.
+                            if (error.name === 'AbortError') {
+                                console.log('Fetch aborted');
+                                return; // Don't show an error message.
+                            }
+                            var tableBody = document.getElementById("bulk-select-body");
+                            tableBody.innerHTML = ''; // Clear the table body
+                            showFlashMessage('Failed to load test data. Please try again.', 'error');
                             $("#spinner").hide();
                         });
                 }
-        
+
                 function updateTable(tests) {
-                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "testName", "duration", "maxThreads", "startTime", "endTime"], "page": 10, "pagination": true}');
-        
+                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "duration", "max_threads", "start_time", "end_time"], "page": 10, "pagination": true}');
+
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body
-        
+
                     tests.forEach(function(test) {
                         const row = tableBody.insertRow();
-        
+
                         // Insert the checkbox column
                         const checkboxCell = row.insertCell();
                         const checkboxDiv = document.createElement("div");
                         checkboxDiv.className = "form-check fs-0";
-                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","testName":"${test.testName}","duration":"${test.duration}","maxThreads":"${test.maxThreads}","startTime":"${test.startTime}","endTime":"${test.endTime}"}' />`;
+                        checkboxDiv.innerHTML = `<input class="form-check-input" type="checkbox" data-bulk-select-row='{"test_title":"${test.test_title}","duration":"${test.duration}","max_threads":"${test.max_threads}","start_time":"${test.start_time}","end_time":"${test.end_time}"}' />`;
                         checkboxCell.appendChild(checkboxDiv);
-        
+
                         // Insert cells for each column based on your data structure
-                        const runIdCell = row.insertCell();
-                        runIdCell.className = "test_title"; // Add class for sorting
-                        runIdCell.textContent = test.test_title;
-        
+                        const testTitleCell = row.insertCell();
+                        testTitleCell.className = "test_title";
+                        testTitleCell.textContent = test.test_title;
+
+                        // Insert Duration (modify as needed)
+                        const durationCell = row.insertCell();
+                        durationCell.className = "duration";
+                        durationCell.textContent = test.duration;
+
+                        // Insert Max Threads (modify as needed)
+                        const max_threadsCell = row.insertCell();
+                        max_threadsCell.className = "max_threads";
+                        max_threadsCell.textContent = test.max_threads;
+
+                        // Insert Start Time (modify as needed)
+                        const start_timeCell = row.insertCell();
+                        start_timeCell.className = "start_time";
+                        start_timeCell.textContent = test.start_time;
+
+                        // Insert End Time (modify as needed)
+                        const end_timeCell = row.insertCell();
+                        end_timeCell.className = "end_time";
+                        end_timeCell.textContent = test.end_time;
+
                         // Create and insert the Test ID dropdown
                         const templateIdCell = row.insertCell();
                         const selectTemplate = document.createElement("select");
                         selectTemplate.className = "form-select";
-        
+
                         // Create a default "Choose for comparison" option
                         const defaultTemplateOption = document.createElement("option");
                         defaultTemplateOption.value = "no data"; // Set an empty value for the default option
-                        defaultTemplateOption.textContent = "For report generation";
+                        defaultTemplateOption.textContent = "Select a template";
                         selectTemplate.appendChild(defaultTemplateOption);
                         selectTemplate.setAttribute("template-test-id", test.test_title)
                         templates.forEach(tmp => {
@@ -221,7 +278,7 @@
                             selectTemplate.appendChild(option);
                         });
                         templateIdCell.appendChild(selectTemplate);
-        
+
                         selectTemplate.addEventListener('change', (event) => {
                             const value = event.target.value;
                             const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
@@ -229,41 +286,16 @@
                             checkboxData['template_id'] = value;
                             checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
                         });
-        
-                        // Insert Test Name (modify as needed)
-                        const testNameCell = row.insertCell();
-                        testNameCell.className = "testName"; // Add class for sorting
-                        testNameCell.textContent = test.testName;
-        
-                        // Insert Duration (modify as needed)
-                        const durationCell = row.insertCell();
-                        durationCell.className = "duration"; // Add class for sorting
-                        durationCell.textContent = test.duration;
-        
-                        // Insert Max Threads (modify as needed)
-                        const maxThreadsCell = row.insertCell();
-                        maxThreadsCell.className = "maxThreads"; // Add class for sorting
-                        maxThreadsCell.textContent = test.maxThreads;
-        
-                        // Insert Start Time (modify as needed)
-                        const startTimeCell = row.insertCell();
-                        startTimeCell.className = "startTime"; // Add class for sorting
-                        startTimeCell.textContent = test.startTime;
-        
-                        // Insert End Time (modify as needed)
-                        const endTimeCell = row.insertCell();
-                        endTimeCell.className = "endTime"; // Add class for sorting
-                        endTimeCell.textContent = test.endTime;
-        
+
                         // Create and insert the Test ID dropdown
                         const testIdCell = row.insertCell();
                         const select = document.createElement("select");
                         select.className = "form-select";
-        
+
                         // Create a default "Choose for comparison" option
                         const defaultOption = document.createElement("option");
                         defaultOption.value = "no data"; // Set an empty value for the default option
-                        defaultOption.textContent = "For comparison";
+                        defaultOption.textContent = "Select a test to compare (optional)";
                         select.appendChild(defaultOption);
                         select.setAttribute("data-test-id", test.test_title)
                         tests.forEach(test => {
@@ -273,7 +305,7 @@
                             select.appendChild(option);
                         });
                         testIdCell.appendChild(select);
-        
+
                         select.addEventListener('change', (event) => {
                             const value = event.target.value;
                             const checkbox = checkboxDiv.querySelector('input[data-bulk-select-row]');
@@ -281,24 +313,67 @@
                             checkboxData['baseline_test_title'] = value;
                             checkbox.setAttribute('data-bulk-select-row', JSON.stringify(checkboxData))
                         });
+
+                        const reportCell = row.insertCell();
+                        const btn = document.createElement('a');
+                        btn.className = 'btn btn-danger';
+                        const dataSource = document.getElementById('dataSourceId').value;
+                        const dataSourceJson = JSON.parse(dataSource);
+                        btn.textContent = 'ML Report';
+                        if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
+                            btn.classList.add('disabled');
+                        } else {
+                            btn.href = `/report?test_title=${test.test_title}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}`;
+                        }
+                        reportCell.appendChild(btn);
                     });
+
+                    perforge.utils.listInit();
                 }
             });
-        
-            async function checkVersion() {
-                const response = await fetch('/check_new_version');
-                const data = await response.json();
-                const versionInfo = document.getElementById('version-info');
-        
-                if (data.new_version_released) {
-                    versionInfo.innerHTML = `
-                        New version is available:<span class="text-primary fw-bold ms-2">${data.new_version}</span>
-                        Check out the <a href="https://github.com/PerForge/PerForge/releases/tag/${data.new_version}" class="text-primary fw-bold" target="_blank">release notes</a> and update.
-                    `;
+
+
+            // --- Logic to save and restore selected data source ---
+            document.addEventListener('DOMContentLoaded', function() {
+                const dataSourceSelect = document.getElementById('dataSourceId');
+                const storedDataSourceId = localStorage.getItem('selectedDataSourceId');
+
+                if (storedDataSourceId) {
+                    let found = false;
+                    for (let i = 0; i < dataSourceSelect.options.length; i++) {
+                        const option = dataSourceSelect.options[i];
+                        try {
+                            const dbConfig = JSON.parse(option.value);
+                            // Use == for type coercion just in case one is a string and the other a number
+                            if (dbConfig.id == storedDataSourceId) {
+                                option.selected = true;
+                                // Trigger the change event to load the tests table
+                                dataSourceSelect.dispatchEvent(new Event('change'));
+                                found = true;
+                                break;
+                            }
+                        } catch (e) {
+                            console.error("Could not parse data source option value:", option.value, e);
+                        }
+                    }
+                    // If the stored ID is not in the list, it was probably deleted.
+                    if (!found) {
+                        localStorage.removeItem('selectedDataSourceId');
+                    }
                 }
-            }
-            // Check version when the page loads
-            checkVersion();
+
+                // Add event listener to save the data source ID when the user changes it
+                dataSourceSelect.addEventListener('change', function() {
+                    try {
+                        const selectedDbConfig = JSON.parse(this.value);
+                        if (selectedDbConfig && selectedDbConfig.id) {
+                            localStorage.setItem('selectedDataSourceId', selectedDbConfig.id);
+                        }
+                    } catch (e) {
+                        console.error("Could not parse selected data source value:", this.value, e);
+                    }
+                });
+            });
         </script>
     </main>
 {% endblock content %}

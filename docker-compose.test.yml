@@ -1,0 +1,16 @@
+version: '3'
+services:
+  perforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: perforge
+    ports:
+      - "7878:7878"
+    networks:
+      - perforge-net
+    restart: always
+
+networks:
+  perforge-net:
+    external: true

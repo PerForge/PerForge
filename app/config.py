@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,21 @@
 
 import os
 
-from decouple import config
+from decouple         import config
+from flask_sqlalchemy import SQLAlchemy
 
 
 basedir     = os.path.abspath(os.path.dirname(__file__))
-config_path = "./app/data/config.json"
+# Configure SQLAlchemy with optimized connection pooling settings
+db = SQLAlchemy(engine_options={
+    'pool_size': 10,  # Default number of connections to maintain
+    'max_overflow': 20,  # Allow up to this many extra connections when pool_size is reached
+    'pool_timeout': 30,  # Seconds to wait before giving up on getting a connection
+    'pool_recycle': 300,  # Recycle connections after 5 minutes to avoid stale connections
+    'pool_pre_ping': True  # Check connection validity before using it from the pool
+})
 
 class Config:
 
-    CSRF_ENABLED                   = True
-    SECRET_KEY                     = config('SECRET_KEY', default='S#perS3crEt_007')
-    database_path                  = os.path.join(basedir, 'db.sqlite3')
-    SQLALCHEMY_DATABASE_URI        = f'sqlite:///{database_path}'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    CSRF_ENABLED = True
+    SECRET_KEY   = config('SECRET_KEY', default='S#perS3crEt_007')

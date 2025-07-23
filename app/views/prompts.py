@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,54 +15,16 @@
 import logging
 import traceback
 
-
-from app                                          import app
-from app.forms                                    import PromptForm
-from app.backend.errors                           import ErrorMessages
-from app.backend.components.prompts.prompt_config import PromptConfig
-from flask                                        import flash, redirect, request, url_for, render_template
+from app                                       import app
+from app.backend.errors                        import ErrorMessages
+from flask                                     import flash, redirect, url_for, render_template
 
 
 @app.route('/prompts', methods=['GET'])
 def prompts():
     try:
-        project          = request.cookies.get('project')
-        form_for_prompts = PromptForm(request.form)
-        default_prompts  = PromptConfig.get_default_prompts()
-        custom_prompts   = PromptConfig.get_custom_prompts(project)
+        return render_template('home/prompts.html')
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_PROMPTS.value, "error")
+        flash(ErrorMessages.ER00016.value, "error")
         return redirect(url_for("index"))
-    return render_template('home/prompts.html', default_prompts = default_prompts, custom_prompts = custom_prompts, form_for_prompts = form_for_prompts)
-
-@app.route('/save-prompt', methods=['POST'])
-def save_prompt():
-    try:
-        project    = request.cookies.get('project')
-        if request.method == "POST":
-            original_prompt_id = request.form.to_dict().get("id")
-            prompt_id          = PromptConfig.save_custom_prompt(project, request.form.to_dict())
-        if original_prompt_id == prompt_id:
-            flash("Custom prompt updated.", "info")
-        else:
-            flash("Custom prompt added.", "info")
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.SAVE_PROMPT.value, "error")
-        return redirect(url_for("index"))
-    return redirect(url_for('prompts', type='custom'))
-
-@app.route('/delete-prompt', methods=['GET'])
-def delete_prompt():
-    try:
-        project    = request.cookies.get('project')
-        prompt_id  = request.args.get('prompt_id')
-        if prompt_id is not None:
-            PromptConfig.delete_custom_prompt(project, prompt_id)
-            flash("Custom prompt deleted", "info")
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.DELETE_PROMPT.value, "error")
-        return redirect(url_for("index"))
-    return redirect(url_for('prompts', type='custom'))

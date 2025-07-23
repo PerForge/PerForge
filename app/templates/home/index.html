@@ -4,16 +4,15 @@
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 {% endblock stylesheets %}
 {% block content %}
    <main>
       <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-               <div class="main-body-header">
-               </div>
                <div class="start-section ms-4 mt-3">
-                  <h2 class="mb-2 lh-sm">Getting started</h2>
+                  <h2 class="lh-sm">Project stats</h2>
                </div>
                <div class="start-section ms-4 mt-3">
                   <div class="pr-10 col-xxl-2-5 col-lg-2-5">
@@ -72,8 +71,8 @@
                </div>
                <div class="start-section ms-4">
                   {% for project in projects %}
-                      <div class="card card-project center-section">
-                          <a class="mt-3-5" href="/set-project?project={{ project.id }}">{{ project.name }}</a>
+                      <div class="card card-project center-section" data-project-id="{{ project.id }}">
+                          <a class="mt-3-5" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
                           <button class="badge badge-primary mt-2 fs--2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}">remove</button>
                       </div>
                       <div class="modal fade" id="deleteProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel-{{ project.id }}" aria-hidden="true">
@@ -88,7 +87,7 @@
                                   </div>
                                   <div class="modal-footer">
                                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                      <a class="btn btn-danger" href="/delete-project?project={{ project.id }}">Confirm Delete</a>
+                                      <button type="button" class="btn btn-danger" onclick="deleteProject('{{ project.id }}')">Confirm Delete</button>
                                   </div>
                               </div>
                           </div>
@@ -120,7 +119,7 @@
                         </ul>
                      </div>
                      <div class="center-section">
-                        <p>Current version:<p class="text-primary fw-bold ms-2">{{ current_version }}</p></p>
+                        <p id="version-info" class="fs-5">Current version: <span class="text-primary fw-bold">{{ current_version }}</span></p>
                      </div>
                   </div>
                </div>
@@ -132,6 +131,89 @@
             </div>
         </div>
         <script>
+            function setActiveProject(projectId) {
+                apiClient.projects.setActive(projectId)
+                    .then(response => {
+                        window.location.reload();
+                    })
+                    .catch(error => {
+                        console.error('Error setting active project:', error);
+                        showFlashMessage("Error setting active project: " + (error.message || 'Unknown error'), "error");
+                    });
+            }
+
+            function deleteProject(projectId) {
+                apiClient.projects.delete(projectId)
+                    .then(response => {
+                        // Close modal
+                        $(`#deleteProjectModal-${projectId}`).modal('hide');
+
+                        // Show success message
+                        showFlashMessage("Project deleted successfully", "success");
+
+                        // Get all available projects after deletion
+                        apiClient.projects.getAll()
+                            .then(response => {
+                                if (response.data && response.data.projects && response.data.projects.length > 0) {
+                                    // If there are still projects, set the first one as active
+                                    apiClient.projects.setActive(response.data.projects[0].id)
+                                        .then(() => {
+                                            // Reload page after a short delay to allow message to be seen
+                                            setTimeout(() => {
+                                                window.location.reload();
+                                            }, 1000);
+                                        });
+                                } else {
+                                    // If no projects left, redirect to choose-project page after a short delay
+                                    setTimeout(() => {
+                                        window.location.href = '/choose-project';
+                                    }, 1000);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error getting projects after deletion:', error);
+                                showFlashMessage("Error getting projects after deletion", "error");
+                                // Fallback to choose-project page if there's an error
+                                setTimeout(() => {
+                                    window.location.href = '/choose-project';
+                                }, 1000);
+                            });
+                    })
+                    .catch(error => {
+                        console.error('Error deleting project:', error);
+                        showFlashMessage("Error deleting project: " + (error.message || 'Unknown error'), "error");
+                    });
+            }
+
+            async function checkVersion() {
+                const response = await fetch('/check_new_version');
+                const data = await response.json();
+                const versionInfo = document.getElementById('version-info');
+
+                if (data.new_version_released) {
+                    versionInfo.innerHTML = `<i class="fas fa-rocket text-primary me-2"></i> New version <strong class="text-primary">${data.new_version}</strong> is out! <a href="https://github.com/PerForge/PerForge/releases/tag/${data.new_version}" class="fw-bold" target="_blank">See what's new</a>`;
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                checkVersion();
+
+                function getCookie(name) {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                }
+
+                const activeProjectId = getCookie('project');
+
+                if (activeProjectId) {
+                    const projectCard = document.querySelector(`.card-project[data-project-id='${activeProjectId}']`);
+                    if (projectCard) {
+                        projectCard.classList.add('selected-project');
+                    }
+                }
+            });
         </script>
+      {% include 'includes/project-modal.html' %}
     </main>
 {% endblock content %}
