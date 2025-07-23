@@ -162,7 +162,7 @@ class SmtpMailReport(ReportingBase):
                     self.report_body += self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
-                        if obj.get('id') == test.get('template_id'):
+                        if int(obj.get('template_id')) == int(test.get('template_id')):
                             process_test(test)
             result = self.analyze_template_group()
             self.report_body = self.add_text(result) + self.report_body

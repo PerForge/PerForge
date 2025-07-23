@@ -341,7 +341,7 @@ class PdfReport(ReportingBase):
 
     def generate_title(self, isgroup):
         if isgroup:
-            title = self.group_title
+            title = self.replace_variables(self.group_title)
         else:
             title = self.replace_variables(self.title)
         return title
@@ -436,7 +436,7 @@ class PdfReport(ReportingBase):
                     self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
-                        if obj.get('id') == test.get('template_id'):
+                        if int(obj.get('template_id')) == int(test.get('template_id')):
                             process_test(test, True)
 
             # Add AI/ML/NFR summary for the whole group at the top
