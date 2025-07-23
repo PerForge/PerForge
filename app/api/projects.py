@@ -498,5 +498,28 @@ def _create_example_data(project_id: str) -> None:
             ]
         })
 
+        # Template example for SMTP
+        DBTemplates.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] REPORT for SMTP",
+            "nfr": nfr_example_id,
+            "title": "[EXAMPLE] REPORT for SMTP",
+            "ai_switch": False,
+            "ai_aggregated_data_switch": False,
+            "ai_graph_switch": False,
+            "ai_to_graphs_switch": False,
+            "nfrs_switch": True,
+            "ml_switch": True,
+            "template_prompt_id": None,
+            "aggregated_prompt_id": None,
+            "system_prompt_id": None,
+            "data": [
+                {"content":"<h1>Executive Summaries</h1>\n<p><strong>Timestamp when report was generated:</strong> ${report_timestamp}</p>\n<p><strong>Current run:</strong> from ${current_start_time} to ${current_end_time}</p>\n<p><strong>Baseline run:</strong> from ${baseline_start_time} to ${baseline_end_time}</p>\n<h1>Summary</h1>\n<hr>\n<h2>AI Insights</h2>\n<p>${ai_summary}</p>\n<h2>NFR Compliance</h2>\n<pre>${nfr_summary}</pre>\n<h2>ML Anomalies</h2>\n<pre>${ml_summary}</pre>\n<h2>Key KPI Comparison</h2>\n<table>\n        <thead>\n            <tr>\n                <th>KPI</th>\n                <th>Baseline</th>\n                <th>Current</th>\n            </tr>\n        </thead>\n        <tbody>\n            <tr>\n                <td>Max active users</td>\n                <td>${baseline_max_active_users}</td>\n                <td>${current_max_active_users}</td>\n            </tr>\n            <tr>\n                <td>Median throughput (RPS)</td>\n                <td>${baseline_median_throughput}</td>\n                <td>${current_median_throughput}</td>\n            </tr>\n            <tr>\n                <td>Median response time (ms)</td>\n                <td>${baseline_median_response_time_stats}</td>\n                <td>${current_median_response_time_stats}</td>\n            </tr>\n            <tr>\n                <td>P90 response time (ms)</td>\n                <td>${baseline_pct90_response_time_stats}</td>\n                <td>${current_pct90_response_time_stats}</td>\n            </tr>\n            <tr>\n                <td>Error rate %</td>\n                <td>${baseline_errors_pct_stats}</td>\n                <td>${current_errors_pct_stats}</td>\n            </tr>\n        </tbody>\n</table>\n<h3>Grafana Dashboards</h3>\n<p>\n    <strong>Baseline:</strong> <a href=\"${baseline_grafana_link}\" target=\"_blank\">baseline_grafana_link</a>\n</p>\n<p>\n    <strong>Current:</strong> <a href=\"${current_grafana_link}\" target=\"_blank\">current_grafana_link</a>\n</p>","graph_id":None,"template_id":None,"type":"text"},
+                {"content":"<h1>Throughput graph</h1>","graph_id":None,"template_id":None,"type":"text"},
+                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
+                {"content":"<h1>Aggregated data</h1>\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
+            ]
+        })
+
     except Exception as exc:
         logging.warning(f"Failed to create example data for project {project_id}: {exc}")

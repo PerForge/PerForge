@@ -36,14 +36,16 @@ class SmtpMailReport(ReportingBase):
         self.output_obj = SmtpMail(project=self.project, id=action_id)
 
     def add_group_text(self, text):
-        text = f'<p>{text}</p><br>'
-        text = text.replace('\n', '<br>')
+        text = text.replace("\r\n", "")
+        text = text.replace("\r", "")
+        text = text.replace("\n", "")
         return text
 
     def add_text(self, text):
         text = self.replace_variables(text)
-        text = f'<p>{text}</p>'
-        text = text.replace('\n', '<br>')
+        text = text.replace("\r\n", "")
+        text = text.replace("\r", "")
+        text = text.replace("\n", "")
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
@@ -134,52 +136,52 @@ class SmtpMailReport(ReportingBase):
         return "".join(html)
 
     def generate_path(self, isgroup):
-        return self.group_title if isgroup else self.replace_variables(self.title)
+        if isgroup:
+            return self.replace_variables(self.group_title)
+        else:
+            return self.replace_variables(self.title)
 
     def generate_report(self, tests, action_id, template_group=None):
-        templates_title = ""
-        group_title     = None
-        def process_test(test):
-            nonlocal templates_title
+        page_title  = None
+
+        def process_test(test, isgroup):
+            nonlocal page_title
+
             template_id = test.get('template_id')
             if template_id:
                 db_config = test.get('db_config')
                 self.set_template(template_id, db_config, action_id)
+
                 test_title            = test.get('test_title')
                 baseline_test_title   = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
-                title             = self.generate_path(False)
-                self.report_body += f'<h3>{title}</h3>'
+
+                # Determine the final wiki page title once
+                if page_title is None:
+                    if isgroup:
+                        page_title  = self.generate_path(True)
+                    else:
+                        page_title = self.generate_path(False)
                 self.report_body += self.generate(test_title, baseline_test_title)
-                if not group_title:
-                    templates_title += f'{title} | '
         if template_group:
             self.set_template_group(template_group)
-            group_title       = self.generate_path(True)
-            self.report_body += f'<h2>{group_title}</h2>'
+
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.report_body += self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
                         if int(obj.get('template_id')) == int(test.get('template_id')):
-                            process_test(test)
+                            process_test(test, True)
             result = self.analyze_template_group()
             self.report_body = self.add_text(result) + self.report_body
         else:
             for test in tests:
-                process_test(test)
-        current_time = datetime.now()
-        time_str     = current_time.strftime("%d.%m.%Y %H:%M")
-        if not group_title:
-            templates_title += time_str
-            title = templates_title
-        else:
-            group_title += f' {time_str}'
-            title = group_title
-        self.output_obj.put_page_to_mail(title, self.report_body, self.images)
+                process_test(test, False)
+
+        self.output_obj.put_page_to_mail(page_title, self.report_body, self.images)
         response = self.generate_response()
-        response['title'] = title
+        response['title'] = page_title
         return response
 
     def generate(self, current_test_title, baseline_test_title = None):
