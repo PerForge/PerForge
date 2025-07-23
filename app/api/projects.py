@@ -401,12 +401,12 @@ def _create_example_data(project_id: str) -> None:
             "prompt_id": None
         })
 
-        # Template example for Confluence
+        # Template example for Confluence Wiki
         DBTemplates.save(project_id, {
             "id": None,
-            "name": "[EXAMPLE] REPORT for Confluence",
+            "name": "[EXAMPLE] REPORT for Confluence Wiki",
             "nfr": nfr_example_id,
-            "title": "[EXAMPLE] REPORT for Confluence",
+            "title": "[EXAMPLE] REPORT for Confluence Wiki",
             "ai_switch": False,
             "ai_aggregated_data_switch": False,
             "ai_graph_switch": False,
@@ -422,6 +422,28 @@ def _create_example_data(project_id: str) -> None:
                 {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
                 {"content":"</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"},
                 {"content":"<h2>Aggregated data example in Expand</h2>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${aggregated_data_table_}\n</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"}]
+        })
+
+        # Template example for Confluence Jira
+        DBTemplates.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] REPORT for Confluence Jira",
+            "nfr": nfr_example_id,
+            "title": "[EXAMPLE] REPORT for Confluence Jira",
+            "ai_switch": False,
+            "ai_aggregated_data_switch": False,
+            "ai_graph_switch": False,
+            "ai_to_graphs_switch": False,
+            "nfrs_switch": True,
+            "ml_switch": True,
+            "template_prompt_id": None,
+            "aggregated_prompt_id": None,
+            "system_prompt_id": None,
+            "data": [
+                {"content":"h2. Executive summaries\n\nTimestamp when report was generated: ${report_timestamp}\\\n*Current run:* from ${current_start_time} to ${current_end_time}\\\n*Baseline run:* from ${baseline_start_time} to ${baseline_end_time}\n\nh2. Summary\n{code:title=AI insights|borderStyle=solid}\n${ai_summary}\n{code}\n\n{code:title=NFR compliance|borderStyle=solid}\n${nfr_summary}\n{code}\n\n{code:title=ML anomalies|borderStyle=solid}\n${ml_summary}\n{code}\n\nh2. Key KPI comparison\n\n|| KPI || Baseline || Current ||\n| Max active users | ${baseline_max_active_users} | ${current_max_active_users} |\n| Median throughput (RPS) | ${baseline_median_throughput} | ${current_median_throughput} |\n| Median response time (ms) | ${baseline_median_response_time_stats} | ${current_median_response_time_stats} |\n| P90 response time (ms) | ${baseline_pct90_response_time_stats} | ${current_pct90_response_time_stats} |\n| Error rate % | ${baseline_errors_pct_stats} | ${current_errors_pct_stats} |\n\nh3. Grafana dashboards\n\n*Baseline:* [baseline_grafana_link|${baseline_grafana_link}]. \\\n*Current:* [current_grafana_link|${current_grafana_link}].\n\nh2. Example graph","graph_id":None,"template_id":None,"type":"text"},
+                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
+                {"content":"h2. Aggregated data\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
+                ]
         })
 
         # Template example for Azure
