@@ -168,7 +168,7 @@
                 });
 
                 const templates = JSON.parse('{{ templates | tojson }}');
-                if (!templates){
+                if (!templates) {
                     templates = []
                 }
 
@@ -201,6 +201,10 @@
                                 showFlashMessage(response.message, 'error');
                             }
                             $("#spinner").hide();
+
+                            // Initialize List.js after updating the table
+                            perforge.utils.listInit();
+
                         })
                         .catch((error) => {
                             // If the error is an AbortError, it means we cancelled it intentionally.
