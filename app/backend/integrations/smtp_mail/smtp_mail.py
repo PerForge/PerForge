@@ -68,12 +68,22 @@ class SmtpMail(Integration):
                 html       = html
             )
             for img in report_images:
-                msg.attach(filename = img["file_name"], content_type = 'image/png', data = img["data"], headers = [['Content-ID', img["content_id"]]])
+                msg.attach(
+                    filename=img["file_name"],
+                    content_type="image/png",
+                    data=img["data"],
+                    headers={"Content-ID": img["content_id"]},
+                )
 
             logo_file_path = os.path.join('app', 'static', 'assets', 'img', 'logo.png')
             with open(logo_file_path, 'rb') as f:
                 logo_data = f.read()
-            msg.attach(filename = 'logo.png', content_type = 'image/png', data = logo_data, headers = [['Content-ID', 'perforge_logo']])
+            msg.attach(
+                    filename="logo.png",
+                    content_type="image/png",
+                    data=logo_data,
+                    headers={"Content-ID": "perforge_logo"},
+                )
 
             output = mail.send(msg)
             return output

@@ -15,14 +15,14 @@
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
                                 <h4 class="mb-0">Influxdb
-                                    <div class="tooltip-container">
+                                    <span class="tooltip-container">
                                       <a href="https://perforge.app/docs/configuration/integrations#influxdb" target="_blank">
                                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       </a>
-                                      <div class="tooltip-content" style="font-size: 16px;">
+                                      <span class="tooltip-content" style="font-size: 16px;">
                                           Click to learn more
-                                      </div>
-                                    </div>
+                                      </span>
+                                    </span>
                                 </h4>
                             </div>
                         </div>
@@ -50,10 +50,18 @@
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
                                         <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. INFLUX_TOKEN">
-                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
+                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">
+                                            Scope:
+                                            <span class="tooltip-container d-inline-block me-1">
+                                                <span class="fa-regular fa-circle-question"></span>
+                                                <span class="tooltip-content">
+                                                    Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                                                </span>
+                                            </span>
+                                        </label>
                                         <select class="form-control" id="new_secret_scope">
-                                            <option value="">ALL</option>
-                                            <option value="project">PROJECT</option>
+                                            <option value="project">Current project</option>
+                                            <option value="">All projects</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
                                         <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
@@ -65,26 +73,29 @@
                                     {{ form.timeout(class="form-control", placeholder="e.g. 60000") }}
                                     <label for="bucket" class="mt-2">Bucket:</label>
                                     {{ form.bucket(class="form-control", placeholder="e.g. my-bucket") }}
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        Please be aware that the default listener for JMeter is the first one.
-                                      </div>
-                                    </div>
-                                    <label for="listener" class="input-label mt-2">Backend listener:</label>
+                                    <label for="listener" class="input-label mt-2">Backend listener:
+                                        <span class="tooltip-container">
+                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                            <span class="tooltip-content">
+                                              Please be aware that the default listener for JMeter is the first one.
+                                            </span>
+                                          </span>
+                                    </label>
                                     {{ form.listener(class="form-control") }}
                                     <label for="test_title_tag_name" class="input-label mt-2">Test Title Tag Name:</label>
                                     {{ form.test_title_tag_name(class="form-control", placeholder="e.g. testTitle") }}
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        The timezone will be used when generating timestamps in a human-readable format. If no timezone is specified, UTC will be used by default. For example, a timestamp might use 'US/Eastern'. More available timezones can be found here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
-                                      </div>
-                                    </div>
-                                    <label for="tmz" class="mt-2">Timezone:</label>
+                                    <label for="tmz" class="mt-2">Timezone:
+                                        <span class="tooltip-container">
+                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                            <span class="tooltip-content">
+                                              The timezone will be used when generating timestamps in a human-readable format. If no timezone is specified, UTC will be used by default. For example, a timestamp might use 'US/Eastern'. More available timezones can be found here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+                                            </span>
+                                        </span>
+                                    </label>
                                     {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
+                                    <button class="btn btn-secondary mt-5 me-2" type="button" id="testIntegrationBtn" onclick="testIntegration()">Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                     <button class="btn btn-primary mt-5" type="submit">Save</button>
                                     {% if influxdb_config %}
                                         <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
@@ -224,6 +235,69 @@
                 .catch(error => {
                     console.error('Error:', error);
                     showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
+                });
+        }
+
+        function testIntegration() {
+    const testBtn = document.getElementById('testIntegrationBtn');
+    const spinner = testBtn.querySelector('.spinner-border');
+    testBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+            const urlInput = document.getElementById('url');
+            const orgInput = document.getElementById('org_id');
+            const bucketInput = document.getElementById('bucket');
+            const tokenSelect = document.getElementById('token');
+
+            if (!urlInput.value || !orgInput.value || !bucketInput.value) {
+                showFlashMessage('Please fill URL, Org and Bucket fields before testing.', 'error');
+                return;
+            }
+
+            const payload = {
+                url: urlInput.value,
+                org_id: orgInput.value,
+                bucket: bucketInput.value
+            };
+
+            if (!tokenSelect.value) {
+                showFlashMessage('Please select a token or create a new one before testing.', 'error');
+                return;
+            }
+
+            if (tokenSelect.value === 'create_new') {
+                const newTokenValue = document.getElementById('new_secret_value').value;
+                if (!newTokenValue) {
+                    showFlashMessage('Enter the new secret value before testing.', 'error');
+                    return;
+                }
+                payload.token = newTokenValue;
+            } else {
+                payload.token_id = tokenSelect.value;
+            }
+
+            fetch('/api/v1/integrations/influxdb/ping', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json().then(body => ({ status: response.status, body })))
+                .then(({ status, body }) => {
+                    if (status >= 200 && status < 300) {
+                        showFlashMessage('Connection successful.', 'success');
+                    } else {
+                        const errorMessage = body?.errors?.[0]?.message || body.message || 'Ping failed.';
+                        showFlashMessage(errorMessage, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ping error:', error);
+                    showFlashMessage(error.message || 'Ping failed.', 'error');
+                })
+                .finally(() => {
+                    testBtn.disabled = false;
+                    spinner.style.display = 'none';
                 });
         }
 

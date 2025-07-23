@@ -11,6 +11,10 @@
                 <input class="form-control" id="project_name" name="project_name" type="text" value="">
                 <small class="form-text text-muted">Only alphanumeric characters and underscores are allowed.</small>
               </div>
+              <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" id="create_examples" name="create_examples">
+                <label class="form-check-label" for="create_examples">Create configuration examples</label>
+              </div>
               <div class="alert alert-danger mt-3" id="project_error" style="display: none;"></div>
             </div>
             <div class="modal-footer">
@@ -47,6 +51,7 @@
             newSaveProject.addEventListener('click', (event) => {
                 console.log("Save project button clicked");
                 let projectName_value = document.getElementById("project_name").value;
+                let createExamples = document.getElementById("create_examples").checked;
 
                 // Validate project name - only allow alphanumeric and underscore
                 if (!/^[a-zA-Z0-9_]+$/.test(projectName_value)) {
@@ -63,7 +68,8 @@
                     // Use the API client instead of direct AJAX call
                     apiClient.projects.create({
                         id: null,
-                        name: projectName_value
+                        name: projectName_value,
+                        create_examples: createExamples
                     })
                     .then(response => {
                         console.log("Project created successfully:", response);

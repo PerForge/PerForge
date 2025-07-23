@@ -154,42 +154,57 @@ class AzureWikiReport(ReportingBase):
             return graph, ""
 
     def generate_path(self, isgroup):
-        title = self.output_obj.get_path() + (self.group_title if isgroup else self.replace_variables(self.title))
-        return title
+        if isgroup:
+            return self.output_obj.get_path() + self.replace_variables(self.group_title)
+        else:
+            return self.output_obj.get_path() +self.replace_variables(self.title)
 
     def generate_report(self, tests, action_id, template_group=None):
-        path = None
+        page_title  = None
+
         def process_test(test, isgroup):
-            nonlocal path
+            nonlocal page_title
+
             template_id = test.get('template_id')
             if template_id:
                 db_config = test.get('db_config')
                 self.set_template(template_id, db_config, action_id)
-                test_title            = test.get('test_title')
-                baseline_test_title   = test.get('baseline_test_title')
+
+                test_title          = test.get('test_title')
+                baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
-                self.report_body += self.generate_content(test_title, baseline_test_title)
-                if not path:
-                    path = self.generate_path(isgroup)
+
+                # Determine the final wiki page title once
+                if page_title is None:
+                    if isgroup:
+                        page_title  = self.generate_path(True)
+                    else:
+                        page_title = self.generate_path(False)
+
+                self.report_body += self.generate(test_title, baseline_test_title)
         if template_group:
             self.set_template_group(template_group)
+
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.report_body += self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
-                        if obj.get('id') == test.get('template_id'):
+                        if int(obj.get('template_id')) == int(test.get('template_id')):
                             process_test(test, True)
             result = self.analyze_template_group()
             self.report_body = self.add_text(result) + self.report_body
         else:
             for test in tests:
                 process_test(test, False)
-        self.output_obj.create_or_update_page(path, self.report_body)
+
+        # Create or update the Azure Wiki page using the determined title
+        self.output_obj.create_or_update_page(page_title, self.report_body)
+
         response = self.generate_response()
         return response
 
-    def generate_content(self, current_test_title, baseline_test_title = None):
+    def generate(self, current_test_title, baseline_test_title = None):
         report_body = ""
         for obj in self.data:
             if obj["type"] == "text":

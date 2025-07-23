@@ -15,14 +15,14 @@
                     <div class="card-header">
                         <div class="justify-content-between align-items-center">
                             <h4 class="mb-0">Azure
-                                <div class="tooltip-container">
+                                <span class="tooltip-container">
                                   <a href="https://perforge.app/docs/configuration/integrations#azure-wiki" target="_blank">
                                       <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                   </a>
-                                  <div class="tooltip-content" style="font-size: 16px;">
+                                  <span class="tooltip-content" style="font-size: 16px;">
                                       Click to learn more
-                                  </div>
-                                </div>
+                                  </span>
+                                </span>
                             </h4>
                         </div>
                     </div>
@@ -48,10 +48,18 @@
                                 <div id="new_secret_fields" style="display: none; width: 100%;">
                                     <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
                                     <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. AZURE_TOKEN">
-                                    <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
+                                    <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">
+                                        Scope:
+                                        <span class="tooltip-container d-inline-block me-1">
+                                            <span class="fa-regular fa-circle-question"></span>
+                                            <span class="tooltip-content">
+                                                Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                                            </span>
+                                        </span>
+                                    </label>
                                     <select class="form-control" id="new_secret_scope">
-                                        <option value="">ALL</option>
-                                        <option value="project">PROJECT</option>
+                                        <option value="project">Current project</option>
+                                        <option value="">All projects</option>
                                     </select>
                                     <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
                                     <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">

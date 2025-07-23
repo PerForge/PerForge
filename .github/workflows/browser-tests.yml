@@ -2,7 +2,7 @@ name: Browser Auto Tests
 
 on:
   push:
-    branches: [ "dev", "v2" ]
+    branches: [ "dev", "main"]
 
 jobs:
   test:
@@ -37,20 +37,10 @@ jobs:
         run: docker compose -f docker-compose.test.yml up -d --build
 
       - name: Build and Run Integration Services
-        run: docker compose -f docker-compose.extra.yml up -d
+        run: docker compose -f docker-compose.yml up -d
 
       - name: Wait for Services to be Ready
         run: |
-          # Wait for TimescaleDB
-          for i in {1..30}; do
-            if docker exec timescaledb pg_isready -U perforgedbuser; then
-              echo "TimescaleDB is ready"
-              break
-            fi
-            echo "Waiting for TimescaleDB..."
-            sleep 5
-          done
-
           # Wait for Perforge service
           for i in {1..30}; do
             if curl -s http://localhost:7878; then
@@ -65,7 +55,7 @@ jobs:
             echo "Perforge service did not start in time."
             exit 1
           fi
- 
+
           # Wait for InfluxDB service
           for i in {1..30}; do
             if curl -s http://localhost:8086/health; then
@@ -104,7 +94,7 @@ jobs:
 
       - name: Shutdown Integration Services
         if: always()
-        run: docker compose -f docker-compose.extra.yml down
+        run: docker compose -f docker-compose.yml down
 
       - name: Remove External Network
         if: always()

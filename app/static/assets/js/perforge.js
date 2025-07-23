@@ -125,9 +125,13 @@
             const contentDisposition = response.headers.get('content-disposition');
             let filename = 'report.pdf';
             if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-                if (filenameMatch && filenameMatch.length > 1) {
-                    filename = filenameMatch[1];
+                // Support both standard and RFC 5987 (filename*) forms.
+                // This regex captures the first occurrence of filename or filename* and stops at the next semicolon.
+                const filenameRegex = /filename\*?=(?:UTF-8''|"?)([^";\n]*)/i;
+                const match = filenameRegex.exec(contentDisposition);
+                if (match && match[1]) {
+                    // Decode RFC 5987 encoding and trim surrounding quotes/spaces
+                    filename = decodeURIComponent(match[1]).replace(/^\s+|\s+$/g, '').replace(/"/g, '');
                 }
             }
             return response.blob().then(blob => ({ blob, filename }));

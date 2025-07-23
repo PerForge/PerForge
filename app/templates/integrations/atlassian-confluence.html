@@ -15,14 +15,14 @@
                         <div class="card-header">
                             <div class="justify-content-between align-items-center">
                                 <h4 class="mb-0">Atlassian Confluence
-                                    <div class="tooltip-container">
+                                    <span class="tooltip-container">
                                       <a href="https://perforge.app/docs/configuration/integrations#atlassian-confluence" target="_blank">
                                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                       </a>
-                                      <div class="tooltip-content" style="font-size: 16px;">
+                                      <span class="tooltip-content" style="font-size: 16px;">
                                           Click to learn more
-                                      </div>
-                                    </div>
+                                      </span>
+                                    </span>
                                 </h4>
                             </div>
                         </div>
@@ -39,13 +39,14 @@
                                     {{ form.name(class="form-control", placeholder="e.g. My Atlassian Confluence Connection") }}
                                     <label for="email" class="input-label mt-2">Email:</label>
                                     {{ form.email(class="form-control", placeholder="e.g. perforge.app@gmail.com") }}
-                                    <div class="tooltip-container">
-                                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      <div class="tooltip-content">
-                                        Please note that an API token serves as the password for the account, while a Personal Access Token functions as both the login and the password.
-                                      </div>
-                                    </div>
-                                    <label for="token_type" class="mt-2">Token type:</label>
+                                    <label for="token_type" class="mt-2">Token type:
+                                        <span class="tooltip-container">
+                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                            <span class="tooltip-content">
+                                              Please note that an API token serves as the password for the account, while a Personal Access Token functions as both the login and the password.
+                                            </span>
+                                        </span>
+                                    </label>
                                     {{ form.token_type(class="form-control") }}
                                     <label for="token" class="input-label mt-2">Token:</label>
                                     <select class="form-control" name="token" id="token" required>
@@ -58,10 +59,18 @@
                                     <div id="new_secret_fields" style="display: none; width: 100%;">
                                         <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
                                         <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. ATLASSIAN_CONFLUENCE_TOKEN">
-                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">Scope:</label>
+                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">
+                                            Scope:
+                                            <span class="tooltip-container d-inline-block me-1">
+                                                <span class="fa-regular fa-circle-question"></span>
+                                                <span class="tooltip-content">
+                                                    Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                                                </span>
+                                            </span>
+                                        </label>
                                         <select class="form-control" id="new_secret_scope">
-                                            <option value="">ALL</option>
-                                            <option value="project">PROJECT</option>
+                                            <option value="project">Current project</option>
+                                            <option value="">All projects</option>
                                         </select>
                                         <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
                                         <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">

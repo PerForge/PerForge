@@ -114,8 +114,10 @@ class AtlassianJiraReport(ReportingBase):
         return header + "".join(body) + "\n"
 
     def generate_path(self, isgroup):
-        if isgroup: title = self.group_title
-        else: title = self.replace_variables(self.title)
+        if isgroup:
+            title = self.replace_variables(self.group_title)
+        else:
+            title = self.replace_variables(self.title)
         return title
 
     def create_issue(self, issue_title):
@@ -123,11 +125,10 @@ class AtlassianJiraReport(ReportingBase):
         return self.issue_id
 
     def generate_report(self, tests, action_id, template_group=None):
-        templates_title = ""
-        group_title = None
+        page_title  = None
+
         def process_test(test, isgroup):
-            nonlocal templates_title
-            nonlocal group_title
+            nonlocal page_title
             template_id = test.get('template_id')
             if template_id:
                 db_config = test.get('db_config')
@@ -135,41 +136,36 @@ class AtlassianJiraReport(ReportingBase):
                 test_title          = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
+
+                # Create the Jira issue once using the final title
                 if not self.issue_id:
                     if isgroup:
-                        group_title = self.generate_path(True)
-                        self.create_issue(group_title)
+                        page_title  = self.generate_path(True)
                     else:
-                        temporary_title = self.generate_path(False)
-                        self.create_issue(temporary_title)
-                title = self.generate_path(False)
-                self.report_body += self.add_text(title)
+                        page_title = self.generate_path(False)
+                    self.create_issue(page_title)
+
                 self.report_body += self.generate(test_title, baseline_test_title)
-                if not group_title: templates_title += f'{title} | '
+
+        # Handle template group if provided
         if template_group:
             self.set_template_group(template_group)
-            title             = self.generate_path(True)
-            self.report_body += self.add_group_text(title)
+
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.report_body += self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
-                        if obj.get('id') == test.get('template_id'):
+                        if int(obj.get('template_id')) == int(test.get('template_id')):
                             process_test(test, True)
             result = self.analyze_template_group()
             self.report_body = self.add_text(result) + self.report_body
         else:
             for test in tests:
                 process_test(test, False)
-        current_time = datetime.now()
-        time_str = current_time.strftime("%d.%m.%Y %H:%M")
-        if not group_title:
-            templates_title += time_str
-            self.output_obj.update_jira_page(self.issue_id, templates_title, self.report_body)
-        else:
-            group_title += f' {time_str}'
-            self.output_obj.update_jira_page(self.issue_id, group_title, self.report_body)
+
+        # Final update of the Jira issue with collected body and the chosen title
+        self.output_obj.update_jira_page(self.issue_id, page_title, self.report_body)
         response = self.generate_response()
         response["Issue id"] = self.issue_id
         return response

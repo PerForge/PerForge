@@ -16,7 +16,8 @@ import logging
 import uuid
 import traceback
 import time
-
+from typing import Optional
+from lxml import etree
 from app.backend.integrations.integration                                  import Integration
 from app.backend.integrations.atlassian_confluence.atlassian_confluence_db import DBAtlassianConfluence
 from app.backend.components.secrets.secrets_db                             import DBSecrets
@@ -58,13 +59,38 @@ class AtlassianConfluence(Integration):
             logging.warning("There's no Confluence integration configured, or you're attempting to send a request from an unsupported location.")
 
     def put_page(self, title, content):
+        """Create a new Confluence page or update it if it already exists.
+
+        The Atlassian REST API returns an error when a page with the same
+        title already exists within the same parent.  In this situation we
+        interpret the error as an *expected* condition and simply update the
+        existing page instead of treating it as a failure.
+        """
         try:
-            response = self.confluence_auth.create_page(space=self.space_key, title=title, body=content, parent_id=self.parent_id)
-            return response
+            # Try to create a brand-new page first.
+            response = self.confluence_auth.create_page(
+                space=self.space_key,
+                title=title,
+                body=content,
+                parent_id=self.parent_id,
+            )
+            # Normalise to a simple dict with id key for downstream code.
+            page_id = response.get("id") if isinstance(response, dict) else response
+            return {"id": page_id}
         except Exception as er:
-            logging.warning("An error occurred: " + str(er))
-            err_info = traceback.format_exc()
-            logging.warning("Detailed error info: " + err_info)
+            # On failure, attempt to find an existing page with the same title
+            try:
+                page_id = self.confluence_auth.get_page_id(self.space_key, title)
+                if page_id:
+                    return {"id": page_id}
+            except Exception as fetch_error:
+                logging.warning(f"Failed to retrieve existing Confluence page id for '{title}': {fetch_error}")
+                logging.debug(traceback.format_exc())
+                # fall through to generic logging below
+
+            logging.warning(f"An error occurred while creating Confluence page '{title}': {er}")
+            logging.debug(traceback.format_exc())
+            return None
 
     def put_image_to_confl(self, image, name, page_id):
         name = f'{uuid.uuid4()}.png'
@@ -78,9 +104,67 @@ class AtlassianConfluence(Integration):
             time.sleep(10)
 
     def update_page(self, page_id, title, content):
+        """Update a Confluence page, fixing XHTML if possible before sending."""
+
+        # Will raise ValueError if sanitization fails
+        sanitized = self._sanitize_xhtml(content)
+
         try:
-            response = self.confluence_auth.update_page(page_id=page_id, title=title, body=content)
-            return response
+            return self.confluence_auth.update_page(page_id=page_id, title=title, body=sanitized)
         except Exception as er:
             logging.warning(er)
-            return {"status":"error", "message":er}
+            raise RuntimeError(f"Confluence API update_page failed: {er}")
+
+    # ------------------------------------------------------------------
+    # XHTML helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _sanitize_xhtml(content: str) -> Optional[str]:
+        """Return a well-formed XHTML fragment or *None* if it cannot be fixed.
+
+        Strategy:
+        1. Attempt *strict* parsing (recover=False). If valid, return original.
+        2. Otherwise parse with *recover=True* which tells *lxml* to try to
+           repair common issues (unclosed tags, illegal nesting, etc.).  The
+           repaired tree is then serialised back to an XHTML string.
+        3. If recovery also fails, return *None*.
+        """
+        if not content:
+            raise ValueError("No content provided for XHTML sanitization")
+
+        # Replace any newline characters with HTML <br/> tags so that multi-line
+        # template variables (e.g. $\{nfr_summary\}) render as separate lines
+        # in Confluence instead of being collapsed into a single paragraph. We
+        # handle all common newline variants (\r, \n, \r\n) before validation.
+
+        sanitized_content = (
+            content.replace("\r\n", "\n")  # normalise Windows newlines
+                   .replace("\r", "\n")      # macOS (older) newlines
+                   .replace("\n", "<br/>")    # convert to XHTML line breaks
+        )
+
+        wrapper = f"<div>{sanitized_content}</div>"
+
+        # First try strict validation.
+        try:
+            etree.fromstring(wrapper, etree.XMLParser(recover=False, resolve_entities=False, no_network=True))
+            # Return the newline-sanitised content
+            return sanitized_content
+        except etree.XMLSyntaxError:
+            pass  # will try to recover below
+
+        # Attempt to recover/fix the markup.
+        try:
+            tree = etree.fromstring(wrapper, etree.XMLParser(recover=True, resolve_entities=False, no_network=True))
+            # Serialise children of the wrapper div back to string
+            fixed_parts = [etree.tostring(child, encoding='unicode', method='xml') for child in tree]
+            fixed_content = ''.join(fixed_parts)
+
+            # Double-check the repaired output is now valid.
+            etree.fromstring(f"<div>{fixed_content}</div>", etree.XMLParser(recover=False, resolve_entities=False, no_network=True))
+            logging.info("XHTML content was auto-corrected before update.")
+            return fixed_content
+        except etree.XMLSyntaxError as exc:
+            logging.warning(f"XHTML recovery failed: {exc}")
+            raise ValueError(f"XHTML recovery failed: {exc}")

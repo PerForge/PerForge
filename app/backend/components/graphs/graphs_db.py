@@ -77,7 +77,7 @@ class DBGraphs(db.Model):
             validated_data = GraphModel(**data)
             config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
             if config:
-                for key, value in validated_data.model_dump(exclude_none=True).items():
+                for key, value in validated_data.model_dump().items():
                     setattr(config, key, value)
                 db.session.commit()
         except Exception:
