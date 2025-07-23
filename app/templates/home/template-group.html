@@ -54,14 +54,14 @@
                             <div class="row flex-between-end pl-5 pr-5">
                                 <div class="col-auto">
                                     <h2 class="mb-2">Template group page
-                                        <div class="tooltip-container">
+                                        <span class="tooltip-container">
                                           <a href="https://perforge.app/docs/configuration/template_groups" target="_blank">
                                               <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                           </a>
-                                          <div class="tooltip-content" style="font-size: 20px;">
+                                          <span class="tooltip-content" style="font-size: 20px;">
                                               Click to learn more
-                                          </div>
-                                        </div>
+                                          </span>
+                                        </span>
                                     </h2>
                                 </div>
                                 <div class="col-auto">
@@ -293,7 +293,7 @@
                             // Check for clone parameter first
                             const cloneTemplateGroupId = new URLSearchParams(window.location.search).get('clone');
                             const templateGroupId = cloneTemplateGroupId || '{{ template_group_config }}';
-                            
+
                             if (templateGroupId && templateGroupId !== 'None') {
                                 apiClient.templateGroups.getById(templateGroupId)
                                     .then(response => {
@@ -305,7 +305,7 @@
                                             this.template = templateGroupData.data;
                                             this.ai_summary = templateGroupData.ai_summary;
                                             this.prompt_id = templateGroupData.prompt_id;
-                                            
+
                                             // If cloning, clear the ID so a new template group will be created on save
                                             if (cloneTemplateGroupId) {
                                                 this.template_group_id = null;
