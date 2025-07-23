@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,32 +14,44 @@
 
 import os
 import ast
+import json
+import re
 
-from app.backend.integrations.reporting_base    import ReportingBase
-from app.backend.integrations.grafana.grafana   import Grafana
-from app.backend.components.graphs.graph_config import GraphConfig
-from io                                         import BytesIO
-from PIL                                        import Image as PILImage
-from reportlab.lib.colors                       import Color
-from reportlab.lib.enums                        import TA_LEFT
-from reportlab.lib.pagesizes                    import A4
-from reportlab.lib.styles                       import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units                        import inch
-from reportlab.lib.utils                        import ImageReader
-from reportlab.pdfbase                          import ttfonts
-from reportlab.pdfbase.pdfmetrics               import registerFont, registerFontFamily
-from reportlab.platypus                         import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
-from datetime                                   import datetime
+from app.backend.integrations.reporting_base   import ReportingBase
+from app.backend.integrations.report_registry  import ReportRegistry
+from app.backend.integrations.grafana.grafana  import Grafana
+from app.backend.components.graphs.graphs_db   import DBGraphs
+from io                                       import BytesIO
+from PIL                                      import Image as PILImage
+from reportlab.lib.colors                     import Color
+from reportlab.lib.enums                      import TA_LEFT
+from reportlab.lib.pagesizes                  import A4, landscape
+from reportlab.lib.styles                     import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units                      import inch
+from reportlab.lib.utils                      import ImageReader
+from reportlab.pdfbase                        import ttfonts
+from reportlab.pdfbase.pdfmetrics             import registerFont, registerFontFamily
+from reportlab.platypus                       import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
+from datetime                                 import datetime
 
 
 class Pdf:
+    THEMES = {
+        'dark': {
+            'text': Color(206 / 255, 213 / 255, 218 / 255),
+            'header': Color(40 / 255, 40 / 255, 40 / 255),
+            'background': Color(60 / 255, 60 / 255, 60 / 255)
+        },
+        'light': {
+            'text': Color(60 / 255, 60 / 255, 60 / 255),
+            'header': Color(211 / 255, 211 / 255, 211 / 255),
+            'background': Color(255 / 255, 255 / 255, 255 / 255)
+        }
+    }
 
-    def __init__(self, pdf_io, margin=15):
-        self.doc              = BaseDocTemplate(pdf_io, pagesize=A4, leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
+    def __init__(self, pdf_io, margin=15, theme='dark'):
+        self.doc              = BaseDocTemplate(pdf_io, pagesize=landscape(A4), leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
         self.elements         = []
-        self.text_color       = Color(206 / 255, 213 / 255, 218 / 255)
-        self.header_color     = Color(40 / 255, 40 / 255, 40 / 255)
-        self.background_color = Color(60 / 255, 60 / 255, 60 / 255)
         self.logo_path        = os.path.join('app', 'static', 'assets', 'img', 'logo.png')
         registerFont(ttfonts.TTFont('NunitoSans', os.path.join('app', 'static', 'assets', 'fonts', 'NunitoSans_7pt-Regular.ttf')))
         registerFont(ttfonts.TTFont('NunitoSans-Bold', os.path.join('app', 'static', 'assets', 'fonts', 'NunitoSans_7pt-Bold.ttf')))
@@ -52,7 +64,7 @@ class Pdf:
         # Create a custom page template with a gray background
         def on_page(canvas, doc):
             canvas.setFillColor(self.background_color)
-            canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
+            canvas.rect(0, 0, landscape(A4)[0], landscape(A4)[1], fill=1, stroke=0)
             # Check if it's the first page
             if doc.page == 1:
                 draw_header(canvas)
@@ -61,11 +73,11 @@ class Pdf:
             # Adjust the y-coordinate of the rectangle to move it closer to the top
             header_radius    = 10
             header_text_size = 16
-            rect_y           = A4[1] - self.header_height
+            rect_y           = landscape(A4)[1] - self.header_height
 
             # Draw the new rectangle with full width and rounded bottom edges
             canvas.setFillColor(self.header_color)
-            canvas.roundRect(0, rect_y, A4[0], 60, header_radius, fill=1, stroke=0)
+            canvas.roundRect(0, rect_y, landscape(A4)[0], 60, header_radius, fill=1, stroke=0)
 
             # Add the logo
             logo = ImageReader(self.logo_path)
@@ -81,7 +93,7 @@ class Pdf:
 
             # Calculate the combined width and adjust positions
             combined_width = logo_width_scaled + title_width
-            logo_x         = (A4[0] - combined_width) / 2
+            logo_x         = (landscape(A4)[0] - combined_width) / 2
             title_x        = logo_x + logo_width_scaled
 
              # Draw the logo and title
@@ -95,6 +107,18 @@ class Pdf:
 
         frame = Frame(margin, margin, self.doc.width, self.doc.height, id='normal', showBoundary=0)
         self.doc.addPageTemplates([PageTemplate(id='GrayBackground', frames=frame, onPage=on_page)])
+
+    def set_theme(self, theme):
+        """
+        Set the theme for the PDF.
+
+        Args:
+            theme: The theme to use ('dark' or 'light')
+        """
+        self.theme = theme if theme in self.THEMES else 'dark'
+        self.text_color = self.THEMES[self.theme]['text']
+        self.header_color = self.THEMES[self.theme]['header']
+        self.background_color = self.THEMES[self.theme]['background']
 
     def add_title(self, title_text):
         styles      = getSampleStyleSheet()
@@ -114,8 +138,8 @@ class Pdf:
         image_io = BytesIO(image)
         img      = PILImage.open(image_io)
         img_width, img_height = img.size
-        max_width  = A4[0] - self.doc.leftMargin - self.doc.rightMargin
-        max_height = A4[1] - self.doc.topMargin - self.doc.bottomMargin - 0.25 * inch  # Subtract the height of the Spacer
+        max_width  = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin
+        max_height = landscape(A4)[1] - self.doc.topMargin - self.doc.bottomMargin - 0.25 * inch  # Subtract the height of the Spacer
         if img_width > max_width:
             img_height = img_height * (max_width / img_width)
             img_width  = max_width
@@ -127,15 +151,60 @@ class Pdf:
         img.save(resized_image_io, format=img.format)
         resized_image_io.seek(0)
         img = RoundedImage(resized_image_io, width=img_width, height=img_height)
-        self.elements.append(Spacer(1, 0.25 * inch))
+        self.elements.append(Spacer(1, 0.1 * inch))
         self.elements.append(img)
 
     def add_table(self, table_data):
-        data            = [table_data[0]] + table_data[1:]
-        available_width = A4[0] - self.doc.leftMargin - self.doc.rightMargin
-        num_columns     = len(table_data[0])
-        col_widths      = available_width / num_columns
-        table           = Table(data, colWidths=[col_widths] * num_columns, cornerRadii = [6,6,6,6])
+        # Process data to handle long text and create paragraphs for cell content
+        processed_data = []
+        max_chars_per_cell = 40  # Maximum characters before forcing a line break
+        styles = getSampleStyleSheet()
+        cell_style = styles['Normal']
+        cell_style.fontName = self.regular_font
+        cell_style.textColor = self.text_color
+        cell_style.fontSize = 8
+
+        header_style = styles['Normal']
+        header_style.fontName = self.title_font
+        header_style.textColor = self.text_color
+        header_style.fontSize = 9
+
+        # Process headers (first row)
+        header_row = []
+        for cell in table_data[0]:
+            # Replace various forms of null values with 0
+            if cell is None or cell == '' or cell == 'None' or (isinstance(cell, float) and (cell != cell)):  # None, empty string, 'None' string, and NaN
+                cell = 0
+            cell_text = str(cell)
+            header_row.append(Paragraph(cell_text, header_style))
+        processed_data.append(header_row)
+
+        # Process data rows
+        for row in table_data[1:]:
+            processed_row = []
+            for cell in row:
+                # Replace various forms of null values with 0
+                if cell is None or cell == '' or cell == 'None' or (isinstance(cell, float) and (cell != cell)):  # None, empty string, 'None' string, and NaN
+                    cell = 0
+                cell_text = str(cell)
+                # Add soft breaks for long text
+                if len(cell_text) > max_chars_per_cell:
+                    # Insert soft breaks to help with wrapping
+                    parts = [cell_text[i:i+max_chars_per_cell] for i in range(0, len(cell_text), max_chars_per_cell)]
+                    cell_text = '<br/>'.join(parts)
+                processed_row.append(Paragraph(cell_text, cell_style))
+            processed_data.append(processed_row)
+
+        # Calculate table width and column widths
+        available_width = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin - 10  # Extra margin for safety
+        num_columns = len(table_data[0])
+
+        # Use equal column widths across the full page width
+        col_width = available_width / num_columns
+        col_widths = [col_width] * num_columns
+
+        # Create table with the calculated column widths
+        table = Table(processed_data, colWidths=col_widths, cornerRadii=[6, 6, 6, 6])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), self.header_color),
             ('TEXTCOLOR', (0, 0), (-1, 0), self.text_color),
@@ -145,13 +214,14 @@ class Pdf:
             ('TOPPADDING', (0, 0), (-1, 0), 8),
             ('BACKGROUND', (0, 1), (-1, -1), self.background_color),
             ('TEXTCOLOR', (0, 1), (-1, -1), self.text_color),
-            ('FONTNAME', (0, 1), (-1, -1), self.regular_font),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-            ('TOPPADDING', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, self.header_color)
+            ('GRID', (0, 0), (-1, -1), 1, self.header_color),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            # These settings force proper wrapping
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
         ]))
-        self.elements.append(Spacer(1, 0.25 * inch))
+
+        self.elements.append(Spacer(1, 0.1 * inch))
         self.elements.append(table)
 
     def add_text(self, text):
@@ -160,7 +230,6 @@ class Pdf:
         normal_style.fontName  = self.regular_font
         normal_style.textColor = self.text_color
         text                   = text.replace('\n', '<br/>')
-        self.elements.append(Spacer(1, 0.25 * inch))
         self.elements.append(Paragraph(text, normal_style))
 
     def add_text_summary(self, text):
@@ -188,106 +257,230 @@ class RoundedImage(Image):
             super().draw()
             self.canv.restoreState()
 
+@ReportRegistry.register("pdf_report")
 class PdfReport(ReportingBase):
-
-    def __init__(self, project):
+    def __init__(self, project, theme='dark'):
         super().__init__(project)
         self.pdf_io      = BytesIO()
-        self.pdf_creator = Pdf(self.pdf_io)
+        self.theme       = theme
+        self.pdf_creator = Pdf(self.pdf_io, theme=self.theme)
         self.pdf_creator.elements.append(Spacer(1, self.pdf_creator.header_height))
 
-    def set_template(self, template, influxdb):
-        super().set_template(template, influxdb)
 
-    def add_graph(self, graph_data, current_run_id, baseline_run_id):
-        image = self.grafana_obj.render_image(graph_data["id"], self.current_start_timestamp, self.current_end_timestamp, self.test_name, current_run_id, baseline_run_id)
-        self.pdf_creator.add_image(image)
+    def set_template(self, template, db_config):
+        super().set_template(template, db_config)
+
+    def add_graph(self, graph_data, current_test_title, baseline_test_title):
+        # Use the timestamps from current_test_obj instead of direct attributes
+        start_timestamp = self.current_test_obj.start_time_timestamp
+        end_timestamp = self.current_test_obj.end_time_timestamp
+
+        image = self.grafana_obj.render_image(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
+        ai_support_response = None
         if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-            if self.ai_to_graphs_switch:
-                self.add_text(ai_support_response)
+        return image, ai_support_response
 
     def add_group_text(self, text):
-        self.pdf_creator.add_text(text)
+        self.add_text(text)
 
     def add_text(self, text):
-        text  = self.replace_variables(text)
-        table = self.check_if_table(text)
-        if table == None:
-            self.pdf_creator.add_text(text)
+        """Add a block of text to the PDF.
+
+        If *text* is just a single title (wrapped in `<title>`, `<h1>`, or
+        `<h2>` tags) it is rendered via :pymeth:`Pdf.add_title`. Otherwise the
+        block is considered either a table payload or a normal paragraph.
+        """
+        # Replace template variables early.
+        text = self.replace_variables(text)
+
+        # Use helper to detect a stand-alone title.
+        title = self.extract_title(text)
+        if title:
+            self.pdf_creator.add_title(title)
+            return  # Title consumes the whole block
+
+        # Not a title – render as table or paragraph.
+        is_table, table_data = self.check_if_table(text)
+        if is_table:
+            self.pdf_creator.add_table(table_data)
         else:
-            self.pdf_creator.add_table(table)
+            self.pdf_creator.add_text(text)
+
+    def add_graph_to_pdf(self, image, ai_support_response):
+        self.pdf_creator.add_image(image)
+        if self.ai_to_graphs_switch and ai_support_response:
+            self.add_text(ai_support_response)
 
     def check_if_table(self, text):
         try:
-            # Attempt to parse the input string as a Python literal
+            # Safely evaluate the string to a Python literal
             text   = text.replace('\\"', '"')
             result = ast.literal_eval(text)
 
             # Check if the result is a list of lists
             if isinstance(result, list) and all(isinstance(item, list) for item in result):
-                return result
+                return True, result
             else:
-                return None  # Not a valid list of lists
+                return False, None  # Not a valid list of lists
         except (SyntaxError, ValueError):
-            return None  # Parsing failed
+            return False, None  # Parsing failed
+
+    def extract_title(self, text):
+        """Return inner text if *text* is a stand-alone title block.
+
+        Supported tags (case-insensitive): ``<title>``, ``<h1>``, ``<h2>``.
+        The pattern must occupy the entire string aside from surrounding
+        whitespace. Returns ``None`` when the input is not a pure title block.
+        """
+        pattern = re.compile(r'^\s*<(?:title|h1|h2)>(.*?)</?(?:title|h1|h2)>\s*$', re.IGNORECASE | re.DOTALL)
+        match   = pattern.match(text)
+        if match:
+            return match.group(1).strip()
+        return None
 
     def generate_title(self, isgroup):
         if isgroup:
-            title = self.group_title
+            title = self.replace_variables(self.group_title)
         else:
             title = self.replace_variables(self.title)
         return title
 
-    def generate_report(self, tests, influxdb, template_group=None):
-        templates_title = ""
-        group_title     = None
-        def process_test(test):
-            nonlocal templates_title
+    def format_table(self, metrics):
+        """
+        Format a metrics table for PDF report. Converts the list of dictionaries
+        into a list of lists suitable for PDF table creation.
+
+        Args:
+            metrics: A list of dictionaries containing the metrics data
+
+        Returns:
+            A JSON string representation of a list of lists with table data
+        """
+
+        if not metrics:
+            return json.dumps([["No data available"]])
+
+        # Create header from the keys in the first dictionary
+        all_keys = set()
+        for record in metrics:
+            all_keys.update(record.keys())
+
+        # Filter out metadata fields (_baseline, _diff, _diff_pct, _color)
+        keys = [k for k in sorted(all_keys) if not (k.endswith('_baseline') or
+                                k.endswith('_diff') or
+                                k.endswith('_diff_pct') or
+                                k.endswith('_color'))]
+
+        # Make sure transaction is the first column
+        if 'transaction' in keys:
+            keys.remove('transaction')
+            keys.insert(0, 'transaction')
+        # Fallback to page if no transaction column
+        elif 'page' in keys:
+            keys.remove('page')
+            keys.insert(0, 'page')
+
+        # Create the table data structure with header row
+        table_data = [keys]
+
+        # Add rows for each record
+        for record in metrics:
+            # Get each value and replace None or empty values with ''
+            row = []
+            for key in keys:
+                value = record.get(key, '')
+                if value is None or value == 'None' or (isinstance(value, float) and (value != value)):
+                    value = 0
+                row.append(value)
+            table_data.append(row)
+
+        # Convert any numerical values to more readable format
+        for i in range(1, len(table_data)):
+            for j in range(len(table_data[i])):
+                if isinstance(table_data[i][j], float):
+                    table_data[i][j] = f"{table_data[i][j]:.2f}"
+
+        # Return the table data as a JSON string
+        return json.dumps(table_data)
+
+    def generate_report(self, tests, template_group=None, theme='dark'):
+        page_title  = None
+        self.pdf_creator.set_theme(theme)
+
+        def process_test(test, isgroup):
+            nonlocal page_title
             template_id = test.get('template_id')
             if template_id:
-                self.set_template(template_id, influxdb)
-                run_id          = test.get('test_title')
-                baseline_run_id = test.get('baseline_test_title')
-                self.collect_data(run_id, baseline_run_id)
-                title = self.generate_title(False)
-                self.pdf_creator.add_title(title)
-                self.generate(run_id, baseline_run_id)
-                if not group_title:
-                    templates_title += f'{title}_'
+                db_config            = test.get('db_config')
+                self.set_template(template_id, db_config)
+                test_title           = test.get('test_title')
+                baseline_test_title  = test.get('baseline_test_title')
+                self.collect_data(test_title, baseline_test_title)
+
+                # Determine overall PDF title once
+                if page_title is None:
+                    if isgroup:
+                        page_title  = self.generate_title(True)
+                    else:
+                        page_title = self.generate_title(False)
+
+                self.generate(test_title, baseline_test_title)
+
+        # Handle template groups or individual templates
         if template_group:
             self.set_template_group(template_group)
-            group_title           = self.generate_title(True)
-            self.pdf_creator.add_title(group_title)
+
             for obj in self.template_order:
                 if obj["type"] == "text":
                     self.add_group_text(obj["content"])
                 elif obj["type"] == "template":
                     for test in tests:
-                        if obj.get('id') == test.get('template_id'):
-                            process_test(test)
+                        if int(obj.get('template_id')) == int(test.get('template_id')):
+                            process_test(test, True)
+
+            # Add AI/ML/NFR summary for the whole group at the top
+            summary_text = self.analyze_template_group()
+            if summary_text:
+                self.pdf_creator.add_text_summary(summary_text)
         else:
             for test in tests:
-                process_test(test)
-        current_time = datetime.now()
-        time_str     = current_time.strftime("%d%m%Y-%H%M")
-        if not group_title:
-            templates_title += time_str
-        else:
-            templates_title = group_title + time_str
+                process_test(test, False)
+
+        # Build filename using the resolved page_title (or group title) with timestamp
+        filename_prefix = page_title if page_title else "report"
+        filename = f"{filename_prefix}"
+
+        # Finalize PDF document
         self.pdf_creator.build()
         response = self.generate_response()
-        response['filename'] = templates_title
+        response['filename'] = filename
         return response
 
-    def generate(self, current_run_id, baseline_run_id = None):
+    def generate(self, current_test_title, baseline_test_title = None):
+        processed_graphs = {}
+
+        # First pass: collect all data from graphs
+        for obj in self.data:
+            if obj["type"] == "graph":
+                graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
+                image, ai_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
+                processed_graphs[obj["graph_id"]] = (image, ai_response)
+
+        # Pre-process all text to trigger replace_variables and load tables
+        for obj in self.data:
+            if obj["type"] == "text":
+                # This is a dry run to ensure all tables are loaded before analysis
+                self.replace_variables(obj["content"])
+
+        # Analyze templates after all data is collected
+        if self.nfrs_switch or self.ai_switch or self.ml_switch:
+            self.analyze_template()
+
         for obj in self.data:
             if obj["type"] == "text":
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = GraphConfig.get_graph_value_by_id(self.project, obj["id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                self.add_graph(graph_data, current_run_id, baseline_run_id)
-        if self.nfrs_switch or self.ai_switch:
-            result = self.analyze_template()
-            self.pdf_creator.add_text_summary(result)
+                image, ai_response = processed_graphs[obj["graph_id"]]
+                self.add_graph_to_pdf(image, ai_response)

@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Login {% endblock %} 
+{% block title %} Login {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -7,7 +7,7 @@
 {% endblock stylesheets %}
 {% block content %}
     <main>
-        <div class="main-background flex-center-center">
+        <div class="main-background flex-center-center fullscreen">
             <div class="signin-inner">
                 <h1>PerForge</h1>
                 <br />
@@ -20,7 +20,7 @@
                         <span class="input-group-text" id="basic-addon1">
                             <span class="fas fa-user"></span>
                         </span>
-                        {{ form.username(class="form-control") }}
+                        {{ form.user(class="form-control") }}
                     </div>
                     <br />
                     <h4>Password</h4>
@@ -37,7 +37,7 @@
                     <br />
                 </form>
                 <br />
-                <h4>&copy; 2024 <strong>PerForge</strong>. All rights reserved.</h4>
+                <h4>&copy; 2025 <strong>PerForge</strong>.</h4>
                 {% with msgs = get_flashed_messages() %}
                     {% include 'includes/flashed-msg.html' %}
                 {% endwith %}

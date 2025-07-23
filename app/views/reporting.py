@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,113 +13,36 @@
 # limitations under the License.
 
 import traceback
-import json
 import logging
 
 from app                                                                       import app
-from app.backend                                                               import pkg
+from app.backend.components.projects.projects_db                               import DBProjects
+from app.backend.components.templates.templates_db                             import DBTemplates
+from app.backend.components.templates.template_groups_db                       import DBTemplateGroups
 from app.backend.errors                                                        import ErrorMessages
-from app.backend.integrations.influxdb.influxdb                                import Influxdb
-from app.backend.integrations.azure_wiki.azure_wiki_report                     import AzureWikiReport
-from app.backend.integrations.atlassian_confluence.atlassian_confluence_report import AtlassianConfluenceReport
-from app.backend.integrations.atlassian_jira.atlassian_jira_report             import AtlassianJiraReport
-from app.backend.integrations.smtp_mail.smtp_mail_report                       import SmtpMailReport
-from app.backend.integrations.pdf.pdf_report                                   import PdfReport
-from flask                                                                     import render_template, request, url_for, redirect, flash, jsonify, send_file
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db             import DBInfluxdb
+from flask                                                                     import render_template, request, url_for, redirect, flash
 
 
 @app.route('/tests', methods=['GET'])
 def get_tests():
-    try:
-        # Get current project
-        project          = request.cookies.get('project')
-        influxdb_configs = pkg.get_integration_config_names_and_ids(project, "influxdb")
-        templates        = pkg.get_config_names_and_ids(project, "templates")
-        template_groups  = pkg.get_config_names_and_ids(project, "template_groups")
-        output_configs   = pkg.get_output_integration_configs(project)
-        return render_template('home/tests.html', influxdb_configs=influxdb_configs, templates = templates, template_groups = template_groups, output_configs=output_configs)
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_INTEGRATIONS.value, "error")
-        return redirect(url_for("index"))
+    """
+    Render the tests page with necessary configurations.
 
-@app.route('/load_tests', methods=['GET'])
-def load_tests():
+    This endpoint is maintained for backward compatibility.
+    New implementations should use the RESTful API endpoint /api/v1/tests.
+    """
     try:
-        project      = request.cookies.get('project')
-        influxdb     = request.args.get('influxdb')
-        influxdb_obj = Influxdb(project=project, id=influxdb)
-        influxdb_obj.connect_to_influxdb()
-        tests = influxdb_obj.get_test_log()
-        return jsonify(status="success", tests=tests)
+        project_id             = request.cookies.get('project')
+        influxdb_configs       = DBInfluxdb.get_configs(project_id=project_id)
+        db_configs = []
+        for config in influxdb_configs:
+            db_configs.append({ "id": config["id"], "name": config["name"], "source_type": "influxdb_v2", "listener": config["listener"]})
+        template_configs       = DBTemplates.get_configs_brief(project_id=project_id)
+        template_group_configs = DBTemplateGroups.get_configs(project_id=project_id)
+        output_configs         = DBProjects.get_project_output_configs(project_id=project_id)
+        return render_template('home/tests.html', db_configs=db_configs, templates = template_configs, template_groups = template_group_configs, output_configs=output_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GET_TESTS.value, "error")
-        return jsonify(status="error", message=ErrorMessages.GET_TESTS.value)
-
-@app.route('/generate', methods=['GET','POST'])
-def generate_report():
-    try:
-        project = request.cookies.get('project')
-        if request.method == "POST":
-            data = request.get_json()
-            if "output_id" in data:
-                influxdb       = data.get("influxdb_id")
-                template_group = data.get("template_group")
-                action_id      = data.get("output_id")
-                if action_id == "pdf_report":
-                    action_type = action_id
-                elif action_id == "delete":
-                    action_type = action_id
-                else:
-                    action_type = pkg.get_output_integration_type_by_id(project, action_id)
-            else:
-                action_type = None
-            if action_type == "azure":
-                az     = AzureWikiReport(project)
-                result = az.generate_report(data["tests"], influxdb, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "atlassian_confluence":
-                awr    = AtlassianConfluenceReport(project)
-                result = awr.generate_report(data["tests"], influxdb, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "atlassian_jira":
-                ajr    = AtlassianJiraReport(project)
-                result = ajr.generate_report(data["tests"], influxdb, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "smtp_mail":
-                smr    = SmtpMailReport(project)
-                result = smr.generate_report(data["tests"], influxdb, action_id, template_group)
-                result = json.dumps(result)
-            elif action_type == "pdf_report":
-                pdf      = PdfReport(project)
-                result = pdf.generate_report(data["tests"], influxdb, template_group)
-                pdf.pdf_io.seek(0)
-                # Convert the result to a JSON string and include it in the headers
-                result_json = json.dumps(result)
-                # Create a custom response with the PDF file and headers
-                response = send_file(
-                    pdf.pdf_io,
-                    mimetype="application/pdf",
-                    download_name=f'{result["filename"]}.pdf',
-                    as_attachment=True
-                )
-                response.headers['X-Result-Data'] = result_json
-                return response
-            elif action_type == "delete":
-                try:
-                    influxdb_obj = Influxdb(project=project, id=influxdb)
-                    influxdb_obj.connect_to_influxdb()
-                    for test in data["tests"]:
-                        result = influxdb_obj.delete_run_id(test["test_title"])
-                except:
-                    logging.warning(str(traceback.format_exc()))
-                    flash(ErrorMessages.DELETE_TEST.value, "error")
-                    return redirect(url_for("index"))
-            else:
-                result = f"Wrong action: {str(action_type)}"
-            return result
-    except Exception:
-        logging.warning(str(traceback.format_exc()))
-        flash(ErrorMessages.GENERATE_REPORT.value, "error")
+        flash(ErrorMessages.ER00009.value, "error")
         return redirect(url_for("index"))

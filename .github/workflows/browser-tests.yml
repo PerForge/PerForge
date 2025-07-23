@@ -1,0 +1,101 @@
+name: Browser Auto Tests
+
+on:
+  push:
+    branches: [ "dev", "main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      BASE_URL: http://localhost:7878
+      INFLUXDB_TOKEN: DqwGq5e7Avv9gKYi2NtRtRenOxbvEqXMtg-r4WjNxYlerHMfikeLtCTJwSTzk-5NheVXTOFi0qug5jRGuh8-mw==
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install NPM Dependencies
+        run: npm install
+        working-directory: ./browser_tests
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+        working-directory: ./browser_tests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Check Docker Compose Version
+        run: docker compose version
+
+      - name: Create External Network
+        run: docker network create perforge-net || true
+
+      - name: Build and Run Application Services
+        run: docker compose -f docker-compose.test.yml up -d --build
+
+      - name: Build and Run Integration Services
+        run: docker compose -f docker-compose.yml up -d
+
+      - name: Wait for Services to be Ready
+        run: |
+          # Wait for Perforge service
+          for i in {1..30}; do
+            if curl -s http://localhost:7878; then
+              echo "Perforge service is up"
+              break
+            fi
+            echo "Waiting for Perforge service..."
+            sleep 5
+          done
+
+          if ! curl -s http://localhost:7878; then
+            echo "Perforge service did not start in time."
+            exit 1
+          fi
+
+          # Wait for InfluxDB service
+          for i in {1..30}; do
+            if curl -s http://localhost:8086/health; then
+              echo "InfluxDB service is up"
+              break
+            fi
+            echo "Waiting for InfluxDB service..."
+            sleep 5
+          done
+
+          if ! curl -s http://localhost:8086/health; then
+            echo "InfluxDB service did not start in time."
+            exit 1
+          fi
+
+      - name: List Running Containers
+        run: docker ps -a
+
+      - name: Restore InfluxDB Test Data Set
+        run: |
+          # Copy the test data into the influxdb container
+          docker cp ./browser_tests/test_data/test_influxdb.lp influxdb:/tmp/test_influxdb.lp
+
+          # Import data into InfluxDB
+          docker exec influxdb influx write --bucket jmeter --file /tmp/test_influxdb.lp --org perforge --token $INFLUXDB_TOKEN --compression gzip
+
+      - name: Run Playwright Tests
+        run: npx playwright test
+        working-directory: ./browser_tests
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+
+      - name: Shutdown Application Services
+        if: always()
+        run: docker compose -f docker-compose.test.yml down
+
+      - name: Shutdown Integration Services
+        if: always()
+        run: docker compose -f docker-compose.yml down
+
+      - name: Remove External Network
+        if: always()
+        run: docker network rm perforge-net || true

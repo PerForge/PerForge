@@ -1,4 +1,4 @@
-# Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +13,14 @@
 # limitations under the License.
 
 import io
-import os
 import logging
 import uuid
 import time
 
-from app.backend.integrations.integration                          import Integration
-from app.backend.integrations.atlassian_jira.atlassian_jira_config import AtlassianJiraConfig
-from atlassian                                                     import Jira
-from os                                                            import path
+from app.backend.integrations.integration                      import Integration
+from app.backend.integrations.atlassian_jira.atlassian_jira_db import DBAtlassianJira
+from app.backend.components.secrets.secrets_db                 import DBSecrets
+from atlassian                                                 import Jira
 
 
 class AtlassianJira(Integration):
@@ -34,41 +33,35 @@ class AtlassianJira(Integration):
         return f'Integration id is {self.id}, url is {self.org_url}'
 
     def set_config(self, id):
-        if path.isfile(self.config_path) is False or os.path.getsize(self.config_path) == 0:
-            logging.warning("There is no config file.")
+        id     = id if id else DBAtlassianJira.get_default_config(project_id=self.project)["id"]
+        config = DBAtlassianJira.get_config_by_id(project_id=self.project, id=id)
+        if config['id']:
+            self.id         = config["id"]
+            self.name       = config["name"]
+            self.email      = config["email"]
+            self.token      = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
+            self.token_type = config["token_type"]
+            self.org_url    = config["org_url"]
+            self.jira_project_key = config["jira_project_key"]
+            self.epic_field = config["epic_field"]
+            self.epic_name  = config["epic_name"]
+            if self.token_type == "api_token":
+                self.jira_auth = Jira(
+                    url      = self.org_url,
+                    username = self.email,
+                    password = self.token
+                )
+            elif self.token_type == "personal_access_token":
+                self.jira_auth = Jira(
+                    url   = self.org_url,
+                    token = self.token
+                )
         else:
-            id = id if id else AtlassianJiraConfig.get_default_atlassian_jira_config_id(self.project)
-            config = AtlassianJiraConfig.get_atlassian_jira_config_values(self.project, id, is_internal=True)
-            if "id" in config:
-                if config['id'] == id:
-                    self.id         = config["id"]
-                    self.name       = config["name"]
-                    self.email      = config["email"]
-                    self.token      = config["token"]
-                    self.token_type = config["token_type"]
-                    self.org_url    = config["org_url"]
-                    self.project_id = config["project_id"]
-                    self.epic_field = config["epic_field"]
-                    self.epic_name  = config["epic_name"]
-                    if self.token_type == "api_token":
-                        self.jira_auth = Jira(
-                            url      = self.org_url,
-                            username = self.email,
-                            password = self.token
-                        )
-                    elif self.token_type == "personal_access_token":
-                        self.jira_auth = Jira(
-                            url   = self.org_url,
-                            token = self.token
-                        )
-                    else:
-                        return {"status":"error", "message":"No such token type name"}
-                else:
-                    return {"status":"error", "message":"No such config name"}
+            logging.warning("There's no Jira integration configured, or you're attempting to send a request from an unsupported location.")
 
     def put_page_to_jira(self, title):
         issue_dict = {
-            'project'  : {'key': self.project_id},
+            'project'  : {'key': self.jira_project_key},
             'summary'  : title,
             'issuetype': {'name': 'Task'}
         }

@@ -1,5 +1,15 @@
-version: '3'
 services:
+  perforge:
+    image: perforge/perforge-app:latest
+    container_name: perforge
+    ports:
+      - "7878:7878"
+    volumes:
+      - perforge-conf:/app/app/data/
+    networks:
+      - perforge-net
+    restart: always
+
   influxdb:
     image: influxdb:2.7.6-alpine
     container_name: influxdb
@@ -15,7 +25,8 @@ services:
       - DOCKER_INFLUXDB_INIT_ORG=perforge
       - DOCKER_INFLUXDB_INIT_BUCKET=jmeter
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=DqwGq5e7Avv9gKYi2NtRtRenOxbvEqXMtg-r4WjNxYlerHMfikeLtCTJwSTzk-5NheVXTOFi0qug5jRGuh8-mw==
-      - DOCKER_INFLUXDB_INIT_RETENTION=180d
+    networks:
+      - perforge-net
     restart: always
 
   grafana:
@@ -31,26 +42,26 @@ services:
     volumes:
       - grafana-home:/var/lib/grafana/
       - grafana-conf:/etc/grafana/
+    networks:
+      - perforge-net
     restart: always
 
   renderer:
     image: grafana/grafana-image-renderer:latest
+    container_name: renderer
     ports:
       - 8081
-    restart: always
-
-  perforge:
-    image: perforge/perforge-app:latest
-    container_name: perforge
-    ports:
-      - "7878:7878"
-    volumes:
-      - perforge-conf:/app/app/data/
+    networks:
+      - perforge-net
     restart: always
 
 volumes:
+  perforge-conf:
   influxdb-data:
   influxdb-config:
   grafana-home:
   grafana-conf:
-  perforge-conf:
+
+networks:
+  perforge-net:
+

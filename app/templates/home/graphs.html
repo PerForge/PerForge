@@ -1,32 +1,17 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Graphs {% endblock %} 
+{% block title %} Graphs {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 {% endblock stylesheets %}
 {% block content %}
 <main>
     <div class="main-background">
       {% include 'includes/sidebar.html' %}
       <div class="main-body">
-        <div class="main-body-header">
-        </div> 
         <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-          <div class="card-header">
-            <div class="justify-content-between align-items-center">
-              <h4 class="mb-0">Graphs
-                  <div class="tooltip-container">
-                    <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
-                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                    </a>
-                    <div class="tooltip-content" style="font-size: 16px;">
-                        Click to learn more
-                    </div>
-                  </div>
-              </h4>
-            </div>
-          </div>
           <div class="card-body">
               <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
@@ -51,7 +36,7 @@
                                   <th class="sort" data-sort="height">Height</th>
                                   <th class="sort" data-sort="width">Width</th>
                                   <th class="sort" data-sort="prompt_id">Prompt</th>
-                                  <th class="sort" data-sort="actions">Actions</th>
+                                  <th>Actions</th>
                               </tr>
                           </thead>
                           <tbody class="list">
@@ -84,9 +69,10 @@
                                           {% endif %}
                                       {% endfor %}
                                   </td>
-                                  <td class="actions" style="width: 15%;">
-                                      <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#graphModal" data-graph='{{ graph | tojson | safe }}'>Edit</button>
-                                      <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ graph.id }}">Delete</a>
+                                  <td class="actions">
+                                      <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#graphModal" data-graph='{{ graph | tojson | safe }}'>Edit</button>
+                                      <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#graphModal" data-clone-graph='{{ graph | tojson | safe }}'>Clone</button>
+                                      <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ graph.id }}">Delete</button>
                                   </td>
                               </tr>
                               <div class="modal fade" id="deleteModal{{ graph.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
@@ -101,7 +87,7 @@
                                     </div>
                                     <div class="modal-footer">
                                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                      <a class="btn btn-danger" href="/delete-graph?graph_id={{ graph.id }}">Confirm Delete</a>
+                                      <button type="button" class="btn btn-danger" onclick="deleteGraph('{{ graph.id }}')">Confirm Delete</button>
                                     </div>
                                   </div>
                                 </div>
@@ -116,130 +102,248 @@
         {% with msgs = get_flashed_messages() %}
             {% include 'includes/flashed-msg.html' %}
         {% endwith %}
+        <div id="good-msg" style="display: none;" class="alert alert-success">
+            <span id="msg"></span>
+        </div>
+        <div id="bad-msg" style="display: none;" class="alert alert-danger">
+            <span id="msg"></span>
+        </div>
       </div>
     </div>
     <div class="modal fade" id="graphModal" aria-hidden="true" style="display: none;">
       <div class="modal-dialog">
           <div class="modal-content">
-            <form method="POST" action="/save-graph">
-              <input type="hidden" name="id" id="graph_id">
-              <div class="modal-header">
-                  <h2 class="modal-title" id="addnewgraphLabel">Add graph</h2>
-              </div>
-              <div class="modal-body">
-                <div class="mt-3">
-                    <label>Name</label>
-                    {{ form_for_graphs.name(class="form-control") }}
-                </div>
-                <div class="mt-3">
-                    <label>Grafana</label>
-                    <select class="form-select" id="grafana_id" name="grafana_id">
-                        {% for grafana in grafana_configs %}
-                            <option value="{{ grafana.id }}">{{ grafana.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mt-3">
-                    <label>Dashboard Id</label>
-                    <select class="form-select" id="dash_id" name="dash_id">
-                    </select>
-                </div>
-                <div class="mt-3">
-                    <label>View panel</label>
-                    {{ form_for_graphs.view_panel(class="form-control") }}
-                </div>
-                <div class="mt-3">
-                    <label>Panel width</label>
-                    {{ form_for_graphs.width(class="form-control") }}
-                </div> 
-                <div class="mt-3">
-                    <label class="mt-3">Panel height</label>
-                    {{ form_for_graphs.height(class="form-control") }} 
-                </div>
-                <div class="mt-3">
-                    <label class="mt-3">Custom vars (optional)</label>
-                    <div class="tooltip-container">
-                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                        <div class="tooltip-content">
-                            You can add additional custom variables to draw graphs with these variables. For example, use the following format: &var-varname=varvalue
-                        </div>
-                    </div>
-                    {{ form_for_graphs.custom_vars(class="form-control") }} 
-                </div>
-                <div class="mt-3">
-                    <label>Prompt (optional)</label>
-                    <select class="form-select" id="prompt_id" name="prompt_id">
-                        <option value="" selected>Select a prompt</option>
-                        {% for prompt in graph_prompts %}
-                            <option value="{{ prompt.id }}" data-prompt="{{ prompt.prompt }}">{{ prompt.name }} ({{ prompt.type }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mt-3">
-                    <label>Prompt Value</label>
-                    <textarea class="form-control" id="prompt_value" rows="5" readonly></textarea>
-                </div>
-              </div>
-              <div class="modal-footer">
-                  <div class="status-place" style="float: left;"></div>
-                  <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
-                  <button class="btn btn-primary" type="submit">Save</button>
-              </div>
-            </form>
+            <div class="modal-header">
+                <h2 class="mb-0">Graphs
+                    <span class="tooltip-container">
+                      <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
+                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                      </a>
+                      <span class="tooltip-content" style="font-size: 16px;">
+                          Click to learn more
+                      </span>
+                    </span>
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form id="graphForm">
+                  <div class="mt-3">
+                      <label>Name</label>
+                      <input type="text" class="form-control" id="name" name="name" placeholder="e.g. my-graph">
+                      <input type="hidden" id="graph_id" name="id">
+                  </div>
+                  <div class="mt-3">
+                      <label>Grafana</label>
+                      <select class="form-select" id="grafana_id" name="grafana_id">
+                          {% for grafana in grafana_configs %}
+                              <option value="{{ grafana.id }}">{{ grafana.name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+                  <div class="mt-3">
+                      <label>Dashboard</label>
+                      <select class="form-select" id="dash_id" name="dash_id">
+                      </select>
+                  </div>
+                  <div class="mt-3">
+                      <label>View panel
+                        <span class="tooltip-container">
+                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                            <span class="tooltip-content">
+                                The view panel is a unique identifier for each Grafana panel. To get this ID, simply open the panel in view mode and you can find the ID in the URL (viewPanel=)
+                            </span>
+                        </span>
+                      </label>
+                      <input type="text" class="form-control" id="view_panel" name="view_panel" placeholder="e.g. 1">
+                  </div>
+                  <div class="mt-3">
+                      <label>Expected graph height</label>
+                      <input type="text" class="form-control" id="height" name="height" placeholder="e.g. 500">
+                  </div>
+                  <div class="mt-3">
+                      <label>Expected graph width</label>
+                      <input type="text" class="form-control" id="width" name="width" placeholder="e.g. 1000">
+                  </div>
+                  <div class="mt-3">
+                      <label class="mt-3">Custom vars (optional)
+                        <span class="tooltip-container">
+                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                            <span class="tooltip-content">
+                                You can add additional custom variables to draw graphs with these variables. For example, use the following format: &var-varname=varvalue
+                            </span>
+                        </span>
+                      </label>
+                      <input type="text" class="form-control" id="custom_vars" name="custom_vars" placeholder="e.g. &var-varname=varvalue">
+                  </div>
+                  <div class="mt-3">
+                      <label>Prompt (optional)</label>
+                      <select class="form-select" id="prompt_id" name="prompt_id">
+                          <option value="" selected>Select a prompt</option>
+                          {% for prompt in graph_prompts %}
+                              <option value="{{ prompt.id }}" data-prompt="{{ prompt.prompt }}">{{ prompt.name }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+                  <div class="mt-3">
+                      <label>Prompt value</label>
+                      <textarea class="form-control" id="prompt_value" rows="3" readonly></textarea>
+                  </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveGraphBtn">Save</button>
+            </div>
           </div>
       </div>
     </div>
     <script>
+      let listJsInstance;
+
       $(document).ready(function() {
-          var grafanaConfigs = {{ grafana_configs | tojson | safe }};
-  
-          $('#grafana_id').change(function() {
-              var selectedGrafanaId = $(this).val();
-              var selectedGrafana = grafanaConfigs.find(function(grafana) {
-                  return grafana.id === selectedGrafanaId;
-              });
-              var dashboards = selectedGrafana.dashboards;
-              var dashIdSelect = $('#dash_id');
-              dashIdSelect.empty();
-              dashboards.forEach(function(dashboard) {
-                  dashIdSelect.append('<option value="' + dashboard.id + '">' + dashboard.content + '</option>');
-              });
-          });
-  
-          $('#grafana_id').change();
-  
-          var modal = $('#graphModal');
-          var form = modal.find('form');
-  
-          $('button[data-bs-toggle="modal"][data-bs-target="#graphModal"]').click(function() {
-              var graph = $(this).data('graph');
-  
-              $.each(graph, function(key, value) {
-                  form.find('[name="' + key + '"]').val(value);
-                  if (key == "prompt_id" && value == ""){
-                      form.find('[name="prompt_id"]').val(`{{ form_for_graphs.prompt_id.default }}`);
+          const options = {
+              valueNames: ['name', 'grafana', 'dash_id', 'view_panel', 'height', 'width', 'prompt_id'],
+              page: 15,
+              pagination: true
+          };
+
+          setTimeout(() => {
+              listJsInstance = new List('table-id', options);
+          }, 0);
+
+          // Set up search functionality
+          const searchInput = document.querySelector('.search-input');
+          if (searchInput) {
+              searchInput.addEventListener('input', function() {
+                  if (listJsInstance) {
+                      listJsInstance.search(this.value);
                   }
               });
-  
-              $('#grafana_id').val(graph.grafana_id).change();
-              $('#dash_id').val(graph.dash_id);
-  
-              // Trigger change event to update the textarea with the selected prompt's value
-              $('#prompt_id').change();
+          }
+
+          // Parse Grafana configs passed from the template
+          const grafanaConfigs = JSON.parse('{{ grafana_configs | tojson | safe }}');
+
+          // Function to populate dashboards based on selected Grafana
+          function populateDashboards(selectedGrafanaId, selectedDashId) {
+              const dashIdSelect = $('#dash_id');
+              dashIdSelect.empty();
+
+              const selectedGrafana = grafanaConfigs.find(g => g.id == selectedGrafanaId);
+
+              if (selectedGrafana && selectedGrafana.dashboards) {
+                  selectedGrafana.dashboards.forEach(function(dashboard) {
+                      dashIdSelect.append(`<option value="${dashboard.id}">${dashboard.content}</option>`);
+                  });
+              }
+
+              if (selectedDashId) {
+                  dashIdSelect.val(selectedDashId);
+              }
+          }
+
+          // Event listener for Grafana dropdown change
+          $('#grafana_id').change(function() {
+              const selectedGrafanaId = $(this).val();
+              populateDashboards(selectedGrafanaId);
           });
-  
-          modal.on('hidden.bs.modal', function() {
-              form[0].reset();
+
+          // Handle modal opening
+          $('#graphModal').on('show.bs.modal', function(event) {
+              const button = $(event.relatedTarget);
+              const graphData = button.data('graph');
+              const cloneData = button.data('clone-graph');
+              const modal = $(this);
+
+              // Reset form
+              $('#graphForm')[0].reset();
               $('#graph_id').val('');
-              $('#prompt_value').val(''); // Clear the textarea when the modal is closed
+              $('#prompt_value').val('');
+
+              let selectedGrafanaId, selectedDashId;
+
+              if (cloneData) {
+                  modal.find('.modal-title').text('Clone Graph');
+                  $('#name').val(cloneData.name + ' COPY');
+                  selectedGrafanaId = cloneData.grafana_id;
+                  selectedDashId = cloneData.dash_id;
+                  $('#view_panel').val(cloneData.view_panel);
+                  $('#width').val(cloneData.width);
+                  $('#height').val(cloneData.height);
+                  $('#custom_vars').val(cloneData.custom_vars);
+                  $('#prompt_id').val(cloneData.prompt_id || '').change();
+              } else if (graphData) {
+                  modal.find('.modal-title').text('Edit Graph');
+                  $('#graph_id').val(graphData.id);
+                  $('#name').val(graphData.name);
+                  selectedGrafanaId = graphData.grafana_id;
+                  selectedDashId = graphData.dash_id;
+                  $('#view_panel').val(graphData.view_panel);
+                  $('#width').val(graphData.width);
+                  $('#height').val(graphData.height);
+                  $('#custom_vars').val(graphData.custom_vars);
+                  $('#prompt_id').val(graphData.prompt_id || '').change();
+              } else {
+                  modal.find('.modal-title').text('Add Graph');
+                  selectedGrafanaId = $('#grafana_id').val(); // Get the default selected Grafana
+              }
+
+              $('#grafana_id').val(selectedGrafanaId);
+              populateDashboards(selectedGrafanaId, selectedDashId);
           });
-  
+
           // Update the prompt value textarea when a prompt is selected
           $('#prompt_id').change(function() {
-              var selectedPrompt = $(this).find('option:selected').data('prompt');
-              $('#prompt_value').val(selectedPrompt || '');
+            var selectedPrompt = $(this).find('option:selected').data('prompt');
+            $('#prompt_value').val(selectedPrompt || '');
+          });
+
+          // Handle save button click
+          $('#saveGraphBtn').click(function() {
+              var graphData = {
+                  id: $('#graph_id').val() || null,
+                  name: $('#name').val(),
+                  grafana_id: $('#grafana_id').val(),
+                  dash_id: $('#dash_id').val(),
+                  view_panel: $('#view_panel').val(),
+                  width: $('#width').val(),
+                  height: $('#height').val(),
+                  custom_vars: $('#custom_vars').val(),
+                  prompt_id: $('#prompt_id').val() || null
+              };
+
+              const apiCall = graphData.id
+                  ? apiClient.graphs.update(graphData.id, graphData)
+                  : apiClient.graphs.create(graphData);
+
+              apiCall.then(function(response) {
+                  $('#graphModal').modal('hide');
+                  showFlashMessage(`Graph ${graphData.id ? 'updated' : 'created'} successfully`, 'success');
+                  setTimeout(() => window.location.reload(), 1000);
+              }).catch(function(error) {
+                  console.error('Error saving graph:', error);
+                  showFlashMessage('Error saving graph: ' + (error.message || 'Unknown error'), 'error');
+              });
           });
       });
+
+      // Function to delete a graph
+      function deleteGraph(graphId) {
+          apiClient.graphs.delete(graphId)
+              .then(function(response) {
+                  // Close modal and show success message
+                  $(`#deleteModal${graphId}`).modal('hide');
+                  showFlashMessage('Graph deleted successfully', 'success');
+                  setTimeout(function() {
+                      window.location.reload();
+                  }, 1000);
+              })
+              .catch(function(error) {
+                  console.error('Error deleting graph:', error);
+                  showFlashMessage('Error deleting graph: ' + (error.message || 'Unknown error'), 'error');
+              });
+      }
     </script>
   </main>
 {% endblock content %}

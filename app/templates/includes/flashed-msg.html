@@ -1,13 +1,33 @@
-<div class="center-section" style="display: none;" id="bad-msg">
-    <div class="alert alert-outline-danger d-flex align-items-center" role="alert">
-      <span class="fas fa-times-circle text-danger fs-3 me-3"></span>
+<style>
+    .flash-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1060; /* Higher than Bootstrap modals */
+        min-width: 350px;
+        display: none; /* Hidden by default */
+    }
+    .flash-container .alert-success {
+        background-color: #d1e7dd;
+        color: #198754;
+    }
+    .flash-container .alert-danger {
+        background-color: #f8d7da;
+        color: #dc3545;
+    }
+</style>
+
+<div class="flash-container" id="bad-msg">
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+      <span class="fas fa-times-circle fs-3 me-3"></span>
       <p class="mb-0 flex-1" id="msg"></p>
       <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 </div>
-<div class="center-section" style="display: none;" id="good-msg">
-    <div class="alert alert-outline-success d-flex align-items-center" role="alert">
-        <span class="fas fa-check-circle text-success fs-3 me-3"></span>
+<div class="flash-container" id="good-msg">
+    <div class="alert alert-success d-flex align-items-center" role="alert">
+        <span class="fas fa-check-circle fs-3 me-3"></span>
         <p class="mb-0 flex-1" id="msg"></p>
         <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
@@ -17,17 +37,17 @@
         {% for category, msg in messages %}
             {% if category == 'info' %}
                 <script>
-                    const badmsg = document.getElementById("good-msg");
-                    badmsg.style.display = "flex";
-                    const msg = badmsg.querySelector("#msg");
-                    msg.textContent = `{{ msg }}`
+                    const goodmsg = document.getElementById("good-msg");
+                    goodmsg.style.display = "block";
+                    const msgEl = goodmsg.querySelector("#msg");
+                    msgEl.textContent = `{{ msg }}`;
                 </script>
             {% elif category == 'error' %}
                 <script>
                     const badmsg = document.getElementById("bad-msg");
-                    badmsg.style.display = "flex";
-                    const msg = badmsg.querySelector("#msg");
-                    msg.textContent = `{{ msg }}`
+                    badmsg.style.display = "block";
+                    const msgEl = badmsg.querySelector("#msg");
+                    msgEl.textContent = `{{ msg }}`;
                 </script>
             {% endif %}
         {% endfor %}

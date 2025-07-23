@@ -1,0 +1,232 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_INFLUXDB",
+      "label": "InfluxDB",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.2"
+    },
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "table-old",
+      "name": "Table (old)",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Tests logs",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": 9561,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 68,
+      "panels": [],
+      "title": "JMeter Standard listener",
+      "type": "row"
+    },
+    {
+      "columns": [],
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB}"
+      },
+      "editable": true,
+      "error": false,
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "height": "300",
+      "id": 70,
+      "links": [],
+      "pageSize": 50,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$$hashKey": "object:175",
+          "alias": "",
+          "align": "center",
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkUrl": "${__cell}",
+          "mappingType": 1,
+          "pattern": "actions",
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$$hashKey": "object:210",
+          "alias": "",
+          "align": "auto",
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "duration",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ns"
+        },
+        {
+          "$$hashKey": "object:240",
+          "alias": "",
+          "align": "auto",
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "startTime",
+          "thresholds": [],
+          "type": "date",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB}"
+          },
+          "query": "import \"strings\"\r\n\r\ndata = from(bucket: v.bucket)\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n\r\nmaxThreads = data\r\n  |> keep(columns: [\"_value\", \"testTitle\"])\r\n  |> max()\r\n  |> group(columns: [\"_value\", \"testTitle\"])\r\n  |> rename(columns: {_value: \"maxThreads\"})\r\n\r\nendTime = data\r\n  |> max(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\"])\r\n  |> group(columns: [\"_time\", \"testTitle\"])\r\n  |> rename(columns: {_time: \"endTime\"})\r\n\r\nstartTime = data\r\n  |> min(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\"])\r\n  |> group(columns: [\"_time\", \"testTitle\"])\r\n  |> rename(columns: {_time: \"startTime\"})\r\n\r\njoin1 = join(tables: {d1: maxThreads, d2: startTime}, on: [\"testTitle\"])\r\n  |> keep(columns: [\"startTime\",\"testTitle\", \"maxThreads\"])\r\n  |> group(columns: [\"testTitle\"])\r\n\r\njoin(tables: {d1: join1, d2: endTime}, on: [\"testTitle\"])\r\n  |> map(fn: (r) => ({ r with duration: (int(v: r.endTime) - int(v: r.startTime))}))\r\n  |> map(fn: (r) => ({ r with actions: \r\n    strings.joinStr(arr: \r\n    [\r\n      \"<a class=\\\"btn-primary btn-small\\\" href=\\\"d/jmeter-test-results-standard-listener/jmeter-test-results-standard-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Dashboard</a>\"\r\n    ], \r\n    v: \"\") \r\n    + \r\n    strings.joinStr(arr: \r\n\t  [\r\n      \"<a class=\\\"btn-primary btn-small offset-md-1\\\" \r\n      href=\\\"d/jmeter-test-comparison-standard-listener/jmeter-tests-comparison-standard-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-app=\",\"&var-current_testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Compare</a>\"\r\n    ], \r\n    v: \"\")\r\n  }))\r\n  |> keep(columns: [\"testTitle\", \"maxThreads\", \"duration\", \"actions\"])\r\n  |> group()",
+          "refId": "A"
+        }
+      ],
+      "title": "Tests log",
+      "transform": "table",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "maxThreads": false
+            },
+            "indexByName": {
+              "actions": 6,
+              "application": 0,
+              "build": 1,
+              "duration": 4,
+              "maxThreads": 5,
+              "testTitle": 3,
+              "testType": 2
+            },
+            "renameByName": {
+              "maxThreads": ""
+            }
+          }
+        }
+      ],
+      "type": "table-old"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "tests logs"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "1m",
+      "5m",
+      "2h"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "utc",
+  "title": "Tests logs",
+  "uid": "tests_logs",
+  "version": 2,
+  "weekStart": ""
+}

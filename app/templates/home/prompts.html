@@ -1,5 +1,5 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Prompts {% endblock %} 
+{% block title %} Prompts {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
@@ -10,23 +10,7 @@
     <div class="main-background">
       {% include 'includes/sidebar.html' %}
       <div class="main-body">
-        <div class="main-body-header">
-        </div> 
         <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
-          <div class="card-header">
-            <div class="justify-content-between align-items-center">
-              <h4 class="mb-0">Prompts
-                <div class="tooltip-container">
-                  <a href="https://perforge.app/docs/configuration/prompts" target="_blank">
-                      <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                  </a>
-                  <div class="tooltip-content" style="font-size: 16px;">
-                      Click to learn more
-                  </div>
-                </div>
-              </h4>
-            </div>
-          </div>
           <div class="card-body">
               <div id="table-id">
                   <div class="d-flex align-items-center justify-content-end mb-3">
@@ -51,226 +35,482 @@
                                   <th class="sort" data-sort="prompt">Prompt</th>
                                   <th class="sort" data-sort="place">Place</th>
                                   <th class="sort" data-sort="type">Type</th>
-                                  <th class="sort" data-sort="actions">Actions</th>
+                                  <th class="sort" data-sort="project_id">Scope</th>
+                                  <th>Actions</th>
                               </tr>
                           </thead>
-                          <tbody class="list">
-                            {% for prompt in default_prompts %}
-                            <tr class="default-prompt">
-                                <td class="height">{{ prompt.name }}</td>
-                                <td class="prompt"><div style="display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prompt.prompt }}</div></td>
-                                <td class="place"><div class="badge badge-primary">{{ prompt.place }}</div></td>
-                                <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
-                                <td class="actions">
-                                    <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#viewPromptModal" data-prompt='{{ prompt | tojson | safe }}'>View</button>
-                                </td>
-                            </tr>
-                            <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            Are you sure you want to delete the "{{ prompt.name }}" prompt?
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <a class="btn btn-danger" href="/delete-prompt?prompt_id={{ prompt.id }}">Confirm Delete</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            {% for prompt in custom_prompts %}
-                            <tr class="custom-prompt">
-                                <td class="height">{{ prompt.name }}</td>
-                                <td class="prompt"><div style="display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ prompt.prompt }}</div></td>
-                                <td class="place"><div class="badge badge-primary">{{ prompt.place }}</div></td>
-                                <td class="type"><div class="badge badge-success">{{ prompt.type }}</div></td>
-                                <td class="actions">
-                                    <button class="btn btn-secondary" type="button" data-bs-toggle="modal" data-bs-target="#promptModal" data-prompt='{{ prompt | tojson | safe }}'>Edit</button>
-                                    <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ prompt.id }}">Delete</a>
-                                </td>
-                            </tr>
-                            <div class="modal fade" id="deleteModal{{ prompt.id }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            Are you sure you want to delete the "{{ prompt.name }}" prompt?
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <a class="btn btn-danger" href="/delete-prompt?prompt_id={{ prompt.id }}">Confirm Delete</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </tbody>
+                          <tbody class="list" id="prompts-table-body">
+                            <!-- Prompts will be loaded dynamically via API -->
+                          </tbody>
                       </table>
                   </div>
               </div>
           </div>
         </div>
+      </div>
+      <div class="center-section">
         {% with msgs = get_flashed_messages() %}
-            {% include 'includes/flashed-msg.html' %}
+        {% include 'includes/flashed-msg.html' %}
         {% endwith %}
       </div>
     </div>
     <div class="modal fade" id="promptModal" aria-hidden="true" style="display: none;">
       <div class="modal-dialog">
           <div class="modal-content">
-            <form method="POST" action="/save-prompt">
+            <form id="promptForm">
               <input type="hidden" name="id" id="prompt_id">
               <input type="hidden" name="type" id="prompt_type" value="custom">
               <div class="modal-header">
-                <h2 class="modal-title" id="addnewpromptLabel">Add prompt</h2>
+                <h2 class="modal-title" id="addnewpromptLabel">Add prompt
+                  <span class="tooltip-container">
+                    <a href="https://perforge.app/docs/configuration/prompts" target="_blank">
+                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                    </a>
+                    <span class="tooltip-content" style="font-size: 16px;">
+                        Click to learn more
+                    </span>
+                  </span>
+                </h2>
               </div>
               <div class="modal-body">
                 <div class="mt-3">
                   <label>Name</label>
-                  {{ form_for_prompts.name(class="form-control") }}
+                  <input type="text" class="form-control" id="name" name="name" required placeholder="e.g. my-genius-prompt">
                 </div>
                 <div class="mt-3">
                   <label>Place</label>
-                  {{ form_for_prompts.place(class="form-control") }}
+                  <select class="form-select" id="place" name="place" required>
+                    <option value="graph">Graph</option>
+                    <option value="template">Template</option>
+                    <option value="aggregated_data">Aggregated Data</option>
+                    <option value="template_group">Template Group</option>
+                    <option value="system">System</option>
+                  </select>
                 </div>
                 <div class="mt-3">
                   <label>Prompt</label>
-                  {{ form_for_prompts.prompt(class="form-control") }}
+                  <textarea class="form-control" id="prompt" name="prompt" rows="10" required></textarea>
                 </div>
-                <div class="mt-3" id="template-info" style="display: none;">
-                  <p>You can use the following variables in your prompts. Simply include the variable name in square brackets to insert the corresponding data:</p>
-                  <ul>
-                    <li>[aggregated_data_analysis]: Output generated by AI from aggregated data analysis.</li>
-                    <li>[graphs_analysis]: Output generated by AI from graphs analysis.</li>
-                    <li>[nfr_summary]: Comparison of test results with NFRs: includes percentage of satisfied NFRs and list of unmet NFRs.</li>
-                  </ul>
+                <div class="mt-3">
+                  <label>Scope
+                    <span class="tooltip-container">
+                      <span class="fa-regular fa-circle-question me-2 mt-1"></span>
+                      <span class="tooltip-content">
+                          Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                      </span>
+                    </span>
+                  </label>
+                  <select class="form-select" id="project_id" name="project_id">
+                    <option value="project">Current project</option>
+                    <option value="">All projects</option>
+                  </select>
                 </div>
+                <div class="mt-3">
+                  <div class="variables-section">
+                      <label>Available parameters</label>
+                      <div class="variable-item">
+                          <label class="var-name" onclick="copyToClipboard('${aggregated_data_analysis}')">${aggregated_data_analysis}</label>
+                          <label class="var-description">Detailed analysis of aggregated performance metrics.</label>
+                      </div>
+                      <div class="variable-item">
+                          <label class="var-name" onclick="copyToClipboard('${graphs_analysis}')">${graphs_analysis}</label>
+                          <label class="var-description">AI-generated analysis of performance graphs.</label>
+                      </div>
+                      <div class="variable-item">
+                          <label class="var-name" onclick="copyToClipboard('${nfr_summary}')">${nfr_summary}</label>
+                          <label class="var-description">Summary of Non-Functional Requirements validation.</label>
+                      </div>
+                      <div class="variable-item">
+                          <label class="var-name" onclick="copyToClipboard('${ml_summary}')">${ml_summary}</label>
+                          <label class="var-description">Summary of ML-based anomaly detection.</label>
+                      </div>
+                    </div>
+                  </div>
               </div>
               <div class="modal-footer">
-                  <div class="status-place" style="float: left;"></div>
-                  <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
-                  <button class="btn btn-primary" type="submit">Save</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Save</button>
               </div>
             </form>
           </div>
       </div>
     </div>
+
+    <!-- View Prompt Modal -->
     <div class="modal fade" id="viewPromptModal" aria-hidden="true" style="display: none;">
       <div class="modal-dialog">
           <div class="modal-content">
               <div class="modal-header">
-                <h2 class="modal-title" id="addnewpromptLabel">Prompt</h2>
+                <h2 class="modal-title">View Prompt</h2>
               </div>
               <div class="modal-body">
                 <div class="mt-3">
-                  <textarea class="form-control" id="view_prompt" rows="10" readonly></textarea>
+                  <label>Name</label>
+                  <input type="text" class="form-control" id="view_name" readonly>
+                </div>
+                <div class="mt-3">
+                  <label>Place</label>
+                  <input type="text" class="form-control" id="view_place" readonly>
+                </div>
+                <div class="mt-3">
+                  <label>Prompt</label>
+                  <textarea class="form-control" id="view_prompt" rows="6" readonly></textarea>
+                </div>
+                <div class="mt-3">
+                  <label>Scope</label>
+                  <input type="text" class="form-control" id="view_scope" readonly>
                 </div>
               </div>
               <div class="modal-footer">
-                  <div class="status-place" style="float: left;"></div>
-                  <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
               </div>
           </div>
       </div>
     </div>
+
+    <!-- Delete Prompt Modal -->
+    <div class="modal fade" id="deletePromptModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to delete this prompt?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Confirm Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
-      $(document).ready(function() {
-        // Store a reference to the modals and form
-        var modal = $('#promptModal');
-        var viewModal = $('#viewPromptModal');
-        var form = modal.find('form');
-    
-        // Function to show/hide the template info div
-        function toggleTemplateInfo() {
-          var placeValue = form.find('[name="place"]').val();
-          if (placeValue === 'template') {
-            $('#template-info').show();
-          } else {
-            $('#template-info').hide();
-          }
+      let listJsInstance;
+
+      document.addEventListener('DOMContentLoaded', function() {
+        // Load prompts when the page loads
+        loadPrompts();
+
+        // Set up search functionality
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                if (listJsInstance) {
+                    listJsInstance.search(this.value);
+                }
+            });
         }
-    
-        // Listen for the modal open event for editing
-        $('button[data-bs-toggle="modal"][data-bs-target="#promptModal"]').click(function() {
-          var prompt = $(this).data('prompt');
-    
-          $.each(prompt, function(key, value) {
-            form.find('[name="' + key + '"]').val(value.toString());
-          });
-    
-          // Call the function to show/hide the template info div
-          toggleTemplateInfo();
+
+        // Handle form submission
+        document.getElementById('promptForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const promptData = {
+                id: document.getElementById('prompt_id').value || null,
+                name: document.getElementById('name').value,
+                place: document.getElementById('place').value,
+                prompt: document.getElementById('prompt').value,
+                type: document.getElementById('prompt_type').value,
+                project_id: document.getElementById('project_id').value === 'project' ? true : null
+            };
+
+            const promptId = promptData.id;
+
+            // Use the API client to save the prompt
+            const apiCall = promptId
+                ? apiClient.prompts.update(promptId, promptData)
+                : apiClient.prompts.create(promptData);
+
+            apiCall
+                .then(response => {
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('promptModal'));
+                    modal.hide();
+
+                    // Show success message
+                    const message = promptId ? "Prompt updated successfully." : "Prompt created successfully.";
+                    showFlashMessage(message, "success");
+
+                    // Reload prompts
+                    loadPrompts();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showFlashMessage(error.message || "An error occurred while saving the prompt.", "error");
+                });
         });
-    
-        // Listen for changes in the place field
-        form.find('[name="place"]').change(function() {
-          toggleTemplateInfo();
-        });
-    
-        // Listen for the modal close event for editing
-        modal.on('hidden.bs.modal', function() {
-          form[0].reset();
-          $('#prompt_id').val('');
-          $('#prompt_type').val('custom');
-          $('#template-info').hide(); // Hide the template info div
-        });
-    
-        // Listen for the modal open event for viewing
-        $('button[data-bs-toggle="modal"][data-bs-target="#viewPromptModal"]').click(function() {
-          var prompt = $(this).data('prompt');
-    
-          $('#view_prompt').val(prompt.prompt);
-        });
-    
-        // Listen for the modal close event for viewing
-        viewModal.on('hidden.bs.modal', function() {
-          $('#view_prompt').val('');
-        });
-    
-        // Handle the switch change event
-        $('#selectedTypeSwitch').change(function() {
-          if ($(this).is(':checked')) {
-            // Show default prompts, hide custom prompts
-            $('tr.default-prompt').hide();
-            $('tr.custom-prompt').show();
-            updateURL('custom');
-          } else {
-            // Show custom prompts, hide default prompts
-            $('tr.custom-prompt').hide();
-            $('tr.default-prompt').show();
-            updateURL('default');
-          }
-        });
-    
-        // Update the URL with the selected type
-        function updateURL(type) {
-          var currentURL = new URL(window.location.href);
-          currentURL.searchParams.set('type', type);
-          window.history.replaceState({}, '', currentURL);
-        }
-    
-        // Read the switcher state from the URL on page load
-        function initializeSwitcher() {
-          var currentURL = new URL(window.location.href);
-          var type = currentURL.searchParams.get('type');
-          if (type === 'custom') {
-            $('#selectedTypeSwitch').prop('checked', true).trigger('change');
-          } else {
-            $('#selectedTypeSwitch').prop('checked', false).trigger('change');
-          }
-        }
-    
+
         // Initialize the switcher based on the URL
         initializeSwitcher();
       });
+
+      // Function to load prompts via API
+      function loadPrompts() {
+          apiClient.prompts.getAll()
+              .then(response => {
+                  if (response.data && Array.isArray(response.data.prompts)) {
+                      const defaultPrompts = response.data.prompts.filter(p => p.type === 'default');
+                      const customPrompts = response.data.prompts.filter(p => p.type === 'custom');
+
+                      // Render based on the current filter
+                      const showCustom = document.getElementById('selectedTypeSwitch').checked;
+                      renderPrompts(showCustom ? customPrompts : defaultPrompts);
+                  } else {
+                      showFlashMessage('No prompts found.', 'info');
+                      renderPrompts([]);
+                  }
+              })
+              .catch(error => {
+                  console.error('Error loading prompts:', error);
+                  showFlashMessage(error.message || 'Error loading prompts', 'error');
+                  renderPrompts([]);
+              });
+      }
+
+      // Function to render prompts in the table
+      function renderPrompts(promptsList) {
+          const tableBody = document.getElementById('prompts-table-body');
+          tableBody.innerHTML = '';
+
+          if (promptsList.length === 0) {
+              const emptyRow = document.createElement('tr');
+              emptyRow.innerHTML = '<td colspan="6" class="text-center">No prompts found</td>';
+              tableBody.appendChild(emptyRow);
+              if (listJsInstance) {
+                  listJsInstance.clear();
+              }
+              return;
+          }
+
+          promptsList.forEach(prompt => {
+              const row = document.createElement('tr');
+              row.className = prompt.type === 'default' ? 'default-prompt' : 'custom-prompt';
+
+              // Name column
+              const nameCell = document.createElement('td');
+              nameCell.className = 'name';
+              nameCell.textContent = prompt.name;
+              row.appendChild(nameCell);
+
+              // Prompt column
+              const promptCell = document.createElement('td');
+              promptCell.className = 'prompt';
+              const promptDiv = document.createElement('div');
+              promptDiv.style = 'display:block;width:40pc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+              promptDiv.textContent = prompt.prompt;
+              promptCell.appendChild(promptDiv);
+              row.appendChild(promptCell);
+
+              // Place column
+              const placeCell = document.createElement('td');
+              placeCell.className = 'place';
+              const placeDiv = document.createElement('div');
+              placeDiv.className = 'badge badge-primary';
+              placeDiv.textContent = prompt.place;
+              placeCell.appendChild(placeDiv);
+              row.appendChild(placeCell);
+
+              // Type column
+              const typeCell = document.createElement('td');
+              typeCell.className = 'type';
+              const typeDiv = document.createElement('div');
+              typeDiv.className = 'badge badge-success';
+              typeDiv.textContent = prompt.type;
+              typeCell.appendChild(typeDiv);
+              row.appendChild(typeCell);
+
+              // Project ID column
+              const projectCell = document.createElement('td');
+              projectCell.className = 'project_id';
+              const projectDiv = document.createElement('div');
+              projectDiv.className = 'badge badge-primary';
+              projectDiv.textContent = prompt.project_id ? 'PROJECT' : 'ALL';
+              projectCell.appendChild(projectDiv);
+              row.appendChild(projectCell);
+
+              // Actions column
+              const actionsCell = document.createElement('td');
+              actionsCell.className = 'actions';
+
+              if (prompt.type === 'default') {
+                  // Default prompts can only be viewed
+                  const viewButton = document.createElement('button');
+                  viewButton.className = 'btn btn-primary';
+                  viewButton.textContent = 'View';
+                  viewButton.setAttribute('data-bs-toggle', 'modal');
+                  viewButton.setAttribute('data-bs-target', '#viewPromptModal');
+                  viewButton.addEventListener('click', function() {
+                      showViewPromptModal(prompt);
+                  });
+                  actionsCell.appendChild(viewButton);
+
+                  const cloneButton = document.createElement('button');
+                  cloneButton.className = 'btn btn-secondary ms-2';
+                  cloneButton.textContent = 'Clone';
+                  cloneButton.addEventListener('click', function() {
+                      showClonePromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
+                  });
+                  actionsCell.appendChild(cloneButton);
+              } else {
+                  // Custom prompts can be edited and deleted
+                  const editButton = document.createElement('button');
+                  editButton.className = 'btn btn-primary';
+                  editButton.textContent = 'Edit';
+                  editButton.setAttribute('data-bs-toggle', 'modal');
+                  editButton.setAttribute('data-bs-target', '#promptModal');
+                  editButton.addEventListener('click', function() {
+                      showEditPromptModal(prompt);
+                  });
+                  actionsCell.appendChild(editButton);
+
+                  const cloneButton = document.createElement('button');
+                  cloneButton.className = 'btn btn-secondary ms-2';
+                  cloneButton.textContent = 'Clone';
+                  cloneButton.addEventListener('click', function() {
+                      showClonePromptModal(prompt);
+                      const modal = new bootstrap.Modal(document.getElementById('promptModal'));
+                      modal.show();
+                  });
+                  actionsCell.appendChild(cloneButton);
+
+                  const deleteButton = document.createElement('button');
+                  deleteButton.className = 'btn btn-danger ms-2';
+                  deleteButton.textContent = 'Delete';
+                  deleteButton.addEventListener('click', function() {
+                      showDeletePromptModal(prompt.id, prompt.name);
+                  });
+                  actionsCell.appendChild(deleteButton);
+              }
+
+              row.appendChild(actionsCell);
+              tableBody.appendChild(row);
+          });
+
+          const options = {
+              valueNames: ['name', 'prompt', 'place', 'type', 'project_id'],
+              page: 15,
+              pagination: true
+          };
+
+          setTimeout(() => {
+            if (listJsInstance) {
+              listJsInstance.reIndex();
+            } else {
+              listJsInstance = new List('table-id', options);
+            }
+          }, 0);
+      }
+
+      function copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then(function() {
+              showFlashMessage('Copied to clipboard!', 'success');
+          }, function(err) {
+              showFlashMessage('Failed to copy!', 'error');
+          });
+      }
+
+      // Function to show the view prompt modal
+      function showViewPromptModal(prompt) {
+          document.getElementById('view_name').value = prompt.name;
+          document.getElementById('view_place').value = prompt.place;
+          document.getElementById('view_prompt').value = prompt.prompt;
+          document.getElementById('view_scope').value = prompt.project_id ? 'PROJECT' : 'ALL';
+      }
+
+      function showClonePromptModal(prompt) {
+          document.getElementById('prompt_id').value = '';
+          document.getElementById('name').value = prompt.name + ' COPY';
+          document.getElementById('place').value = prompt.place;
+          document.getElementById('prompt').value = prompt.prompt;
+          document.getElementById('prompt_type').value = 'custom';
+          document.getElementById('project_id').value = prompt.project_id ? 'project' : '';
+
+          // Update modal title
+          document.getElementById('addnewpromptLabel').textContent = 'Clone Prompt';
+      }
+
+      // Function to show the edit prompt modal
+      function showEditPromptModal(prompt) {
+          document.getElementById('prompt_id').value = prompt.id;
+          document.getElementById('name').value = prompt.name;
+          document.getElementById('place').value = prompt.place;
+          document.getElementById('prompt').value = prompt.prompt;
+          document.getElementById('prompt_type').value = prompt.type;
+          document.getElementById('project_id').value = prompt.project_id ? 'project' : '';
+
+          // Update modal title
+          document.getElementById('addnewpromptLabel').textContent = 'Edit Prompt';
+      }
+
+      // Function to show the delete confirmation modal
+      function showDeletePromptModal(promptId, promptName) {
+          const modal = new bootstrap.Modal(document.getElementById('deletePromptModal'));
+          const modalBody = document.querySelector('#deletePromptModal .modal-body');
+          modalBody.textContent = `Are you sure you want to delete the "${promptName}" prompt?`;
+
+          // Set up the confirm delete button
+          const confirmBtn = document.getElementById('confirmDeleteBtn');
+          confirmBtn.onclick = function() {
+              deletePrompt(promptId, modal);
+          };
+
+          modal.show();
+      }
+
+      // Function to delete a prompt
+      function deletePrompt(promptId, modal) {
+          const promptModalEl = document.getElementById('promptModal');
+          const modalInstance = bootstrap.Modal.getInstance(promptModalEl) || new bootstrap.Modal(promptModalEl);
+
+          apiClient.prompts.delete(promptId)
+              .then(response => {
+                  modal.hide();
+                  modalInstance.hide();
+                  showFlashMessage('Prompt deleted successfully', 'success');
+                  loadPrompts(); // Reload the prompts list
+              })
+              .catch(error => {
+                  console.error('Error deleting prompt:', error);
+                  modal.hide();
+                  modalInstance.hide();
+                  showFlashMessage(error.message || 'Error deleting prompt', 'error');
+              });
+      }
+
+      // Function to toggle template info visibility
+      function toggleTemplateInfo() {
+          const templateInfo = document.getElementById('templateInfo');
+          if (templateInfo.style.display === 'none') {
+              templateInfo.style.display = 'block';
+          } else {
+              templateInfo.style.display = 'none';
+          }
+      }
+
+      // Read the switcher state from localStorage on page load
+      function initializeSwitcher() {
+          const switcher = document.getElementById('selectedTypeSwitch');
+          const savedType = localStorage.getItem('prompt_view_type');
+
+          // Set switcher state from localStorage or default to 'default'
+          if (savedType === 'custom') {
+              switcher.checked = true;
+          } else {
+              switcher.checked = false;
+          }
+
+          // Add event listener to the switcher
+          switcher.addEventListener('change', function() {
+              const type = this.checked ? 'custom' : 'default';
+              localStorage.setItem('prompt_view_type', type);
+              loadPrompts(); // Reload prompts when switcher changes
+          });
+      }
     </script>
-  </main>
+</main>
 {% endblock content %}

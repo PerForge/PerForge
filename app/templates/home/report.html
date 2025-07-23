@@ -1,0 +1,175 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Prompts {% endblock %}
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<script src="{{ url_for('static', filename='assets/js/plotly-basic-2.35.2.min.js') }}"></script>
+{% endblock stylesheets %}
+{% block content %}
+<main>
+    <div class="main-background">
+        {% include 'includes/sidebar.html' %}
+        <div class="main-body">
+            <div id="loading-screen" class="loading-screen">
+                <div class="loading-message" id="loading-message">Preparing your tests data</div>
+                <div class="loader">
+                    {% include 'includes/loader-anvil.html' %}
+                </div>
+            </div>
+            <div class="start-section ms-4 m10-top" style="align-items: normal;">
+                <div class="pr-10 col-lg-6">
+                    <div class="card" style="height: auto; border-left: 4px solid #ccc;">
+                        <div class="card-header-sm">Performance analysis</div>
+                        <div class="card-body" id="summaryCard">
+                        </div>
+                    </div>
+                </div>
+                <div class="pr-10 col-lg-6">
+                    <div class="card" style="height: 100%;">
+                        <div class="card-header-sm">Test details</div>
+                        <div class="card-body flex">
+                            <div class="pr-10 col-lg-6">
+                                <div>Start time:</div>
+                                <div class="m10-top">End time:</div>
+                                <div class="m10-top">Duration:</div>
+                            </div>
+                            <div class="pr-10 col-lg-6">
+                                <div class="secondary-text" id="startTimeDetail"></div>
+                                <div class="m10-top secondary-text" id="endTimeDetail"></div>
+                                <div class="m10-top secondary-text" id="durationDetail"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="start-section justify-content-between ms-4 m10-top">
+                <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2 fw-bold mb-0" id="vuCard">...</p>
+                            <span class="fs--1 text-900 lh-lg">Virtual users</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2 fw-bold mb-0" id="throughputCard">...</p>
+                            <span class="fs--1 text-900 lh-sm">Throughput</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2 fw-bold mb-0" id="medianCard">...</p>
+                            <span class="fs--1 text-900 lh-sm">Median</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2 fw-bold mb-0" id="pct90Card">...</p>
+                            <span class="fs--1 text-900 lh-sm">90% Response time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pr-10 col-xxl-2-5 col-lg-2-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="text-info fs-2 fw-bold mb-0" id="errorsCard">...</p>
+                            <span class="fs--1 text-900 lh-sm">Error rate</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="start-section ms-4 m10-top me-4">
+                <div class="pr-10 col-lg-6">
+                    <div class="chart-card">
+                        <div class="nopadding chart-container" id="throughputChart"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="chart-card">
+                        <div class="nopadding chart-container" id="responseTimeChart"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="start-section ms-4 m10-top me-4">
+                <div class="pr-10 col-lg-6">
+                    <div class="chart-card">
+                        <div class="nopadding chart-container" id="responseTimeScatterChart"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="chart-card">
+                        <div class="nopadding chart-container" id="overalErrors"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="data-component-card" class="card ms-4 m10-top me-4">
+                <div class="card-body">
+                    <div id="aggregated-table">
+                        <div class="table-responsive">
+                            <table class="table fs--1 mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="sort" data-sort="label">Label</th>
+                                        <th class="sort" data-sort="count">Count</th>
+                                        <th class="sort" data-sort="avg">Avg [ms]</th>
+                                        <th class="sort" data-sort="pct50">Pct50 [ms]</th>
+                                        <th class="sort" data-sort="pct75">Pct75 [ms]</th>
+                                        <th class="sort" data-sort="pct90">Pct90 [ms]</th>
+                                        <th class="sort" data-sort="rpm">Reqs/min</th>
+                                        <th class="sort" data-sort="errors">Errors</th>
+                                        <th class="sort" data-sort="stddev">Stddev</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list">
+                                    <!-- Rows will be dynamically inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="data-component-card" class="card ms-4 m10-top me-4">
+                <div class="card-header-sm">Analysis</div>
+                <div class="card-body">
+                    <div id="analysis-table">
+                        <div class="table-responsive">
+                            <table class="table fs--1 mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="sort" data-sort="status">Status</th>
+                                        <th class="sort" data-sort="method">Method</th>
+                                        <th class="sort" data-sort="description">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list">
+                                    <!-- Rows will be dynamically inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% with msgs = get_flashed_messages() %}
+        {% include 'includes/flashed-msg.html' %}
+        {% endwith %}
+    </div>
+    <script src="{{ url_for('static', filename='assets/js/report.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // When the page is fully loaded, call the 'fetchAndDisplayTestData' function
+            const testTitle = "{{ test_title }}"; // Pass the value from the template
+            const source_type = "{{ source_type }}";
+            const id = "{{ id }}";
+            fetchAndDisplayTestData(testTitle, source_type, id);
+        });
+    </script>
+</main>
+{% endblock content %}

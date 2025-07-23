@@ -1,4 +1,4 @@
- <!-- Copyright 2024 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+ <!-- Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 <head>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-G72VFEFQ02"></script>
-<script>
+<!-- <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
   gtag('config', 'G-G72VFEFQ02');
-</script>
+</script> -->
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <!-- Primary Meta Tags -->
 <title>
@@ -35,11 +35,23 @@
 <meta name="description" content="PerForge is a tool for automating performance testing">
 <link type="image/x-icon" href="/static/assets/img/favicon.ico" rel="shortcut icon">
 <script src="/static/assets/js/perforge.js"></script>
-<!-- Specific Page JS goes HERE  -->    
+<!-- Specific Page JS goes HERE  -->
 {% block stylesheets %}{% endblock stylesheets %}
 </head>
 <body>
+        <script>
+        // Immediately apply theme from localStorage to prevent FOUC
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+                document.body.classList.add('light-theme');
+            }
+        })();
+    </script>
     {% block content %}{% endblock content %}
+    {% if request.endpoint not in ['login', 'register', 'register_admin', 'choose_project'] %}
+        {% include 'includes/sidebar.html' %}
+    {% endif %}
     {% include 'includes/scripts.html' %}
     <!-- Specific Page JS goes HERE  -->
     {% block javascripts %}{% endblock javascripts %}

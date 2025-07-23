@@ -1,14 +1,15 @@
 {% extends "layouts/base-fullscreen.html" %}
-{% block title %} Project {% endblock %} 
+{% block title %} Project {% endblock %}
 <!-- Specific Page CSS goes HERE  -->
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<!-- API Client -->
 {% endblock stylesheets %}
 {% block content %}
    <main>
-      <div class="main-background">
+      <div class="main-background fullscreen">
          <div class="min-vh-100 flex-center-center flex-direction-column">
             <div class="center-section">
                <h2 class="mb-2 lh-sm">Choose your project</h2>
@@ -16,7 +17,7 @@
             <div class="center-section">
                {% for project in projects %}
                   <div class="card card-project center-section">
-                     <a href="/set-project?project={{ project.id }}">{{ project.name }}</a>
+                     <a href="#" onclick="setProject('{{ project.id }}'); return false;">{{ project.name }}</a>
                   </div>
                {% endfor %}
                <div class="card card-project center-section">
@@ -29,6 +30,17 @@
             {% include 'includes/flashed-msg.html' %}
             {% endwith %}
          </div>
-         {% include 'includes/project-modal.html' %}
     </main>
+
+    {% include 'includes/project-modal.html' %}
+
+    <script>
+        function setProject(projectId) {
+            // Use the API client to set the active project
+            apiClient.projects.setActive(projectId)
+                .catch(error => {
+                    console.error('Error setting project:', error);
+                });
+        }
+    </script>
 {% endblock content %}
