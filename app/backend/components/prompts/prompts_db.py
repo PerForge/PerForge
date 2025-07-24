@@ -17,18 +17,18 @@ import os
 import traceback
 import logging
 
-from app.config                  import db
+from app.config import db
 from app.backend.pydantic_models import PromptModel
-from sqlalchemy                  import or_
+from sqlalchemy import or_
 
 class DBPrompts(db.Model):
-    __tablename__  = 'prompts'
-    id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name           = db.Column(db.String(120), nullable=False)
-    type           = db.Column(db.String(120), nullable=False)
-    place          = db.Column(db.String(120), nullable=False)
-    prompt         = db.Column(db.Text, nullable=False)
-    project_id     = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), index=True)
+    __tablename__ = 'prompts'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(120), nullable=False)
+    type = db.Column(db.String(120), nullable=False)
+    place = db.Column(db.String(120), nullable=False)
+    prompt = db.Column(db.Text, nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), index=True)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
@@ -139,7 +139,7 @@ class DBPrompts(db.Model):
             # Delete all existing default prompts first
             cls.query.filter_by(type='default').delete(synchronize_session=False)
 
-            file_path = os.path.join("app", "data", "prompts.yaml")
+            file_path = os.path.join("app", "backend", "components", "prompts", "prompts.yaml")
             with open(file_path, 'r') as file:
                 data = yaml.safe_load(file)
 
