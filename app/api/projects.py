@@ -401,12 +401,12 @@ def _create_example_data(project_id: str) -> None:
             "prompt_id": None
         })
 
-        # Template example for Confluence Wiki
+        # Template example for Confluence
         DBTemplates.save(project_id, {
             "id": None,
-            "name": "[EXAMPLE] REPORT for Confluence Wiki",
+            "name": "[EXAMPLE] REPORT for Confluence",
             "nfr": nfr_example_id,
-            "title": "[EXAMPLE] REPORT for Confluence Wiki",
+            "title": "[EXAMPLE] REPORT for Confluence",
             "ai_switch": False,
             "ai_aggregated_data_switch": False,
             "ai_graph_switch": False,
@@ -424,12 +424,12 @@ def _create_example_data(project_id: str) -> None:
                 {"content":"<h2>Aggregated data example in Expand</h2>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${aggregated_data_table_}\n</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"}]
         })
 
-        # Template example for Confluence Jira
+        # Template example for Jira
         DBTemplates.save(project_id, {
             "id": None,
-            "name": "[EXAMPLE] REPORT for Confluence Jira",
+            "name": "[EXAMPLE] REPORT for Jira",
             "nfr": nfr_example_id,
-            "title": "[EXAMPLE] REPORT for Confluence Jira",
+            "title": "[EXAMPLE] REPORT for Jira",
             "ai_switch": False,
             "ai_aggregated_data_switch": False,
             "ai_graph_switch": False,
