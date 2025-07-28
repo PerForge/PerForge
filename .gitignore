@@ -2,7 +2,7 @@ flask/
 *.pyc
 dev
 node_modules
-app/data/database.db
+app/data/*.db
 app/build
 yarn.lock
 yarn-error.log
@@ -18,3 +18,8 @@ app/logs
 **/config.json
 **/nfrs.json
 debug_run.bat
+# Playwright auth state
+browser_tests/storageState.json
+browser_tests/test-results/
+# Playwright HTML report (if generated)
+browser_tests/playwright-report/
