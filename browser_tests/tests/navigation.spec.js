@@ -8,7 +8,7 @@ const path = require('path');
 const projectRoot = path.resolve(__dirname, '..');
 
 // Pages to verify
-const pages = ['/', '/secrets', '/integrations', '/prompts', '/nfrs', '/graphs', '/templates'];
+const pages = ['/', '/secrets', '/integrations', '/prompts', '/nfrs', '/graphs', '/templates', '/tests'];
 
 test.use({
   storageState: path.join(projectRoot, 'storageState.json'),

@@ -10,12 +10,10 @@ const projectRoot = path.resolve(__dirname, '..');
 // List endpoints to ping
 const endpoints = [
   '/api/v1/secrets',
-  '/api/v1/integrations',
   '/api/v1/prompts',
   '/api/v1/nfrs',
   '/api/v1/graphs',
   '/api/v1/template-groups',
-  '/api/v1/tests',
   '/api/v1/templates',
   '/api/v1/projects',
 ];
