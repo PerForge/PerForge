@@ -85,9 +85,20 @@ class DataProvider:
         return now_utc.astimezone(human_tz).strftime(fmt)
 
     # Basic data retrieval methods
-    def get_test_log(self) -> Dict[str, Any]:
-        """Retrieve test log data from the database."""
-        return self.ds_obj.get_test_log()
+    def get_test_log(self, limit: int | None = None, offset: int | None = None, sort_by: str | None = None, sort_dir: str = 'asc'):
+        """Return tests list.
+
+        If *limit* and/or *offset* are provided and the underlying data-source
+        supports them, they will be forwarded to reduce the amount of data
+        transferred. Otherwise the full list will be requested and sliced
+        in-memory as a graceful fallback.
+        """
+        return self.ds_obj.get_test_log(limit=limit, offset=offset or 0, sort_by=sort_by, sort_dir=sort_dir)
+
+    def get_tests_titles(self) -> list[str]:
+        """Return list of unique test titles from data-source."""
+        raw = self.ds_obj.get_tests_titles()
+        return [str(r.get("test_title")) for r in raw if r.get("test_title")]
 
     def get_response_time_data(self) -> None:
         """Retrieve response time data (placeholder)."""

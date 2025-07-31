@@ -15,18 +15,18 @@
 import logging
 import pandas as pd
 
-from app.backend.integrations.data_sources.base_extraction                                      import DataExtractionBase
-from app.backend.integrations.data_sources.base_queries                                         import BackEndQueriesBase, FrontEndQueriesBase
+from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
+from app.backend.integrations.data_sources.base_queries import BackEndQueriesBase, FrontEndQueriesBase
 from app.backend.integrations.data_sources.influxdb_v2.queries.influxdb_backend_listener_client import InfluxDBBackendListenerClientImpl
-from app.backend.integrations.data_sources.influxdb_v2.queries.sitespeed_influxdb_v2            import SitespeedFluxQueries
-from app.backend.integrations.data_sources.influxdb_v2.influxdb_db                              import DBInfluxdb
-from app.backend.components.secrets.secrets_db                                                  import DBSecrets
-from app.backend.errors                                                                         import ErrorMessages
-from influxdb_client                                                                            import InfluxDBClient
-from datetime                                                                                   import datetime
-from dateutil                                                                                   import tz
-from typing                                                                                     import List, Dict, Any, Type
-from collections                                                                                import defaultdict
+from app.backend.integrations.data_sources.influxdb_v2.queries.sitespeed_influxdb_v2 import SitespeedFluxQueries
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
+from app.backend.components.secrets.secrets_db import DBSecrets
+from app.backend.errors import ErrorMessages
+from influxdb_client import InfluxDBClient
+from datetime import datetime
+from dateutil import tz
+from typing import List, Dict, Any, Type
+from collections import defaultdict
 
 
 class InfluxdbV2(DataExtractionBase):
@@ -68,19 +68,19 @@ class InfluxdbV2(DataExtractionBase):
         self._close_client()
 
     def set_config(self, id):
-        id     = id if id else DBInfluxdb.get_default_config(project_id=self.project)["id"]
+        id = id if id else DBInfluxdb.get_default_config(project_id=self.project)["id"]
         config = DBInfluxdb.get_config_by_id(project_id=self.project, id=id)
         if config["id"]:
-            self.id       = config["id"]
-            self.name     = config["name"]
-            self.url      = config["url"]
-            self.org_id   = config["org_id"]
-            self.token    = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
-            self.timeout  = config["timeout"]
-            self.bucket   = config["bucket"]
+            self.id = config["id"]
+            self.name = config["name"]
+            self.url = config["url"]
+            self.org_id = config["org_id"]
+            self.token = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
+            self.timeout = config["timeout"]
+            self.bucket = config["bucket"]
             self.listener = config["listener"]
             self.test_title_tag_name = config["test_title_tag_name"]
-            self.tmz      = config["tmz"]
+            self.tmz = config["tmz"]
         else:
             logging.warning("There's no InfluxDB integration configured, or you're attempting to send a request from an unsupported location.")
 
@@ -101,14 +101,33 @@ class InfluxdbV2(DataExtractionBase):
                 logging.error(ErrorMessages.ER00053.value.format(self.name))
                 logging.error(er)
 
-    def _fetch_test_log(self) -> List[Dict[str, Any]]:
+    def _fetch_test_log(self, limit: int | None = None, offset: int = 0, sort_by: str | None = None, sort_dir: str = 'desc') -> List[Dict[str, Any]]:
+        """Fetch tests list with optional limit/offset."""
         try:
-            query = self.queries.get_test_log(self.bucket, self.test_title_tag_name)
-            records = self._execute_query(query)
+            query = self.queries.get_test_log(
+                self.bucket,
+                self.test_title_tag_name,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
+                limit=limit,
+                offset=offset,
+            )
 
+            records = self._execute_query(query)
             df = pd.DataFrame(records)
-            sorted_df = df.sort_values(by='start_time')
-            return sorted_df.to_dict(orient='records')
+            return df.to_dict(orient="records")
+        except Exception as er:
+            logging.error(ErrorMessages.ER00057.value.format(self.name))
+            logging.error(er)
+            return []
+
+    def _fetch_tests_titles(self) -> List[Dict[str, Any]]:
+        try:
+            if hasattr(self.queries, "get_tests_titles"):
+                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name)
+                records = self._execute_query(query)
+                df = pd.DataFrame(records)
+                return df.to_dict(orient="records")
         except Exception as er:
             logging.error(ErrorMessages.ER00057.value.format(self.name))
             logging.error(er)
@@ -325,7 +344,7 @@ class InfluxdbV2(DataExtractionBase):
         if start == None: start = "2000-01-01T00:00:00Z"
         else:
             start = datetime.strftime(datetime.fromtimestamp(int(start)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
-        if end   == None: end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        if end == None: end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         else:
             end = datetime.strftime(datetime.fromtimestamp(int(end)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
         try:
@@ -338,7 +357,7 @@ class InfluxdbV2(DataExtractionBase):
     def delete_custom(self, bucket, filetr):
         try:
             start = "2000-01-01T00:00:00Z"
-            end   = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
             self.influxdb_connection.delete_api().delete(start, end, filetr, bucket=bucket, org=self.org_id)
         except Exception as er:
             logging.warning('ERROR: deleteTestPoint method failed')
@@ -349,7 +368,7 @@ class InfluxdbV2(DataExtractionBase):
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
         try:
             flux_tables = self.influxdb_connection.query_api().query(query)
-            records     = []
+            records = []
             for table in flux_tables:
                 for row in table.records:
                     row_data = row.values
@@ -360,7 +379,7 @@ class InfluxdbV2(DataExtractionBase):
         except Exception as er:
             logging.error(ErrorMessages.ER00056.value.format(query))
             logging.error(er)
-            return []
+            raise
 
     def process_data(self, flux_tables):
         data = []
@@ -409,8 +428,8 @@ class InfluxdbV2(DataExtractionBase):
 
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                timestamp   = flux_record['_time']
-                value       = flux_record['_value']
+                timestamp = flux_record['_time']
+                value = flux_record['_value']
                 transaction = flux_record['transaction']
 
                 if transaction not in data_dict:

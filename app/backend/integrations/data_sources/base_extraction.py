@@ -15,11 +15,11 @@
 import logging
 import pandas as pd
 
-from app.backend.errors                          import ErrorMessages
-from abc                                         import ABC, abstractmethod
-from typing                                      import List, Dict, Any, Callable
-from functools                                   import wraps
-from datetime                                    import datetime
+from app.backend.errors import ErrorMessages
+from abc import ABC, abstractmethod
+from typing import List, Dict, Any, Callable
+from functools import wraps
+from datetime import datetime
 
 
 def validate_output(expected_keys: set):
@@ -174,29 +174,33 @@ class DataExtractionBase(ABC):
 
     # Common methods for all extraction types
     @abstractmethod
-    def _fetch_test_log(self) -> List[Dict[str, Any]]:
+    def _fetch_test_log(self, limit: int | None = None, offset: int = 0, sort_by: str | None = None, sort_dir: str = 'desc') -> List[Dict[str, Any]]:
         """
         Fetch the test log from the data source.
+        :param limit: Maximum number of records to return (None for all)
+        :param offset: Starting offset (default 0)
         :return: A list of dictionaries containing test log data.
         """
         pass
 
     @validate_output(expected_keys={'duration', 'end_time', 'max_threads', 'start_time', 'test_title'})
-    def get_test_log(self) -> List[Dict[str, Any]]:
+    def get_test_log(self, limit: int | None = None, offset: int = 0, sort_by: str | None = None, sort_dir: str = 'desc') -> List[Dict[str, Any]]:
         """
-        Retrieve the test log data, validated to ensure required fields are present.
+        Retrieve the test log data with optional pagination.
         Results are sorted by test_title in descending order.
-
-        :return: A list of dictionaries containing test log data, sorted by test_title in descending order.
         """
-        test_log = self._fetch_test_log()
 
-        # Sort by test_title in descending order
-        if test_log:
-            test_log.sort(key=lambda x: x.get('test_title', ''), reverse=True)
+        return self._fetch_test_log(limit=limit, offset=offset, sort_by=sort_by, sort_dir=sort_dir)
 
-        return test_log
+    @abstractmethod
+    def _fetch_tests_titles(self) -> List[str]:
+        """Fetch list of unique test titles from the data source."""
+        pass
 
+    @validate_output(expected_keys={'test_title'})
+    def get_tests_titles(self) -> List[str]:
+        """Return list of unique test titles."""
+        return self._fetch_tests_titles()
     @abstractmethod
     def _fetch_start_time(self, test_title: str, time_format: str) -> Any:
         """
