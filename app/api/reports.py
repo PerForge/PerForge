@@ -128,6 +128,42 @@ def get_test_data():
         source_type = request.args.get('source_type')
         source_id = request.args.get('id')
 
+        # Pagination parameters
+        try:
+            page = int(request.args.get('page', 1))
+            page_size = int(request.args.get('page_size', 10))
+        except ValueError:
+            return api_response(
+                message="Invalid pagination parameters",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "invalid_param", "message": "'page' and 'page_size' must be integers and > 0"}]
+            )
+        if page < 1 or page_size < 1:
+            return api_response(
+                message="Pagination parameters must be positive",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "invalid_param", "message": "'page' and 'page_size' must be positive"}]
+            )
+
+        # Sorting parameters
+        allowed_sort_by = {"test_title", "duration", "max_threads", "start_time", "end_time"}
+        sort_by = request.args.get('sort_by')
+        if sort_by is not None and sort_by not in allowed_sort_by:
+            return api_response(
+                message="Invalid sort_by parameter",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "invalid_param", "message": f"Cannot sort by '{sort_by}'"}]
+            )
+
+        allowed_sort_dir = {"desc", "asc"}
+        sort_dir = request.args.get('sort_dir', 'desc').lower()
+        if sort_dir not in allowed_sort_dir:
+            return api_response(
+                message="Invalid sort_dir parameter",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "invalid_param", "message": "'sort_dir' must be 'desc' or 'asc'"}]
+            )
+
         if not source_type:
             return api_response(
                 message="Missing source_type parameter",
@@ -136,7 +172,12 @@ def get_test_data():
             )
 
         ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id)
-        tests = ds_obj.get_test_log()
+
+        # Retrieve total count and current page slice directly from data provider
+        titles = ds_obj.get_tests_titles()
+        total = len(titles)
+        start = (page - 1) * page_size
+        tests = ds_obj.get_test_log(limit=page_size, offset=start, sort_by=sort_by, sort_dir=sort_dir)
 
         # Format timestamps to sortable format for better table sorting
         for test in tests:
@@ -150,7 +191,13 @@ def get_test_data():
                 if hasattr(test['end_time'], 'strftime'):
                     test['end_time'] = test['end_time'].strftime('%Y-%m-%d %H:%M:%S')
 
-        return api_response(data={"tests": tests})
+        return api_response(data={
+            "tests": tests,
+            "total": total,
+            "baseline_titles": titles,
+            "page": page,
+            "page_size": page_size
+        })
     except Exception as e:
         logging.error(f"Error loading tests: {str(e)}")
         return api_response(

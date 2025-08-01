@@ -155,6 +155,52 @@
                 const dataSource_select = document.getElementById("dataSourceId");
                 let currentAbortController = null;
 
+                // Pagination and sorting state
+                let currentPage = 1;
+                const pageSize = 10; // keep UI page size
+                let totalItems = 0;
+                // Default server-side sorting: newest tests first
+                let sortBy = 'start_time';
+                let sortDir = 'desc';
+
+                // Helper to build an array of page numbers / ellipsis tokens
+                function generatePageList(page, totalPages, innerWindow = 1, outerWindow = 1){
+                    // Show all pages if total small
+                    const maxVisible = innerWindow * 2 + outerWindow * 2 + 3; // +2 for two ellipsis, +1 for current
+                    if (totalPages <= maxVisible) {
+                        return Array.from({length: totalPages}, (_, idx) => idx + 1);
+                    }
+                    const pages = [];
+                    const left = Math.max(page - innerWindow, outerWindow + 2);
+                    const right = Math.min(page + innerWindow, totalPages - outerWindow - 1);
+
+                    // first outerWindow pages
+                    for (let i = 1; i <= outerWindow; i++) {
+                        pages.push(i);
+                    }
+                    // left gap
+                    if (left > outerWindow + 2) {
+                        pages.push('...');
+                    } else if (left === outerWindow + 2) {
+                        pages.push(outerWindow + 1);
+                    }
+                    // middle pages
+                    for (let i = left; i <= right; i++) {
+                        pages.push(i);
+                    }
+                    // right gap
+                    if (right < totalPages - outerWindow - 1) {
+                        pages.push('...');
+                    } else if (right === totalPages - outerWindow - 1) {
+                        pages.push(totalPages - outerWindow);
+                    }
+                    // last outerWindow pages
+                    for (let i = totalPages - outerWindow + 1; i <= totalPages; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                }
+
                 // Initialize from cookie if exists
                 const savedDataSource = getCookie("selectedDataSource");
                 if (savedDataSource) {
@@ -167,12 +213,62 @@
                     loadData();
                 });
 
+                // Pagination buttons (bind once)
+                $("[data-list-pagination='prev']").on('click', function(){
+                    if(currentPage > 1){
+                        currentPage--;
+                        loadData();
+                    }
+                });
+                $("[data-list-pagination='next']").on('click', function(){
+                    const maxPage = Math.ceil(totalItems / pageSize);
+                    if(currentPage < maxPage){
+                        currentPage++;
+                        loadData();
+                    }
+                });
+
+                // Sorting headers click (server-side)
+                $('th.sort').css('cursor','pointer').on('click', function(e){
+                    e.preventDefault();
+                    e.stopImmediatePropagation(); // suppress List.js default sorting
+                    const field = $(this).data('sort');
+                    if(sortBy === field){
+                        sortDir = (sortDir === 'asc') ? 'desc' : 'asc';
+                    } else {
+                        sortBy = field;
+                        sortDir = 'asc';
+                    }
+                    currentPage = 1; // reset to first page when sorting changes
+                    updateSortIcons();
+                    loadData();
+                });
+
+                function updateSortIcons(){
+                    // Clear previous indicators
+                    $('th.sort').each(function(){
+                        $(this).find('.sort-indicator').remove();
+                    });
+                    if(!sortBy){
+                        return;
+                    }
+                    // Add indicator to active column
+                    const $active = $('th.sort[data-sort="'+sortBy+'"]');
+                    if($active.length){
+                        const indicator = $('<span class="sort-indicator ms-1"></span>').html(sortDir === 'asc' ? '&#9650;' : '&#9660;');
+                        $active.append(indicator);
+                    }
+                }
+
                 const templates = JSON.parse('{{ templates | tojson }}');
                 if (!templates) {
                     templates = []
                 }
 
+                let baselineTitles = []; // global list of available baseline tests
+
                 // Initial load after everything is initialized
+                updateSortIcons(); // reflect default sorting in UI
                 loadData();
 
                 function loadData(){
@@ -191,9 +287,22 @@
                     $("#spinner").show();
 
                     // Use the API client instead of direct fetch, passing the signal
-                    apiClient.tests.getTestData(sourceType, id, { signal })
+                    apiClient.tests.getTestData(sourceType, id,
+                        {
+                            page: currentPage,
+                            page_size: pageSize,
+                            sort_by: sortBy,
+                            sort_dir: sortDir
+                        },
+                        { signal })
                         .then((response) => {
                             if(response.status === 'success'){
+                                baselineTitles = response.data.baseline_titles || [];
+                                totalItems = response.data.total;
+                                // Ensure current page reflects server response (safety if server adjusted page)
+                                if (response.data.page) {
+                                    currentPage = response.data.page;
+                                }
                                 updateTable(response.data.tests);
                             } else {
                                 var tableBody = document.getElementById("bulk-select-body");
@@ -204,6 +313,21 @@
 
                             // Initialize List.js after updating the table
                             perforge.utils.listInit();
+
+                            // Override List.js generated info with correct server-side pagination info
+                            // Use timeout to ensure this runs after List.js internal updateListControls
+                            setTimeout(() => {
+                                const startItemCalc = ((currentPage - 1) * pageSize) + 1;
+                                const endItemCalc = Math.min(currentPage * pageSize, totalItems);
+                                $("[data-list-info]").text(`${startItemCalc} to ${endItemCalc} Items of ${totalItems}`);
+
+                                // Re-enable/disable Prev/Next after List.js mutates DOM
+                                const maxPageCalc = Math.ceil(totalItems / pageSize) || 1;
+                                const $prevBtn = $("[data-list-pagination='prev']");
+                                const $nextBtn = $("[data-list-pagination='next']");
+                                $prevBtn.prop('disabled', currentPage === 1).toggleClass('disabled', currentPage === 1);
+                                $nextBtn.prop('disabled', currentPage === maxPageCalc).toggleClass('disabled', currentPage === maxPageCalc);
+                            }, 0);
 
                         })
                         .catch((error) => {
@@ -220,7 +344,46 @@
                 }
 
                 function updateTable(tests) {
-                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "duration", "max_threads", "start_time", "end_time"], "page": 10, "pagination": true}');
+                    // Update pagination UI info to show item range and total from API
+                    const maxPage = Math.ceil(totalItems / pageSize) || 1;
+                    const startItem = ((currentPage - 1) * pageSize) + 1;
+                    const endItem = Math.min(currentPage * pageSize, totalItems);
+                    $("[data-list-info]").text(`${startItem} to ${endItem} Items of ${totalItems}`);
+
+                    // Enable/disable Prev/Next buttons appropriately
+                    const $prevBtn = $("[data-list-pagination='prev']");
+                    const $nextBtn = $("[data-list-pagination='next']");
+                    $prevBtn.prop('disabled', currentPage === 1).toggleClass('disabled', currentPage === 1);
+                    $nextBtn.prop('disabled', currentPage === maxPage).toggleClass('disabled', currentPage === maxPage);
+
+                    // Render numeric pagination
+                    const $pagination = $("ul.pagination");
+                    $pagination.empty();
+                    generatePageList(currentPage, maxPage).forEach(p => {
+                        const $li = $('<li>').addClass('page-item');
+                        if (p === '...') {
+                            $li.addClass('disabled').append($('<span>').addClass('page-link').text('...'));
+                        } else {
+                            const isActive = p === currentPage;
+                            const $a = $('<a>').addClass('page-link').attr('href','#').text(p);
+                            if (isActive) {
+                                $li.addClass('active');
+                                $a.addClass('active').attr('aria-current', 'page');
+                            }
+                            $a.on('click', function(e){
+                                e.preventDefault();
+                                if(currentPage !== p){
+                                    currentPage = p;
+                                    loadData();
+                                }
+                            });
+                            $li.append($a);
+                        }
+                        $pagination.append($li);
+                    });
+
+                    // Disable List.js built-in pagination since we paginate server-side
+                    $("#table-id").attr('data-list', '{"valueNames":["test_title", "duration", "max_threads", "start_time", "end_time"]}');
 
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body
@@ -298,10 +461,10 @@
                         defaultOption.textContent = "Select a test to compare (optional)";
                         select.appendChild(defaultOption);
                         select.setAttribute("data-test-id", test.test_title)
-                        tests.forEach(test => {
+                        baselineTitles.forEach(testTitle => {
                             const option = document.createElement("option");
-                            option.value = test.test_title;
-                            option.textContent = test.test_title;
+                            option.value = testTitle;
+                            option.textContent = testTitle;
                             select.appendChild(option);
                         });
                         testIdCell.appendChild(select);
