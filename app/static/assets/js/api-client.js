@@ -694,11 +694,12 @@ const apiClient = {
          * @param {string} id - Optional ID for the data source
          * @returns {Promise} - Promise that resolves with test data
          */
-        getTestData: function(sourceType, id, options = {}) {
+        getTestData: function(sourceType, id, queryParams = {}, axiosConfig = {}) {
             return apiClient.get('/tests/data', {
                 source_type: sourceType,
-                id: id
-            }, options);
+                id: id,
+                ...queryParams
+            }, axiosConfig);
         },
 
         /**

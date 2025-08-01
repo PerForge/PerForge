@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BASE_URL: http://localhost:7878
       INFLUXDB_TOKEN: DqwGq5e7Avv9gKYi2NtRtRenOxbvEqXMtg-r4WjNxYlerHMfikeLtCTJwSTzk-5NheVXTOFi0qug5jRGuh8-mw==
 
     steps:
@@ -37,7 +36,7 @@ jobs:
         run: docker compose -f docker-compose.test.yml up -d --build
 
       - name: Build and Run Integration Services
-        run: docker compose -f docker-compose.yml up -d
+        run: docker compose -f docker-compose.yml up -d influxdb grafana renderer
 
       - name: Wait for Services to be Ready
         run: |
@@ -85,8 +84,6 @@ jobs:
       - name: Run Playwright Tests
         run: npx playwright test
         working-directory: ./browser_tests
-        env:
-          BASE_URL: ${{ env.BASE_URL }}
 
       - name: Shutdown Application Services
         if: always()

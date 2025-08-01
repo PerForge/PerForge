@@ -14,6 +14,7 @@
 
 import os
 import logging
+from app.logging_config import setup_logging
 
 from app.config                                  import db
 from app.backend.components.users.users_db       import DBUsers
@@ -43,6 +44,9 @@ from app.migrations                              import run_migrations
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+# Initialise unified logging before other modules create their loggers
+setup_logging()
+
 app = Flask(__name__)
 # Enable compression
 Compress(app)
@@ -56,35 +60,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-
-class IgnoreStaticRequests(logging.Filter):
-
-    def filter(self, record):
-        return 'GET /static/' not in record.getMessage()
-
-log_directory = os.path.join(basedir, "logs")
-log_file = os.path.join(log_directory, "info.log")
-
-if not os.path.exists(log_directory):
-    os.makedirs(log_directory)
-
-handler = RotatingFileHandler(
-    filename=log_file, maxBytes=1024 * 1024 * 50, backupCount=1
-)
-
-handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-
-# Configure logging
-app.logger.addHandler(handler)
-app.logger.setLevel(logging.INFO)
-
-werkzeug_logger = logging.getLogger('werkzeug')
-werkzeug_logger.addFilter(IgnoreStaticRequests())
-# Also send werkzeug logs to the file
-werkzeug_logger.addHandler(handler)
 
 app.config.from_object('app.config.Config')
 

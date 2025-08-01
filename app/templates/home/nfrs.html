@@ -12,7 +12,7 @@
             <div class="main-body">
               <div class="card mb-3 margin-all-10" data-component-card="data-component-card">
                 <div class="card-body">
-                    <div id="table-id">
+                    <div>
                         <div class="d-flex align-items-center justify-content-end mb-3">
                             <div class="d-flex">
                                 <div>
@@ -33,7 +33,7 @@
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody class="list" id="nfrs-table-body">
+                                <tbody id="nfrs-table-body" class="list">
                                     <!-- NFR items will be loaded dynamically via API -->
                                 </tbody>
                             </table>
@@ -180,7 +180,7 @@
                 if (listJsInstance) {
                     listJsInstance.reIndex();
                 } else {
-                    listJsInstance = new List('table-id', options);
+                    listJsInstance = new List('nfrs-table', options);
                 }
             }, 0);
         }

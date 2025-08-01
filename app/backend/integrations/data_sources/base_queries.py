@@ -16,7 +16,20 @@ from abc import ABC, abstractmethod
 
 class BackEndQueriesBase(ABC):
     @abstractmethod
-    def get_test_log(self, bucket: str, test_title_tag_name: str) -> str:
+    def get_test_log(
+        self,
+        bucket: str,
+        test_title_tag_name: str,
+        *,
+        sort_by: str | None = None,
+        sort_dir: str = "desc",
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> str:
+        pass
+
+    @abstractmethod
+    def get_tests_titles(self, bucket: str, test_title_tag_name: str) -> str:
         pass
 
     @abstractmethod
@@ -90,7 +103,20 @@ class BackEndQueriesBase(ABC):
 
 class FrontEndQueriesBase(ABC):
     @abstractmethod
-    def get_test_log(self, bucket: str, test_title_tag_name: str) -> str:
+    def get_tests_titles(self, bucket: str, test_title_tag_name: str) -> str:
+        pass
+
+    @abstractmethod
+    def get_test_log(
+        self,
+        bucket: str,
+        test_title_tag_name: str,
+        *,
+        sort_by: str | None = None,
+        sort_dir: str = "desc",
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> str:
         pass
 
     @abstractmethod
