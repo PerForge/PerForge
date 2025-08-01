@@ -5,14 +5,6 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/nfrs.css" rel="stylesheet">
-<style>
-  /* Pagination active link styled like .btn-primary */
-  .pagination .page-link.active {
-    background-color: var(--bs-primary);
-    color: #fff;
-    border-color: var(--bs-primary);
-  }
-</style>
 {% endblock stylesheets %}
 {% block content %}
     <main>
@@ -171,6 +163,44 @@
                 let sortBy = 'start_time';
                 let sortDir = 'desc';
 
+                // Helper to build an array of page numbers / ellipsis tokens
+                function generatePageList(page, totalPages, innerWindow = 1, outerWindow = 1){
+                    // Show all pages if total small
+                    const maxVisible = innerWindow * 2 + outerWindow * 2 + 3; // +2 for two ellipsis, +1 for current
+                    if (totalPages <= maxVisible) {
+                        return Array.from({length: totalPages}, (_, idx) => idx + 1);
+                    }
+                    const pages = [];
+                    const left = Math.max(page - innerWindow, outerWindow + 2);
+                    const right = Math.min(page + innerWindow, totalPages - outerWindow - 1);
+
+                    // first outerWindow pages
+                    for (let i = 1; i <= outerWindow; i++) {
+                        pages.push(i);
+                    }
+                    // left gap
+                    if (left > outerWindow + 2) {
+                        pages.push('...');
+                    } else if (left === outerWindow + 2) {
+                        pages.push(outerWindow + 1);
+                    }
+                    // middle pages
+                    for (let i = left; i <= right; i++) {
+                        pages.push(i);
+                    }
+                    // right gap
+                    if (right < totalPages - outerWindow - 1) {
+                        pages.push('...');
+                    } else if (right === totalPages - outerWindow - 1) {
+                        pages.push(totalPages - outerWindow);
+                    }
+                    // last outerWindow pages
+                    for (let i = totalPages - outerWindow + 1; i <= totalPages; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                }
+
                 // Initialize from cookie if exists
                 const savedDataSource = getCookie("selectedDataSource");
                 if (savedDataSource) {
@@ -291,7 +321,12 @@
                                 const endItemCalc = Math.min(currentPage * pageSize, totalItems);
                                 $("[data-list-info]").text(`${startItemCalc} to ${endItemCalc} Items of ${totalItems}`);
 
-
+                                // Re-enable/disable Prev/Next after List.js mutates DOM
+                                const maxPageCalc = Math.ceil(totalItems / pageSize) || 1;
+                                const $prevBtn = $("[data-list-pagination='prev']");
+                                const $nextBtn = $("[data-list-pagination='next']");
+                                $prevBtn.prop('disabled', currentPage === 1).toggleClass('disabled', currentPage === 1);
+                                $nextBtn.prop('disabled', currentPage === maxPageCalc).toggleClass('disabled', currentPage === maxPageCalc);
                             }, 0);
 
                         })
@@ -315,27 +350,37 @@
                     const endItem = Math.min(currentPage * pageSize, totalItems);
                     $("[data-list-info]").text(`${startItem} to ${endItem} Items of ${totalItems}`);
 
+                    // Enable/disable Prev/Next buttons appropriately
+                    const $prevBtn = $("[data-list-pagination='prev']");
+                    const $nextBtn = $("[data-list-pagination='next']");
+                    $prevBtn.prop('disabled', currentPage === 1).toggleClass('disabled', currentPage === 1);
+                    $nextBtn.prop('disabled', currentPage === maxPage).toggleClass('disabled', currentPage === maxPage);
+
                     // Render numeric pagination
                     const $pagination = $("ul.pagination");
                     $pagination.empty();
-                    for(let i=1;i<=maxPage;i++){
-                        const isActive = i === currentPage;
+                    generatePageList(currentPage, maxPage).forEach(p => {
                         const $li = $('<li>').addClass('page-item');
-                        const $a = $('<a>').addClass('page-link').attr('href','#').text(i);
-                        if (isActive) {
-                            $li.addClass('active');
-                            $a.addClass('active').attr('aria-current', 'page');
-                        }
-                        $a.on('click', function(e){
-                            e.preventDefault();
-                            if(currentPage !== i){
-                                currentPage = i;
-                                loadData();
+                        if (p === '...') {
+                            $li.addClass('disabled').append($('<span>').addClass('page-link').text('...'));
+                        } else {
+                            const isActive = p === currentPage;
+                            const $a = $('<a>').addClass('page-link').attr('href','#').text(p);
+                            if (isActive) {
+                                $li.addClass('active');
+                                $a.addClass('active').attr('aria-current', 'page');
                             }
-                        });
-                        $li.append($a);
+                            $a.on('click', function(e){
+                                e.preventDefault();
+                                if(currentPage !== p){
+                                    currentPage = p;
+                                    loadData();
+                                }
+                            });
+                            $li.append($a);
+                        }
                         $pagination.append($li);
-                    }
+                    });
 
                     // Disable List.js built-in pagination since we paginate server-side
                     $("#table-id").attr('data-list', '{"valueNames":["test_title", "duration", "max_threads", "start_time", "end_time"]}');
