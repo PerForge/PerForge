@@ -20,6 +20,7 @@ from typing import List, Dict, Any, Tuple, Optional, Type
 import pandas as pd
 from datetime import datetime
 from dateutil import tz
+from cachetools import TTLCache, cached
 
 # Local application imports
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
