@@ -5,6 +5,14 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/nfrs.css" rel="stylesheet">
+<style>
+  /* Pagination active link styled like .btn-primary */
+  .pagination .page-link.active {
+    background-color: var(--bs-primary);
+    color: #fff;
+    border-color: var(--bs-primary);
+  }
+</style>
 {% endblock stylesheets %}
 {% block content %}
     <main>
@@ -261,6 +269,10 @@
                             if(response.status === 'success'){
                                 baselineTitles = response.data.baseline_titles || [];
                                 totalItems = response.data.total;
+                                // Ensure current page reflects server response (safety if server adjusted page)
+                                if (response.data.page) {
+                                    currentPage = response.data.page;
+                                }
                                 updateTable(response.data.tests);
                             } else {
                                 var tableBody = document.getElementById("bulk-select-body");
@@ -271,6 +283,16 @@
 
                             // Initialize List.js after updating the table
                             perforge.utils.listInit();
+
+                            // Override List.js generated info with correct server-side pagination info
+                            // Use timeout to ensure this runs after List.js internal updateListControls
+                            setTimeout(() => {
+                                const startItemCalc = ((currentPage - 1) * pageSize) + 1;
+                                const endItemCalc = Math.min(currentPage * pageSize, totalItems);
+                                $("[data-list-info]").text(`${startItemCalc} to ${endItemCalc} Items of ${totalItems}`);
+
+
+                            }, 0);
 
                         })
                         .catch((error) => {
@@ -287,17 +309,23 @@
                 }
 
                 function updateTable(tests) {
-                    // Update pagination UI info
+                    // Update pagination UI info to show item range and total from API
                     const maxPage = Math.ceil(totalItems / pageSize) || 1;
-                    $("[data-list-info]").text(`Page ${currentPage} / ${maxPage} — Total ${totalItems}`);
+                    const startItem = ((currentPage - 1) * pageSize) + 1;
+                    const endItem = Math.min(currentPage * pageSize, totalItems);
+                    $("[data-list-info]").text(`${startItem} to ${endItem} Items of ${totalItems}`);
 
                     // Render numeric pagination
                     const $pagination = $("ul.pagination");
                     $pagination.empty();
                     for(let i=1;i<=maxPage;i++){
                         const isActive = i === currentPage;
-                        const $li = $('<li>').addClass('page-item').toggleClass('active', isActive);
+                        const $li = $('<li>').addClass('page-item');
                         const $a = $('<a>').addClass('page-link').attr('href','#').text(i);
+                        if (isActive) {
+                            $li.addClass('active');
+                            $a.addClass('active').attr('aria-current', 'page');
+                        }
                         $a.on('click', function(e){
                             e.preventDefault();
                             if(currentPage !== i){
