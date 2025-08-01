@@ -24,7 +24,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
         base_query = (
             f"from(bucket: \"{bucket}\")\n"
             f"  |> range(start: 0)\n"
-            f"  |> filter(fn: (r) => r._measurement == \"jmeter\")\n"
+            f"  |> filter(fn: (r) => r._measurement == \"largestContentfulPaint\")\n"
             f"  |> keep(columns: [\"{test_title_tag_name}\"])\n"
             f"  |> group()"
             f"  |> distinct(column: \"{test_title_tag_name}\")"

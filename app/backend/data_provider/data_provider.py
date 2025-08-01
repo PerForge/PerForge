@@ -28,6 +28,7 @@ from app.backend.integrations.data_sources.base_extraction import DataExtraction
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
 
 class DataProvider:
+    _titles_cache = TTLCache(maxsize=1000, ttl=60)
     """
     DataProvider class manages data extraction, transformation, and analysis for performance tests.
 
@@ -95,6 +96,7 @@ class DataProvider:
         """
         return self.ds_obj.get_test_log(limit=limit, offset=offset or 0, sort_by=sort_by, sort_dir=sort_dir)
 
+    @cached(_titles_cache)
     def get_tests_titles(self) -> list[str]:
         """Return list of unique test titles from data-source."""
         raw = self.ds_obj.get_tests_titles()
