@@ -444,7 +444,7 @@ def ping_grafana():
         try:
             import requests
             headers = {"Authorization": f"Bearer {token}"} if token else {}
-            resp = requests.get(f"{url.rstrip('/')}/api/org", headers=headers, timeout=5)
+            resp = requests.get(f"{url.rstrip('/')}/api/org", headers=headers, timeout=5, verify=False)
             if resp.status_code == 200:
                 if org_id:
                     try:

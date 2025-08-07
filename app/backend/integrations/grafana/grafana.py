@@ -17,9 +17,9 @@ import logging
 import base64
 import traceback
 
-from app.backend.integrations.integration        import Integration
+from app.backend.integrations.integration import Integration
 from app.backend.integrations.grafana.grafana_db import DBGrafana
-from app.backend.components.secrets.secrets_db   import DBSecrets
+from app.backend.components.secrets.secrets_db import DBSecrets
 
 
 class Grafana(Integration):
@@ -32,17 +32,17 @@ class Grafana(Integration):
         return f'Integration id is {self.id}, url is {self.server}'
 
     def set_config(self, id):
-        id     = id if id else DBGrafana.get_default_config(project_id=self.project)["id"]
+        id = id if id else DBGrafana.get_default_config(project_id=self.project)["id"]
         config = DBGrafana.get_config_by_id(project_id=self.project, id=id)
         if config['id']:
-            self.id                  = config["id"]
-            self.name                = config["name"]
-            self.server              = config["server"]
-            self.org_id              = config["org_id"]
-            self.token               = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
-            self.test_title          = config["test_title"]
+            self.id = config["id"]
+            self.name = config["name"]
+            self.server = config["server"]
+            self.org_id = config["org_id"]
+            self.token = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
+            self.test_title = config["test_title"]
             self.baseline_test_title = config["baseline_test_title"]
-            self.dashboards          = config["dashboards"]
+            self.dashboards = config["dashboards"]
         else:
             logging.warning("There's no Grafana integration configured, or you're attempting to send a request from an unsupported location.")
 
@@ -83,14 +83,14 @@ class Grafana(Integration):
             + "&height=" + str(graph_data["height"])
             + "&scale=3"
         )
-        url   = self.dash_id_to_render(url)
+        url = self.dash_id_to_render(url)
         if baseline_test_title:
             url = url+f'&var-{self.test_title}='+test_title+f'&var-{self.baseline_test_title}='+baseline_test_title
         else:
             url = url+f'&var-{self.test_title}='+test_title
         url = self.add_custom_tags(url=url, graph_json=graph_data)
         try:
-            response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180)
+            response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180, verify=False)
             if response.status_code == 200:
                 image = response.content
             else:
