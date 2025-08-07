@@ -24,7 +24,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
         base_query = (
             f"from(bucket: \"{bucket}\")\n"
             f"  |> range(start: 0, stop: now())\n"
-            f"  |> filter(fn: (r) => r._measurement == \"largestContentfulPaint\")\n"
+            f"  |> filter(fn: (r) => r._measurement == \"largestContentfulPaint\" and r._field == \"median\" and r.origin == \"browsertime\" )\n"
             f"  |> group(columns: [\"{test_title_tag_name}\"])\n"
             f"  |> min(column: \"_time\")\n"
             f"  |> group()"
@@ -69,7 +69,6 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> sort(columns: ["start_time"], desc: true)
       |> rename(columns: {{{test_title_tag_name}: "test_title"}})
       |> set(key: "max_threads", value: "1")'''
-
     return base_query
 
   def get_start_time(self, testTitle: str, bucket: str, test_title_tag_name: str) -> str:
