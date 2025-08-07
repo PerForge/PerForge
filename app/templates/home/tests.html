@@ -89,12 +89,22 @@
                                 </table>
                             </div>
                             <div class="d-flex justify-content-between mt-3 fs--1">
-                                <span data-list-info="data-list-info"></span>
+                                <div class="d-flex align-items-center">
+                                    <select id="pageSizeSelect" class="form-select form-select-sm me-2" style="width:auto;">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <span data-list-info="data-list-info"></span>
+                                </div>
                                 <div class="d-flex">
+                                
                                     <button class="page-link" data-list-pagination="prev">
                                         <span class="fas fa-chevron-left"></span>
                                     </button>
                                     <ul class="mb-0 pagination"></ul>
+                                    
                                     <button class="page-link pe-0" data-list-pagination="next">
                                         <span class="fas fa-chevron-right"></span>
                                     </button>
@@ -157,7 +167,19 @@
 
                 // Pagination and sorting state
                 let currentPage = 1;
-                const pageSize = 10; // keep UI page size
+                let pageSize = parseInt(localStorage.getItem('pageSize')) || 10; // UI page size
+
+                // Initialize page size dropdown and handler
+                const pageSizeSelect = document.getElementById('pageSizeSelect');
+                if (pageSizeSelect) {
+                    pageSizeSelect.value = pageSize;
+                    pageSizeSelect.addEventListener('change', function () {
+                        pageSize = parseInt(this.value);
+                        localStorage.setItem('pageSize', pageSize);
+                        currentPage = 1; // reset to first page
+                        loadData();
+                    });
+                }
                 let totalItems = 0;
                 // Default server-side sorting: newest tests first
                 let sortBy = 'start_time';
