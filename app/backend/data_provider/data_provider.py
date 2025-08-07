@@ -20,7 +20,6 @@ from typing import List, Dict, Any, Tuple, Optional, Type
 import pandas as pd
 from datetime import datetime
 from dateutil import tz
-from cachetools import TTLCache, cached
 
 # Local application imports
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
@@ -29,7 +28,6 @@ from app.backend.integrations.data_sources.base_extraction import DataExtraction
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
 
 class DataProvider:
-    _titles_cache = TTLCache(maxsize=1000, ttl=60)
     """
     DataProvider class manages data extraction, transformation, and analysis for performance tests.
 
@@ -97,7 +95,6 @@ class DataProvider:
         """
         return self.ds_obj.get_test_log(test_titles=test_titles)
 
-    @cached(_titles_cache)
     def get_tests_titles(self) -> list[str]:
         """Return list of unique test titles from data-source."""
         raw = self.ds_obj.get_tests_titles()
