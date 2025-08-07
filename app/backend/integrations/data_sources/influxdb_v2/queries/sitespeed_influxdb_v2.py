@@ -29,7 +29,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
             f"  |> min(column: \"_time\")\n"
             f"  |> group()"
             f"  |> sort(columns: [\"_time\"], desc: true)\n"
-            f"  |> keep(column: \"{test_title_tag_name}\")"
+            f"  |> keep(columns: [\"{test_title_tag_name}\"])"
             f"  |> rename(columns: {{{test_title_tag_name}: \"test_title\"}})"
         )
         return base_query
@@ -40,11 +40,13 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       test_title_tag_name: str,
       *,
       test_titles: list[str],
+      start_time: str,
+      end_time: str,
   ) -> str:
     formatted = ", ".join([f'"{t}"' for t in test_titles])
 
     base_query = f'''data = from(bucket: "{bucket}")
-      |> range(start: 0, stop: now())
+      |> range(start: {start_time}, stop: {end_time})
       |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint")
       |> filter(fn: (r) => r["_field"] == "median")
       |> filter(fn: (r) => contains(value: r["{test_title_tag_name}"], set: [{formatted}]))

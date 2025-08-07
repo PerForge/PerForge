@@ -27,6 +27,7 @@ from datetime import datetime
 from dateutil import tz
 from typing import List, Dict, Any, Type
 from collections import defaultdict
+from datetime import timedelta
 
 
 class InfluxdbV2(DataExtractionBase):
@@ -104,10 +105,15 @@ class InfluxdbV2(DataExtractionBase):
     def _fetch_test_log(self, test_titles: list[str]) -> List[Dict[str, Any]]:
         """Fetch tests list with optional limit/offset."""
         try:
+            start_time = self._fetch_start_time(test_titles[-1], "iso")
+            end_time = self._fetch_end_time(test_titles[0], "iso")
+
             query = self.queries.get_test_log(
                 self.bucket,
                 self.test_title_tag_name,
-                test_titles=test_titles
+                test_titles=test_titles,
+                start_time=start_time,
+                end_time=end_time
             )
 
             records = self._execute_query(query)
@@ -148,7 +154,8 @@ class InfluxdbV2(DataExtractionBase):
                     if time_format == "human":
                         return datetime.strftime(flux_record["_time"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
                     elif time_format == "iso":
-                        return datetime.strftime(flux_record["_time"], "%Y-%m-%dT%H:%M:%SZ")
+                        start_time_dt = flux_record["_time"] - timedelta(seconds=10)
+                        return datetime.strftime(start_time_dt, "%Y-%m-%dT%H:%M:%SZ")
                     elif time_format == "timestamp":
                         return int(flux_record["_time"].astimezone(self.tmz_utc).timestamp() * 1000)
         except Exception as er:
@@ -165,7 +172,8 @@ class InfluxdbV2(DataExtractionBase):
                     if time_format == "human":
                         return datetime.strftime(flux_record["_time"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
                     elif time_format == "iso":
-                        return datetime.strftime(flux_record["_time"], "%Y-%m-%dT%H:%M:%SZ")
+                        end_time_dt = flux_record["_time"] + timedelta(seconds=10)
+                        return datetime.strftime(end_time_dt, "%Y-%m-%dT%H:%M:%SZ")
                     elif time_format == "timestamp":
                         return int(flux_record["_time"].astimezone(self.tmz_utc).timestamp() * 1000)
         except Exception as er:

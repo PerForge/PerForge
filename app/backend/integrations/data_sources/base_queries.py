@@ -112,10 +112,9 @@ class FrontEndQueriesBase(ABC):
         bucket: str,
         test_title_tag_name: str,
         *,
-        sort_by: str | None = None,
-        sort_dir: str = "desc",
-        limit: int | None = None,
-        offset: int = 0,
+        test_titles: list[str],
+        start_time: str,
+        end_time: str,
     ) -> str:
         pass
 
