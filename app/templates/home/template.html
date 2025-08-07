@@ -655,6 +655,9 @@
                                             // If this is a clone operation, append COPY to the name
                                             this.name = cloneTemplateId ? `${templateData.name} COPY` : templateData.name;
                                             this.nfr = this.nfrs.find(nfr => nfr.id === templateData.nfr) || "";
+                                             if (!this.nfr && this.nfrs.length) {
+                                                 this.nfr = this.nfrs[0];
+                                             }
                                             this.template = templateData.data;
                                             this.template_prompt_id = templateData.template_prompt_id;
                                             this.aggregated_prompt_id = templateData.aggregated_prompt_id;
@@ -676,8 +679,20 @@
                                             // Set selected options after data is loaded
                                             if (this.template_prompts.length && this.aggregated_data_prompts.length && this.system_prompts.length) {
                                                 this.selectedTemplatePrompt = this.template_prompts.find(prompt => prompt.id === this.template_prompt_id);
+                                                if (!this.selectedTemplatePrompt && this.template_prompts.length) {
+                                                    this.selectedTemplatePrompt = this.template_prompts[0];
+                                                    this.template_prompt_id = this.selectedTemplatePrompt.id;
+                                                }
                                                 this.selectedAggregatedDataPrompt = this.aggregated_data_prompts.find(prompt => prompt.id === this.aggregated_prompt_id);
+                                                if (!this.selectedAggregatedDataPrompt && this.aggregated_data_prompts.length) {
+                                                    this.selectedAggregatedDataPrompt = this.aggregated_data_prompts[0];
+                                                    this.aggregated_prompt_id = this.selectedAggregatedDataPrompt.id;
+                                                }
                                                 this.selectedSystemPrompt = this.system_prompts.find(prompt => prompt.id === this.system_prompt_id);
+                                                if (!this.selectedSystemPrompt && this.system_prompts.length) {
+                                                    this.selectedSystemPrompt = this.system_prompts[0];
+                                                    this.system_prompt_id = this.selectedSystemPrompt.id;
+                                                }
                                             }
                                         }
                                     })
@@ -706,6 +721,10 @@
                                 if (this.aggregated_data_prompts.length > 0) {
                                     this.selectedAggregatedDataPrompt = this.aggregated_data_prompts[0];
                                     this.aggregated_prompt_id = this.aggregated_data_prompts[0].id;
+                                }
+                                // Set default NFR if available
+                                if (this.nfrs.length > 0) {
+                                    this.nfr = this.nfrs[0];
                                 }
 
                                 this.isLoading = false;
