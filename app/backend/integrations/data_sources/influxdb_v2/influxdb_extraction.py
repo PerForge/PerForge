@@ -101,16 +101,13 @@ class InfluxdbV2(DataExtractionBase):
                 logging.error(ErrorMessages.ER00053.value.format(self.name))
                 logging.error(er)
 
-    def _fetch_test_log(self, limit: int | None = None, offset: int = 0, sort_by: str | None = None, sort_dir: str = 'desc') -> List[Dict[str, Any]]:
+    def _fetch_test_log(self, test_titles: list[str]) -> List[Dict[str, Any]]:
         """Fetch tests list with optional limit/offset."""
         try:
             query = self.queries.get_test_log(
                 self.bucket,
                 self.test_title_tag_name,
-                sort_by=sort_by,
-                sort_dir=sort_dir,
-                limit=limit,
-                offset=offset,
+                test_titles=test_titles
             )
 
             records = self._execute_query(query)

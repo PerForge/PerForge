@@ -5,6 +5,11 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/nfrs.css" rel="stylesheet">
+    <style>
+        th.sort {
+            pointer-events: none;
+        }
+    </style>
 {% endblock stylesheets %}
 {% block content %}
     <main>
@@ -17,7 +22,7 @@
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex">
                                     <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
-                                        <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" style="min-width: 300px;"/>
+                                        <input class="form-control search-input search" type="search" placeholder="Search on the page" aria-label="Search" style="min-width: 300px;"/>
                                         <span class="fas fa-search search-box-icon"></span>
                                     </div>
                                     <div class="d-flex align-items-center ms-2">
@@ -99,12 +104,12 @@
                                     <span data-list-info="data-list-info"></span>
                                 </div>
                                 <div class="d-flex">
-                                
+
                                     <button class="page-link" data-list-pagination="prev">
                                         <span class="fas fa-chevron-left"></span>
                                     </button>
                                     <ul class="mb-0 pagination"></ul>
-                                    
+
                                     <button class="page-link pe-0" data-list-pagination="next">
                                         <span class="fas fa-chevron-right"></span>
                                     </button>
@@ -181,9 +186,10 @@
                     });
                 }
                 let totalItems = 0;
-                // Default server-side sorting: newest tests first
-                let sortBy = 'start_time';
-                let sortDir = 'desc';
+                // Fixed sorting parameters (used only for icon updates)
+                const sortBy = 'start_time';
+                const sortDir = 'desc';
+
 
                 // Helper to build an array of page numbers / ellipsis tokens
                 function generatePageList(page, totalPages, innerWindow = 1, outerWindow = 1){
@@ -250,22 +256,6 @@
                     }
                 });
 
-                // Sorting headers click (server-side)
-                $('th.sort').css('cursor','pointer').on('click', function(e){
-                    e.preventDefault();
-                    e.stopImmediatePropagation(); // suppress List.js default sorting
-                    const field = $(this).data('sort');
-                    if(sortBy === field){
-                        sortDir = (sortDir === 'asc') ? 'desc' : 'asc';
-                    } else {
-                        sortBy = field;
-                        sortDir = 'asc';
-                    }
-                    currentPage = 1; // reset to first page when sorting changes
-                    updateSortIcons();
-                    loadData();
-                });
-
                 function updateSortIcons(){
                     // Clear previous indicators
                     $('th.sort').each(function(){
@@ -290,7 +280,6 @@
                 let baselineTitles = []; // global list of available baseline tests
 
                 // Initial load after everything is initialized
-                updateSortIcons(); // reflect default sorting in UI
                 loadData();
 
                 function loadData(){
@@ -312,9 +301,7 @@
                     apiClient.tests.getTestData(sourceType, id,
                         {
                             page: currentPage,
-                            page_size: pageSize,
-                            sort_by: sortBy,
-                            sort_dir: sortDir
+                            page_size: pageSize
                         },
                         { signal })
                         .then((response) => {

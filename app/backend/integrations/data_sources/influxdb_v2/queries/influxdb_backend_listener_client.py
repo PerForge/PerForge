@@ -23,31 +23,31 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
         """Return Flux query to get distinct test titles."""
         base_query = (
             f"from(bucket: \"{bucket}\")\n"
-            f"  |> range(start: 0)\n"
+            f"  |> range(start: 0, stop: now())\n"
             f"  |> filter(fn: (r) => r._measurement == \"jmeter\")\n"
-            f"  |> keep(columns: [\"{test_title_tag_name}\"])\n"
+            f"  |> group(columns: [\"{test_title_tag_name}\"])\n"
+            f"  |> min(column: \"_time\")\n"
             f"  |> group()"
-            f"  |> distinct(column: \"{test_title_tag_name}\")"
-            f"  |> rename(columns: {{_value: \"test_title\"}})"
-            f"  |> sort(columns: [\"test_title\"], desc: true)"
+            f"  |> sort(columns: [\"_time\"], desc: true)\n"
+            f"  |> keep(columns: [\"{test_title_tag_name}\"])\n"
+            f"  |> rename(columns: {{{test_title_tag_name}: \"test_title\"}})"
         )
         return base_query
 
   def get_test_log(
-      self,
-      bucket: str,
-      test_title_tag_name: str,
-      *,
-      sort_by: str | None = None,
-      sort_dir: str = "desc",
-      limit: int | None = None,
-      offset: int = 0,
-  ) -> str:
+    self,
+    bucket: str,
+    test_title_tag_name: str,
+    *,
+    test_titles: list[str],
+) -> str:
+    formatted = ", ".join([f'"{t}"' for t in test_titles])
+
     base_query = f'''data = from(bucket: "{bucket}")
       |> range(start: 0, stop: now())
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "maxAT")
-      |> aggregateWindow(every: 1m, fn: last, createEmpty: false)
+      |> filter(fn: (r) => contains(value: r["{test_title_tag_name}"], set: [{formatted}]))
 
     max_threads = data
       |> keep(columns: ["_value", "{test_title_tag_name}"])
@@ -75,17 +75,9 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> map(fn: (r) => ({{ r with duration: (int(v: r.end_time) - int(v: r.start_time))/1000000000}}))
       |> keep(columns: ["start_time","end_time","{test_title_tag_name}", "max_threads", "duration"])
       |> group()
+      |> sort(columns: ["start_time"], desc: true)
       |> rename(columns: {{{test_title_tag_name}: "test_title"}})'''
 
-    # Optional sorting / pagination additions
-    allowed_sort_fields = {"test_title", "duration", "max_threads", "start_time", "end_time"}
-    if sort_by in allowed_sort_fields:
-        desc_flag = "true" if sort_dir == "desc" else "false"
-        base_query += f"\n  |> sort(columns:[\"{sort_by}\"], desc: {desc_flag})"
-
-    if limit is not None or offset:
-        n_part = f"n: {limit}" if limit is not None else ""
-        base_query += f"\n  |> limit({n_part}, offset: {offset})"
     return base_query
 
   def get_start_time(self, testTitle: str, bucket: str, test_title_tag_name: str) -> str:

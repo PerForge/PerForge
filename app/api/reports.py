@@ -145,24 +145,6 @@ def get_test_data():
                 errors=[{"code": "invalid_param", "message": "'page' and 'page_size' must be positive"}]
             )
 
-        # Sorting parameters
-        allowed_sort_by = {"test_title", "duration", "max_threads", "start_time", "end_time"}
-        sort_by = request.args.get('sort_by')
-        if sort_by is not None and sort_by not in allowed_sort_by:
-            return api_response(
-                message="Invalid sort_by parameter",
-                status=HTTP_BAD_REQUEST,
-                errors=[{"code": "invalid_param", "message": f"Cannot sort by '{sort_by}'"}]
-            )
-
-        allowed_sort_dir = {"desc", "asc"}
-        sort_dir = request.args.get('sort_dir', 'desc').lower()
-        if sort_dir not in allowed_sort_dir:
-            return api_response(
-                message="Invalid sort_dir parameter",
-                status=HTTP_BAD_REQUEST,
-                errors=[{"code": "invalid_param", "message": "'sort_dir' must be 'desc' or 'asc'"}]
-            )
 
         if not source_type:
             return api_response(
@@ -173,11 +155,27 @@ def get_test_data():
 
         ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id)
 
-        # Retrieve total count and current page slice directly from data provider
+        # Retrieve all titles once and slice in-memory for pagination
         titles = ds_obj.get_tests_titles()
         total = len(titles)
+
+        # If no titles are found, return an empty response immediately
+        if total == 0:
+            return api_response(data={
+                "tests": [],
+                "total": 0,
+                "baseline_titles": [],
+                "page": page,
+                "page_size": page_size
+            })
+
+        # Determine slice of titles for current page
         start = (page - 1) * page_size
-        tests = ds_obj.get_test_log(limit=page_size, offset=start, sort_by=sort_by, sort_dir=sort_dir)
+        end = start + page_size
+        page_titles = titles[start:end]
+
+        # Fetch only logs for the page titles via DB-level filtering
+        tests = ds_obj.get_test_log(test_titles=page_titles)
 
         # Format timestamps to sortable format for better table sorting
         for test in tests:

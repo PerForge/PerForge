@@ -87,7 +87,7 @@ class DataProvider:
         return now_utc.astimezone(human_tz).strftime(fmt)
 
     # Basic data retrieval methods
-    def get_test_log(self, limit: int | None = None, offset: int | None = None, sort_by: str | None = None, sort_dir: str = 'asc'):
+    def get_test_log(self, test_titles: list[str]):
         """Return tests list.
 
         If *limit* and/or *offset* are provided and the underlying data-source
@@ -95,7 +95,7 @@ class DataProvider:
         transferred. Otherwise the full list will be requested and sliced
         in-memory as a graceful fallback.
         """
-        return self.ds_obj.get_test_log(limit=limit, offset=offset or 0, sort_by=sort_by, sort_dir=sort_dir)
+        return self.ds_obj.get_test_log(test_titles=test_titles)
 
     @cached(_titles_cache)
     def get_tests_titles(self) -> list[str]:
