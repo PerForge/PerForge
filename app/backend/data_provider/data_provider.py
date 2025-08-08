@@ -161,6 +161,12 @@ class DataProvider:
             self._collect_backend_test_data(test_obj)
         elif effective_test_type == "front_end":
             self._collect_frontend_test_data(test_obj)
+
+        if hasattr(test_obj, 'custom_vars'):
+            for custom_var in self.ds_obj.custom_vars:
+                value = self.ds_obj.get_custom_var(test_title=test_title, custom_var=custom_var, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+                
+                test_obj.append_metric("custom_vars", {"name": custom_var, "value": value})
         return test_obj
 
     def _collect_backend_test_data(self, test_obj: BackendTestData) -> None:

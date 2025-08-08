@@ -356,3 +356,12 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> pivot(rowKey: [], columnKey: ["statut"], valueColumn: "_value")
       |> map(fn: (r) => ({{ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }}))
       |> keep(columns: ["errors"])'''
+
+  def get_custom_var(self, testTitle: str, custom_var: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> keep(columns: ["{custom_var}"])
+      |> group()
+      |> distinct(column: "{custom_var}")
+      |> first()'''

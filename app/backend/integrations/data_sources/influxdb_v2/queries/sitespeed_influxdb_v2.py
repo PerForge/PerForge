@@ -234,3 +234,12 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
       |> group()
       '''
+      
+  def get_custom_var(self, testTitle: str, custom_var: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> keep(columns: ["{custom_var}"])
+      |> group()
+      |> distinct(column: "{custom_var}")
+      |> first()'''
