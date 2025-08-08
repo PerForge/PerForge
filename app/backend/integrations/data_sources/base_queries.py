@@ -41,6 +41,10 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
+    def get_custom_var(self, testTitle: str, custom_var: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+        pass
+
+    @abstractmethod
     def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
         pass
 

@@ -20,34 +20,21 @@ log = logging.getLogger(__name__)
 
 def run_migrations():
     try:
+        with db.engine.connect() as connection:
+            inspector = inspect(db.engine)
 
-        log.info("No migrations to run for this release.")
+            # --- Migration: Add 'custom_vars' to 'influxdb' table ---
+            table_name = 'influxdb'
+            column_name = 'custom_vars'
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
 
-        # with db.engine.connect() as connection:
-        #     inspector = inspect(db.engine)
-
-        #     # --- Migration 1: Add 'ml_switch' to 'templates' table ---
-        #     table_name = 'templates'
-        #     column_name = 'ml_switch'
-        #     columns = [c['name'] for c in inspector.get_columns(table_name)]
-
-        #     if column_name not in columns:
-        #         log.info(f"Applying migration: Adding column '{column_name}' to table '{table_name}'")
-        #         # Use server_default to handle existing rows without issues.
-        #         alter_command = text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} BOOLEAN DEFAULT FALSE")
-        #         connection.execute(alter_command)
-        #         log.info(f"Migration for '{column_name}' applied successfully.")
-
-        #     # --- Migration 2: Drop 'type' column from 'secrets' table ---
-        #     table_name = 'secrets'
-        #     column_name = 'type'
-        #     columns = [c['name'] for c in inspector.get_columns(table_name)]
-
-        #     if column_name in columns:
-        #         log.info(f"Applying migration: Dropping column '{column_name}' from table '{table_name}'")
-        #         alter_command = text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}")
-        #         connection.execute(alter_command)
-        #         log.info(f"Migration for dropping '{column_name}' applied successfully.")
+            if column_name not in columns:
+                log.info(f"Applying migration: Adding column '{column_name}' to table '{table_name}'")
+                # SQLite permits adding columns at the end; VARCHAR is fine (treated as TEXT).
+                # For Postgres, VARCHAR(500) is also valid.
+                alter_command = text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} VARCHAR(500)")
+                connection.execute(alter_command)
+                log.info(f"Migration for '{column_name}' applied successfully.")
 
     except Exception as e:
         # If the table doesn't exist yet, inspector will fail. This is okay

@@ -44,7 +44,25 @@ class InfluxdbModel(BaseModelWithStripping):
     listener  : str
     tmz       : str = Field(default="UTC")
     test_title_tag_name: str = Field(default="testTitle")
+    custom_vars: list[str] = Field(default_factory=list)
     is_default: bool
+
+    @model_validator(mode='before')
+    def normalize_custom_vars(cls, values):
+        if 'custom_vars' not in values:
+            return values
+        cv = values.get('custom_vars')
+        if cv is None:
+            values['custom_vars'] = []
+            return values
+        if isinstance(cv, str):
+            parts = [p.strip() for p in cv.split(',') if p and p.strip()]
+            values['custom_vars'] = parts
+        elif isinstance(cv, list):
+            values['custom_vars'] = [str(p).strip() for p in cv if str(p).strip()]
+        else:
+            values['custom_vars'] = []
+        return values
 
 
 class GrafanaObjectModel(BaseModelWithStripping):

@@ -32,6 +32,7 @@ class DBInfluxdb(db.Model):
     listener      = db.Column(db.String(120), nullable=False)
     tmz           = db.Column(db.String(120), nullable=False)
     test_title_tag_name = db.Column(db.String(120), nullable=False)
+    custom_vars   = db.Column(db.String(500))
     is_default    = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
@@ -42,7 +43,10 @@ class DBInfluxdb(db.Model):
         try:
             data['project_id'] = project_id
             validated_data = InfluxdbModel(**data)
-            instance = cls(**validated_data.model_dump())
+            payload = validated_data.model_dump()
+            if isinstance(payload.get('custom_vars'), list):
+                payload['custom_vars'] = ','.join(payload['custom_vars'])
+            instance = cls(**payload)
 
             if instance.is_default:
                 cls.reset_default_config(project_id)
@@ -107,6 +111,8 @@ class DBInfluxdb(db.Model):
                 validated_data.is_default = True
 
             for key, value in validated_data.model_dump(exclude={'id', 'project_id'}).items():
+                if key == 'custom_vars' and isinstance(value, list):
+                    value = ','.join([v for v in value if v])
                 setattr(config, key, value)
 
             db.session.commit()

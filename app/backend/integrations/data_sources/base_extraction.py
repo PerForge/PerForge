@@ -241,6 +241,28 @@ class DataExtractionBase(ABC):
         """
         return self._fetch_end_time(test_title, **kwargs)
 
+    @abstractmethod
+    def _fetch_custom_var(self, test_title: str, custom_var: str, start: str, end: str) -> str:
+        """
+        Retrieve the custom variable for a test, validated for the correct time format.
+        :param test_title: The title of the test.
+        :param custom_var: The custom variable.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The custom variable in the specified format.
+        """
+        pass
+
+    def get_custom_var(self, test_title: str, custom_var: str, start: str, end: str) -> str:
+        """
+        Retrieve the custom variable for a test, validated for the correct time format.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: The custom variable in the specified format.
+        """
+        return self._fetch_custom_var(test_title, custom_var, start, end)
+
     # ===================================================================
     # Backend metrics extraction methods
     # ===================================================================

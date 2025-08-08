@@ -42,7 +42,8 @@ class BaseTestData(ABC):
         'performance_status',
         'ml_summary',
         'ml_html_summary',
-        'ml_anomalies'
+        'ml_anomalies',
+        'custom_vars'
     }
 
     # Common aggregation types used for performance metrics across test types
@@ -64,6 +65,7 @@ class BaseTestData(ABC):
         self.ml_summary: Optional[str] = None
         self.ml_html_summary: Optional[str] = None
         self.ml_anomalies: Optional[Dict[str, Any]] = None
+        self.custom_vars: List[Dict[str, Any]] = []
 
         # Default aggregation type
         self.aggregation = "median"
@@ -116,6 +118,18 @@ class BaseTestData(ABC):
             value: Value to set for the metric
         """
         setattr(self, metric_name, value)
+
+    def append_metric(self, metric_name: str, value: Any) -> None:
+        """
+        Append a value to a metric list.
+
+        Args:
+            metric_name: Name of the metric to append to
+            value: Value to append to the metric list
+        """
+        if not hasattr(self, metric_name):
+            setattr(self, metric_name, [])
+        getattr(self, metric_name).append(value)
 
     def get_available_metrics(self) -> List[str]:
         """
