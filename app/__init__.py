@@ -16,13 +16,13 @@ import os
 import logging
 from app.logging_config import setup_logging
 
-from app.config                                  import db
-from app.backend.components.users.users_db       import DBUsers
-from app.backend.components.secrets.secrets_db   import DBSecrets
+from app.config import db
+from app.backend.components.users.users_db import DBUsers
+from app.backend.components.secrets.secrets_db import DBSecrets
 from app.backend.components.projects.projects_db import DBProjects
-from app.backend.components.prompts.prompts_db   import DBPrompts
-from app.backend.components.graphs.graphs_db     import DBGraphs
-from app.backend.components.nfrs.nfrs_db         import DBNFRs, DBNFRRows
+from app.backend.components.prompts.prompts_db import DBPrompts
+from app.backend.components.graphs.graphs_db import DBGraphs
+from app.backend.components.nfrs.nfrs_db import DBNFRs, DBNFRRows
 from app.backend.components.templates.templates_db import DBTemplates, DBTemplateData
 from app.backend.components.templates.template_groups_db import DBTemplateGroups, DBTemplateGroupData
 from app.backend.integrations.ai_support.ai_support_db import DBAISupport
@@ -32,14 +32,14 @@ from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db import DBGrafana, DBGrafanaDashboards
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
 from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail, DBSMTPMailRecipient
-from logging.handlers                            import RotatingFileHandler
-from flask                                       import Flask
-from flask_login                                 import LoginManager
-from flask_bcrypt                                import Bcrypt
-from flask_compress                              import Compress
+from logging.handlers import RotatingFileHandler
+from flask import Flask
+from flask_login import LoginManager
+from flask_bcrypt import Bcrypt
+from flask_compress import Compress
 
-from app.api                                     import register_blueprints
-from app.migrations                              import run_migrations
+from app.api import register_blueprints
+from app.migrations import run_migrations
 
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -55,7 +55,7 @@ app.config['COMPRESS_MIN_SIZE'] = 500
 
 # Setup database
 database_directory = os.path.join(basedir, "data")
-app.config['SQLALCHEMY_DATABASE_URI']        = 'sqlite:///'+database_directory+'/database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+database_directory+'/database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)

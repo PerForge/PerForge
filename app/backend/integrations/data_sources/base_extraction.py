@@ -174,7 +174,7 @@ class DataExtractionBase(ABC):
 
     # Common methods for all extraction types
     @abstractmethod
-    def _fetch_test_log(self, limit: int | None = None, offset: int = 0, sort_by: str | None = None, sort_dir: str = 'desc') -> List[Dict[str, Any]]:
+    def _fetch_test_log(self, test_titles: list[str]) -> List[Dict[str, Any]]:
         """
         Fetch the test log from the data source.
         :param limit: Maximum number of records to return (None for all)
@@ -184,13 +184,13 @@ class DataExtractionBase(ABC):
         pass
 
     @validate_output(expected_keys={'duration', 'end_time', 'max_threads', 'start_time', 'test_title'})
-    def get_test_log(self, limit: int | None = None, offset: int = 0, sort_by: str | None = None, sort_dir: str = 'desc') -> List[Dict[str, Any]]:
+    def get_test_log(self, test_titles: list[str]) -> List[Dict[str, Any]]:
         """
         Retrieve the test log data with optional pagination.
         Results are sorted by test_title in descending order.
         """
 
-        return self._fetch_test_log(limit=limit, offset=offset, sort_by=sort_by, sort_dir=sort_dir)
+        return self._fetch_test_log(test_titles=test_titles)
 
     @abstractmethod
     def _fetch_tests_titles(self) -> List[str]:
