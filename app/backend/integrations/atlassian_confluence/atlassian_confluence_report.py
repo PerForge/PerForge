@@ -51,7 +51,9 @@ class AtlassianConfluenceReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
+        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
+        url = self.replace_variables(url)
+        image = self.grafana_obj.render_image(url)
         fileName = self.output_obj.put_image_to_confl(image, graph_data["id"], self.page_id)
         if fileName:
             graph = f'<br/>{self._build_confluence_image(str(fileName), graph_data.get("width", 1000), graph_data.get("height", 500))}<br/>'

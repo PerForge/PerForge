@@ -49,7 +49,9 @@ class SmtpMailReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        image = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
+        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
+        url = self.replace_variables(url)
+        image = self.grafana_obj.render_image(url)
         if image:
             timestamp  = str(round(time.time() * 1000))
             content_id = f'{graph_data["id"]}_{timestamp}'.replace(" ", "_")

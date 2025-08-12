@@ -140,7 +140,9 @@ class AzureWikiReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        image         = self.grafana_obj.render_image(graph_data, self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, current_test_title, baseline_test_title)
+        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, current_test_title, baseline_test_title)
+        url = self.replace_variables(url)
+        image = self.grafana_obj.render_image(url)
         encoded_image = self.grafana_obj.encode_image(image)
         fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["name"])
         if(fileName):

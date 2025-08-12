@@ -43,7 +43,9 @@ class AtlassianJiraReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        image    = self.grafana_obj.render_image(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
+        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
+        url = self.replace_variables(url)
+        image = self.grafana_obj.render_image(url)
         filename = self.output_obj.put_image_to_jira(issue=self.issue_id, image_bytes=image)
         if(filename):
             graph = f'!{str(filename)}|width=900!\n\n'
