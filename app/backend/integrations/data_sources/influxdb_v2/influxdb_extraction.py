@@ -82,6 +82,7 @@ class InfluxdbV2(DataExtractionBase):
             self.listener = config["listener"]
             self.test_title_tag_name = config["test_title_tag_name"]
             self.tmz = config["tmz"]
+            self.custom_vars = config["custom_vars"]
         else:
             logging.warning("There's no InfluxDB integration configured, or you're attempting to send a request from an unsupported location.")
 
@@ -178,6 +179,18 @@ class InfluxdbV2(DataExtractionBase):
                         return int(flux_record["_time"].astimezone(self.tmz_utc).timestamp() * 1000)
         except Exception as er:
             logging.error(ErrorMessages.ER00060.value.format(self.name))
+            logging.error(er)
+            return None
+
+    def _fetch_custom_var(self, test_title: str, custom_var: str, start: str, end: str) -> Any:
+        try:
+            query = self.queries.get_custom_var(test_title, custom_var, start, end, self.bucket, self.test_title_tag_name)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            for flux_table in flux_tables:
+                for flux_record in flux_table.records:
+                    return flux_record["_value"]
+        except Exception as er:
+            logging.error(ErrorMessages.ER00076.value.format(self.name))
             logging.error(er)
             return None
 

@@ -90,3 +90,4 @@ class ErrorMessages(Enum):
     ER00073 = 'Unexpected parameter "{}" in dictionary for AnomalyDetectionEngine.'
     ER00074 = 'An error occurred while fetching median throughput stat value. Integration name: {}'
     ER00075 = 'An error occurred while fetching median response time stat value. Integration name: {}'
+    ER00076 = 'An error occurred while fetching custom variable. Integration name: {}'

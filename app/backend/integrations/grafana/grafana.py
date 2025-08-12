@@ -74,8 +74,7 @@ class Grafana(Integration):
                 url += custom_vars
         return url
 
-    def render_image(self, graph_data, start, stop, test_title, baseline_test_title = None):
-        image = None
+    def generate_url_to_render_graph(self, graph_data, start, stop, test_title, baseline_test_title = None):
         url = (
             self.get_grafana_link(start, stop, graph_data["dash_id"])
             + "&panelId=" + str(graph_data["view_panel"])
@@ -89,6 +88,10 @@ class Grafana(Integration):
         else:
             url = url+f'&var-{self.test_title}='+test_title
         url = self.add_custom_tags(url=url, graph_json=graph_data)
+        return url
+
+    def render_image(self, url):
+        image = None
         try:
             response = requests.get(url=url, headers={ 'Authorization': 'Bearer ' + self.token}, timeout=180, verify=False)
             if response.status_code == 200:

@@ -275,7 +275,9 @@ class PdfReport(ReportingBase):
         start_timestamp = self.current_test_obj.start_time_timestamp
         end_timestamp = self.current_test_obj.end_time_timestamp
 
-        image = self.grafana_obj.render_image(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
+        url = self.grafana_obj.generate_url_to_render_graph(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
+        url = self.replace_variables(url)
+        image = self.grafana_obj.render_image(url)
         ai_support_response = None
         if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])

@@ -212,13 +212,20 @@ class ReportingBase:
             'duration': 'duration',
             'start_time': 'start_time_human',
             'end_time': 'end_time_human',
-            'test_type': 'test_type'
+            'test_type': 'test_type',
+            'custom_vars': 'custom_vars'
         }
 
         for report_name, attr_name in common_params_to_collect.items():
             if test_obj.has_metric(attr_name):
-                param_name = f"{prefix}{report_name}"
-                parameters[param_name] = str(test_obj.get_metric(attr_name))
+                if attr_name == 'custom_vars':
+                    custom_vars = test_obj.get_metric(attr_name)
+                    for custom_var in custom_vars:
+                        param_name = f"{prefix}{custom_var['name']}"
+                        parameters[param_name] = str(custom_var['value'])
+                else:
+                    param_name = f"{prefix}{report_name}"
+                    parameters[param_name] = str(test_obj.get_metric(attr_name))
 
         # Add a single, global report generation timestamp (no prefix)
         # Use the DataProvider helper to honour data source timezones.
