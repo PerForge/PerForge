@@ -14,11 +14,11 @@
 
 import os
 
-from decouple         import config
+from decouple import config
 from flask_sqlalchemy import SQLAlchemy
 
 
-basedir     = os.path.abspath(os.path.dirname(__file__))
+basedir = os.path.abspath(os.path.dirname(__file__))
 # Configure SQLAlchemy with optimized connection pooling settings
 db = SQLAlchemy(engine_options={
     'pool_size': 10,  # Default number of connections to maintain
@@ -31,4 +31,8 @@ db = SQLAlchemy(engine_options={
 class Config:
 
     CSRF_ENABLED = True
-    SECRET_KEY   = config('SECRET_KEY', default='S#perS3crEt_007')
+    SECRET_KEY = config('SECRET_KEY', default='S#perS3crEt_007')
+    # Enable to require HTTP Basic Auth for API endpoints
+    BASIC_AUTH_ENABLED = config('BASIC_AUTH_ENABLED', default=True, cast=bool)
+    # Realm shown in Basic Auth challenge
+    BASIC_AUTH_REALM = config('BASIC_AUTH_REALM', default='PerForge API')
