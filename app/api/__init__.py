@@ -24,7 +24,7 @@ from app.api.reports import reports_api
 from app.api.templates import templates_api
 from app.api.integrations import integrations_api
 from app.api.nfrs import nfrs_api
-# from app.api.other import other_api
+from app.api.other import other_api
 from app.api.prompts import prompts_api
 from app.api.secrets import secrets_api
 
@@ -45,7 +45,7 @@ def register_blueprints(app):
     app.register_blueprint(templates_api)
     app.register_blueprint(integrations_api)
     app.register_blueprint(nfrs_api)
-    # app.register_blueprint(other_api)
+    app.register_blueprint(other_api)
     app.register_blueprint(prompts_api)
     app.register_blueprint(secrets_api)
 

@@ -309,6 +309,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
   def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "count")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")

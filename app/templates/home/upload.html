@@ -1,0 +1,207 @@
+{% extends "layouts/base-fullscreen.html" %}
+{% block title %} Upload {% endblock %}
+
+{% block stylesheets %}
+<link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+{% endblock stylesheets %}
+
+{% block content %}
+<main class="upload-page">
+  <div class="main-background">
+    {% include 'includes/sidebar.html' %}
+    <div class="main-body">
+      <div class="upload-center">
+        <div class="card">
+          <div class="card-body">
+            <h4 class="mb-3 text-center">Upload results</h4>
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+              <div class="mb-3">
+                <label for="influxdbId" class="form-label">InfluxDB integration</label>
+                <select class="form-select" id="influxdbId" name="influxdb_id" required disabled>
+                  <option value="" selected>Loading integrations...</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="testTitle" class="form-label">Test title</label>
+                <input type="text" class="form-control" id="testTitle" name="test_title" placeholder="Enter test title" required>
+                <div class="form-hint">
+                  <i class="fas fa-info-circle icon" aria-hidden="true"></i>
+                  <div>
+                    When uploading, the system will automatically prepend your test title with the test's start time (from your file) in the format
+                    <code>YYYY-MM-DD_HH:MM@</code>. Do not include the time/date yourself - this is added for you. Only provide a unique title for your test.<br>Example:
+                    <code>2025-08-13_12:29@Your Unique Title</code>.
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="aggregationWindow" class="form-label">Aggregation window</label>
+                <input type="text" class="form-control" id="aggregationWindow" name="aggregation_window" value="5s" placeholder="e.g. 5s, 30s, 1min, 500ms">
+                <div class="form-hint">
+                  <i class="fas fa-clock icon" aria-hidden="true"></i>
+                  <div>
+                    Controls resampling/aggregation granularity (pandas offset alias).<br>Examples:
+                    <code>5s</code>, <code>30s</code>, <code>1min</code>.
+                  </div>
+                </div>
+              </div>
+
+              <div id="dropzone" class="border-dashed text-center p-5 mb-3" role="button" tabindex="0" aria-label="Upload area">
+                <i class="fas fa-file-upload fa-2x mb-2 text-info"></i>
+                <p id="drop-helper" class="mb-1">Drag & drop CSV or JTL</p>
+                <div id="fileName" class="text-truncate mt-1"></div>
+              </div>
+              <input type="file" id="fileInput" name="file" accept=".csv,.jtl" hidden>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="btn btn-secondary mb-0" for="fileInput">Choose file</label>
+                <button type="submit" id="uploadBtn" class="btn btn-primary" disabled>Upload</button>
+              </div>
+            </form>
+            <div id="uploadStatus" class="mt-3 hidden"></div>
+          </div>
+        </div>
+        {% with msgs = get_flashed_messages() %}
+          {% include 'includes/flashed-msg.html' %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const fileName = document.getElementById('fileName');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const influxSelect = document.getElementById('influxdbId');
+      const testTitleInput = document.getElementById('testTitle');
+
+
+
+      function setFile(file) {
+        if (!file) return;
+        const valid = /\.(csv|jtl)$/i.test(file.name);
+        if (!valid) {
+          fileName.textContent = 'Only .csv or .jtl files are allowed';
+          fileName.classList.add('text-danger');
+          uploadBtn.disabled = true;
+          return;
+        }
+        fileName.classList.remove('text-danger');
+        fileName.textContent = file.name;
+        uploadBtn.disabled = false;
+      }
+
+      ['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover');
+      }));
+      ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover');
+      }));
+      dropzone.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          const dt = new DataTransfer();
+          dt.items.add(files[0]);
+          fileInput.files = dt.files;
+          setFile(files[0]);
+        }
+      });
+      dropzone.addEventListener('click', () => fileInput.click());
+      dropzone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }});
+      fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+      // Handle form submit with new API
+      document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        // Flash helpers (use includes/flashed-msg.html containers)
+        function showFlashSuccess(text){
+          const good = document.getElementById('good-msg');
+          if (!good) return;
+          good.style.display = 'block';
+          const msgEl = good.querySelector('#msg');
+          if (msgEl) msgEl.textContent = text;
+        }
+        function showFlashError(text){
+          const bad = document.getElementById('bad-msg');
+          if (!bad) return;
+          bad.style.display = 'block';
+          const msgEl = bad.querySelector('#msg');
+          if (msgEl) msgEl.textContent = text;
+        }
+
+        // Basic validations
+        if (!fileInput.files || fileInput.files.length === 0) {
+          showFlashError('Please choose a .csv or .jtl file.');
+          return;
+        }
+        if (influxSelect.disabled || !influxSelect.value) {
+          showFlashError('Please select a valid InfluxDB integration.');
+          return;
+        }
+        if (!testTitleInput.value.trim()) {
+          showFlashError('Please enter a test title.');
+          return;
+        }
+
+        const originalText = uploadBtn.textContent;
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading...';
+        try {
+          const formData = new FormData(this);
+          const res = await fetch('/api/v1/uploads/test', {
+            method: 'POST',
+            body: formData
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok) {
+            const msg = (json && json.message) || 'Upload failed';
+            showFlashError(msg);
+            return;
+          }
+          const info = (json && json.data) || {};
+          const finalTitle = info.test_title || '';
+          showFlashSuccess(`Upload processed successfully; Final test title: "${finalTitle}"`);
+        } catch (err) {
+          console.error(err);
+          showFlashError('Unexpected error while uploading.');
+        } finally {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = originalText;
+        }
+      });
+
+      // Load integrations by type (influxdb) and populate selector
+      async function loadIntegrations() {
+        try {
+          influxSelect.innerHTML = '<option value="" selected>Loading integrations...</option>';
+          influxSelect.disabled = true;
+          const res = await fetch('/api/v1/integrations/type/influxdb', { headers: { 'Accept': 'application/json' } });
+          const json = await res.json();
+          const all = (json && json.data && json.data.integrations) || [];
+          const integrations = all.filter(cfg => cfg && cfg.listener === 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient');
+          influxSelect.innerHTML = '';
+          if (!Array.isArray(integrations) || integrations.length === 0) {
+            influxSelect.innerHTML = '<option value="" disabled selected>No compatible InfluxDB integrations found</option>';
+            influxSelect.disabled = true;
+            return;
+          }
+          let defaultIndex = 0;
+          integrations.forEach((cfg, idx) => {
+            const opt = new Option(cfg.name || cfg.id, cfg.id);
+            influxSelect.add(opt);
+            if (cfg.is_default) defaultIndex = idx;
+          });
+          influxSelect.selectedIndex = defaultIndex;
+          influxSelect.disabled = false;
+        } catch (err) {
+          influxSelect.innerHTML = '<option value="" disabled selected>Error loading integrations</option>';
+          influxSelect.disabled = true;
+          console.error('Failed to load integrations', err);
+        }
+      }
+      loadIntegrations();
+    })();
+  </script>
+</main>
+{% endblock content %}

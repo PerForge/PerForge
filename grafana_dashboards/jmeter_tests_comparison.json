@@ -1,8 +1,8 @@
 {
   "__inputs": [
     {
-      "name": "DS_INFLUXDB",
-      "label": "InfluxDB",
+      "name": "DS_INFLUXDB_- JMETER",
+      "label": "InfluxDB - jmeter",
       "description": "",
       "type": "datasource",
       "pluginId": "influxdb",
@@ -102,7 +102,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -185,7 +185,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"Median response time\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"Median response time\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -194,7 +194,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"75%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"75%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -203,7 +203,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"90%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\"])\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"90%-tile response time\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -212,7 +212,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"request\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"statut\"])\r\n  |> sum()\r\n  |> filter(fn: (r) => exists r.statut)\r\n  |> pivot(rowKey: [], columnKey: [\"statut\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with Current: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"Current\"])\r\n  |> set(key: \"Metric\", value: \"Errors,%\")\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(\r\n        fn: (r) => if \"request\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> group(columns: [\"statut\"])\r\n  |> sum()\r\n  |> filter(fn: (r) => exists r.statut)\r\n  |> pivot(rowKey: [], columnKey: [\"statut\"], valueColumn: \"_value\")\r\n  |> map(fn: (r) => ({ r with Baseline: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }))\r\n  |> keep(columns: [\"Baseline\"])\r\n  |> set(key: \"Metric\", value: \"Errors,%\")\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -221,7 +221,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 60))}))\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"Requests per second\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: 60))}))\r\n  |> median()\r\n  |> set(key: \"Metric\", value: \"Requests per second\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -230,7 +230,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "hide": false,
           "query": "current = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"_field\"])\r\n  |> sum()\r\n  |> set(key: \"Metric\", value: \"Total requests\")\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n\r\nbaseline = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(fn: (r) => r[\"transaction\"] !~ /${transaction_mark}/ and r[\"transaction\"] != \"all\")\r\n  |> group(columns: [\"_field\"])\r\n  |> sum()\r\n  |> set(key: \"Metric\", value: \"Total requests\")\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n\r\njoin(tables: {t1: current, t2: baseline}, on: [\"Metric\"])",
@@ -261,7 +261,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -388,7 +388,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: $__interval_ms) * 1000.0)}))\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"count\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: sum, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with _value: float(v: r._value / float(v: $__interval_ms) * 1000.0)}))\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -400,7 +400,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -527,7 +527,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -539,7 +539,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -666,7 +666,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -678,7 +678,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -805,7 +805,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Current test\")\r\n\r\nbaseline_data_tr = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_field\", \"_value\", \"_time\"])\r\n  |> aggregateWindow(every: $__interval, fn: median, createEmpty: false)\r\n  |> set(key: \"testTitle\", value: \"Baseline test\")\r\n  |> timeShift(duration: duration(v: uint(v: ${current_startTime}) - uint(v: ${baseline_startTime})))\r\n\r\nunion(tables: [current_data_tr, baseline_data_tr])\r\n|> group(columns: [\"testTitle\"])\r\n|> keep(columns: [\"testTitle\", \"_value\", \"_time\"])",
           "refId": "A"
@@ -817,7 +817,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1007,7 +1007,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> keep(columns: [\"Current\", \"transaction\"])\r\n\r\nbaseline_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct50.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> keep(columns: [\"Baseline\", \"transaction\"])\r\n\r\njoin(tables: {d1: current_test, d2: baseline_test}, on: [\"transaction\"])\r\n  |> map(fn: (r) => ({ r with \"Diff,ms\": float(v: r.Current) - float(v: r.Baseline) }))\r\n  |> map(fn: (r) => ({ r with \"Diff,%\": float(v: r.Current) / float(v: r.Baseline) - float(v: 1) }))\r\n  |> group()",
           "refId": "A"
@@ -1035,7 +1035,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1225,7 +1225,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> keep(columns: [\"Current\", \"transaction\"])\r\n\r\nbaseline_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct75.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> keep(columns: [\"Baseline\", \"transaction\"])\r\n\r\njoin(tables: {d1: current_test, d2: baseline_test}, on: [\"transaction\"])\r\n  |> map(fn: (r) => ({ r with \"Diff,ms\": float(v: r.Current) - float(v: r.Baseline) }))\r\n  |> map(fn: (r) => ({ r with \"Diff,%\": float(v: r.Current) / float(v: r.Baseline) - float(v: 1) }))\r\n  |> group()",
           "refId": "A"
@@ -1253,7 +1253,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1272,8 +1272,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1295,8 +1294,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "dark-green",
-                      "value": null
+                      "color": "dark-green"
                     },
                     {
                       "color": "#EAB839",
@@ -1341,8 +1339,7 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "dark-green",
-                      "value": null
+                      "color": "dark-green"
                     },
                     {
                       "color": "#EAB839",
@@ -1443,7 +1440,7 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
           "query": "current_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${current_startTime}), stop: time(v: ${current_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Current\"})\r\n  |> keep(columns: [\"Current\", \"transaction\"])\r\n\r\nbaseline_test = from(bucket: v.bucket)\r\n  |> range(start: time(v: ${baseline_startTime}), stop: time(v: ${baseline_endTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"pct90.0\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> filter(fn: (r) => r[\"statut\"] == \"all\")\r\n  |> filter(\r\n        fn: (r) => if \"${type}\" == \"transaction\" then\r\n            r.transaction =~ /${transaction_mark}/\r\n        else\r\n            r.transaction !~ /${transaction_mark}/ and r.transaction != \"all\",\r\n  )\r\n  |> keep(columns: [\"_value\", \"transaction\"])\r\n  |> group(columns: [\"transaction\"])\r\n  |> toFloat()\r\n  |> median()\r\n  |> rename(columns: {\"_value\": \"Baseline\"})\r\n  |> keep(columns: [\"Baseline\", \"transaction\"])\r\n\r\njoin(tables: {d1: current_test, d2: baseline_test}, on: [\"transaction\"])\r\n  |> map(fn: (r) => ({ r with \"Diff,ms\": float(v: r.Current) - float(v: r.Baseline) }))\r\n  |> map(fn: (r) => ({ r with \"Diff,%\": float(v: r.Current) / float(v: r.Baseline) - float(v: 1) }))\r\n  |> group()",
           "refId": "A"
@@ -1482,7 +1479,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "${DS_INFLUXDB_- JMETER}"
         },
         "definition": "import \"influxdata/influxdb/schema\"\r\n\r\nschema.tagValues(\r\n    bucket: v.bucket,\r\n    tag: \"testTitle\",\r\n    predicate: (r) => r._measurement == \"events\",\r\n    start: 0,\r\n    stop: now()\r\n  )",
         "hide": 0,
@@ -1502,7 +1499,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "${DS_INFLUXDB_- JMETER}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> min(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
@@ -1522,7 +1519,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "${DS_INFLUXDB_- JMETER}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> max(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
@@ -1542,7 +1539,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "${DS_INFLUXDB_- JMETER}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: time(v: ${current_startTime}))\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"events\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] != \"${testTitle}\")\r\n  |> distinct(column: \"testTitle\")\r\n  |> keep(columns: [\"testTitle\"])\r\n  |> group()",
         "hide": 0,
@@ -1562,7 +1559,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "${DS_INFLUXDB_- JMETER}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> min(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))",
         "hide": 2,
@@ -1582,7 +1579,7 @@
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "uid": "${DS_INFLUXDB_- JMETER}"
         },
         "definition": "from(bucket: v.bucket)\r\n  |> range(start: 0, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n  |> filter(fn: (r) => r[\"testTitle\"] == \"${baseline_testTitle}\")\r\n  |> keep(columns: [\"_time\"])\r\n  |> max(column: \"_time\")\r\n  |> map(fn: (r) => ({ r with _time: string(v: r._time)}))\r\n",
         "hide": 2,
@@ -1695,8 +1692,8 @@
     ]
   },
   "time": {
-    "from": "2025-07-16T14:15:14.870Z",
-    "to": "2025-07-16T14:15:37.590Z"
+    "from": "2025-08-13T12:36:18.087Z",
+    "to": "2025-08-13T12:46:34.036Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1707,8 +1704,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "JMeter tests comparison STANDARD LISTENER",
-  "uid": "jmeter-test-comparison-standard-listener",
+  "title": "JMeter Tests comparison",
+  "uid": "jmeter-test-comparison",
   "version": 3,
   "weekStart": "monday"
 }

@@ -287,6 +287,31 @@ body.light-theme .form-select {
     border-color: #ced4da;
 }
 
+/* Callout hint under fields */
+/* Dark theme (default) */
+.form-hint { display: flex; gap: 8px; align-items: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-main-color); border-left: 4px solid var(--bs-blue); border-radius: 6px; padding: 10px 12px; color: var(--text-main-color); margin-top: 6px; font-size: 0.9rem; }
+.form-hint .icon { color: var(--bs-blue); margin-top: 2px; }
+.form-hint code { background: rgba(13,110,253,0.12); color: var(--bs-blue); padding: 1px 4px; border-radius: 4px; }
+/* Light theme overrides */
+body.light-theme .form-hint { background: #f8f9fa; border: 1px solid #e9ecef; color: #495057; }
+body.light-theme .form-hint code { background: rgba(13,110,253,0.08); color: var(--bs-blue); }
+
+/* Utility */
+.hidden { display: none !important; }
+
+/* Upload page specific styles */
+.upload-page { height: 100vh; overflow: hidden; }
+.upload-page .main-background { min-height: 100vh; }
+.upload-page .main-body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.upload-page .upload-center { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(680px, calc(100vw - 32px)); }
+.border-dashed { border: 2px dashed var(--perforge-border, #6c757d); border-radius: 0.5rem; }
+.upload-page #dropzone { min-height: 280px; padding: 4rem 2rem; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.upload-page #dropzone.dragover { background: rgba(13,110,253,0.05); border-color: var(--bs-blue); }
+.upload-page #drop-helper { color: var(--perforge-muted, #6c757d); }
+/* Inline replacements */
+.upload-page .card { width: 100%; }
+.upload-page #fileName { max-width: 100%; }
+
 /* Theme switcher button styles */
 .theme-switcher-btn {
     position: fixed;
