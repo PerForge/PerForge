@@ -13,12 +13,18 @@
 # limitations under the License.
 
 """
-InfluxDB V2 insertion module.
+InfluxDB v2 write-side integration.
 
-This module encapsulates InfluxDB V2 write logic for uploading aggregated JMeter
-results and lightweight events used for test discovery. It mirrors configuration
-handling from `influxdb_extraction.py` but focuses on point construction and
-writes.
+This module encapsulates the end-to-end flow required to persist aggregated
+JMeter samples and lightweight discovery events into InfluxDB v2. It handles:
+
+- configuration loading (URL/org/bucket/token/test title tag),
+- client lifecycle (connect/close),
+- point construction for the "jmeter" and "events" measurements,
+- robust, synchronous batched writes, and
+- best-effort rollback via the Delete API if a write fails.
+
+Only write logic lives here. Read/analytics live elsewhere.
 """
 
 from __future__ import annotations
@@ -39,9 +45,11 @@ from app.backend.integrations.data_sources.base_insertion import DataInsertionBa
 
 
 class InfluxdbV2Insertion(DataInsertionBase):
-    """
-    InfluxDB V2 insertion implementation, encapsulating configuration, client lifecycle,
-    point building, and synchronous batched writes.
+    """InfluxDB v2 insertion implementation.
+
+    Provides a small façade around the InfluxDB Python client to reliably write
+    time-series derived from JMeter results. The class is intended to be used as
+    a short-lived object (per upload) and supports usage as a context manager.
     """
 
     def __init__(self, project: int, id: int | None = None):
@@ -71,6 +79,12 @@ class InfluxdbV2Insertion(DataInsertionBase):
 
     # -------------------- Configuration & Client --------------------
     def set_config(self, id: int | None) -> None:
+        """Load integration configuration and resolve the secret token.
+
+        Picks the provided configuration by id or falls back to the project's
+        default InfluxDB config. Populates instance attributes with connection
+        parameters and metadata used for tagging writes.
+        """
         id = id if id else DBInfluxdb.get_default_config(project_id=self.project)["id"]
         config = DBInfluxdb.get_config_by_id(project_id=self.project, id=id)
         if config["id"]:
@@ -88,6 +102,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
             logging.warning("There's no InfluxDB integration configured, or you're attempting to send a request from an unsupported location.")
 
     def _initialize_client(self) -> None:
+        """Create an InfluxDB client if it is not already initialized."""
         if self.influxdb_connection is not None:
             return
         try:
@@ -99,6 +114,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
             logging.error(er)
 
     def _close_client(self) -> None:
+        """Close the InfluxDB client and release resources."""
         if self.influxdb_connection:
             try:
                 self.influxdb_connection.close()
@@ -110,21 +126,22 @@ class InfluxdbV2Insertion(DataInsertionBase):
 
     # -------------------- Public API --------------------
     def write_upload(self, df: pd.DataFrame, test_title: str, write_events: bool = True, aggregation_window: str = "5s") -> Dict[str, Any]:
-        """
-        Build and write all points derived from a normalized JMeter samples DataFrame.
+        """Aggregate JMeter samples and write them into InfluxDB.
 
-        Expected DataFrame columns (normalized):
-        - timestamp (datetime64[ns, UTC])
-        - label (str)
-        - elapsed (float)
-        - success (bool)
-        - bytes (int)
-        - sentBytes (int)
-        - responseCode (str)
-        - responseMessage (str)
-        - allThreads (int)
+        Parameters
+        - df: A DataFrame of normalized JMeter samples. It must contain either
+          a DatetimeIndex named "timestamp" or a "timestamp" column. Required
+          columns: "label", "elapsed", "success". Optional columns are
+          auto-filled if missing: "bytes", "sentBytes", "responseCode",
+          "responseMessage", "allThreads".
+        - test_title: Logical name of the test used to tag data points.
+        - write_events: If True, also emit lightweight "events" points marking
+          the start and end timestamps of the upload.
+        - aggregation_window: Pandas offset string used for resampling, e.g.
+          "1s", "5s", "1min".
 
-        Returns: { "points_written": int }
+        Returns
+        - dict with a single key: {"points_written": int}
         """
         if df is None or df.empty:
             return {"points_written": 0}
@@ -137,13 +154,15 @@ class InfluxdbV2Insertion(DataInsertionBase):
         except Exception:
             raise ValueError("Parameter 'aggregation_window' must be a positive pandas offset string, e.g. 1s, 5s, 1min, 500ms")
 
-        # Ensure required columns exist (accept either a 'timestamp' column or a proper DatetimeIndex)
+        # Ensure required columns exist (accept either a DatetimeIndex named
+        # "timestamp" or a separate "timestamp" column).
         if not isinstance(df.index, pd.DatetimeIndex) or df.index.name != "timestamp":
             if "timestamp" not in df.columns:
                 raise ValueError("DataFrame must have a 'timestamp' column")
-        for col in ["label", "elapsed", "success"]:
-            if col not in getattr(df, "columns", []):
-                raise ValueError(f"DataFrame must have a '{col}' column")
+        required = ["label", "elapsed", "success"]
+        missing = [c for c in required if c not in getattr(df, "columns", [])]
+        if missing:
+            raise ValueError(f"DataFrame missing required columns: {', '.join(missing)}")
 
         # Prepare DataFrame: set timestamp index and coerce types
         if not isinstance(df.index, pd.DatetimeIndex) or df.index.name != "timestamp":
@@ -168,7 +187,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
         df["responseCode"] = df["responseCode"].astype(str)
         df["responseMessage"] = df["responseMessage"].astype(str)
 
-        # statut tag derived from success
+        # Derive statut tag from success
         df["statut"] = np.where(df["success"].astype(bool), "ok", "ko")
 
         points: List[Point] = []
@@ -177,7 +196,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
         start_dt = df.index.min().to_pydatetime()
         stop_dt = df.index.max().to_pydatetime() + timedelta(seconds=1)
 
-        # Per-transaction aggregates for statut all and ko
+        # Per-transaction aggregates for each statut
         def build_points_for_group(group_df: pd.DataFrame, label_val: str, statut_val: str):
             agg = group_df.resample(aggregation_window).agg(
                 count=("elapsed", "count"),
@@ -259,9 +278,27 @@ class InfluxdbV2Insertion(DataInsertionBase):
         if not g_ko_all.empty:
             build_points_for_group(g_ko_all, "all", "ko")
 
-        # Response code counts per transaction (failures only to match JMeter)
+        # Response code counts (failures only, to match JMeter semantics)
         if "responseCode" in df.columns:
             failed = df[df["success"] == False] if "success" in df.columns else df
+            # Small helpers to normalize tags consistently
+            def _norm_rc(rc_raw: Any) -> str:
+                """Normalize responseCode to a canonical string (e.g. 200.0 -> "200")."""
+                if pd.isna(rc_raw):
+                    return "0"
+                rc_s = str(rc_raw).strip()
+                if rc_s.lower() in ("", "nan", "none", "null"):
+                    return "0"
+                try:
+                    return str(int(float(rc_s)))
+                except Exception:
+                    return rc_s
+
+            def _norm_msg(rm_raw: Any) -> str:
+                if pd.isna(rm_raw):
+                    return ""
+                rm_s = str(rm_raw).strip()
+                return "" if rm_s.lower() in ("nan", "none", "null") else rm_s
             rc_counts = (
                 failed
                 .groupby([pd.Grouper(freq=aggregation_window), "label", "responseCode", "responseMessage"])  # type: ignore[arg-type]
@@ -277,21 +314,8 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     p.tag(test_title_tag, test_title)
                     p.tag("application", "perforge")
                     p.tag("transaction", str(row["label"]))
-                    # Normalize responseCode to match backend listener (integers as strings, empty -> '0')
-                    rc_raw = row.get("responseCode", "")
-                    rc_str = "0"
-                    if pd.notna(rc_raw):
-                        rc_s = str(rc_raw).strip()
-                        if rc_s.lower() not in ("", "nan", "none", "null"):
-                            try:
-                                rc_str = str(int(float(rc_s)))
-                            except Exception:
-                                rc_str = rc_s
-                    # Clean responseMessage (avoid literal 'nan')
-                    rm_raw = row.get("responseMessage", "")
-                    rm_str = "" if (pd.isna(rm_raw) or str(rm_raw).strip().lower() in ("nan", "none", "null")) else str(rm_raw)
-                    p.tag("responseCode", rc_str)
-                    p.tag("responseMessage", rm_str)
+                    p.tag("responseCode", _norm_rc(row.get("responseCode", "")))
+                    p.tag("responseMessage", _norm_msg(row.get("responseMessage", "")))
                     p.field("count", float(row["count"]))
                     points.append(p)
 
@@ -311,20 +335,8 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     p.tag(test_title_tag, test_title)
                     p.tag("application", "perforge")
                     p.tag("transaction", "all")
-                    # Normalize responseCode as above
-                    rc_raw = row.get("responseCode", "")
-                    rc_str = "0"
-                    if pd.notna(rc_raw):
-                        rc_s = str(rc_raw).strip()
-                        if rc_s.lower() not in ("", "nan", "none", "null"):
-                            try:
-                                rc_str = str(int(float(rc_s)))
-                            except Exception:
-                                rc_str = rc_s
-                    rm_raw = row.get("responseMessage", "")
-                    rm_str = "" if (pd.isna(rm_raw) or str(rm_raw).strip().lower() in ("nan", "none", "null")) else str(rm_raw)
-                    p.tag("responseCode", rc_str)
-                    p.tag("responseMessage", rm_str)
+                    p.tag("responseCode", _norm_rc(row.get("responseCode", "")))
+                    p.tag("responseMessage", _norm_msg(row.get("responseMessage", "")))
                     p.field("count", float(row["count"]))
                     points.append(p)
 
@@ -334,15 +346,10 @@ class InfluxdbV2Insertion(DataInsertionBase):
             at_max = at_series.resample(aggregation_window).max().fillna(0).astype(int)
             at_mean = at_series.resample(aggregation_window).mean().fillna(0.0).astype(float)
             at_min = at_series.resample(aggregation_window).min().fillna(0).astype(int)
-            # startedT / endedT approximated from positive/negative diffs within the window
-            def _started(s: pd.Series) -> int:
-                d = s.diff().fillna(0)
-                return int(np.maximum(d, 0).sum())
-            def _ended(s: pd.Series) -> int:
-                d = s.diff().fillna(0)
-                return int(np.maximum(-d, 0).sum())
-            startedT = at_series.groupby(pd.Grouper(freq=aggregation_window)).apply(_started).reindex(at_max.index, fill_value=0)
-            endedT = at_series.groupby(pd.Grouper(freq=aggregation_window)).apply(_ended).reindex(at_max.index, fill_value=0)
+            # Vectorized startedT/endedT from diffs (avoid Python groupby-apply)
+            d = at_series.diff().fillna(0)
+            startedT = d.clip(lower=0).resample(aggregation_window).sum().reindex(at_max.index, fill_value=0).astype(int)
+            endedT = (-d.clip(upper=0)).resample(aggregation_window).sum().reindex(at_max.index, fill_value=0).astype(int)
             idx = at_max.index
         else:
             idx = pd.to_datetime([df.index.min(), df.index.max()], utc=True)
@@ -372,7 +379,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     ep = Point("events").time(ts.to_pydatetime())
                     ep.tag(test_title_tag, test_title)
                     ep.tag("application", "perforge")
-                    # keep compatibility and add BL-like fields
+                    # Keep compatibility and add BL-like fields
                     ep.field("text", str(test_title))
                     points.append(ep)
                     # JMeter-style annotation event
@@ -383,27 +390,28 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     jp.field("text", f"{test_title} {'started' if typ == 'start' else 'ended'}")
                     points.append(jp)
             except Exception:
-                # Non-fatal; continue
+                # Non-fatal: event enrichment should not block writes
                 pass
 
         try:
             written = self._write_points(points)
         except Exception as er:
-            # Best-effort rollback: delete points for this upload by predicate and time range
+            # Best-effort rollback: delete points of this upload by predicate and time range
             try:
                 self._rollback_delete(test_title_tag, test_title, start_dt, stop_dt)
             except Exception:
-                # Non-fatal; original exception will be raised
+                # Non-fatal: preserve original write error
                 pass
             raise
         return {"points_written": written}
 
     # -------------------- Internals --------------------
     def _rollback_delete(self, test_title_tag: str, test_title: str, start_dt, stop_dt) -> None:
-        """Best-effort delete for points belonging to the current upload.
+        """Best-effort rollback for the current upload.
 
-        Deletes from measurements 'jmeter' and 'events' where application="perforge"
-        and test title tag matches. Stop is exclusive.
+        Deletes from the "jmeter" and "events" measurements where
+        application="perforge" and the test title tag matches. Note that InfluxDB
+        treats the "stop" bound as exclusive.
         """
         if not self.influxdb_connection:
             return
@@ -424,6 +432,11 @@ class InfluxdbV2Insertion(DataInsertionBase):
             pass
 
     def _write_points(self, points: List[Point], chunk_size: int = 5000) -> int:
+        """Write points synchronously in chunks.
+
+        Returns the number of points successfully submitted to the write API.
+        Raises the underlying error on failure (rollback is performed by caller).
+        """
         if not points:
             return 0
         if not self.influxdb_connection:
