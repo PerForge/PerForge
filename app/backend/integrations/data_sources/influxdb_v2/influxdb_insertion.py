@@ -54,19 +54,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
 
     def __init__(self, project: int, id: int | None = None):
         super().__init__(project)
-        self.id: int | None = None
-        self.name: str | None = None
-        self.url: str | None = None
-        self.org_id: str | None = None
-        self.token: str | None = None
-        self.timeout: int | None = None
-        self.bucket: str | None = None
-        self.listener: str | None = None
-        self.test_title_tag_name: str | None = None
-        self.tmz: str | None = None
-
         self.influxdb_connection: InfluxDBClient | None = None
-
         self.set_config(id)
         self._initialize_client()
 
@@ -228,7 +216,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
             for ts, row in agg.iterrows():
                 p = Point("jmeter").time(ts.to_pydatetime())
                 p.tag(test_title_tag, test_title)
-                p.tag("application", "perforge")
+                p.tag("backend_listener", "perforge")
                 p.tag("transaction", label_val)
                 p.tag("statut", statut_val)
                 # Align field types with existing bucket schema
@@ -312,7 +300,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     ts_dt = ts if isinstance(ts, pd.Timestamp) else pd.Timestamp(ts, tz="UTC")
                     p = Point("jmeter").time(ts_dt.to_pydatetime())
                     p.tag(test_title_tag, test_title)
-                    p.tag("application", "perforge")
+                    p.tag("backend_listener", "perforge")
                     p.tag("transaction", str(row["label"]))
                     p.tag("responseCode", _norm_rc(row.get("responseCode", "")))
                     p.tag("responseMessage", _norm_msg(row.get("responseMessage", "")))
@@ -333,7 +321,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     ts_dt = ts if isinstance(ts, pd.Timestamp) else pd.Timestamp(ts, tz="UTC")
                     p = Point("jmeter").time(ts_dt.to_pydatetime())
                     p.tag(test_title_tag, test_title)
-                    p.tag("application", "perforge")
+                    p.tag("backend_listener", "perforge")
                     p.tag("transaction", "all")
                     p.tag("responseCode", _norm_rc(row.get("responseCode", "")))
                     p.tag("responseMessage", _norm_msg(row.get("responseMessage", "")))
@@ -361,7 +349,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
         for ts in idx:
             p = Point("jmeter").time(ts.to_pydatetime())
             p.tag(test_title_tag, test_title)
-            p.tag("application", "perforge")
+            p.tag("backend_listener", "perforge")
             p.tag("transaction", "internal")
             p.field("minAT", float(at_min.loc[ts]))
             p.field("maxAT", float(at_max.loc[ts]))
@@ -378,14 +366,14 @@ class InfluxdbV2Insertion(DataInsertionBase):
                 for ts, typ in [(start_ts, "start"), (end_ts, "end")]:
                     ep = Point("events").time(ts.to_pydatetime())
                     ep.tag(test_title_tag, test_title)
-                    ep.tag("application", "perforge")
+                    ep.tag("backend_listener", "perforge")
                     # Keep compatibility and add BL-like fields
                     ep.field("text", str(test_title))
                     points.append(ep)
                     # JMeter-style annotation event
                     jp = Point("events").time(ts.to_pydatetime())
                     jp.tag(test_title_tag, test_title)
-                    jp.tag("application", "perforge")
+                    jp.tag("backend_listener", "perforge")
                     jp.tag("title", "ApacheJMeter")
                     jp.field("text", f"{test_title} {'started' if typ == 'start' else 'ended'}")
                     points.append(jp)
@@ -410,7 +398,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
         """Best-effort rollback for the current upload.
 
         Deletes from the "jmeter" and "events" measurements where
-        application="perforge" and the test title tag matches. Note that InfluxDB
+        backend_listener="perforge" and the test title tag matches. Note that InfluxDB
         treats the "stop" bound as exclusive.
         """
         if not self.influxdb_connection:
@@ -418,8 +406,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
         try:
             delete_api = self.influxdb_connection.delete_api()
             predicates = [
-                f'_measurement="jmeter" AND "application"="perforge" AND "{test_title_tag}"="{test_title}"',
-                f'_measurement="events" AND "application"="perforge" AND "{test_title_tag}"="{test_title}"',
+                f'"backend_listener"="perforge" AND "{test_title_tag}"="{test_title}"',
             ]
             for predicate in predicates:
                 try:

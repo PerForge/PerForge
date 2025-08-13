@@ -300,12 +300,13 @@ body.light-theme .form-hint code { background: rgba(13,110,253,0.08); color: var
 .hidden { display: none !important; }
 
 /* Upload page specific styles */
-.upload-page { height: 100vh; overflow: hidden; }
+.upload-page { --header-h: 6vh; --upload-gap: 16px; height: auto; min-height: 100vh; overflow: auto; }
 .upload-page .main-background { min-height: 100vh; }
-.upload-page .main-body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.upload-page .upload-center { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(680px, calc(100vw - 32px)); }
+/* Compensate fixed 6vh header without creating extra page height */
+.upload-page .main-body { min-height: calc(100vh - var(--header-h) - var(--upload-gap)); padding-top: calc(var(--header-h) + var(--upload-gap)); margin-top: 0; display: flex; align-items: center; justify-content: center; }
+.upload-page .upload-center { position: static; top: auto; left: auto; transform: none; width: min(680px, calc(100vw - 32px)); margin: 0 auto; }
 .border-dashed { border: 2px dashed var(--perforge-border, #6c757d); border-radius: 0.5rem; }
-.upload-page #dropzone { min-height: 280px; padding: 4rem 2rem; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.upload-page #dropzone { min-height: 120px; padding: 2rem 1.2rem; display: flex; align-items: center; justify-content: center; flex-direction: column; }
 .upload-page #dropzone.dragover { background: rgba(13,110,253,0.05); border-color: var(--bs-blue); }
 .upload-page #drop-helper { color: var(--perforge-muted, #6c757d); }
 /* Inline replacements */

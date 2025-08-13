@@ -13,14 +13,26 @@
     <div class="main-body">
       <div class="upload-center">
         <div class="card">
+          <div class="card-header">
+            <h4 class="mb-0 text-center">Upload results</h4>
+          </div>
           <div class="card-body">
-            <h4 class="mb-3 text-center">Upload results</h4>
             <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
               <div class="mb-3">
                 <label for="influxdbId" class="form-label">InfluxDB integration</label>
                 <select class="form-select" id="influxdbId" name="influxdb_id" required disabled>
                   <option value="" selected>Loading integrations...</option>
                 </select>
+                <div class="form-hint">
+                  <i class="fas fa-info-circle icon" aria-hidden="true"></i>
+                  <div>
+                    Currently, only JMeter results saved as .jtl or .csv files are supported.<br>
+                    Used columns:
+                    <code>timeStamp</code>, <code>label</code>, <code>elapsed</code>, <code>success</code>,
+                    <code>bytes</code>, <code>sentBytes</code>, <code>allThreads</code>,
+                    <code>responseCode</code>, <code>responseMessage</code>.
+                  </div>
+                </div>
               </div>
               <div class="mb-3">
                 <label for="testTitle" class="form-label">Test title</label>
