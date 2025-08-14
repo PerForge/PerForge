@@ -57,6 +57,13 @@ class User:
 @app.before_request
 def check_authentication():
     g.user = current_user
+    # Skip API routes: API auth is handled by blueprint-level guards in app.api.__init__
+    try:
+        if request.path.startswith('/api/'):
+            return None
+    except Exception:
+        # If request.path is unavailable for some reason, fall back to normal flow
+        pass
     if not DBUsers.check_admin_exists():
         if request.endpoint not in need_admin_routes:  # Exclude register_admin from redirect
             return redirect(url_for('register_admin'))

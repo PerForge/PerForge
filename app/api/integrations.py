@@ -236,6 +236,57 @@ def get_integration(integration_id):
             errors=[{"code": "integration_error", "message": str(e)}]
         )
 
+@integrations_api.route('/api/v1/integrations/type/<integration_type>', methods=['GET'])
+@api_error_handler
+def get_integrations_by_type(integration_type):
+    """
+    Get integrations of a specific type for the current project.
+
+    Path params:
+        integration_type: Integration type (e.g., influxdb, grafana, ...)
+
+    Returns:
+        JSON response with a list of integrations of the requested type.
+    """
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        if not project_data:
+            return api_response(
+                message=f"Project with ID {project_id} not found",
+                status=HTTP_NOT_FOUND,
+                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
+            )
+
+        try:
+            db_class = get_db_class(integration_type)
+            configs = db_class.get_configs(project_id=project_id)
+            # annotate with type for consistency
+            for cfg in configs:
+                cfg['integration_type'] = integration_type
+
+            return api_response(data={"integrations": configs, "integration_type": integration_type})
+        except ValueError as e:
+            return api_response(
+                message=str(e),
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "invalid_type", "message": str(e)}]
+            )
+    except Exception as e:
+        logging.error(f"Error getting integrations by type: {str(e)}")
+        return api_response(
+            message="Error retrieving integrations by type",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
 @integrations_api.route('/api/v1/integrations', methods=['POST'])
 @api_error_handler
 def create_integration():

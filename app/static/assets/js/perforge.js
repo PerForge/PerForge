@@ -829,12 +829,15 @@
         const projectCookieValue = getCookieValue('project');
         const baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`;
 
+        // Basic Auth placeholder (replace with real credentials)
+        const authLine = `-u "CHANGE_USERNAME:CHANGE_PASSWORD" \\\n`;
+
         // Use the new API endpoint
         const post_request = `
-curl -k --fail-with-body --request POST \\
---url ${baseUrl}/api/v1/reports \\
--H "Content-Type: application/json" \\
--H "Cookie: project=${projectCookieValue}" \\
+curl -k --fail-with-body --request POST \
+--url ${baseUrl}/api/v1/reports \
+-H "Content-Type: application/json" \
+${authLine}-H "Cookie: project=${projectCookieValue}" \
 --data '${JSON.stringify(selectedRows, null, 2)}'
 `;
 

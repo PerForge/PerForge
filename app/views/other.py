@@ -28,6 +28,10 @@ def view_logs():
     logs      = ''.join(log_lines)
     return render_template('home/logs.html', logs=logs)
 
+@app.route('/upload', methods=['GET'])
+def upload_page():
+    return render_template('home/upload.html')
+
 @app.route('/check_new_version')
 def check_version():
     try:
