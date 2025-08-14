@@ -52,7 +52,8 @@
                 <div class="form-hint">
                   <i class="fas fa-clock icon" aria-hidden="true"></i>
                   <div>
-                    Controls resampling/aggregation granularity (pandas offset alias).<br>Examples:
+                    Controls resampling/aggregation granularity (pandas offset alias).<br>
+                    This value auto-adjusts based on your file size, but you can change it manually. For larger files, prefer larger windows to improve performance and reduce processing time.<br>Examples:
                     <code>5s</code>, <code>30s</code>, <code>1min</code>.
                   </div>
                 </div>
@@ -87,6 +88,7 @@
       const uploadBtn = document.getElementById('uploadBtn');
       const influxSelect = document.getElementById('influxdbId');
       const testTitleInput = document.getElementById('testTitle');
+      const aggregationInput = document.getElementById('aggregationWindow');
 
 
 
@@ -100,7 +102,30 @@
           return;
         }
         fileName.classList.remove('text-danger');
-        fileName.textContent = file.name;
+        // Show human-readable file size next to the name
+        const size = file.size;
+        let humanSize = '0 B';
+        if (size < 1024) {
+          humanSize = `${size} B`;
+        } else if (size < 1024 * 1024) {
+          humanSize = `${(size / 1024).toFixed(1)} KB`;
+        } else if (size < 1024 * 1024 * 1024) {
+          humanSize = `${(size / (1024 * 1024)).toFixed(1)} MB`;
+        } else {
+          humanSize = `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+        }
+        fileName.innerHTML = `${file.name} <span class="text-muted">(${humanSize})</span>`;
+        // Auto-adjust aggregation window based on file size
+        if (aggregationInput) {
+          let aw = '5s';
+          if (size <= 50 * 1024 * 1024) aw = '5s';
+          else if (size <= 150 * 1024 * 1024) aw = '10s';
+          else if (size <= 300 * 1024 * 1024) aw = '30s';
+          else if (size <= 1 * 1024 * 1024 * 1024) aw = '1min';
+          else if (size <= 2 * 1024 * 1024 * 1024) aw = '2min';
+          else aw = '5min';
+          aggregationInput.value = aw;
+        }
         uploadBtn.disabled = false;
       }
 
