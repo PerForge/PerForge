@@ -1,8 +1,8 @@
 {
   "__inputs": [
     {
-      "name": "DS_INFLUXDB",
-      "label": "InfluxDB",
+      "name": "DS_INFLUXDB_- JMETER",
+      "label": "InfluxDB - jmeter",
       "description": "",
       "type": "datasource",
       "pluginId": "influxdb",
@@ -62,32 +62,19 @@
   "liveNow": false,
   "panels": [
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 68,
-      "panels": [],
-      "title": "JMeter Standard listener",
-      "type": "row"
-    },
-    {
       "columns": [],
       "datasource": {
         "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "uid": "${DS_INFLUXDB_- JMETER}"
       },
       "editable": true,
       "error": false,
       "fontSize": "100%",
       "gridPos": {
-        "h": 12,
+        "h": 18,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 0
       },
       "height": "300",
       "id": 70,
@@ -159,9 +146,9 @@
         {
           "datasource": {
             "type": "influxdb",
-            "uid": "${DS_INFLUXDB}"
+            "uid": "${DS_INFLUXDB_- JMETER}"
           },
-          "query": "import \"strings\"\r\n\r\ndata = from(bucket: v.bucket)\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n\r\nmaxThreads = data\r\n  |> keep(columns: [\"_value\", \"testTitle\"])\r\n  |> max()\r\n  |> group(columns: [\"_value\", \"testTitle\"])\r\n  |> rename(columns: {_value: \"maxThreads\"})\r\n\r\nendTime = data\r\n  |> max(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\"])\r\n  |> group(columns: [\"_time\", \"testTitle\"])\r\n  |> rename(columns: {_time: \"endTime\"})\r\n\r\nstartTime = data\r\n  |> min(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\"])\r\n  |> group(columns: [\"_time\", \"testTitle\"])\r\n  |> rename(columns: {_time: \"startTime\"})\r\n\r\njoin1 = join(tables: {d1: maxThreads, d2: startTime}, on: [\"testTitle\"])\r\n  |> keep(columns: [\"startTime\",\"testTitle\", \"maxThreads\"])\r\n  |> group(columns: [\"testTitle\"])\r\n\r\njoin(tables: {d1: join1, d2: endTime}, on: [\"testTitle\"])\r\n  |> map(fn: (r) => ({ r with duration: (int(v: r.endTime) - int(v: r.startTime))}))\r\n  |> map(fn: (r) => ({ r with actions: \r\n    strings.joinStr(arr: \r\n    [\r\n      \"<a class=\\\"btn-primary btn-small\\\" href=\\\"d/jmeter-test-results-standard-listener/jmeter-test-results-standard-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Dashboard</a>\"\r\n    ], \r\n    v: \"\") \r\n    + \r\n    strings.joinStr(arr: \r\n\t  [\r\n      \"<a class=\\\"btn-primary btn-small offset-md-1\\\" \r\n      href=\\\"d/jmeter-test-comparison-standard-listener/jmeter-tests-comparison-standard-listener?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-app=\",\"&var-current_testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Compare</a>\"\r\n    ], \r\n    v: \"\")\r\n  }))\r\n  |> keep(columns: [\"testTitle\", \"maxThreads\", \"duration\", \"actions\"])\r\n  |> group()",
+          "query": "import \"strings\"\r\n\r\ndata = from(bucket: v.bucket)\r\n  |> range(start: 0, stop: now())\r\n  |> filter(fn: (r) => r[\"_measurement\"] == \"jmeter\")\r\n  |> filter(fn: (r) => r[\"_field\"] == \"maxAT\")\r\n\r\nmaxThreads = data\r\n  |> keep(columns: [\"_value\", \"testTitle\"])\r\n  |> max()\r\n  |> group(columns: [\"_value\", \"testTitle\"])\r\n  |> rename(columns: {_value: \"maxThreads\"})\r\n\r\nendTime = data\r\n  |> max(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\"])\r\n  |> group(columns: [\"_time\", \"testTitle\"])\r\n  |> rename(columns: {_time: \"endTime\"})\r\n\r\nstartTime = data\r\n  |> min(column: \"_time\")\r\n  |> keep(columns: [\"_time\", \"testTitle\"])\r\n  |> group(columns: [\"_time\", \"testTitle\"])\r\n  |> rename(columns: {_time: \"startTime\"})\r\n\r\njoin1 = join(tables: {d1: maxThreads, d2: startTime}, on: [\"testTitle\"])\r\n  |> keep(columns: [\"startTime\",\"testTitle\", \"maxThreads\"])\r\n  |> group(columns: [\"testTitle\"])\r\n\r\njoin(tables: {d1: join1, d2: endTime}, on: [\"testTitle\"])\r\n  |> map(fn: (r) => ({ r with duration: (int(v: r.endTime) - int(v: r.startTime))}))\r\n  |> map(fn: (r) => ({ r with actions: \r\n    strings.joinStr(arr: \r\n    [\r\n      \"<a class=\\\"btn-primary btn-small\\\" href=\\\"d/jmeter-test-results/jmeter-test-results?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Dashboard</a>\"\r\n    ], \r\n    v: \"\") \r\n    + \r\n    strings.joinStr(arr: \r\n\t  [\r\n      \"<a class=\\\"btn-primary btn-small offset-md-1\\\" \r\n      href=\\\"d/jmeter-test-comparison/jmeter-tests-comparison?orgId=1&from=\",\r\n      string(v: (int(v: r.startTime)/1000000)-5000),\"&to=\",\r\n      string(v: (int(v: r.endTime)/1000000)+5000),\"&var-testTitle=\",\r\n      string(v: r.testTitle),\"\\\">Compare</a>\"\r\n    ], \r\n    v: \"\")\r\n  }))\r\n  |> keep(columns: [\"testTitle\", \"maxThreads\", \"duration\", \"actions\"])\r\n  |> group()",
           "refId": "A"
         }
       ],
@@ -225,8 +212,8 @@
     ]
   },
   "timezone": "utc",
-  "title": "Tests logs",
-  "uid": "tests_logs",
-  "version": 2,
+  "title": "JMeter Tests log",
+  "uid": "jmeter-tests-log",
+  "version": 5,
   "weekStart": ""
 }

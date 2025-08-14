@@ -95,7 +95,7 @@
                                     {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
                                     <label for="is_default" class="mt-2">Is Default:</label>
                                     {{ form.is_default(class="form-control") }}
-                                    <label for="custom_vars" class="input-label mt-2">Custom Vars:
+                                    <label for="custom_vars" class="input-label mt-2">Custom Vars (optional):
                                         <span class="tooltip-container">
                                             <span class="fa-regular fa-circle-question me-2 mt-2"></span>
                                             <span class="tooltip-content">
@@ -106,7 +106,7 @@
                                     <div id="custom-vars-container" style="width: 100%;">
                                         {% for var in form.custom_vars %}
                                         <div class="flex m10-top">
-                                            <input type="text" class="form-control customVarInput" required name="custom_vars-{{ loop.index0 }}-content" id="custom_vars-{{ loop.index0 }}-content" value="{{ var.data or '' }}" placeholder="e.g. build">
+                                            <input type="text" class="form-control customVarInput" name="custom_vars-{{ loop.index0 }}-content" id="custom_vars-{{ loop.index0 }}-content" value="{{ var.data or '' }}" placeholder="e.g. build">
                                             <button type="button" class="btn btn-secondary ms-2" onclick="removeCustomVar(this)">Delete</button>
                                         </div>
                                         {% endfor %}
@@ -178,7 +178,7 @@
             window.addCustomVar = function() {
                 var count = document.querySelectorAll('.customVarInput').length;
                 var html = `<div class="flex m10-top">
-                                <input type="text" class="form-control customVarInput" required name="custom_vars-${count}-content" id="custom_vars-${count}-content" placeholder="e.g. build">
+                                <input type="text" class="form-control customVarInput" name="custom_vars-${count}-content" id="custom_vars-${count}-content" placeholder="e.g. build">
                                 <button type="button" class="btn btn-secondary ms-2" onclick="removeCustomVar(this)">Delete</button>
                             </div>`;
                 var container = document.createElement('div');
