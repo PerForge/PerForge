@@ -70,6 +70,27 @@ class ZScoreDetector(BaseDetector):
         """
         df = df.copy()
 
+        # Guard: skip if the metric column is missing
+        if metric not in df.columns:
+            return df
+
+        series = df[metric].dropna()
+
+        # Guard: if not enough data points or zero standard deviation, default to Normal
+        if len(series) < 3 or series.std() == 0 or pd.isna(series.std()):
+            df[f'{metric}_anomaly_z_score'] = 1
+            df = engine.update_anomaly_status(
+                df=df,
+                metric=metric,
+                anomaly_metric=f'{metric}_anomaly_z_score',
+                method='z_score'
+            )
+            engine.delete_columns(
+                df=df,
+                columns=[f'{metric}_anomaly_z_score']
+            )
+            return df
+
         # Step 1: Z-Score calculation and anomaly detection
         df[f'{metric}_z_score'] = (df[metric] - df[metric].mean()) / df[metric].std()
         df[f'{metric}_anomaly_z_score'] = df[f'{metric}_z_score'].apply(

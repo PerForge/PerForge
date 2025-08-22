@@ -23,6 +23,7 @@ from app.backend.components.templates.templates_db                         impor
 from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
 from app.backend.data_provider.data_provider                               import DataProvider
 from app.backend.data_provider.test_data                                   import BaseTestData, MetricsTable
+from app.backend.data_provider.image_creator.plotly_image_renderer         import PlotlyImageRenderer
 
 from typing import Dict, Any
 
@@ -184,6 +185,83 @@ class ReportingBase:
             response["Input tokens"]  = 0
             response["Output tokens"] = 0
         return response
+
+    # ----------------------------------------------------------------------------------
+    # Centralized Graph Rendering
+    # ----------------------------------------------------------------------------------
+
+    def _ensure_ml_metrics(self) -> dict:
+        """
+        Make sure ML metrics are available on current_test_obj and return metrics dict.
+        If already computed, reconstruct a minimal metrics dict from existing tables if possible.
+        """
+        metrics = self.dp_obj.get_ml_analysis_to_test_obj(self.current_test_obj)
+        if not isinstance(metrics, dict) or not metrics:
+            logging.error("_ensure_ml_metrics: Failed to obtain ML metrics dict. ml_anomalies=%s",
+                          bool(getattr(self.current_test_obj, "ml_anomalies", None)))
+            raise RuntimeError("Internal graph rendering failed: ML metrics could not be constructed.")
+        return metrics
+
+    def _render_internal_graph(self, graph_data: dict) -> bytes:
+        """Render an internal Plotly graph fully in-memory and return PNG bytes."""
+        # Ensure metric series exist
+        metrics = self._ensure_ml_metrics()
+
+        # Render via Plotly
+        renderer = PlotlyImageRenderer()
+        width = int(graph_data.get("width") or 1024)
+        height = int(graph_data.get("height") or 400)
+        image = renderer.render_bytes_by_name(
+            name=graph_data.get("name", ""),
+            chart_data=metrics,
+            width=width,
+            height=height,
+            image_format="png",
+        )
+        return image
+
+    def add_graph(self, graph_data: dict, current_test_title: str, baseline_test_title: str | None):
+        """
+        Unified graph renderer for both internal and external graphs.
+
+        Returns: (image_bytes, ai_support_response or None)
+        """
+        ai_support_response = None
+
+        if graph_data.get("type") == "default":
+            # Render internal Plotly graph
+            image = self._render_internal_graph(graph_data)
+
+            # Optional AI analysis
+            if self.ai_switch and self.ai_graph_switch and graph_data.get("prompt_id"):
+                ai_support_response = self.ai_support_obj.analyze_graph(graph_data.get("name"), image, graph_data.get("prompt_id"))
+            return image, ai_support_response
+
+        # External (Grafana) graph fallback
+        # Instantiate Grafana using graph-specific grafana_id to respect overrides
+        grafana_id = graph_data.get("grafana_id")
+        if grafana_id:
+            grafana = Grafana(project=self.project, id=grafana_id)
+        else:
+            # Fallback to default Grafana
+            default_grafana_config = DBGrafana.get_default_config(project_id=self.project)
+            grafana = Grafana(project=self.project, id=default_grafana_config["id"]) if default_grafana_config else None
+
+        if grafana is None:
+            raise RuntimeError("Grafana configuration is missing for external graph rendering.")
+
+        # Use the timestamps from current_test_obj instead of direct attributes
+        start_timestamp = self.current_test_obj.start_time_timestamp
+        end_timestamp = self.current_test_obj.end_time_timestamp
+
+        url = grafana.generate_url_to_render_graph(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
+        url = self.replace_variables(url)
+        image = grafana.render_image(url)
+
+        if self.ai_switch and self.ai_graph_switch and graph_data.get("prompt_id"):
+            ai_support_response = self.ai_support_obj.analyze_graph(graph_data.get("name"), image, graph_data.get("prompt_id"))
+
+        return image, ai_support_response
 
     def _collect_parameters(self, test_obj: BaseTestData, prefix: str = "") -> Dict[str, Any]:
         """

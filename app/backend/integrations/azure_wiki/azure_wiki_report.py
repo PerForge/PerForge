@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
+
 from app.backend.integrations.reporting_base        import ReportingBase
 from app.backend.integrations.report_registry       import ReportRegistry
 from app.backend.integrations.azure_wiki.azure_wiki import AzureWiki
-from app.backend.integrations.grafana.grafana       import Grafana
 from app.backend.components.graphs.graphs_db        import DBGraphs
 
 
@@ -140,20 +141,16 @@ class AzureWikiReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_test_obj.start_time_timestamp, self.current_test_obj.end_time_timestamp, current_test_title, baseline_test_title)
-        url = self.replace_variables(url)
-        image = self.grafana_obj.render_image(url)
-        encoded_image = self.grafana_obj.encode_image(image)
+        # Use centralized renderer (supports internal Plotly and external Grafana)
+        image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
+        # Azure expects base64 per existing flow
+        encoded_image = base64.b64encode(image)
         fileName      = self.output_obj.put_image_to_azure(encoded_image, graph_data["name"])
         if(fileName):
             graph = f'![image.png](/.attachments/{str(fileName)})\n\n'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-            return graph, ai_support_response
-        else:
-            return graph, ""
+        return graph, (ai_support_response or "")
 
     def generate_path(self, isgroup):
         if isgroup:
@@ -213,7 +210,6 @@ class AzureWikiReport(ReportingBase):
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:

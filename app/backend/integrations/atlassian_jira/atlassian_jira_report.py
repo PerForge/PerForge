@@ -16,7 +16,6 @@
 from app.backend.integrations.reporting_base                import ReportingBase
 from app.backend.integrations.report_registry               import ReportRegistry
 from app.backend.integrations.atlassian_jira.atlassian_jira import AtlassianJira
-from app.backend.integrations.grafana.grafana               import Grafana
 from app.backend.components.graphs.graphs_db                import DBGraphs
 from datetime                                               import datetime
 
@@ -43,19 +42,14 @@ class AtlassianJiraReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
-        url = self.replace_variables(url)
-        image = self.grafana_obj.render_image(url)
+        # Use centralized renderer (internal Plotly or external Grafana)
+        image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
         filename = self.output_obj.put_image_to_jira(issue=self.issue_id, image_bytes=image)
-        if(filename):
+        if filename:
             graph = f'!{str(filename)}|width=900!\n\n'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-            return graph, ai_support_response
-        else:
-            return graph, ""
+        return graph, (ai_support_response or "")
 
     def format_table(self, metrics):
         if not metrics:
@@ -179,7 +173,6 @@ class AtlassianJiraReport(ReportingBase):
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:

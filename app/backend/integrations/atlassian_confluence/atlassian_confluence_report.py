@@ -16,7 +16,6 @@ from datetime                                                           import d
 from app.backend.integrations.reporting_base                            import ReportingBase
 from app.backend.integrations.report_registry                           import ReportRegistry
 from app.backend.integrations.atlassian_confluence.atlassian_confluence import AtlassianConfluence
-from app.backend.integrations.grafana.grafana                           import Grafana
 from app.backend.components.graphs.graphs_db                            import DBGraphs
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -51,19 +50,14 @@ class AtlassianConfluenceReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
-        url = self.replace_variables(url)
-        image = self.grafana_obj.render_image(url)
+        # Delegate rendering to centralized base (supports internal Plotly and external Grafana)
+        image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
         fileName = self.output_obj.put_image_to_confl(image, graph_data["id"], self.page_id)
         if fileName:
             graph = f'<br/>{self._build_confluence_image(str(fileName), graph_data.get("width", 1000), graph_data.get("height", 500))}<br/>'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-            return graph, ai_support_response
-        else:
-            return graph, ""
+        return graph, (ai_support_response or "")
 
     def generate_path(self, isgroup):
         if isgroup:
@@ -259,7 +253,6 @@ class AtlassianConfluenceReport(ReportingBase):
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:
