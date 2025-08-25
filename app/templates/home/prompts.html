@@ -204,6 +204,22 @@
             });
         }
 
+        // Reset form when clicking "Add custom prompt"
+        const addPromptBtn = document.querySelector('[add-prompt="add-prompt"]');
+        if (addPromptBtn) {
+            addPromptBtn.addEventListener('click', function() {
+                resetPromptForm();
+            });
+        }
+
+        // Reset form when modal is closed
+        const promptModalElForReset = document.getElementById('promptModal');
+        if (promptModalElForReset) {
+            promptModalElForReset.addEventListener('hidden.bs.modal', function() {
+                resetPromptForm();
+            });
+        }
+
         // Handle form submission
         document.getElementById('promptForm').addEventListener('submit', function(event) {
             event.preventDefault();
@@ -233,6 +249,15 @@
                     // Show success message
                     const message = promptId ? "Prompt updated successfully." : "Prompt created successfully.";
                     showFlashMessage(message, "success");
+
+                    // If a new custom prompt was created, switch view to 'custom' to show it immediately
+                    if (!promptId) {
+                        const switcher = document.getElementById('selectedTypeSwitch');
+                        if (switcher) {
+                            switcher.checked = true;
+                            localStorage.setItem('prompt_view_type', 'custom');
+                        }
+                    }
 
                     // Reload prompts
                     loadPrompts();
@@ -412,6 +437,25 @@
           }, function(err) {
               showFlashMessage('Failed to copy!', 'error');
           });
+      }
+
+      // Reset the Add/Edit Prompt form to defaults
+      function resetPromptForm() {
+          const idEl = document.getElementById('prompt_id');
+          const nameEl = document.getElementById('name');
+          const placeEl = document.getElementById('place');
+          const promptEl = document.getElementById('prompt');
+          const typeEl = document.getElementById('prompt_type');
+          const projectEl = document.getElementById('project_id');
+          const titleEl = document.getElementById('addnewpromptLabel');
+
+          if (idEl) idEl.value = '';
+          if (nameEl) nameEl.value = '';
+          if (placeEl) placeEl.value = 'graph';
+          if (promptEl) promptEl.value = '';
+          if (typeEl) typeEl.value = 'custom';
+          if (projectEl) projectEl.value = '';
+          if (titleEl) titleEl.textContent = 'Add Prompt';
       }
 
       // Function to show the view prompt modal

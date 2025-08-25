@@ -60,12 +60,7 @@
                                         <label class="col-form-nfr-label">Threshold:</label>
                                         <label class="col-form-nfr-description">Only number should be specified(ms).</label>
                                     </div>
-                                    <div class="nfr-col-l padding-10">
-                                        <label class="col-form-nfr-label">Weight (optional):</label>
-                                        <label class="col-form-nfr-description">You can specify which weight belongs to each NFR. This is an optional field. If not specified, all NFS will have the same weight.
-                                            Only number should be specified.
-                                            The sum of the total weight in one set should not exceed 100</label>
-                                    </div>
+                                    
                                 </div>
                             </div>
                             <div class="full-screen-section">
@@ -120,18 +115,14 @@
                   <div class="valid-feedback">Looks good!</div>
                   <div class="invalid-feedback">Please provide a valid data.</div>
                 </div>
-                <div class="nfr-col-l padding-10">
-                  <input name="weight" class="form-control weight-nfr-field" max="100" step="0.001" type="number">
-                  <div class="valid-feedback">Looks good!</div>
-                  <div class="invalid-feedback">Please provide a valid data.</div>
-                </div>
+                
                 <div class="padding-10" style="display: flex;width: 5%;">
                   <button onclick="deleteNfrRow(this)" class="btn btn-danger delete-button" type="button" style="align-self: flex-start;">Delete</button>
                 </div>
               </div>
             `;
 
-            const backendMetrics = ["avg", "pct50", "pct75", "pct90", "count", "rpm"];
+            const backendMetrics = ["avg", "pct50", "pct75", "pct90", "count", "rpm", "errors"];
             const frontendMetrics = [
               "CLS", "FCP", "FID", "LCP", "TBT", "TTFB", "fullyLoaded", "backEndTime",
               "domContentLoadedTime", "domInteractiveTime", "domainLookupTime", "frontEndTime",
@@ -182,8 +173,7 @@
                 scope: element.querySelector('.scope-nfr-field').value,
                 metric: element.querySelector('.metric-nfr-field').value,
                 operation: element.querySelector('.operation-nfr-field').value,
-                threshold: parseInt(element.querySelector('.threshold-nfr-field').value),
-                weight: element.querySelector('.weight-nfr-field').value || null
+                threshold: parseFloat(element.querySelector('.threshold-nfr-field').value)
               }));
 
               formData.rows = data;
@@ -231,7 +221,6 @@
                     metricSelect.value = row.metric;
                     newRow.querySelector('.operation-nfr-field').value = row.operation;
                     newRow.querySelector('.threshold-nfr-field').value = row.threshold;
-                    newRow.querySelector('.weight-nfr-field').value = row.weight || '';
                 }
                 // Call updateAllMetricDropdowns again after all rows are loaded and values set
                 // This ensures all dropdowns are correctly populated and values preserved if possible.

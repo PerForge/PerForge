@@ -253,8 +253,7 @@ class NFRObjectModel(BaseModelWithStripping):
     scope    : str
     metric   : str
     operation: str
-    threshold: int
-    weight   : Optional[int]
+    threshold: float
     nfr_id   : Optional[int] = Field(default=None)
 
 

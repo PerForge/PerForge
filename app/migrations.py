@@ -135,6 +135,53 @@ def run_migrations():
                 # If table or column doesn't exist yet, ignore.
                 pass
 
+            # --- Migration: Normalize 'nfr_rows' (drop 'weight', set FLOAT threshold) ---
+            try:
+                table_names = inspector.get_table_names()
+                if 'nfr_rows' in table_names:
+                    nfr_columns = inspector.get_columns('nfr_rows')
+                    nfr_col_names = [c['name'] for c in nfr_columns]
+                    threshold_col = next((c for c in nfr_columns if c['name'] == 'threshold'), None)
+                    current_type = str(threshold_col['type']).upper() if threshold_col else ''
+
+                    needs_rebuild = False
+                    if 'weight' in nfr_col_names:
+                        needs_rebuild = True
+                    if not any(t in current_type for t in ['FLOAT', 'REAL', 'DOUBLE']):
+                        needs_rebuild = True
+
+                    if needs_rebuild:
+                        log.info("Applying migration: Rebuild 'nfr_rows' (no 'weight', FLOAT 'threshold')")
+                        with connection.begin():
+                            connection.execute(text("PRAGMA foreign_keys=OFF"))
+                            connection.execute(text("DROP TABLE IF EXISTS nfr_rows_new"))
+                            connection.execute(text(
+                                """
+                                CREATE TABLE nfr_rows_new (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    regex BOOLEAN,
+                                    scope VARCHAR(500) NOT NULL,
+                                    metric VARCHAR(120) NOT NULL,
+                                    operation VARCHAR(120) NOT NULL,
+                                    threshold FLOAT NOT NULL,
+                                    nfr_id INTEGER NOT NULL,
+                                    FOREIGN KEY(nfr_id) REFERENCES nfrs(id) ON DELETE CASCADE
+                                )
+                                """
+                            ))
+                            connection.execute(text(
+                                """
+                                INSERT INTO nfr_rows_new (id, regex, scope, metric, operation, threshold, nfr_id)
+                                SELECT id, regex, scope, metric, operation, threshold, nfr_id FROM nfr_rows
+                                """
+                            ))
+                            connection.execute(text("DROP TABLE nfr_rows"))
+                            connection.execute(text("ALTER TABLE nfr_rows_new RENAME TO nfr_rows"))
+                            connection.execute(text("PRAGMA foreign_keys=ON"))
+                        log.info("Migration for 'nfr_rows' applied successfully.")
+            except Exception as e:
+                log.warning(f"Could not rebuild 'nfr_rows'. Error: {e}")
+
     except Exception as e:
         # If the table doesn't exist yet, inspector will fail. This is okay
         # because create_all() will create it with all columns anyway.

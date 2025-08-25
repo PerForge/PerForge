@@ -15,15 +15,15 @@
 import re
 import logging
 
-from app.backend.integrations.ai_support.ai_support                        import AISupport
-from app.backend.integrations.grafana.grafana                              import Grafana
-from app.backend.integrations.grafana.grafana_db                           import DBGrafana
-from app.backend.components.nfrs.nfr_validation                            import NFRValidation
-from app.backend.components.templates.templates_db                         import DBTemplates
-from app.backend.components.templates.template_groups_db                   import DBTemplateGroups
-from app.backend.data_provider.data_provider                               import DataProvider
-from app.backend.data_provider.test_data                                   import BaseTestData, MetricsTable
-from app.backend.data_provider.image_creator.plotly_image_renderer         import PlotlyImageRenderer
+from app.backend.integrations.ai_support.ai_support import AISupport
+from app.backend.integrations.grafana.grafana import Grafana
+from app.backend.integrations.grafana.grafana_db import DBGrafana
+from app.backend.components.nfrs.nfr_validation import NFRValidation
+from app.backend.components.templates.templates_db import DBTemplates
+from app.backend.components.templates.template_groups_db import DBTemplateGroups
+from app.backend.data_provider.data_provider import DataProvider
+from app.backend.data_provider.test_data import BaseTestData, MetricsTable
+from app.backend.data_provider.image_creator.plotly_image_renderer import PlotlyImageRenderer
 
 from typing import Dict, Any
 
@@ -32,37 +32,37 @@ from typing import Dict, Any
 class ReportingBase:
 
     def __init__(self, project):
-        self.project                   = project
-        self.validation_obj            = NFRValidation(project=self.project)
-        self.current_test_obj: BaseTestData    = None
-        self.baseline_test_obj: BaseTestData   = None
+        self.project = project
+        self.validation_obj = NFRValidation(project=self.project)
+        self.current_test_obj: BaseTestData = None
+        self.baseline_test_obj: BaseTestData = None
 
     def set_template(self, template, db_config: Dict[str, str]):
-        template_obj                   = DBTemplates.get_config_by_id(project_id=self.project, id=template)
-        self.nfr                       = template_obj["nfr"]
-        self.title                     = template_obj["title"]
-        self.data                      = template_obj["data"]
-        self.template_prompt_id        = template_obj["template_prompt_id"]
-        self.aggregated_prompt_id      = template_obj["aggregated_prompt_id"]
-        self.system_prompt_id          = template_obj["system_prompt_id"]
-        self.dp_obj                    = DataProvider(project=self.project, source_type=db_config.get("source_type"), id=db_config.get("id"))
-        self.nfrs_switch               = template_obj["nfrs_switch"]
-        self.ai_switch                 = template_obj["ai_switch"]
+        template_obj = DBTemplates.get_config_by_id(project_id=self.project, id=template)
+        self.nfr = template_obj["nfr"]
+        self.title = template_obj["title"]
+        self.data = template_obj["data"]
+        self.template_prompt_id = template_obj["template_prompt_id"]
+        self.aggregated_prompt_id = template_obj["aggregated_prompt_id"]
+        self.system_prompt_id = template_obj["system_prompt_id"]
+        self.dp_obj = DataProvider(project=self.project, source_type=db_config.get("source_type"), id=db_config.get("id"))
+        self.nfrs_switch = template_obj["nfrs_switch"]
+        self.ai_switch = template_obj["ai_switch"]
         if self.ai_switch:
-            self.ai_support_obj        = AISupport(project=self.project, system_prompt=self.system_prompt_id)
+            self.ai_support_obj = AISupport(project=self.project, system_prompt=self.system_prompt_id)
         self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
-        self.ai_graph_switch           = template_obj["ai_graph_switch"]
-        self.ai_to_graphs_switch       = template_obj["ai_to_graphs_switch"]
-        self.ml_switch                 = template_obj["ml_switch"]
+        self.ai_graph_switch = template_obj["ai_graph_switch"]
+        self.ai_to_graphs_switch = template_obj["ai_to_graphs_switch"]
+        self.ml_switch = template_obj["ml_switch"]
         if self.dp_obj.test_type == "front_end":
             self.ml_switch = False # Temporary fix for ML switch
 
     def set_template_group(self, template_group):
-        template_group_obj             = DBTemplateGroups.get_config_by_id(project_id=self.project, id=template_group)
-        self.group_title               = template_group_obj["title"]
-        self.template_order            = template_group_obj["data"]
-        self.template_group_prompt_id  = template_group_obj["prompt_id"]
-        self.ai_summary                = template_group_obj["ai_summary"]
+        template_group_obj = DBTemplateGroups.get_config_by_id(project_id=self.project, id=template_group)
+        self.group_title = template_group_obj["title"]
+        self.template_order = template_group_obj["data"]
+        self.template_group_prompt_id = template_group_obj["prompt_id"]
+        self.ai_summary = template_group_obj["ai_summary"]
 
     def replace_variables(self, text):
         """Replace template variables with their corresponding values
@@ -119,9 +119,6 @@ class ReportingBase:
                 except Exception as e:
                     logging.warning(f"Error loading table '{table_name}' with aggregation '{aggregation}': {e}")
 
-            # If we got here, the variable wasn't replaced
-            logging.info(f"Variable {var} not found in parameters or tables")
-
         return text
 
     def format_table(self, metrics):
@@ -141,8 +138,8 @@ class ReportingBase:
     def analyze_template(self):
         # Initialize parameters to ensure they exist
         self.parameters['nfr_summary'] = ""
-        self.parameters['ml_summary']  = ""
-        self.parameters['ai_summary']  = ""
+        self.parameters['ml_summary'] = ""
+        self.parameters['ai_summary'] = ""
 
         all_tables = self.current_test_obj.get_all_tables()
         all_tables_json = self.current_test_obj.get_all_tables_json()
@@ -179,10 +176,10 @@ class ReportingBase:
     def generate_response(self):
         response = {}
         if self.ai_switch:
-            response["Input tokens"]  = self.ai_support_obj.ai_obj.input_tokens
+            response["Input tokens"] = self.ai_support_obj.ai_obj.input_tokens
             response["Output tokens"] = self.ai_support_obj.ai_obj.output_tokens
         else:
-            response["Input tokens"]  = 0
+            response["Input tokens"] = 0
             response["Output tokens"] = 0
         return response
 

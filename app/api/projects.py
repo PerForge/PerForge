@@ -334,7 +334,7 @@ def _create_example_data(project_id: str) -> None:
         grafana_integration_example = DBGrafana.save(project_id, {
             "id": None,
             "name": "[EXAMPLE] INTEGRATION WITH GRAFANA FROM DOCKER-COMPOSE",
-            "server": "http://grafana:8086",
+            "server": "http://grafana:3000",
             "org_id": "1",
             "token": fake_token_example,
             "test_title": "testTitle",
@@ -343,12 +343,12 @@ def _create_example_data(project_id: str) -> None:
             "dashboards": [
                 {
                     "id": 1,
-                    "content": "/d/jmeter-test-results-standard-listener/jmeter-test-results-standard-listener",
+                    "content": "/d/jmeter-test-results/jmeter-test-results",
                     "grafana_id": None
                 },
                 {
                     "id": 2,
-                    "content": "/d/jmeter-test-comparison-standard-listener/jmeter-tests-comparison-standard-listener",
+                    "content": "/d/jmeter-test-comparison/jmeter-tests-comparison",
                     "grafana_id": None
                 }
             ]
@@ -365,24 +365,21 @@ def _create_example_data(project_id: str) -> None:
                     "scope": "each",
                     "metric": "avg",
                     "operation": "<",
-                    "threshold": 500,
-                    "weight": None
+                    "threshold": 500
                 },
                 {
                     "regex": False,
                     "scope": "Dummy Sampler 1",
                     "metric": "pct50",
                     "operation": "<",
-                    "threshold": 700,
-                    "weight": None
+                    "threshold": 700
                 },
                 {
                     "regex": True,
                     "scope": "Dummy.*",
                     "metric": "pct90",
                     "operation": "<",
-                    "threshold": 1000,
-                    "weight": None
+                    "threshold": 1000
                 }
             ]
         })

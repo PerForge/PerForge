@@ -136,8 +136,7 @@ class DBNFRRows(db.Model):
     scope         = db.Column(db.String(500), nullable=False)
     metric        = db.Column(db.String(120), nullable=False)
     operation     = db.Column(db.String(120), nullable=False)
-    threshold     = db.Column(db.Integer, nullable=False)
-    weight        = db.Column(db.Integer)
+    threshold     = db.Column(db.Float, nullable=False)
     nfr_id        = db.Column(db.Integer, db.ForeignKey('nfrs.id', ondelete='CASCADE'), nullable=False)
 
     def to_dict(self):
