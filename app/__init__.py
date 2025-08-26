@@ -94,6 +94,8 @@ with app.app_context():
 
     DBPrompts.load_default_prompts_from_yaml()
 
+    DBGraphs.load_default_graphs_from_yaml()
+
 # Register API blueprints
 register_blueprints(app)
 

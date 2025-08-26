@@ -231,99 +231,127 @@ function addDropdownEventListeners(chartData, styling, layoutConfig) {
 }
 
 function drawGraph(chartData, styling, layoutConfig, transactionName, chartElementId) {
-    const avgTransactionData = chartData.avgResponseTimePerReq.find(transaction => transaction.name === transactionName);
-    const medianTransactionData = chartData.medianResponseTimePerReq.find(transaction => transaction.name === transactionName);
-    const pctTransactionData = chartData.pctResponseTimePerReq.find(transaction => transaction.name === transactionName);
+    const avgTransactionData = chartData.avgResponseTimePerReq?.find(transaction => transaction.name === transactionName);
+    const medianTransactionData = chartData.medianResponseTimePerReq?.find(transaction => transaction.name === transactionName);
+    const pctTransactionData = chartData.pctResponseTimePerReq?.find(transaction => transaction.name === transactionName);
 
-    if (!avgTransactionData || !medianTransactionData || !pctTransactionData) {
-        console.error(`Transaction data not found for: ${transactionName}`);
+    const avgArr = avgTransactionData?.data || [];
+    const medianArr = medianTransactionData?.data || [];
+    const pctArr = pctTransactionData?.data || [];
+
+    // Choose timestamps source from first available series
+    const base = avgArr.length ? avgArr : (medianArr.length ? medianArr : (pctArr.length ? pctArr : []));
+    if (!base.length) {
+        console.warn(`No transaction data available for: ${transactionName}`);
         return;
     }
 
-    const timestamps = avgTransactionData.data.map(d => new Date(d.timestamp));
-    const avgValues = avgTransactionData.data.map(d => d.value);
-    const avgAnomalies = avgTransactionData.data.map(d => d.anomaly !== 'Normal');
-    const avgAnomalyMessages = avgTransactionData.data.map(d => d.anomaly);
+    const timestamps = base.map(d => new Date(d.timestamp));
 
-    const medianValues = medianTransactionData.data.map(d => d.value);
-    const medianAnomalies = medianTransactionData.data.map(d => d.anomaly !== 'Normal');
-    const medianAnomalyMessages = medianTransactionData.data.map(d => d.anomaly);
-
-    const pctValues = pctTransactionData.data.map(d => d.value);
-    const pctAnomalies = pctTransactionData.data.map(d => d.anomaly !== 'Normal');
-    const pctAnomalyMessages = pctTransactionData.data.map(d => d.anomaly);
-
-    createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, [
-        {
+    const metrics = [];
+    if (avgArr.length) {
+        metrics.push({
             name: 'Avg Response Time',
-            data: avgValues,
-            anomalies: avgAnomalies,
-            anomalyMessages: avgAnomalyMessages,
+            data: avgArr.map(d => d.value),
+            anomalies: avgArr.map(d => d.anomaly !== 'Normal'),
+            anomalyMessages: avgArr.map(d => d.anomaly),
             color: 'rgba(2, 208, 81, 0.8)',
             yAxisUnit: 'ms'
-        },
-        {
+        });
+    }
+    if (medianArr.length) {
+        metrics.push({
             name: 'Median Response Time',
-            data: medianValues,
-            anomalies: medianAnomalies,
-            anomalyMessages: medianAnomalyMessages,
+            data: medianArr.map(d => d.value),
+            anomalies: medianArr.map(d => d.anomaly !== 'Normal'),
+            anomalyMessages: medianArr.map(d => d.anomaly),
             color: 'rgba(23, 100, 254, 0.8)',
             yAxisUnit: 'ms'
-        },
-        {
+        });
+    }
+    if (pctArr.length) {
+        metrics.push({
             name: 'Pct90 Response Time',
-            data: pctValues,
-            anomalies: pctAnomalies,
-            anomalyMessages: pctAnomalyMessages,
+            data: pctArr.map(d => d.value),
+            anomalies: pctArr.map(d => d.anomaly !== 'Normal'),
+            anomalyMessages: pctArr.map(d => d.anomaly),
             color: 'rgba(245, 165, 100, 1)',
             yAxisUnit: 'ms'
-        }
-    ],
-        styling, layoutConfig);
+        });
+    }
+
+    if (!metrics.length) {
+        console.warn(`No metrics to plot for transaction: ${transactionName}`);
+        return;
+    }
+
+    createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, metrics, styling, layoutConfig);
 }
 
 function createGraphs(chartData, styling, layoutConfig) {
-    const timestamps = chartData.overalAvgResponseTime.data.map(d => new Date(d.timestamp));
+    const overalAvg = chartData.overalAvgResponseTime?.data || [];
+    const overalMedian = chartData.overalMedianResponseTime?.data || [];
+    const overalPct90 = chartData.overal90PctResponseTime?.data || [];
+    const overalThroughput = chartData.overalThroughput?.data || [];
+    const overalUsers = chartData.overalUsers?.data || [];
+    const overalErrors = chartData.overalErrors?.data || [];
 
-    const avgResponseTime = chartData.overalAvgResponseTime.data.map(d => d.value);
-    const avgResponseTimeAnomalies = chartData.overalAvgResponseTime.data.map(d => d.anomaly !== 'Normal');
-    const avgResponseTimeAnomalyMessages = chartData.overalAvgResponseTime.data.map(d => d.anomaly);
+    // Choose timestamps source from first available series
+    const base = overalAvg.length ? overalAvg : (overalMedian.length ? overalMedian : (overalPct90.length ? overalPct90 : (overalThroughput.length ? overalThroughput : (overalUsers.length ? overalUsers : overalErrors))));
+    if (!base || !base.length) {
+        console.warn('No overall time series available to plot');
+        return;
+    }
+    const timestamps = base.map(d => new Date(d.timestamp));
 
-    const medianResponseTime = chartData.overalMedianResponseTime.data.map(d => d.value);
-    const medianResponseTimeAnomalies = chartData.overalMedianResponseTime.data.map(d => d.anomaly !== 'Normal');
-    const medianResponseTimeAnomalyMessages = chartData.overalMedianResponseTime.data.map(d => d.anomaly);
+    const throughput = overalThroughput.map(d => d.value);
+    const throughputAnomalies = overalThroughput.map(d => d.anomaly !== 'Normal');
+    const throughputAnomalyMessages = overalThroughput.map(d => d.anomaly);
+    const users = overalUsers.map(d => d.value);
 
-    const pctResponseTime = chartData.overal90PctResponseTime.data.map(d => d.value);
-    const pctResponseTimeAnomalies = chartData.overal90PctResponseTime.data.map(d => d.anomaly !== 'Normal');
-    const pctResponseTimeAnomalyMessages = chartData.overal90PctResponseTime.data.map(d => d.anomaly);
+    const responseTimeMetrics = [];
+    if (overalAvg.length) {
+        responseTimeMetrics.push({ name: 'Avg Response Time', data: overalAvg.map(d => d.value), anomalies: overalAvg.map(d => d.anomaly !== 'Normal'), anomalyMessages: overalAvg.map(d => d.anomaly), color: 'rgba(2, 208, 81, 0.8)', yAxisUnit: 'ms' });
+    }
+    if (overalMedian.length) {
+        responseTimeMetrics.push({ name: 'Median Response Time', data: overalMedian.map(d => d.value), anomalies: overalMedian.map(d => d.anomaly !== 'Normal'), anomalyMessages: overalMedian.map(d => d.anomaly), color: 'rgba(23, 100, 254, 0.8)', yAxisUnit: 'ms' });
+    }
+    if (overalPct90.length) {
+        responseTimeMetrics.push({ name: '90Pct Response Time', data: overalPct90.map(d => d.value), anomalies: overalPct90.map(d => d.anomaly !== 'Normal'), anomalyMessages: overalPct90.map(d => d.anomaly), color: 'rgba(245, 165, 100, 1)', yAxisUnit: 'ms' });
+    }
 
-    const throughput = chartData.overalThroughput.data.map(d => d.value);
-    const throughputAnomalies = chartData.overalThroughput.data.map(d => d.anomaly !== 'Normal');
-    const throughputAnomalyMessages = chartData.overalThroughput.data.map(d => d.anomaly);
+    // Plot throughput/users only if we have at least one of them
+    const throughputUsersMetrics = [];
+    if (throughput.length) throughputUsersMetrics.push({ name: 'Throughput', data: throughput, anomalies: throughputAnomalies, anomalyMessages: throughputAnomalyMessages, color: 'rgba(31, 119, 180, 1)', yAxisUnit: 'r/s' });
+    if (users.length) throughputUsersMetrics.push({ name: 'Users', data: users, anomalies: [], anomalyMessages: [], color: 'rgba(0, 155, 162, 0.8)', yAxisUnit: 'vu', useRightYAxis: true });
+    if (throughputUsersMetrics.length) {
+        createGraph('throughputChart', 'Throughput and Users', timestamps, throughputUsersMetrics, styling, layoutConfig);
+    }
 
-    const users = chartData.overalUsers.data.map(d => d.value);
+    if (responseTimeMetrics.length) {
+        createGraph('responseTimeChart', 'Response Time', timestamps, responseTimeMetrics, styling, layoutConfig);
+    }
 
-    const errors = chartData.overalErrors.data.map(d => d.value);
+    const errors = overalErrors.map(d => d.value);
+    if (errors.length) {
+        createGraph('overalErrors', 'Errors', timestamps, [
+            { name: 'Errors', data: errors, anomalies: [], anomalyMessages: [], color: 'rgba(255, 8, 8, 0.8)', yAxisUnit: 'er' }
+        ], styling, layoutConfig);
+    }
 
-    createGraph('throughputChart', 'Throughput and Users', timestamps, [
-        { name: 'Throughput', data: throughput, anomalies: throughputAnomalies, anomalyMessages: throughputAnomalyMessages, color: 'rgba(31, 119, 180, 1)', yAxisUnit: 'r/s' },
-        { name: 'Users', data: users, anomalies: [], anomalyMessages: [], color: 'rgba(0, 155, 162, 0.8)', yAxisUnit: 'vu', useRightYAxis: true }
-    ], styling, layoutConfig);
-
-    createGraph('responseTimeChart', 'Response Time', timestamps, [
-        { name: 'Avg Response Time', data: avgResponseTime, anomalies: avgResponseTimeAnomalies, anomalyMessages: avgResponseTimeAnomalyMessages, color: 'rgba(2, 208, 81, 0.8)', yAxisUnit: 'ms' },
-        { name: 'Median Response Time', data: medianResponseTime, anomalies: medianResponseTimeAnomalies, anomalyMessages: medianResponseTimeAnomalyMessages, color: 'rgba(23, 100, 254, 0.8)', yAxisUnit: 'ms' },
-        { name: '90Pct Response Time', data: pctResponseTime, anomalies: pctResponseTimeAnomalies, anomalyMessages: pctResponseTimeAnomalyMessages, color: 'rgba(245, 165, 100, 1)', yAxisUnit: 'ms' }
-    ], styling, layoutConfig);
-
-    createGraph('overalErrors', 'Errors', timestamps, [
-        { name: 'Errors', data: errors, anomalies: [], anomalyMessages: [], color: 'rgba(255, 8, 8, 0.8)', yAxisUnit: 'er' }
-    ], styling, layoutConfig);
-
-    createScatterChartForResponseTimes(chartData.avgResponseTimePerReq, 'responseTimeScatterChart', styling, layoutConfig);
+    if (Array.isArray(chartData.avgResponseTimePerReq) && chartData.avgResponseTimePerReq.length) {
+        createScatterChartForResponseTimes(chartData.avgResponseTimePerReq, 'responseTimeScatterChart', styling, layoutConfig);
+    }
 }
 
 function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
+    if (!Array.isArray(metrics) || metrics.length === 0) {
+        console.warn(`No metrics provided for graph: ${title}`);
+        return;
+    }
+
+    const safeLayoutConfig = layoutConfig || {};
+
     const traces = metrics.map(metric => {
         return {
             x: labels,
@@ -341,8 +369,10 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
         };
     });
 
-    const leftYAxisColor = metrics.find(metric => !metric.useRightYAxis).color;
-    const rightYAxisColor = metrics.find(metric => metric.useRightYAxis)?.color || leftYAxisColor;
+    const firstLeft = metrics.find(metric => !metric.useRightYAxis) || metrics[0];
+    const leftYAxisColor = firstLeft?.color || (styling?.axis_font_color || '#888');
+    const rightYAxisCandidate = metrics.find(metric => metric.useRightYAxis) || firstLeft;
+    const rightYAxisColor = rightYAxisCandidate?.color || leftYAxisColor;
 
     const layout = {
         title: {
@@ -371,7 +401,7 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
                 size: styling.yaxis_tickfont_size
             },
             color: leftYAxisColor,
-            ticksuffix: ` ${metrics.find(metric => !metric.useRightYAxis).yAxisUnit}`,
+            ticksuffix: ` ${firstLeft?.yAxisUnit || ''}`,
             zeroline: false,
             gridcolor: styling.gridcolor,
             rangemode: 'tozero' // Ensure Y-axis starts at 0
@@ -383,7 +413,7 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
                 size: styling.yaxis_tickfont_size
             },
             color: rightYAxisColor,
-            ticksuffix: ` ${metrics.find(metric => metric.useRightYAxis)?.yAxisUnit || ''}`,
+            ticksuffix: ` ${rightYAxisCandidate?.yAxisUnit || ''}`,
             zeroline: false,
             overlaying: 'y',
             side: 'right',
@@ -405,7 +435,7 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
             xanchor: 'left',
             yanchor: 'top'
         },
-        ...layoutConfig // Spread the layout configuration
+        ...safeLayoutConfig // Spread the layout configuration safely
     };
 
     Plotly.newPlot(divId, traces, layout, { responsive: true, useResizeHandler: true });

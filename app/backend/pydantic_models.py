@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr
-from typing   import Optional
+from typing   import Optional, Literal
 
 
 # Cleaning functions
@@ -167,9 +167,10 @@ class GraphModel(BaseModelWithStripping):
     id         : Optional[int]
     project_id : Optional[int]
     name       : str
-    grafana_id : int
-    dash_id    : int
-    view_panel : int
+    type       : Literal['default', 'custom'] = Field(default='custom')
+    grafana_id : Optional[int]
+    dash_id    : Optional[int]
+    view_panel : Optional[int]
     width      : int
     height     : int
     custom_vars: Optional[str]
@@ -180,6 +181,20 @@ class GraphModel(BaseModelWithStripping):
         if 'custom_vars' in values:
             values['custom_vars'] = values.pop('custom_vars')
         return values
+
+    @model_validator(mode='after')
+    def validate_by_type(self):
+        if self.type == 'custom':
+            missing = []
+            if self.grafana_id is None:
+                missing.append('grafana_id')
+            if self.dash_id is None:
+                missing.append('dash_id')
+            if self.view_panel is None:
+                missing.append('view_panel')
+            if missing:
+                raise ValueError(f"External graph requires fields: {', '.join(missing)}")
+        return self
 
 
 class TemplateObjectModel(BaseModelWithStripping):
@@ -238,8 +253,7 @@ class NFRObjectModel(BaseModelWithStripping):
     scope    : str
     metric   : str
     operation: str
-    threshold: int
-    weight   : Optional[int]
+    threshold: float
     nfr_id   : Optional[int] = Field(default=None)
 
 

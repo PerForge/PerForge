@@ -334,7 +334,7 @@ def _create_example_data(project_id: str) -> None:
         grafana_integration_example = DBGrafana.save(project_id, {
             "id": None,
             "name": "[EXAMPLE] INTEGRATION WITH GRAFANA FROM DOCKER-COMPOSE",
-            "server": "http://grafana:8086",
+            "server": "http://grafana:3000",
             "org_id": "1",
             "token": fake_token_example,
             "test_title": "testTitle",
@@ -343,12 +343,12 @@ def _create_example_data(project_id: str) -> None:
             "dashboards": [
                 {
                     "id": 1,
-                    "content": "/d/jmeter-test-results-standard-listener/jmeter-test-results-standard-listener",
+                    "content": "/d/jmeter-test-results/jmeter-test-results",
                     "grafana_id": None
                 },
                 {
                     "id": 2,
-                    "content": "/d/jmeter-test-comparison-standard-listener/jmeter-tests-comparison-standard-listener",
+                    "content": "/d/jmeter-test-comparison/jmeter-tests-comparison",
                     "grafana_id": None
                 }
             ]
@@ -365,24 +365,21 @@ def _create_example_data(project_id: str) -> None:
                     "scope": "each",
                     "metric": "avg",
                     "operation": "<",
-                    "threshold": 500,
-                    "weight": None
+                    "threshold": 500
                 },
                 {
                     "regex": False,
                     "scope": "Dummy Sampler 1",
                     "metric": "pct50",
                     "operation": "<",
-                    "threshold": 700,
-                    "weight": None
+                    "threshold": 700
                 },
                 {
                     "regex": True,
                     "scope": "Dummy.*",
                     "metric": "pct90",
                     "operation": "<",
-                    "threshold": 1000,
-                    "weight": None
+                    "threshold": 1000
                 }
             ]
         })
@@ -401,8 +398,16 @@ def _create_example_data(project_id: str) -> None:
             "prompt_id": None
         })
 
+        # Use existing default graphs (loaded via DBGraphs.load_default_graphs_from_yaml)
+        default_graphs = []
+        try:
+            default_graph_data = DBGraphs.get_configs(project_id, include_defaults=True)
+            default_graphs = [{'id': g['id'], 'name': g['name']} for g in default_graph_data if g.get('project_id') is None and g.get('type') == 'default']
+        except Exception as e:
+            logging.warning(f"Failed to fetch default graphs for project {project_id}: {e}")
+
         # Template example for Confluence
-        DBTemplates.save(project_id, {
+        confluence_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for Confluence",
             "nfr": nfr_example_id,
@@ -422,10 +427,16 @@ def _create_example_data(project_id: str) -> None:
                 {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
                 {"content":"</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"},
                 {"content":"<h2>Aggregated data example in Expand</h2>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${aggregated_data_table_}\n</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"}]
-        })
+        }
+
+        for default_graph in default_graphs:
+            confluence_template['data'].append({"content":f"<h2>{default_graph['name']}</h2>","graph_id":None,"template_id":None,"type":"text"})
+            confluence_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+
+        DBTemplates.save(project_id, confluence_template)
 
         # Template example for Jira
-        DBTemplates.save(project_id, {
+        jira_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for Jira",
             "nfr": nfr_example_id,
@@ -444,10 +455,16 @@ def _create_example_data(project_id: str) -> None:
                 {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
                 {"content":"h2. Aggregated data\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
                 ]
-        })
+        }
+
+        for default_graph in default_graphs:
+            jira_template['data'].append({"content":f"h2. {default_graph['name']}","graph_id":None,"template_id":None,"type":"text"})
+            jira_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+
+        DBTemplates.save(project_id, jira_template)
 
         # Template example for Azure
-        DBTemplates.save(project_id, {
+        azure_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for Azure",
             "nfr": nfr_example_id,
@@ -467,10 +484,16 @@ def _create_example_data(project_id: str) -> None:
                 {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
                 {"content":"## Aggregated data:\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
             ]
-        })
+        }
+
+        for default_graph in default_graphs:
+            azure_template['data'].append({"content":f"## {default_graph['name']}","graph_id":None,"template_id":None,"type":"text"})
+            azure_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+
+        DBTemplates.save(project_id, azure_template)
 
         # Template example for PDF
-        DBTemplates.save(project_id, {
+        pdf_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for PDF",
             "nfr": nfr_example_id,
@@ -496,10 +519,16 @@ def _create_example_data(project_id: str) -> None:
                 {"content":"<h2>Aggregated data</h2>","graph_id":None,"template_id":None,"type":"text"},
                 {"content":"${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
             ]
-        })
+        }
+
+        for default_graph in default_graphs:
+            pdf_template['data'].append({"content":f"<h2>{default_graph['name']}</h2>","graph_id":None,"template_id":None,"type":"text"})
+            pdf_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+
+        DBTemplates.save(project_id, pdf_template)
 
         # Template example for SMTP
-        DBTemplates.save(project_id, {
+        smtp_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for SMTP",
             "nfr": nfr_example_id,
@@ -519,7 +548,13 @@ def _create_example_data(project_id: str) -> None:
                 {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
                 {"content":"<h1>Aggregated data</h1>\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
             ]
-        })
+        }
+
+        for default_graph in default_graphs:
+            smtp_template['data'].append({"content":f"<h1>{default_graph['name']}</h1>","graph_id":None,"template_id":None,"type":"text"})
+            smtp_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+
+        DBTemplates.save(project_id, smtp_template)
 
     except Exception as exc:
         logging.warning(f"Failed to create example data for project {project_id}: {exc}")

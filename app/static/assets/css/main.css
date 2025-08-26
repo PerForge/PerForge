@@ -299,6 +299,9 @@ body.light-theme .form-hint code { background: rgba(13,110,253,0.08); color: var
 /* Utility */
 .hidden { display: none !important; }
 
+/* Tables: keep action buttons in one line */
+td.actions { white-space: nowrap; }
+
 /* Upload page specific styles */
 .upload-page { --header-h: 6vh; --upload-gap: 16px; height: auto; min-height: 100vh; overflow: auto; }
 .upload-page .main-background { min-height: 100vh; }

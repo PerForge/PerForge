@@ -135,23 +135,70 @@ class DBPrompts(db.Model):
 
     @classmethod
     def load_default_prompts_from_yaml(cls):
+        """
+        Reset and load default INTERNAL prompts from YAML.
+
+        - Upserts prompts with type == 'default' by unique name
+        - Removes internal prompts not present in YAML
+        - Loads prompts from app/backend/components/prompts/prompts.yaml
+        - YAML ids are ignored; DB ids are preserved on update
+
+        Returns: number of imported prompts (not currently returned)
+        """
         try:
-            # Delete all existing default prompts first
-            cls.query.filter_by(type='default').delete(synchronize_session=False)
+            file_path = os.path.join('app', 'backend', 'components', 'prompts', 'prompts.yaml')
+            if not os.path.exists(file_path):
+                logging.info(f"Prompts YAML not found at {file_path}; skipping import")
+                db.session.commit()
+                return 0
 
-            file_path = os.path.join("app", "backend", "components", "prompts", "prompts.yaml")
-            with open(file_path, 'r') as file:
-                data = yaml.safe_load(file)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f) or {}
 
-            for item in data.get('prompts', []):
-                prompt = cls(
-                    name=item['name'],
-                    project_id=None,
-                    type='default',
-                    place=item['place'],
-                    prompt=item['prompt']
-                )
-                db.session.add(prompt)
+            # Prepare existing internal prompts keyed by name for upsert
+            existing_prompts = db.session.query(cls).filter_by(type='default').all()
+            existing_by_name = {p.name: p for p in existing_prompts}
+
+            yaml_internal = [item for item in (data.get('prompts', []) or []) if item.get('type', 'default') == 'default']
+            seen_names = set()
+            created = 0
+            updated = 0
+
+            for item in yaml_internal:
+                try:
+                    name = item.get('name')
+                    if not name:
+                        continue
+                    seen_names.add(name)
+                    place = item.get('place')
+                    prompt_text = item.get('prompt')
+
+                    if name in existing_by_name:
+                        p = existing_by_name[name]
+                        p.place = place
+                        p.prompt = prompt_text
+                        updated += 1
+                    else:
+                        # Create new internal prompt (ID will be assigned, existing IDs preserved)
+                        instance = cls(
+                            name=name,
+                            type='default',
+                            place=place,
+                            prompt=prompt_text,
+                            project_id=None
+                        )
+                        db.session.add(instance)
+                        created += 1
+                except Exception:
+                    logging.warning(f"Skipping prompt due to validation/persistence error: {traceback.format_exc()}")
+
+            # Remove internal prompts that are not present in YAML
+            removed = 0
+            for p in existing_prompts:
+                if p.name not in seen_names:
+                    db.session.delete(p)
+                    removed += 1
+
             db.session.commit()
         except Exception:
             db.session.rollback()

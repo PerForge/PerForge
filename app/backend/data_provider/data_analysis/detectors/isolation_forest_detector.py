@@ -78,20 +78,26 @@ class IsolationForestDetector(BaseDetector):
         """
         df = df.copy()
 
-        # Separate rows with missing values to handle them later
-        missing_rows = df[df.isna().any(axis=1)].copy()
-        non_missing_rows = df.dropna().copy()
+        # Determine which features are actually available in the DataFrame
+        candidate_features = [metric]
+        if engine.isf_feature_metric != metric:
+            candidate_features.append(engine.isf_feature_metric)
+        available_features = [f for f in candidate_features if f in df.columns]
 
-        if not non_missing_rows.empty:
+        # If no expected features are available, return with default 'Normal' anomaly column
+        if not available_features:
+            result = df.copy()
+            result[f'{metric}_anomaly'] = 'Normal'
+            return result
+
+        # Separate rows: keep only rows that have no NaNs in the used features
+        non_missing_rows = df.dropna(subset=available_features).copy()
+        missing_rows = df[~df.index.isin(non_missing_rows.index)].copy()
+
+        if not non_missing_rows.empty and (metric in non_missing_rows.columns):
             # Prepare and normalize features for Isolation Forest
             scaler = StandardScaler()
-            features = [metric]
-
-            # Include secondary metric features if available
-            if engine.isf_feature_metric != metric:
-                features.extend([engine.isf_feature_metric])
-
-            normalized_features = scaler.fit_transform(non_missing_rows[features])
+            normalized_features = scaler.fit_transform(non_missing_rows[available_features])
 
             # Train Isolation Forest and get anomaly scores
             iso_forest = IsolationForest(contamination=engine.contamination, random_state=42)
@@ -101,7 +107,7 @@ class IsolationForestDetector(BaseDetector):
             # Convert scores to binary labels (-1: anomaly, 1: normal)
             non_missing_rows.loc[:, f'{metric}_anomaly_isf'] = np.where(anomaly_scores < engine.isf_threshold, -1, 1)
 
-            # Validate anomalies
+            # Validate anomalies only if primary metric exists
             non_missing_rows = self._validate_anomalies(
                 df=non_missing_rows,
                 metric=metric,
@@ -117,9 +123,14 @@ class IsolationForestDetector(BaseDetector):
 
         # Combine processed rows with missing rows and sort by index
         combined_df = pd.concat([non_missing_rows, missing_rows], axis=0).sort_index()
-        combined_df.loc[:, f'{metric}_anomaly'] = combined_df.loc[:, f'{metric}_anomaly'].fillna('Normal')
 
-        # Clean up temporary columns
-        columns_to_delete = [f'{metric}_anomaly_isf']
-        engine.delete_columns(df=combined_df, columns=columns_to_delete)
+        # Ensure anomaly column exists and default to 'Normal' where missing
+        if f'{metric}_anomaly' not in combined_df.columns:
+            combined_df[f'{metric}_anomaly'] = 'Normal'
+        else:
+            combined_df.loc[:, f'{metric}_anomaly'] = combined_df.loc[:, f'{metric}_anomaly'].fillna('Normal')
+
+        # Clean up temporary columns if present
+        if f'{metric}_anomaly_isf' in combined_df.columns:
+            engine.delete_columns(df=combined_df, columns=[f'{metric}_anomaly_isf'])
         return combined_df

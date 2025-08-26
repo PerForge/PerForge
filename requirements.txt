@@ -32,3 +32,5 @@ langchain==0.3.26
 langchain_core==0.3.66
 langchain_openai==0.3.27
 lxml==6.0.0
+plotly==6.2.0
+kaleido==1.0.0

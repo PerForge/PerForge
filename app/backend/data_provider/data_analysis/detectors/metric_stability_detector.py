@@ -107,7 +107,16 @@ class MetricStabilityDetector(BaseDetector):
             raise ValueError("DataFrame index must be a DatetimeIndex")
 
         df = df.copy()
-        y = df[metric].values
+        # Guard: skip if the metric column is missing
+        if metric not in df.columns:
+            return df
+
+        series = df[metric].dropna()
+        # Guard: insufficient data points
+        if len(series) < 3:
+            return df
+
+        y = series.values
 
         # Step 1: Remove statistical outliers for cleaner analysis
         cleaned_data = self._remove_outliers(y)
