@@ -84,6 +84,15 @@
                                     {{ form.listener(class="form-control") }}
                                     <label for="test_title_tag_name" class="input-label mt-2">Test Title Tag Name:</label>
                                     {{ form.test_title_tag_name(class="form-control", placeholder="e.g. testTitle") }}
+                                    <label for="transaction_regex" class="input-label mt-2">Transaction regex (optional):
+                                        <span class="tooltip-container">
+                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                            <span class="tooltip-content">
+                                              Optional regex to separate transactions and requests.
+                                            </span>
+                                          </span>
+                                    </label>
+                                    {{ form.transaction_regex(class="form-control", placeholder="e.g. ^(Home|Login)$") }}
                                     <label for="tmz" class="mt-2">Timezone:
                                         <span class="tooltip-container">
                                             <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -220,6 +229,7 @@
                 timeout: document.getElementById('timeout').value,
                 bucket: document.getElementById('bucket').value,
                 listener: document.getElementById('listener').value,
+                transaction_regex: document.getElementById('transaction_regex').value,
                 tmz: document.getElementById('tmz').value,
                 test_title_tag_name: document.getElementById('test_title_tag_name').value,
                 is_default: document.getElementById('is_default').value === 'True'
