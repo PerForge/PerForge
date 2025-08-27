@@ -506,6 +506,29 @@ class DataExtractionBase(ABC):
         """
         pass
 
+    @abstractmethod
+    def _fetch_throughput_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
+        """
+        Fetch the throughput per request between the specified time range.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
+        """
+        pass
+
+    @validate_dict_output
+    def get_throughput_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
+        """
+        Retrieve the throughput per request for the specified test.
+        The result is validated to ensure it is a list of dictionaries with the correct structure.
+        :param test_title: The title of the test.
+        :param start: The start time.
+        :param end: The end time.
+        :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
+        """
+        return self._fetch_throughput_per_req(test_title, start, end)
+
     @validate_integer_output
     def get_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
         """

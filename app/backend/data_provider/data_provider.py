@@ -488,6 +488,9 @@ class DataProvider:
         pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
 
+        throughputPerReq = self.ds_obj.get_throughput_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        metrics["throughputPerReq"] = self.transform_to_json(throughputPerReq)
+
         # Collect the aggregated table data
         metrics_table: MetricsTable = test_obj.get_table('aggregated_data')
         if metrics_table:

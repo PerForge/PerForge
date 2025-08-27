@@ -231,7 +231,10 @@ function updateTable(aggregatedTable) {
         </tr>
         <tr class="graph-container" id="graph-${stat.transaction}" style="display: none;" data-transaction="${stat.transaction}">
             <td colspan="9">
-                <div class="chart" id="chart-${stat.transaction}" style="height: 300px;"></div>
+                <div class="transaction-charts-row">
+                    <div class="chart" id="chart-${stat.transaction}-throughput" style="height: 300px;"></div>
+                    <div class="chart" id="chart-${stat.transaction}" style="height: 300px;"></div>
+                </div>
             </td>
         </tr>`;
         tbody.insertAdjacentHTML('beforeend', row);
@@ -333,13 +336,15 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
     const avgTransactionData = chartData.avgResponseTimePerReq?.find(transaction => transaction.name === transactionName);
     const medianTransactionData = chartData.medianResponseTimePerReq?.find(transaction => transaction.name === transactionName);
     const pctTransactionData = chartData.pctResponseTimePerReq?.find(transaction => transaction.name === transactionName);
+    const throughputTransactionData = chartData.throughputPerReq?.find(transaction => transaction.name === transactionName);
 
     const avgArr = avgTransactionData?.data || [];
     const medianArr = medianTransactionData?.data || [];
     const pctArr = pctTransactionData?.data || [];
+    const throughputArr = throughputTransactionData?.data || [];
 
     // Choose timestamps source from first available series
-    const base = avgArr.length ? avgArr : (medianArr.length ? medianArr : (pctArr.length ? pctArr : []));
+    const base = avgArr.length ? avgArr : (medianArr.length ? medianArr : (pctArr.length ? pctArr : (throughputArr.length ? throughputArr : [])));
     if (!base.length) {
         console.warn(`No transaction data available for: ${transactionName}`);
         return;
@@ -385,10 +390,36 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
     }
 
     createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, metrics, styling, layoutConfig);
+
+    // Draw throughput under the response time chart if available
+    if (throughputArr.length) {
+        const thrTimestamps = throughputArr.map(d => new Date(d.timestamp));
+        const thrMetrics = [{
+            name: 'Throughput',
+            data: throughputArr.map(d => d.value),
+            anomalies: throughputArr.map(d => d.anomaly !== 'Normal'),
+            anomalyMessages: throughputArr.map(d => d.anomaly),
+            color: 'rgba(31, 119, 180, 1)',
+            yAxisUnit: 'r/s'
+        }];
+        createGraph(`${chartElementId}-throughput`, `Throughput - ${transactionName}`, thrTimestamps, thrMetrics, styling, layoutConfig);
+    }
     // Apply theme to the lazily created chart as well
     if (typeof updateAllPlotlyChartsTheme === 'function') {
         updateAllPlotlyChartsTheme();
     }
+
+    // Ensure Plotly recalculates sizes after flex layout is applied
+    try {
+        if (typeof Plotly !== 'undefined') {
+            const respEl = document.getElementById(chartElementId);
+            const thrEl = document.getElementById(`${chartElementId}-throughput`);
+            requestAnimationFrame(() => {
+                if (thrEl) { try { Plotly.Plots.resize(thrEl); } catch (e) {} }
+                if (respEl) { try { Plotly.Plots.resize(respEl); } catch (e) {} }
+            });
+        }
+    } catch (e) { /* no-op */ }
 }
 
 function createGraphs(chartData, styling, layoutConfig) {

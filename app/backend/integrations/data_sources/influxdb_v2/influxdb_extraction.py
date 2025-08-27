@@ -294,6 +294,17 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(er)
             return []
 
+    def _fetch_throughput_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
+        try:
+            query = self.queries.get_throughput_per_req(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            result = self.transform_flux_tables_to_dict(flux_tables)
+            return result
+        except Exception as er:
+            logging.error(ErrorMessages.ER00072.value.format(self.name))
+            logging.error(er)
+            return []
+
     def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
         try:
             query = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket, self.test_title_tag_name)

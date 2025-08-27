@@ -108,7 +108,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
             |> filter(fn: (r) => r._field == "count")
             |> filter(fn: (r) => r["statut"] == "all")
-            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
             |> keep(columns: ["_value", "_time", "transaction"])
             |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)
             |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 60))}}))
@@ -123,7 +123,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
             |> filter(fn: (r) => r._field == "count")
             |> filter(fn: (r) => r["statut"] == "ko" or r["statut"] == "all")
-            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
             |> group(columns: ["transaction", "statut"])
             |> sum()
             |> pivot(rowKey: ["transaction"], columnKey: ["statut"], valueColumn: "_value")
@@ -148,7 +148,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
             |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
             |> filter(fn: (r) => r["statut"] == "all")
-            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
             |> keep(columns: ["_value", "transaction", "_field"])
             |> group(columns: ["transaction","_field"])
             |> median()
@@ -178,7 +178,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
             |> filter(fn: (r) => r._field == "avg")
             |> filter(fn: (r) => r["statut"] == "all")
-            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
             |> keep(columns: ["_value", "transaction"])
             |> group(columns: ["transaction"])
             |> stddev()
@@ -203,7 +203,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_field", "_value", "_time"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
@@ -226,7 +226,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "avg")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)
       |> set(key: "_field", value: "Average response time")'''
@@ -238,7 +238,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "pct50.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: median, createEmpty: false)
       |> set(key: "_field", value: "Median response time")'''
@@ -250,7 +250,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "pct90.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(
       every: 30s,
@@ -277,7 +277,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "avg")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)'''
 
@@ -288,7 +288,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "pct50.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(every: 30s, fn: median, createEmpty: false)'''
 
@@ -299,7 +299,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "pct90.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(
           every: 30s,
@@ -307,6 +307,19 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
               tables
               |> quantile(q: 0.90, method: "exact_selector"),
           createEmpty: false)'''
+
+  def get_throughput_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
+      return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r._measurement == "jmeter")
+      |> filter(fn: (r) => r._field == "count")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
+      |> keep(columns: ["transaction", "_value", "_time"])
+      |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
+      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
+      |> set(key: "_field", value: "Requests per second")'''
 
   def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
@@ -325,7 +338,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_field", "_value", "_time"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
@@ -340,7 +353,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''
@@ -353,7 +366,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
-      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''

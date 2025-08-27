@@ -14,6 +14,8 @@
 
 from abc import ABC, abstractmethod
 
+from numpy import str_
+
 class BackEndQueriesBase(ABC):
     @abstractmethod
     def get_test_log(
@@ -82,6 +84,10 @@ class BackEndQueriesBase(ABC):
 
     @abstractmethod
     def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
+        pass
+
+    @abstractmethod
+    def get_throughput_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
