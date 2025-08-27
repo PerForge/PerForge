@@ -45,11 +45,11 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -57,15 +57,15 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -73,15 +73,15 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -89,15 +89,15 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod

@@ -36,9 +36,9 @@ def run_migrations():
                 connection.execute(alter_command)
                 log.info(f"Migration for '{column_name}' applied successfully.")
 
-            # --- Migration: Add 'transaction_regex' to 'influxdb' table ---
+            # --- Migration: Add 'regex' to 'influxdb' table ---
             table_name = 'influxdb'
-            column_name = 'transaction_regex'
+            column_name = 'regex'
             columns = [c['name'] for c in inspector.get_columns(table_name)]
 
             if column_name not in columns:

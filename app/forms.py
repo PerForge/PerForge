@@ -38,7 +38,7 @@ class InfluxDBForm(FlaskForm):
     listener   = SelectField('Backend listener', choices=[('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient'), ('sitespeed_influxdb_v2', 'sitespeed_influxdb_v2')], default='InfluxdbBackendListenerClient')
     tmz        = StringField('Timezone', default="UTC")
     test_title_tag_name = StringField('Test Title Tag Name', default="testTitle")
-    transaction_regex   = StringField('Transaction regex')
+    regex   = StringField('Transaction regex')
     custom_vars= FieldList(StringField('Custom vars'), min_entries=0)
     is_default = SelectField("Is default", choices=[(False, 'No'), (True, 'Yes')], coerce=bool)
 

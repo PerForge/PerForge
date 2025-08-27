@@ -100,105 +100,110 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
 
-  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''import "join"
-      rpm_set = from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "count")
-      |> filter(fn: (r) => r["statut"] == "all")
-      |> keep(columns: ["_value", "_time", "transaction"])
-      |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)
-      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 60))}}))
-      |> median()
-      |> group()
-      |> rename(columns: {{"_value": "rpm"}})
-      |> keep(columns: ["rpm", "transaction"])
+            rpm_set = from(bucket: "{bucket}")
+            |> range(start: {start}, stop: {stop})
+            |> filter(fn: (r) => r._measurement == "jmeter")
+            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+            |> filter(fn: (r) => r._field == "count")
+            |> filter(fn: (r) => r["statut"] == "all")
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            |> keep(columns: ["_value", "_time", "transaction"])
+            |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)
+            |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 60))}}))
+            |> median()
+            |> group()
+            |> rename(columns: {{"_value": "rpm"}})
+            |> keep(columns: ["rpm", "transaction"])
 
-      errors_set = from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "count")
-      |> filter(fn: (r) => r["statut"] == "ko" or r["statut"] == "all")
-      |> group(columns: ["transaction", "statut"])
-      |> sum()
-      |> pivot(rowKey: ["transaction"], columnKey: ["statut"], valueColumn: "_value")
-      |> group()
-      |> map(fn: (r) => ({{ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }}))
-      |> toInt()
-      |> rename(columns: {{"all": "count"}})
-      |> keep(columns: ["errors","count", "transaction"])
+            errors_set = from(bucket: "{bucket}")
+            |> range(start: {start}, stop: {stop})
+            |> filter(fn: (r) => r._measurement == "jmeter")
+            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+            |> filter(fn: (r) => r._field == "count")
+            |> filter(fn: (r) => r["statut"] == "ko" or r["statut"] == "all")
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            |> group(columns: ["transaction", "statut"])
+            |> sum()
+            |> pivot(rowKey: ["transaction"], columnKey: ["statut"], valueColumn: "_value")
+            |> group()
+            |> map(fn: (r) => ({{ r with errors: if exists r.ko then (r.ko/r.all*100.0) else 0.0 }}))
+            |> toInt()
+            |> rename(columns: {{"all": "count"}})
+            |> keep(columns: ["errors","count", "transaction"])
 
-      stats1 = join.full(
-        left: rpm_set,
-        right: errors_set,
-        on: (l, r) => l.transaction == r.transaction,
-        as: (l, r) => {{
-            return {{transaction: l.transaction, rpm: l.rpm, errors: r.errors, count: r.count}}
-        }},
-      )
+            stats1 = join.full(
+                left: rpm_set,
+                right: errors_set,
+                on: (l, r) => l.transaction == r.transaction,
+                as: (l, r) => {{
+                    return {{transaction: l.transaction, rpm: l.rpm, errors: r.errors, count: r.count}}
+                }},
+            )
 
-      stats2 = from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
-      |> filter(fn: (r) => r["statut"] == "all")
-      |> keep(columns: ["_value", "transaction", "_field"])
-      |> group(columns: ["transaction","_field"])
-      |> median()
-      |> toInt()
-      |> group()
-      |> pivot(rowKey: ["transaction"], columnKey: ["_field"], valueColumn: "_value")
-      |> map(fn: (r) => ({{
-          r with
-          pct50: if exists r["pct50.0"] then r["pct50.0"] else 0,
-          pct75: if exists r["pct75.0"] then r["pct75.0"] else 0,
-          pct90: if exists r["pct90.0"] then r["pct90.0"] else 0,
-      }}))
-      |> drop(columns: ["pct50.0", "pct75.0", "pct90.0"])
+            stats2 = from(bucket: "{bucket}")
+            |> range(start: {start}, stop: {stop})
+            |> filter(fn: (r) => r._measurement == "jmeter")
+            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+            |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
+            |> filter(fn: (r) => r["statut"] == "all")
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            |> keep(columns: ["_value", "transaction", "_field"])
+            |> group(columns: ["transaction","_field"])
+            |> median()
+            |> toInt()
+            |> group()
+            |> pivot(rowKey: ["transaction"], columnKey: ["_field"], valueColumn: "_value")
+            |> map(fn: (r) => ({{
+                r with
+                pct50: if exists r["pct50.0"] then r["pct50.0"] else 0,
+                pct75: if exists r["pct75.0"] then r["pct75.0"] else 0,
+                pct90: if exists r["pct90.0"] then r["pct90.0"] else 0,
+            }}))
+            |> drop(columns: ["pct50.0", "pct75.0", "pct90.0"])
 
-      stats3 = join.full(
-        left: stats1,
-        right: stats2,
-        on: (l, r) => l.transaction == r.transaction,
-        as: (l, r) => {{
-            return {{transaction: l.transaction, rpm: l.rpm, errors: l.errors, count: l.count, avg: r.avg, pct50: r.pct50, pct75: r.pct75, pct90: r.pct90}}
-        }},
-      )
+            stats3 = join.full(
+                left: stats1,
+                right: stats2,
+                on: (l, r) => l.transaction == r.transaction,
+                as: (l, r) => {{
+                    return {{transaction: l.transaction, rpm: l.rpm, errors: l.errors, count: l.count, avg: r.avg, pct50: r.pct50, pct75: r.pct75, pct90: r.pct90}}
+                }},
+            )
 
-      stddev = from(bucket: "{bucket}")
-      |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r._field == "avg")
-      |> filter(fn: (r) => r["statut"] == "all")
-      |> keep(columns: ["_value", "transaction"])
-      |> group(columns: ["transaction"])
-      |> stddev()
-      |> toInt()
-      |> group()
-      |> rename(columns: {{"_value": "stddev"}})
+            stddev = from(bucket: "{bucket}")
+            |> range(start: {start}, stop: {stop})
+            |> filter(fn: (r) => r._measurement == "jmeter")
+            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+            |> filter(fn: (r) => r._field == "avg")
+            |> filter(fn: (r) => r["statut"] == "all")
+            {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
+            |> keep(columns: ["_value", "transaction"])
+            |> group(columns: ["transaction"])
+            |> stddev()
+            |> toInt()
+            |> group()
+            |> rename(columns: {{"_value": "stddev"}})
 
-      join.full(
-        left: stats3,
-        right: stddev,
-        on: (l, r) => l.transaction == r.transaction,
-        as: (l, r) => {{
-            return {{transaction: l.transaction, rpm: l.rpm, errors: l.errors, count: l.count, avg: l.avg, pct50: l.pct50, pct75: l.pct75, pct90: l.pct90, stddev: r.stddev }}
-        }},
-      )'''
+            join.full(
+                left: stats3,
+                right: stddev,
+                on: (l, r) => l.transaction == r.transaction,
+                as: (l, r) => {{
+                    return {{transaction: l.transaction, rpm: l.rpm, errors: l.errors, count: l.count, avg: l.avg, pct50: l.pct50, pct75: l.pct75, pct90: l.pct90, stddev: r.stddev }}
+                }},
+            )'''
 
-  def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "count")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
-      |> filter(fn: (r) => r["transaction"] !~ /TR/ and r["transaction"] != "all")
+      |> filter(fn: (r) => r["transaction"] != "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> keep(columns: ["_field", "_value", "_time"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
@@ -214,35 +219,38 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> aggregateWindow(every: 30s, fn: max, createEmpty: false)
       |> set(key: "_field", value: "Active threads")'''
 
-  def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "avg")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)
       |> set(key: "_field", value: "Average response time")'''
 
-  def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct50.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: median, createEmpty: false)
       |> set(key: "_field", value: "Median response time")'''
 
-  def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct90.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(
       every: 30s,
@@ -255,40 +263,43 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
   def get_error_count(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
-      |> filter(fn: (r) => r._measurement == "jmeter")
-      |> filter(fn: (r) => r._field == "countError")
+      |> filter(fn: (r) => r["_measurement"] == "jmeter")
+      |> filter(fn: (r) => r["_field"] == "countError")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> group(columns: ["_field"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
       |> set(key: "_field", value: "Errors Per Second")'''
 
-  def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "avg")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)'''
 
-  def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct50.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(every: 30s, fn: median, createEmpty: false)'''
 
-  def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "pct90.0")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(
           every: 30s,
@@ -306,7 +317,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> keep(columns: ["_value"])
       |> max(column: "_value")'''
 
-  def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
@@ -314,13 +325,14 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> keep(columns: ["_field", "_value", "_time"])
       |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
       |> keep(columns: ["_value"])
       |> median(column: "_value")'''
 
-  def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
@@ -328,11 +340,12 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''
 
-  def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+  def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
@@ -340,6 +353,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => r["statut"] == "all")
       |> filter(fn: (r) => r["transaction"] != "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)\n' if regex else ''}
       |> group(columns: ["_field"])
       |> keep(columns: ["_value"])
       |> median()'''

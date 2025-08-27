@@ -80,6 +80,7 @@ class InfluxdbV2(DataExtractionBase):
             self.timeout = config["timeout"]
             self.bucket = config["bucket"]
             self.listener = config["listener"]
+            self.regex = config["regex"]
             self.test_title_tag_name = config["test_title_tag_name"]
             self.tmz = config["tmz"]
             self.custom_vars = config["custom_vars"]
@@ -139,7 +140,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_aggregated_data(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_aggregated_data(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_aggregated_data(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             return self._execute_query(query)
         except Exception as er:
             logging.error(ErrorMessages.ER00058.value.format(self.name))
@@ -196,7 +197,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_rps(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query = self.queries.get_rps(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_rps(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             df = self.process_data(flux_tables)
             return df
@@ -218,7 +219,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_average_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query = self.queries.get_average_response_time(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_average_response_time(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             df = self.process_data(flux_tables)
             return df
@@ -229,7 +230,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query = self.queries.get_median_response_time(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_median_response_time(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             df = self.process_data(flux_tables)
             return df
@@ -240,7 +241,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_pct90_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query = self.queries.get_pct90_response_time(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_pct90_response_time(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             df = self.process_data(flux_tables)
             return df
@@ -262,7 +263,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_average_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_average_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_average_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             result = self.transform_flux_tables_to_dict(flux_tables)
             return result
@@ -273,7 +274,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_median_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_median_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             result = self.transform_flux_tables_to_dict(flux_tables)
             return result
@@ -284,7 +285,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_pct90_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_pct90_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_pct90_response_time_per_req(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             result = self.transform_flux_tables_to_dict(flux_tables)
             return result
@@ -308,7 +309,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_throughput_stats(self, test_title: str, start: str, end: str) -> int:
         try:
-            query = self.queries.get_median_throughput_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_median_throughput_stats(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table:
@@ -321,7 +322,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_median_response_time_stats(self, test_title: str, start: str, end: str) -> float:
         try:
-            query = self.queries.get_median_response_time_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_median_response_time_stats(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
@@ -334,7 +335,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_pct90_response_time_stats(self, test_title: str, start: str, end: str) -> float:
         try:
-            query = self.queries.get_pct90_response_time_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_pct90_response_time_stats(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:

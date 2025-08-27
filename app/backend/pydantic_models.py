@@ -44,7 +44,7 @@ class InfluxdbModel(BaseModelWithStripping):
     listener  : str
     tmz       : str = Field(default="UTC")
     test_title_tag_name: str = Field(default="testTitle")
-    transaction_regex: Optional[str] = Field(default=None)
+    regex: Optional[str] = Field(default=None)
     custom_vars: list[str] = Field(default_factory=list)
     is_default: bool
 
