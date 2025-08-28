@@ -55,111 +55,6 @@
                             <div class="row">
                             <div class="col-12 col-xl-25p pr-1">
                                 <div class="row g-2">
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="variables-container">
-                                                    <label>Available variables:</label>
-
-                                                    <div class="variables-section  mt-2">
-                                                        <h6>Common variables:</h6>
-                                                        <div v-for="variable in commonVariables" :key="variable.name" class="variable-item">
-                                                            <label class="var-name" @click="copyToClipboard(variable.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" @click.stop="copyToClipboard(variable.name)"></i> ${ variable.name }</label>
-                                                            <label class="var-description">${ variable.description }</label>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="variables-section mt-2">
-                                                        <h6>Summary variables:</h6>
-                                                        <div v-for="variable in summaryVariables" :key="variable.name" class="variable-item">
-                                                            <label class="var-name" @click="copyToClipboard(variable.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" @click.stop="copyToClipboard(variable.name)"></i> ${ variable.name }</label>
-                                                            <label class="var-description">${ variable.description }</label>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="variables-section mt-2">
-                                                        <div class="d-flex justify-content-between align-items-center">
-                                                            <h6 class="mb-0">Backend variables:</h6>
-                                                            <i class="fas" :class="showBackendVariables ? 'fa-chevron-up' : 'fa-chevron-down'" @click="showBackendVariables = !showBackendVariables" style="cursor: pointer;"></i>
-                                                        </div>
-                                                        <div v-show="showBackendVariables">
-                                                            <div v-for="variable in backendVariables" :key="variable.name" class="variable-item">
-                                                                <label class="var-name" @click="copyToClipboard(variable.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" @click.stop="copyToClipboard(variable.name)"></i> ${ variable.name }</label>
-                                                                <label class="var-description">${ variable.description }</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <!-- Merged Test Tables into Available variables -->
-                                                    <div class="variables-section mt-2">
-                                                        <div class="d-flex justify-content-between align-items-center">
-                                                            <h6 class="mb-0">Frontend variables:</h6>
-                                                            <i class="fas" :class="showTables ? 'fa-chevron-up' : 'fa-chevron-down'" @click="showTables = !showTables" style="cursor: pointer;"></i>
-                                                        </div>
-                                                        <div v-show="showTables">
-                                                            <div class="text-description mt-2">Tables can be used in templates to display test metrics data. Always specify the aggregation type: median, mean, p90, p95, or p99. Please ensure that the desired aggregation type is available in InfluxDB</div>
-                                                            <div v-for="table in backendTables" :key="'b-' + table.name" class="variable-item">
-                                                                <label class="var-name" @click="copyToClipboard(table.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy table name" @click.stop="copyToClipboard(table.name)"></i> ${ table.name }</label>
-                                                                <label class="var-description">${ table.description }</label>
-                                                            </div>
-                                                            <div v-for="table in frontendTables" :key="'f-' + table.name" class="variable-item">
-                                                                <label class="var-name" @click="copyToClipboard(table.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy table name" @click.stop="copyToClipboard(table.name)"></i> ${ table.name }</label>
-                                                                <label class="var-description">${ table.description }</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <!-- Removed separate 'Available Tables' card: tables are now inside 'Available variables' -->
-                                </div>
-                            </div>
-
-                            <!-- Center column: Template Editor (60%) -->
-                            <div class="col-12 col-xl-50p pr-1">
-                                <div class="mb-3">
-                                    <label for="template-name" class="mb-2">Template name
-                                        <span class="tooltip-container">
-                                            <a href="https://perforge.app/docs/configuration/templates" target="_blank">
-                                                <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            </a>
-                                            <span class="tooltip-content" style="font-size: 20px;">
-                                                Click to learn more
-                                            </span>
-                                        </span>
-                                    </label>
-                                    <div class="d-flex align-items-center">
-                                        <input v-model="name" id="template-name" class="form-control" type="text" required>
-                                        <button class="btn btn-primary ms-2" type="button" @click.prevent="submitForm">Save</button>
-                                    </div>
-                                </div>
-                                <h4 class="mb-2">Report title</h4>
-                                <input v-model="title" id="template-title" class="form-control mb-3" type="text" placeholder="Write title here..." required>
-                                <h4 class="mb-2">Report template</h4>
-                                <div class="sortable-container">
-                                    <div v-for="(element, index) in template" :key="element.id" class="template-item" :data-index="index">
-                                        <div v-if="element.type === 'text'" class="template-group">
-                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                            <textarea v-model="element.content" required></textarea>
-                                            <button class='btn-close-id btn-close ms-2' @click="removeElement(element)" type="button"></button>
-                                        </div>
-                                        <div v-else-if="element.type === 'graph'" class="template-group">
-                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                            <span class="badge badge-primary">GRAPH</span>
-                                            <span class="badge badge-success ms-2" v-if="getGraphTypeById(element.graph_id)">${ getGraphTypeById(element.graph_id) }</span>
-                                            <div class="template-el-label">Name: ${ getGraphNameById(element.graph_id) || 'Graph not found' }</div>
-                                            <div class="flex-end">
-                                                <button class='btn-close-id btn-close' @click="removeElement(element)" type="button"></button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary mt-3" @click="addTextElement" type="button">Add Text</button>
-                                <button class="btn btn-success mt-3 ms-2" @click="showGraphsModal = true" type="button">Add Graphs</button>
-                                <!-- Switches moved to right column -->
-                            </div>
-                            <div class="col-12 col-xl-25p">
-                                <div class="row g-2">
                                     <div class="col-12 mb-3">
                                         <div class="card">
                                             <div class="card-body">
@@ -250,6 +145,111 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Center column: Template Editor (60%) -->
+                            <div class="col-12 col-xl-50p pr-1">
+                                <div class="mb-3">
+                                    <label for="template-name" class="mb-2">Template name
+                                        <span class="tooltip-container">
+                                            <a href="https://perforge.app/docs/configuration/templates" target="_blank">
+                                                <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                            </a>
+                                            <span class="tooltip-content" style="font-size: 20px;">
+                                                Click to learn more
+                                            </span>
+                                        </span>
+                                    </label>
+                                    <div class="d-flex align-items-center">
+                                        <input v-model="name" id="template-name" class="form-control" type="text" required>
+                                        <button class="btn btn-primary ms-2" type="button" @click.prevent="submitForm">Save</button>
+                                    </div>
+                                </div>
+                                <h4 class="mb-2">Report title</h4>
+                                <input v-model="title" id="template-title" class="form-control mb-3" type="text" placeholder="Write title here..." required>
+                                <h4 class="mb-2">Report template</h4>
+                                <div class="sortable-container">
+                                    <div v-for="(element, index) in template" :key="element.id" class="template-item" :data-index="index">
+                                        <div v-if="element.type === 'text'" class="template-group">
+                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
+                                            <textarea v-model="element.content" required></textarea>
+                                            <button class='btn-close-id btn-close ms-2' @click="removeElement(element)" type="button"></button>
+                                        </div>
+                                        <div v-else-if="element.type === 'graph'" class="template-group">
+                                            <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
+                                            <span class="badge badge-primary">GRAPH</span>
+                                            <span class="badge badge-success ms-2" v-if="getGraphTypeById(element.graph_id)">${ getGraphTypeById(element.graph_id) }</span>
+                                            <div class="template-el-label">Name: ${ getGraphNameById(element.graph_id) || 'Graph not found' }</div>
+                                            <div class="flex-end">
+                                                <button class='btn-close-id btn-close' @click="removeElement(element)" type="button"></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary mt-3" @click="addTextElement" type="button">Add Text</button>
+                                <button class="btn btn-success mt-3 ms-2" @click="showGraphsModal = true" type="button">Add Graphs</button>
+                                <!-- Switches moved to left column -->
+                            </div>
+                            <div class="col-12 col-xl-25p">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="variables-container">
+                                                    <label>Available variables:</label>
+
+                                                    <div class="variables-section  mt-2">
+                                                        <h6>Common variables:</h6>
+                                                        <div v-for="variable in commonVariables" :key="variable.name" class="variable-item">
+                                                            <label class="var-name" @click="copyToClipboard(variable.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" @click.stop="copyToClipboard(variable.name)"></i> ${ variable.name }</label>
+                                                            <label class="var-description">${ variable.description }</label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="variables-section mt-2">
+                                                        <h6>Summary variables:</h6>
+                                                        <div v-for="variable in summaryVariables" :key="variable.name" class="variable-item">
+                                                            <label class="var-name" @click="copyToClipboard(variable.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" @click.stop="copyToClipboard(variable.name)"></i> ${ variable.name }</label>
+                                                            <label class="var-description">${ variable.description }</label>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="variables-section mt-2">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <h6 class="mb-0">Backend variables:</h6>
+                                                            <i class="fas" :class="showBackendVariables ? 'fa-chevron-up' : 'fa-chevron-down'" @click="showBackendVariables = !showBackendVariables" style="cursor: pointer;"></i>
+                                                        </div>
+                                                        <div v-show="showBackendVariables">
+                                                            <div v-for="variable in backendVariables" :key="variable.name" class="variable-item">
+                                                                <label class="var-name" @click="copyToClipboard(variable.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" @click.stop="copyToClipboard(variable.name)"></i> ${ variable.name }</label>
+                                                                <label class="var-description">${ variable.description }</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Merged Test Tables into Available variables -->
+                                                    <div class="variables-section mt-2">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <h6 class="mb-0">Frontend variables:</h6>
+                                                            <i class="fas" :class="showTables ? 'fa-chevron-up' : 'fa-chevron-down'" @click="showTables = !showTables" style="cursor: pointer;"></i>
+                                                        </div>
+                                                        <div v-show="showTables">
+                                                            <div class="text-description mt-2">Tables can be used in templates to display test metrics data. Always specify the aggregation type: median, mean, p90, p95, or p99. Please ensure that the desired aggregation type is available in InfluxDB</div>
+                                                            <div v-for="table in backendTables" :key="'b-' + table.name" class="variable-item">
+                                                                <label class="var-name" @click="copyToClipboard(table.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy table name" @click.stop="copyToClipboard(table.name)"></i> ${ table.name }</label>
+                                                                <label class="var-description">${ table.description }</label>
+                                                            </div>
+                                                            <div v-for="table in frontendTables" :key="'f-' + table.name" class="variable-item">
+                                                                <label class="var-name" @click="copyToClipboard(table.name)"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy table name" @click.stop="copyToClipboard(table.name)"></i> ${ table.name }</label>
+                                                                <label class="var-description">${ table.description }</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     </div>
                                 </div>
                             </div>
