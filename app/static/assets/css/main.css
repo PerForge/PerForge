@@ -3416,13 +3416,19 @@ body.light-theme .theme-switcher-btn {
  * Use alongside Bootstrap grid classes, e.g., `col-12 col-xl-20p`.
  */
 @media (min-width: 1200px) {
-  .col-xl-25p {
-    -webkit-box-flex: 0;
-    -ms-flex: 0 0 22.5%;
-    flex: 0 0 22.5%;
-    max-width: 22.5%;
+  .col-xl-22p {
+        -webkit-box-flex: 0;
+        -ms-flex: 0 0 22%;
+        flex: 0 0 22%;
+        max-width: 22%;
   }
-  .col-xl-50p {
+  .col-xl-23p {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 23%;
+    flex: 0 0 23%;
+    max-width: 23%;
+  }
+  .col-xl-55p {
     -webkit-box-flex: 0;
     -ms-flex: 0 0 55%;
     flex: 0 0 55%;
