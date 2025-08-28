@@ -393,87 +393,37 @@ class InfluxdbV2(DataExtractionBase):
             logging.warning('ERROR: deleteTestPoint method failed')
             logging.warning(er)
 
-    ###HELPER FUNCTIONS
+    # ===================================================================
+    # COMMON FUNCTIONS
+    # ===================================================================
 
-    def _execute_query(self, query: str) -> List[Dict[str, Any]]:
+    def _fetch_overview_data(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+        """
+        Fetch overview table metrics from frontend test using SitespeedFluxQueries.
+        :param test_title: The title of the test
+        :param start: Start time
+        :param end: End time
+        :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
+        :return: Dictionary of overview table metrics
+        """
         try:
-            flux_tables = self.influxdb_connection.query_api().query(query)
-            records = []
-            for table in flux_tables:
-                for row in table.records:
-                    row_data = row.values
-                    row_data.pop("result", None)
-                    row_data.pop("table", None)
-                    records.append(row_data)
+            query = self.queries.get_overview_data(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, self.regex)
+            records = self._execute_query(query)
+
+            if not records:
+                return []
+
+            # Remove _start and _stop fields from each record
+            for record in records:
+                if '_start' in record:
+                    del record['_start']
+                if '_stop' in record:
+                    del record['_stop']
+
             return records
-        except Exception as er:
-            logging.error(ErrorMessages.ER00056.value.format(query))
-            logging.error(er)
-            raise
-
-    def process_data(self, flux_tables):
-        data = []
-        for flux_table in flux_tables:
-            for flux_record in flux_table:
-                timestamp = flux_record['_time']
-                value = flux_record['_value']
-                data.append({'timestamp': timestamp, 'value': value})
-
-        df = pd.DataFrame(data, columns=['timestamp', 'value'])
-        df.set_index('timestamp', inplace=True)
-        return df
-
-    def process_data_req(self, result):
-        grouped_records = defaultdict(list)
-
-        for table in result:
-            for record in table.records:
-                timestamp = record.get_time()
-                value = record.get_value()
-                transaction = record.values.get('transaction')
-
-                grouped_records[transaction].append({
-                    'timestamp': timestamp.isoformat(),
-                    'value': value,
-                    "anomaly": "Normal"
-                })
-
-        json_result = []
-        for transaction, data in grouped_records.items():
-            json_result.append({
-                'name': transaction,
-                'data': data
-            })
-
-        return json_result
-
-
-    def transform_flux_tables_to_dict(self, flux_tables) -> List[Dict[str, Any]]:
-        """
-        Transform flux_tables to a list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
-        :param flux_tables: The flux tables to transform.
-        :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
-        """
-        data_dict = {}
-
-        for flux_table in flux_tables:
-            for flux_record in flux_table:
-                timestamp = flux_record['_time']
-                value = flux_record['_value']
-                transaction = flux_record['transaction']
-
-                if transaction not in data_dict:
-                    data_dict[transaction] = []
-
-                data_dict[transaction].append({'timestamp': timestamp, 'value': value})
-
-        result = []
-        for transaction, records in data_dict.items():
-            df = pd.DataFrame(records)
-            df.set_index('timestamp', inplace=True)
-            result.append({'transaction': transaction, 'data': df})
-
-        return result
+        except Exception as e:
+            logging.error(f"Error getting overview table: {str(e)}")
+            return {}
 
     # ===================================================================
     # Frontend metrics extraction methods
@@ -758,3 +708,88 @@ class InfluxdbV2(DataExtractionBase):
         except Exception as e:
             logging.error(f"Error getting third party content types: {str(e)}")
             return {}
+
+    # ===================================================================
+    # HELPER FUNCTIONS
+    # ===================================================================
+
+
+    def _execute_query(self, query: str) -> List[Dict[str, Any]]:
+        try:
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            records = []
+            for table in flux_tables:
+                for row in table.records:
+                    row_data = row.values
+                    row_data.pop("result", None)
+                    row_data.pop("table", None)
+                    records.append(row_data)
+            return records
+        except Exception as er:
+            logging.error(ErrorMessages.ER00056.value.format(query))
+            logging.error(er)
+            raise
+
+    def process_data(self, flux_tables):
+        data = []
+        for flux_table in flux_tables:
+            for flux_record in flux_table:
+                timestamp = flux_record['_time']
+                value = flux_record['_value']
+                data.append({'timestamp': timestamp, 'value': value})
+
+        df = pd.DataFrame(data, columns=['timestamp', 'value'])
+        df.set_index('timestamp', inplace=True)
+        return df
+
+    def process_data_req(self, result):
+        grouped_records = defaultdict(list)
+
+        for table in result:
+            for record in table.records:
+                timestamp = record.get_time()
+                value = record.get_value()
+                transaction = record.values.get('transaction')
+
+                grouped_records[transaction].append({
+                    'timestamp': timestamp.isoformat(),
+                    'value': value,
+                    "anomaly": "Normal"
+                })
+
+        json_result = []
+        for transaction, data in grouped_records.items():
+            json_result.append({
+                'name': transaction,
+                'data': data
+            })
+
+        return json_result
+
+
+    def transform_flux_tables_to_dict(self, flux_tables) -> List[Dict[str, Any]]:
+        """
+        Transform flux_tables to a list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
+        :param flux_tables: The flux tables to transform.
+        :return: A list of dictionaries with 'transaction' and 'data' (DataFrame with 'timestamp' and 'value').
+        """
+        data_dict = {}
+
+        for flux_table in flux_tables:
+            for flux_record in flux_table:
+                timestamp = flux_record['_time']
+                value = flux_record['_value']
+                transaction = flux_record['transaction']
+
+                if transaction not in data_dict:
+                    data_dict[transaction] = []
+
+                data_dict[transaction].append({'timestamp': timestamp, 'value': value})
+
+        result = []
+        for transaction, records in data_dict.items():
+            df = pd.DataFrame(records)
+            df.set_index('timestamp', inplace=True)
+            result.append({'transaction': transaction, 'data': df})
+
+        return result

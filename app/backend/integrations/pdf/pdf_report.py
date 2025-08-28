@@ -379,6 +379,10 @@ class PdfReport(ReportingBase):
         elif 'page' in keys:
             keys.remove('page')
             keys.insert(0, 'page')
+        # Fallback to page if no transaction column
+        elif 'Metric' in keys:
+            keys.remove('Metric')
+            keys.insert(0, 'Metric')
 
         # Create the table data structure with header row
         table_data = [keys]

@@ -654,6 +654,29 @@ class DataExtractionBase(ABC):
         return value
 
     # ===================================================================
+    # COMMON FUNCTIONS
+    # ===================================================================
+
+    @abstractmethod
+    def _fetch_overview_data(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+        """
+        Fetch overview table metrics from frontend test using SitespeedFluxQueries.
+        :param test_title: The title of the test
+        :param start: Start time
+        :param end: End time
+        :param aggregation: The aggregation type (mean, median, p90, p99, etc.)
+        :return: Dictionary of overview table metrics
+        """
+        pass
+
+    def get_overview_data(self, test_title: str, start: str, end: str, aggregation: str = 'median') -> Dict[str, Any]:
+        try:
+            return self._fetch_overview_data(test_title, start, end, aggregation)
+        except Exception as e:
+            logging.warning(f"Error getting overview table: {str(e)}")
+            return {}
+
+    # ===================================================================
     # Frontend metrics extraction methods
     # ===================================================================
 

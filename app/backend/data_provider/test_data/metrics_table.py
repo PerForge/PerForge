@@ -32,6 +32,7 @@ class MetricsTable:
         self.name = name
         self.aggregation = aggregation
         self.metrics: List[Metric] = []  # Store Metric objects instead of raw dicts
+        self.scope_column_name = ""
 
     def add_metric(self, metric: Metric) -> None:
         """Add a metric object to the table"""
@@ -40,6 +41,8 @@ class MetricsTable:
     def set_metrics_from_data(self, current_data: List[Dict], baseline_data: Optional[List[Dict]] = None):
         """Convert raw data to Metric objects"""
         self.metrics = []
+        # Recalculate scope column name for each dataset to avoid stale state
+        self.scope_column_name = ""
 
         # Create baseline lookup
         baseline_map = {}
@@ -53,23 +56,41 @@ class MetricsTable:
             row_key = self._get_row_key(current_row)
             baseline_row = baseline_map.get(row_key, {})
 
-            # Create metrics for each numeric field
-            for field_name, value in current_row.items():
-                if isinstance(value, (int, float)) and field_name not in ['page', 'transaction']:
-                    baseline_value = baseline_row.get(field_name) if baseline_row else None
+            # Detect scope column per row to avoid relying on dict iteration order
+            scope_key = self._detect_scope_key(current_row)
+            if not self.scope_column_name and scope_key:
+                self.scope_column_name = scope_key
+            scope_value = current_row.get(scope_key) if scope_key else None
+            if scope_value is None:
+                # Fallback to row key if explicit scope is missing
+                scope_value = row_key
+            else:
+                # Normalize to string for consistent grouping keys
+                scope_value = str(scope_value)
 
-                    metric = Metric(
-                        name=field_name,
-                        value=round(value, 2),
-                        scope=current_row.get('page') or current_row.get('transaction'),
-                        baseline=round(baseline_value, 2) if baseline_value is not None else None
-                    )
-                    self.add_metric(metric)
+            # Create metrics for each numeric field (coerce numeric-like strings)
+            for field_name, value in current_row.items():
+                if field_name in ['page', 'transaction', 'Metric']:
+                    continue
+                num_value = self._to_number(value)
+                if num_value is None:
+                    continue
+
+                baseline_value_raw = baseline_row.get(field_name) if baseline_row else None
+                baseline_num = self._to_number(baseline_value_raw)
+
+                metric = Metric(
+                    name=field_name,
+                    value=round(num_value, 2),
+                    scope=scope_value,
+                    baseline=round(baseline_num, 2) if baseline_num is not None else None
+                )
+                self.add_metric(metric)
 
     def _get_row_key(self, row: Dict[str, Any]) -> str:
         """Generate a unique key for a row to match baseline with current"""
         # Try common identifier fields first
-        for key in ['page', 'transaction', 'name', 'id', 'url']:
+        for key in ['page', 'transaction', 'Metric', 'name', 'id', 'url']:
             if key in row:
                 return str(row[key])
 
@@ -77,6 +98,24 @@ class MetricsTable:
         # Exclude highly variable fields that shouldn't affect matching
         matching_dict = {k: v for k, v in row.items() if k not in ['timestamp']}
         return str(hash(frozenset(matching_dict.items())))
+
+    def _to_number(self, value: Any) -> Optional[float]:
+        """Try to coerce a value to float; return None if not possible."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return None
+        return None
+
+    def _detect_scope_key(self, row: Dict[str, Any]) -> Optional[str]:
+        """Detect which column should be used as scope for a given row."""
+        for key in ['transaction', 'page', 'Metric']:
+            if key in row:
+                return key
+        return None
 
     def _sanitize_metrics(self, metrics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Replace None or null values with 0.00 in numeric fields"""
@@ -120,32 +159,6 @@ class MetricsTable:
         """Get all metrics that failed NFR evaluation"""
         return [m for m in self.metrics if m.nfr_status == NFRStatus.FAILED]
 
-    def to_display_format(self) -> List[Dict[str, Any]]:
-        """Convert metrics to display format with colors"""
-        display_data = []
-
-        # Group by scope
-        scope_groups = {}
-        for metric in self.metrics:
-            scope = metric.scope or 'unknown'
-            if scope not in scope_groups:
-                scope_groups[scope] = {}
-            scope_groups[scope][metric.name] = metric
-
-        # Create display rows
-        for scope, metrics_dict in scope_groups.items():
-            row = {'transaction': scope}
-            for metric_name, metric in metrics_dict.items():
-                row[metric_name] = metric.value
-                row[f"{metric_name}_color"] = metric.get_display_color()  # Color info
-                if metric.baseline is not None:
-                    row[f"{metric_name}_baseline"] = metric.baseline
-                    row[f"{metric_name}_diff"] = metric.difference
-                    row[f"{metric_name}_diff_pct"] = metric.difference_pct
-            display_data.append(row)
-
-        return display_data
-
     def format_metrics(self) -> List[Dict[str, Any]]:
         """Format metrics for display with proper formatting of float values"""
         result = []
@@ -160,7 +173,7 @@ class MetricsTable:
 
         # Create formatted result
         for scope, metrics_dict in scope_groups.items():
-            row = {'transaction': scope}
+            row = {self.scope_column_name: scope}
             for metric_name, metric in metrics_dict.items():
                 # Format value to max 2 decimal places if it's a float
                 if isinstance(metric.value, float):
@@ -191,6 +204,42 @@ class MetricsTable:
                 scope_groups[scope] = {}
             scope_groups[scope][metric.name] = metric
 
+        # Determine how many distinct metric columns exist across the table
+        all_metric_names = set()
+        for metrics_dict in scope_groups.values():
+            all_metric_names.update(metrics_dict.keys())
+        # If only one metric column exists, output separate columns for baseline and differences
+        if len(all_metric_names) == 1:
+            only_metric_name = next(iter(all_metric_names))
+
+            for scope, metrics_dict in scope_groups.items():
+                row = {self.scope_column_name: scope}
+                metric = metrics_dict.get(only_metric_name)
+                if not metric:
+                    # No metric present for this scope; fill with zeros
+                    row["Current"] = 0.00
+                    row["Baseline"] = 0.00
+                    row["Diff"] = 0.00
+                    row["Diff Pct"] = 0.00
+                    result.append(row)
+                    continue
+
+                # Current and baseline values (default to 0.00 if None)
+                current_val = float(metric.value) if metric.value is not None else 0.00
+                baseline_val = float(metric.baseline) if metric.baseline is not None else 0.00
+
+                # Differences
+                diff_val = round(current_val - baseline_val, 2)
+                diff_pct_val = round((diff_val / baseline_val) * 100, 2) if baseline_val != 0 else 0.00
+
+                # Populate row
+                row["Current"] = round(current_val, 2)
+                row["Baseline"] = round(baseline_val, 2)
+                row["Diff"] = diff_val
+                row["Diff Pct"] = diff_pct_val
+                result.append(row)
+            return result
+
         # Check if any metric in a scope has baseline data
         has_baseline_by_scope = {}
         for scope, metrics_dict in scope_groups.items():
@@ -198,7 +247,7 @@ class MetricsTable:
 
         # Create comparison rows
         for scope, metrics_dict in scope_groups.items():
-            row = {'transaction': scope}
+            row = {self.scope_column_name: scope}
             # Check if this scope has any baseline metrics
             scope_has_baseline = has_baseline_by_scope[scope]
 

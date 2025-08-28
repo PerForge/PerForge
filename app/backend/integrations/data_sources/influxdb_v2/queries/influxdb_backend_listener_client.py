@@ -393,3 +393,61 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> group()
       |> distinct(column: "{custom_var}")
       |> first()'''
+
+  def get_overview_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str, regex: str) -> str:
+      return f'''jmeter_data = from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["_measurement"] == "jmeter" and r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["transaction"] != "all")
+      {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
+      |> keep(columns: ["_field", "_value", "_time", "statut"])
+
+      avg_stat = jmeter_data
+      |> filter(fn: (r) => r["_field"] == "avg" and r["statut"] == "all")
+      |> mean()
+      |> map(fn: (r) => ({{Metric: "Average", Value: r._value}}))
+
+      median_stat = jmeter_data
+      |> filter(fn: (r) => r["_field"] == "pct50.0" and r["statut"] == "all")
+      |> median()
+      |> map(fn: (r) => ({{Metric: "Median", Value: r._value}}))
+
+      p75_stat = jmeter_data
+      |> filter(fn: (r) => r["_field"] == "pct75.0" and r["statut"] == "all")
+      |> quantile(q: 0.75)
+      |> map(fn: (r) => ({{Metric: "75%-tile", Value: r._value}}))
+
+      p90_stat = jmeter_data
+      |> filter(fn: (r) => r["_field"] == "pct90.0" and r["statut"] == "all")
+      |> quantile(q: 0.90)
+      |> map(fn: (r) => ({{Metric: "90%-tile", Value: r._value}}))
+
+      count_data = jmeter_data
+      |> filter(fn: (r) => r["_field"] == "count")
+
+      total_stat = count_data
+      |> filter(fn: (r) => r["statut"] == "all")
+      |> sum()
+      |> map(fn: (r) => ({{Metric: "Total requests", Value: r._value}}))
+
+      rps_stat = count_data
+      |> filter(fn: (r) => r["statut"] == "all")
+      |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
+      |> map(fn: (r) => ({{ r with _value: float(v: r._value) / float(v: 30) }}))
+      |> quantile(q: 0.75)
+      |> map(fn: (r) => ({{Metric: "RPS", Value: r._value}}))
+
+      error_stat = count_data
+      |> filter(fn: (r) => r.transaction != "all")
+      |> group(columns: ["_field", "statut"])
+      |> sum()
+      |> filter(fn: (r) => exists r.statut)
+      |> pivot(rowKey: ["_field"], columnKey: ["statut"], valueColumn: "_value")
+      |> map(fn: (r) => ({{
+          Metric: "Error %",
+          Value: if exists r.ko and exists r.all and r.all > 0.0 then float(v: r.ko) * 100.0 / float(v: r.all) else 0.0
+        }}))
+
+      union(tables: [avg_stat, median_stat, p75_stat, p90_stat, total_stat, rps_stat, error_stat])
+      |> group()
+      '''

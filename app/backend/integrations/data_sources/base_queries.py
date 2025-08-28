@@ -175,3 +175,7 @@ class FrontEndQueriesBase(ABC):
     @abstractmethod
     def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
         pass
+
+    @abstractmethod
+    def get_overview_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+        pass
