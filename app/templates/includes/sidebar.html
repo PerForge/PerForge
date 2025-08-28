@@ -72,42 +72,45 @@
                 <span class="nav-link-icon"><i class="fa-solid fa-list"></i></span>
                 <span class="nav-link-text">Prompts</span>
             </a>
-            <a class="nav-link" type="button" href="/upload">
-                <span class="nav-link-icon"><i class="fas fa-upload"></i></span>
-                <span class="nav-link-text">Upload</span>
+            <a class="nav-link" type="button" href="/secrets">
+                <span class="nav-link-icon"><i class="fa-solid fa-key"></i></span>
+                <span class="nav-link-text">Secrets</span>
             </a>
             <a class="nav-link" type="button" href="/integrations">
                 <span class="nav-link-icon"><i class="fas fa-link"></i></span>
                 <span class="nav-link-text">Integrations</span>
             </a>
-            <a class="nav-link" type="button" href="/secrets">
-                <span class="nav-link-icon"><i class="fa-solid fa-key"></i></span>
-                <span class="nav-link-text">Secrets</span>
+            <a class="nav-link" type="button" href="/upload">
+                <span class="nav-link-icon"><i class="fas fa-upload"></i></span>
+                <span class="nav-link-text">Upload</span>
+            </a>
+            <a class="nav-link" type="button" href="/view-logs">
+                <span class="nav-link-icon"><i class="fas fa-clipboard-list"></i></span>
+                <span class="nav-link-text">Logs</span>
             </a>
         </div>
-        <div class="settings-dropdown dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="nav-link-icon"><i class="fas fa-cog"></i></span>
-                <span class="nav-link-text">Settings</span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown" data-bs-auto-close="outside">
-                <li>
-                    <button class="dropdown-item" id="themeSwitcher" type="button">
-                        <i id="themeIcon" class="fas fa-sun me-2"></i>Theme
-                    </button>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/register">
-                    <i class="fas fa-user-plus me-2"></i>Add user
-                </a></li>
-                <li><a class="dropdown-item" href="/view-logs">
-                    <i class="fas fa-clipboard-list me-2"></i>View logs
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/logout">
-                    <i class="fas fa-sign-out-alt me-2"></i>Sign out
-                </a></li>
-            </ul>
+        <div class="right-links">
+            <div class="settings-dropdown dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" id="settingsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="nav-link-icon"><i class="fas fa-cog"></i></span>
+                    <span class="nav-link-text">Settings</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingsDropdown" data-bs-auto-close="outside">
+                    <li>
+                        <button class="dropdown-item" id="themeSwitcher" type="button">
+                            <i id="themeIcon" class="fas fa-sun me-2"></i>Theme
+                        </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/register">
+                        <i class="fas fa-user-plus me-2"></i>Add user
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/logout">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sign out
+                    </a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>

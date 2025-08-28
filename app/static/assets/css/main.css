@@ -136,6 +136,8 @@ img {
     left: 0;
     right: 0;
     z-index: 100;
+    --scrollbar-thumb: rgba(255,255,255,0.25);
+    --scrollbar-thumb-hover: rgba(255,255,255,0.45);
     background-color: var(--bs-background-dark);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
@@ -144,7 +146,6 @@ img {
     display: flex;
     align-items: center;
     height: 100%;
-    padding: 0 15px;
 }
 
 .horizontal-sidebar .sidebar-header {
@@ -152,8 +153,6 @@ img {
     align-items: center;
     height: 100%;
     background-color: transparent;
-    padding: 0 15px 0 0;
-    margin-right: 15px;
     border-right: 1px solid var(--border-main-color);
 }
 
@@ -162,12 +161,34 @@ img {
     align-items: center;
     height: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     flex-grow: 1;
-    scrollbar-width: none; /* Firefox */
+    min-width: 0; /* allow container to shrink so overflow works */
+    flex-wrap: nowrap; /* keep links on one line */
+    scrollbar-width: thin; /* Firefox: show thin scrollbar when needed */
+    scrollbar-color: var(--scrollbar-thumb) transparent; /* Firefox colors */
 }
 
 .horizontal-sidebar .nav-links-container::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
+    height: 6px; /* Chrome, Safari */
+}
+.horizontal-sidebar .nav-links-container::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 6px;
+    background-clip: content-box;
+    border: 2px solid transparent;
+}
+.horizontal-sidebar .nav-links-container::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+.horizontal-sidebar .nav-links-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Light theme overrides for scrollbar palette */
+body.light-theme .horizontal-sidebar {
+    --scrollbar-thumb: rgba(0, 0, 0, 0.25);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.45);
 }
 
 .horizontal-sidebar .nav-link {
@@ -179,6 +200,7 @@ img {
     flex-direction: row;
     text-decoration: none;
     position: relative;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
@@ -220,6 +242,17 @@ body.light-theme .horizontal-sidebar .nav-link.active {
 
 .horizontal-sidebar .nav-link-text {
     font-size: 0.95em;
+}
+
+.horizontal-sidebar .right-links {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.horizontal-sidebar .right-links .settings-dropdown {
+    margin-left: 0;
 }
 
 .horizontal-sidebar .settings-dropdown {
@@ -298,6 +331,11 @@ body.light-theme .form-hint code { background: rgba(13,110,253,0.08); color: var
 
 /* Utility */
 .hidden { display: none !important; }
+
+/* Standard text color utility */
+.text-main {
+    color: var(--text-main-color) !important;
+}
 
 /* Tables: keep action buttons in one line */
 td.actions { white-space: nowrap; }
@@ -846,6 +884,10 @@ input:focus, select:focus {
     padding-left: 2rem !important;
 }
 
+.pr-1 {
+    padding-right: 1rem !important;
+}
+
 .pr-5 {
     padding-right: 2rem !important;
 }
@@ -1143,6 +1185,75 @@ p {
     --btn-disabled-color: #fff;
     --btn-disabled-bg: var(--bs-primary);
     --btn-disabled-border-color: transparent
+}
+
+.btn-graphs {
+    --btn-color: #fff;
+    --btn-bg: var(--bs-teal);
+    --btn-border-color: transparent;
+    --btn-hover-color: #fff;
+    --btn-hover-bg: var(--bs-green);
+    --btn-hover-border-color: rgba(0, 0, 0, 0.2);
+    --btn-focus-shadow-rgb: 255, 255, 255;
+    --btn-active-color: #fff;
+    --btn-active-bg: var(--bs-green);
+    --btn-active-border-color: rgba(0, 0, 0, 0.25);
+    --btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0);
+    --btn-disabled-color: #fff;
+    --btn-disabled-bg: var(--bs-teal);
+    --btn-disabled-border-color: transparent;
+}
+
+/* Additional button variants */
+.btn-success {
+    --btn-color: #fff;
+    --btn-bg: var(--bs-success);
+    --btn-border-color: transparent;
+    --btn-hover-color: #fff;
+    --btn-hover-bg: #1c925b; /* darker success */
+    --btn-hover-border-color: rgba(0, 0, 0, 0.2);
+    --btn-focus-shadow-rgb: 255, 255, 255;
+    --btn-active-color: #fff;
+    --btn-active-bg: #1db971;
+    --btn-active-border-color: rgba(0, 0, 0, 0.25);
+    --btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0);
+    --btn-disabled-color: #fff;
+    --btn-disabled-bg: var(--bs-success);
+    --btn-disabled-border-color: transparent;
+}
+
+.btn-warning {
+    --btn-color: #000;
+    --btn-bg: var(--bs-warning);
+    --btn-border-color: transparent;
+    --btn-hover-color: #000;
+    --btn-hover-bg: #e0a800; /* darker warning */
+    --btn-hover-border-color: rgba(0, 0, 0, 0.2);
+    --btn-focus-shadow-rgb: 255, 255, 255;
+    --btn-active-color: #000;
+    --btn-active-bg: #d39e00;
+    --btn-active-border-color: rgba(0, 0, 0, 0.25);
+    --btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0);
+    --btn-disabled-color: #000;
+    --btn-disabled-bg: var(--bs-warning);
+    --btn-disabled-border-color: transparent;
+}
+
+.btn-info {
+    --btn-color: #000;
+    --btn-bg: var(--bs-info);
+    --btn-border-color: transparent;
+    --btn-hover-color: #000;
+    --btn-hover-bg: #31d2f2; /* darker info */
+    --btn-hover-border-color: rgba(0, 0, 0, 0.2);
+    --btn-focus-shadow-rgb: 255, 255, 255;
+    --btn-active-color: #000;
+    --btn-active-bg: #0aa2c0;
+    --btn-active-border-color: rgba(0, 0, 0, 0.25);
+    --btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0);
+    --btn-disabled-color: #000;
+    --btn-disabled-bg: var(--bs-info);
+    --btn-disabled-border-color: transparent;
 }
 
 #dashboardContainer {
@@ -1503,6 +1614,24 @@ input, button, select, optgroup, textarea {
     }
 }
 
+/* Modal utilities */
+.modal-centered {
+    align-items: center;
+    justify-content: center;
+}
+.modal.show.modal-centered {
+    display: flex;
+}
+.modal-dialog-wide {
+    max-width: 840px;
+    width: 90vw;
+}
+
+/* Lock body scroll when modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
 .alert-outline-danger {
     --alert-color: #ed2000 !important;
     --alert-bg: transparent !important;
@@ -1787,8 +1916,8 @@ svg:not(:host).svg-inline--fa, svg:not(:root).svg-inline--fa {
         padding-top: 1rem;
         padding-bottom: .35rem;
         padding-left: .75rem;
-        margin-left: .75rem;
-        margin-right: .75rem;
+        margin-left: .50rem;
+        margin-right: .50rem;
     }
     .nav-link.dropdown-indicator {
         padding-left: 0;
@@ -2023,6 +2152,12 @@ textarea:focus  {
     --badge-bg: rgba(133, 169, 255, 0.08);
     --badge-color: #85a9ff !important;
     --badge-border-color: rgba(133, 169, 255, 0.2 );
+}
+
+.badge-secondary {
+    --badge-bg: rgba(108, 117, 125, 0.12);
+    --badge-color: var(--bs-gray-500) !important;
+    --badge-border-color: rgba(108, 117, 125, 0.25);
 }
 
 .badge {
@@ -3274,4 +3409,23 @@ body.light-theme .theme-switcher-btn {
 .page-link.active {
     color: #fff;
     background-color: var(--bs-blue);
+}
+
+/*
+ * Exact width utilities for xl+ screens to support 20% / 60% / 20% layout.
+ * Use alongside Bootstrap grid classes, e.g., `col-12 col-xl-20p`.
+ */
+@media (min-width: 1200px) {
+  .col-xl-25p {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 22.5%;
+    flex: 0 0 22.5%;
+    max-width: 22.5%;
+  }
+  .col-xl-50p {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 55%;
+    flex: 0 0 55%;
+    max-width: 55%;
+  }
 }

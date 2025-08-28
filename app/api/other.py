@@ -102,9 +102,47 @@ def get_config():
     except Exception as e:
         logging.error(f"Error getting configuration: {str(e)}")
         return api_response(
-            message="Error retrieving configuration information",
+            message="Error getting configuration information",
             status=HTTP_BAD_REQUEST,
             errors=[{"code": "config_error", "message": str(e)}]
+        )
+
+@other_api.route('/api/v1/logs', methods=['GET'])
+@api_error_handler
+def get_logs():
+    """
+    Return the last N lines of the application log file.
+    Query params:
+      - tail: number of last lines to return (default 150, max 1000)
+    """
+    try:
+        # Parse tail parameter and clamp to a reasonable range
+        tail_param = request.args.get('tail', default='150')
+        try:
+            tail = int(tail_param)
+        except (TypeError, ValueError):
+            tail = 150
+        tail = max(1, min(tail, 1000))
+
+        try:
+            with open("./app/logs/info.log", "r", errors='ignore') as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            lines = ["Log file not found."]
+
+        lines = lines[-tail:]
+        logs = ''.join(lines)
+
+        return api_response(
+            data={"logs": logs, "tail": tail},
+            message="Logs fetched"
+        )
+    except Exception as e:
+        logging.error(f"Error reading logs: {str(e)}")
+        return api_response(
+            message="Failed to read logs",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "logs_read_error", "message": str(e)}]
         )
 
 @other_api.route('/api/v1/uploads/test', methods=['POST'])

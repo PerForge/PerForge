@@ -19,14 +19,7 @@ from flask       import render_template, jsonify
 
 @app.route('/view-logs', methods=['GET'])
 def view_logs():
-    try:
-        with open("./app/logs/info.log", "r", errors='ignore') as file:
-            log_lines = file.readlines()
-    except FileNotFoundError:
-        log_lines = ["Log file not found."]
-    log_lines = log_lines[-150:]
-    logs      = ''.join(log_lines)
-    return render_template('home/logs.html', logs=logs)
+    return render_template('home/logs.html')
 
 @app.route('/upload', methods=['GET'])
 def upload_page():
