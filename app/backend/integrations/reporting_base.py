@@ -164,7 +164,8 @@ class ReportingBase:
             self.parameters['ai_summary'] = self.ai_support_obj.create_template_summary(
                 self.template_prompt_id,
                 self.parameters['nfr_summary'],
-                self.current_test_obj.ml_anomalies
+                self.current_test_obj.ml_anomalies,
+                self.parameters.get('additional_context', '')
             )
 
     def analyze_template_group(self):
@@ -348,13 +349,14 @@ class ReportingBase:
             # Return empty link if Grafana object or method doesn't exist
             return {link_param_name: ""}
 
-    def collect_data(self, current_test_title, baseline_test_title=None):
+    def collect_data(self, current_test_title, baseline_test_title=None, additional_context=None):
         """
         Collect test data and prepare parameters for report generation.
 
         Args:
             current_test_title: Title of the current test to analyze
             baseline_test_title: Optional title of a baseline test for comparison
+            additional_context: Optional additional context for the report
         """
 
         # Initialize parameters dictionary
@@ -385,3 +387,6 @@ class ReportingBase:
         self.parameters.update(self._collect_parameters(self.current_test_obj, "current_"))
         self.parameters.update(self._create_grafana_link(self.current_test_obj, current_test_title, "current_"))
         self.parameters['current_test_title'] = current_test_title
+
+        if additional_context:
+            self.parameters['additional_context'] = additional_context

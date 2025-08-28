@@ -74,6 +74,18 @@
                     .then(response => {
                         console.log("Project created successfully:", response);
 
+                        // Reset active project cookies to the newly created project
+                        try {
+                            const newProjectId = (response && response.data && response.data.project_id) || (response && response.project_id);
+                            if (newProjectId) {
+                                document.cookie = `project=${newProjectId}; path=/`;
+                                // Use the entered name as the cookie value
+                                document.cookie = `project_name=${encodeURIComponent(projectName_value)}; path=/`;
+                            }
+                        } catch (e) {
+                            console.warn('Could not set active project cookies after creation:', e);
+                        }
+
                         // Hide the modal
                         modal.modal('hide');
 

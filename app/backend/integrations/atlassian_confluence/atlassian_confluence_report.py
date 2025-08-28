@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime                                                           import datetime
-from app.backend.integrations.reporting_base                            import ReportingBase
-from app.backend.integrations.report_registry                           import ReportRegistry
+from datetime import datetime
+from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.integrations.atlassian_confluence.atlassian_confluence import AtlassianConfluence
-from app.backend.components.graphs.graphs_db                            import DBGraphs
+from app.backend.components.graphs.graphs_db import DBGraphs
 from lxml import etree
 from lxml.builder import ElementMaker
 
@@ -27,7 +27,7 @@ class AtlassianConfluenceReport(ReportingBase):
     def __init__(self, project):
         super().__init__(project)
         self.report_body = ""
-        self.page_id     = None
+        self.page_id = None
 
     def set_template(self, template, db_config, action_id):
         super().set_template(template, db_config)
@@ -96,7 +96,7 @@ class AtlassianConfluenceReport(ReportingBase):
         return etree.tostring(ac_image, encoding='unicode')
 
     def create_page_id(self, page_title):
-        response     = self.output_obj.put_page(title=page_title, content="")
+        response = self.output_obj.put_page(title=page_title, content="")
         self.page_id = response["id"]
 
     def format_table(self, metrics):
@@ -208,16 +208,17 @@ class AtlassianConfluenceReport(ReportingBase):
         return ''.join(html)
 
     def generate_report(self, tests, action_id, template_group=None):
-        page_title  = None
+        page_title = None
         def process_test(test, isgroup):
             nonlocal page_title
             template_id = test.get('template_id')
             if template_id:
                 db_config = test.get('db_config')
                 self.set_template(template_id, db_config, action_id)
-                test_title          = test.get('test_title')
+                test_title = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
-                self.collect_data(test_title, baseline_test_title)
+                additional_context = test.get('additional_context')
+                self.collect_data(test_title, baseline_test_title, additional_context)
                 if not self.page_id:
                     if isgroup:
                         page_title = self.generate_path(True)
@@ -252,7 +253,7 @@ class AtlassianConfluenceReport(ReportingBase):
             if obj["type"] == "text":
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:

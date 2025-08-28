@@ -144,6 +144,9 @@
 
       Observations from ML analysis.
       ${ml_summary}
+
+      Additional context.
+      ${additional_context}
   - name: "[BE][COMPARISON] Template summary"
     type: default
     place: template
@@ -183,6 +186,9 @@
 
       Observations from ML analysis:
       ${ml_summary}
+
+      Additional context:
+      ${additional_context}
   - name: Template group
     type: default
     place: template_group
@@ -301,6 +307,9 @@
 
       ### Observations from NFRs analysis:
       ${nfr_summary}
+
+      ### Additional context:
+      ${additional_context}
   - name: "[FE][COMPARISON] Template summary"
     type: default
     place: template

@@ -17,10 +17,10 @@ import traceback
 from typing import List, Optional, Any
 import uuid
 
-from app.backend.integrations.integration              import Integration
-from app.backend.components.prompts.prompts_db         import DBPrompts
+from app.backend.integrations.integration import Integration
+from app.backend.components.prompts.prompts_db import DBPrompts
 from app.backend.integrations.ai_support.ai_support_db import DBAISupport
-from app.backend.components.secrets.secrets_db         import DBSecrets
+from app.backend.components.secrets.secrets_db import DBSecrets
 from app.backend.integrations.ai_support.providers.provider_factory import ProviderFactory
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
 
@@ -240,7 +240,7 @@ class AISupport(Integration):
             result += "\n\n"
         return str(result)
 
-    def create_template_summary(self, prompt_id: str, nfr_summary: str, ml_summary: Optional[str] = None) -> str:
+    def create_template_summary(self, prompt_id: str, nfr_summary: str, ml_summary: Optional[str] = None, additional_context: Optional[str] = None) -> str:
         """
         Create a summary based on all analyses and NFR results using a template prompt.
 
@@ -258,10 +258,11 @@ class AISupport(Integration):
         prompt_template = DBPrompts.get_config_by_id(project_id=self.project, id=prompt_id)["prompt"]
 
         replacements = {
-            "aggregated_data_analysis": self.prepare_list_of_analysis(self.aggregated_data_analysis),
-            "graphs_analysis": self.prepare_list_of_analysis(self.graph_analysis),
-            "nfr_summary": nfr_summary,
-            "ml_summary": ml_summary or ""
+            "aggregated_data_analysis": self.prepare_list_of_analysis(self.aggregated_data_analysis) or "N/A",
+            "graphs_analysis": self.prepare_list_of_analysis(self.graph_analysis) or "N/A",
+            "nfr_summary": nfr_summary or "N/A",
+            "ml_summary": ml_summary or "N/A",
+            "additional_context": additional_context or "N/A"
         }
 
         prompt_value = prompt_template
