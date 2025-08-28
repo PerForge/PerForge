@@ -4,6 +4,11 @@
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<style>
+  .copy-icon { cursor: pointer; opacity: 0.8; }
+  .copy-icon:hover { opacity: 1; }
+  .var-name i { margin-right: 6px; }
+</style>
 {% endblock stylesheets %}
 {% block content %}
 <main>
@@ -107,22 +112,26 @@
                 </div>
                 <div class="mt-3">
                   <div class="variables-section">
-                      <label>Available parameters</label>
+                      <label>Available parameters for template prompts</label>
                       <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${aggregated_data_analysis}')">${aggregated_data_analysis}</label>
+                          <label class="var-name" onclick="copyToClipboard('${aggregated_data_analysis}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${aggregated_data_analysis}');"></i> ${aggregated_data_analysis}</label>
                           <label class="var-description">Detailed analysis of aggregated performance metrics.</label>
                       </div>
                       <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${graphs_analysis}')">${graphs_analysis}</label>
+                          <label class="var-name" onclick="copyToClipboard('${graphs_analysis}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${graphs_analysis}');"></i> ${graphs_analysis}</label>
                           <label class="var-description">AI-generated analysis of performance graphs.</label>
                       </div>
                       <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${nfr_summary}')">${nfr_summary}</label>
+                          <label class="var-name" onclick="copyToClipboard('${nfr_summary}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${nfr_summary}');"></i> ${nfr_summary}</label>
                           <label class="var-description">Summary of Non-Functional Requirements validation.</label>
                       </div>
                       <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${ml_summary}')">${ml_summary}</label>
+                          <label class="var-name" onclick="copyToClipboard('${ml_summary}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${ml_summary}');"></i> ${ml_summary}</label>
                           <label class="var-description">Summary of ML-based anomaly detection.</label>
+                      </div>
+                      <div class="variable-item">
+                          <label class="var-name" onclick="copyToClipboard('${additional_context}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${additional_context}');"></i> ${additional_context}</label>
+                          <label class="var-description">Optional extra context you provide for the report.</label>
                       </div>
                     </div>
                   </div>

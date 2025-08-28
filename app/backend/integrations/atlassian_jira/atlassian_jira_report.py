@@ -13,11 +13,11 @@
 # limitations under the License.
 
 
-from app.backend.integrations.reporting_base                import ReportingBase
-from app.backend.integrations.report_registry               import ReportRegistry
+from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.integrations.atlassian_jira.atlassian_jira import AtlassianJira
-from app.backend.components.graphs.graphs_db                import DBGraphs
-from datetime                                               import datetime
+from app.backend.components.graphs.graphs_db import DBGraphs
+from datetime import datetime
 
 
 @ReportRegistry.register("atlassian_jira")
@@ -26,7 +26,7 @@ class AtlassianJiraReport(ReportingBase):
     def __init__(self, project):
         super().__init__(project)
         self.report_body = ""
-        self.issue_id    = None
+        self.issue_id = None
 
     def set_template(self, template, db_config, action_id):
         super().set_template(template, db_config)
@@ -124,7 +124,7 @@ class AtlassianJiraReport(ReportingBase):
         return self.issue_id
 
     def generate_report(self, tests, action_id, template_group=None):
-        page_title  = None
+        page_title = None
 
         def process_test(test, isgroup):
             nonlocal page_title
@@ -132,14 +132,16 @@ class AtlassianJiraReport(ReportingBase):
             if template_id:
                 db_config = test.get('db_config')
                 self.set_template(template_id, db_config, action_id)
-                test_title          = test.get('test_title')
+                test_title = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
+                additional_context = test.get('additional_context')
+                self.collect_data(test_title, baseline_test_title, additional_context)
 
                 # Create the Jira issue once using the final title
                 if not self.issue_id:
                     if isgroup:
-                        page_title  = self.generate_path(True)
+                        page_title = self.generate_path(True)
                     else:
                         page_title = self.generate_path(False)
                     self.create_issue(page_title)
@@ -175,7 +177,7 @@ class AtlassianJiraReport(ReportingBase):
             if obj["type"] == "text":
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
                 if self.ai_to_graphs_switch:

@@ -72,8 +72,29 @@
                <div class="start-section ms-4">
                   {% for project in projects %}
                       <div class="card card-project center-section" data-project-id="{{ project.id }}">
-                          <a class="mt-3-5" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
-                          <button class="badge badge-primary mt-2 fs--2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}">remove</button>
+                          <a class="mt-3-5 d-block" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
+                          <div class="project-actions mt-2 d-flex align-items-center">
+                              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#renameProjectModal-{{ project.id }}" onclick="prefillRename('{{ project.id }}')" aria-label="Rename project" title="Rename project"><i class="fas fa-pen"></i></button>
+                              <button class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}" aria-label="Delete project" title="Delete project"><i class="fas fa-trash"></i></button>
+                          </div>
+                      </div>
+                      <div class="modal fade" id="renameProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="renameProjectModalLabel-{{ project.id }}" aria-hidden="true">
+                          <div class="modal-dialog">
+                              <div class="modal-content">
+                                  <div class="modal-header">
+                                      <h5 class="modal-title" id="renameProjectModalLabel-{{ project.id }}">Rename Project</h5>
+                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                  </div>
+                                  <div class="modal-body">
+                                      <label for="renameProjectName-{{ project.id }}" class="form-label">New name</label>
+                                      <input type="text" class="form-control" id="renameProjectName-{{ project.id }}" value="{{ project.name }}" />
+                                  </div>
+                                  <div class="modal-footer">
+                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                      <button type="button" class="btn btn-primary" onclick="renameProject('{{ project.id }}')">Save</button>
+                                  </div>
+                              </div>
+                          </div>
                       </div>
                       <div class="modal fade" id="deleteProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel-{{ project.id }}" aria-hidden="true">
                           <div class="modal-dialog">
@@ -139,6 +160,55 @@
                     .catch(error => {
                         console.error('Error setting active project:', error);
                         showFlashMessage("Error setting active project: " + (error.message || 'Unknown error'), "error");
+                    });
+            }
+
+            function prefillRename(projectId) {
+                const card = document.querySelector(`.card-project[data-project-id='${projectId}']`);
+                const nameLink = card ? card.querySelector('a.mt-3-5') : null;
+                const input = document.getElementById(`renameProjectName-${projectId}`);
+                if (nameLink && input) {
+                    input.value = nameLink.textContent.trim();
+                }
+            }
+
+            function renameProject(projectId) {
+                const input = document.getElementById(`renameProjectName-${projectId}`);
+                const newName = (input && input.value ? input.value : '').trim();
+                if (!newName) {
+                    showFlashMessage('Project name cannot be empty', 'error');
+                    return;
+                }
+
+                apiClient.projects.update(projectId, { id: Number(projectId), name: newName })
+                    .then(response => {
+                        // Close modal
+                        $(`#renameProjectModal-${projectId}`).modal('hide');
+
+                        // Update UI text
+                        const card = document.querySelector(`.card-project[data-project-id='${projectId}']`);
+                        if (card) {
+                            const nameLink = card.querySelector('a.mt-3-5');
+                            if (nameLink) nameLink.textContent = newName;
+                        }
+
+                        // Update cookie if this is the active project
+                        const getCookie = (name) => {
+                            const value = `; ${document.cookie}`;
+                            const parts = value.split(`; ${name}=`);
+                            if (parts.length === 2) return parts.pop().split(';').shift();
+                        };
+                        const activeProjectId = getCookie('project');
+                        if (String(activeProjectId) === String(projectId)) {
+                            document.cookie = `project_name=${encodeURIComponent(newName)}; path=/`;
+                        }
+
+                        showFlashMessage('Project renamed successfully', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Error renaming project:', error);
+                        const errMsg = (error && (error.message || (error.data && error.data.message))) || 'Unknown error';
+                        showFlashMessage(`Error renaming project: ${errMsg}`, 'error');
                     });
             }
 
