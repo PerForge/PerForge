@@ -36,6 +36,17 @@ def run_migrations():
                 connection.execute(alter_command)
                 log.info(f"Migration for '{column_name}' applied successfully.")
 
+            # --- Migration: Add 'regex' to 'influxdb' table ---
+            table_name = 'influxdb'
+            column_name = 'regex'
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+
+            if column_name not in columns:
+                log.info(f"Applying migration: Adding column '{column_name}' to table '{table_name}'")
+                alter_command = text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} VARCHAR(500)")
+                connection.execute(alter_command)
+                log.info(f"Migration for '{column_name}' applied successfully.")
+
             # --- Migration: graphs table adjustments for internal/external support ---
             graphs_table = 'graphs'
             try:

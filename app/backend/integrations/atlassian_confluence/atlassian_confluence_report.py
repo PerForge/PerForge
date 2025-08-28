@@ -126,6 +126,9 @@ class AtlassianConfluenceReport(ReportingBase):
         elif 'transaction' in keys:
             keys.remove('transaction')
             keys.insert(0, 'transaction')
+        elif 'Metric' in keys:
+            keys.remove('Metric')
+            keys.insert(0, 'Metric')
 
         # Find the diff percentage columns for color coding
         diff_pct_columns = [key for key in keys if key.endswith('_diff_pct')]

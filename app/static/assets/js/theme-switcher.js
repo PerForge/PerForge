@@ -32,6 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Update the icon to reflect the new theme
             updateIcon();
+
+            // Notify listeners (e.g., charts) that theme has changed
+            try {
+                document.dispatchEvent(new CustomEvent('theme:changed', { detail: { theme: newTheme } }));
+            } catch (e) {
+                // no-op if CustomEvent is not supported
+            }
         }
     });
 });

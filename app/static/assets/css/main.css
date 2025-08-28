@@ -742,6 +742,112 @@ body.light-theme .theme-switcher-btn:hover {
     color: var(--text-main-color);
 }
 
+/* Horizontal layout for per-transaction charts (Throughput left, Response Time right) */
+.transaction-charts-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.transaction-charts-row .chart {
+    /* allow plotly containers to shrink inside grid cells */
+    min-width: 0;
+}
+
+@media (min-width: 992px) {
+    /* Two equal columns on desktop */
+    .transaction-charts-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Per-graph insights under charts */
+.chart-insights {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+/* Equal height handled via JS to avoid grid side-effects */
+
+.insights-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main-color);
+    opacity: 0.9;
+    margin: 6px 0 4px;
+}
+
+.insight-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 12px;
+    border: 1px solid var(--border-main-color);
+    background-color: var(--bs-background-dark);
+    border-radius: 8px;
+}
+
+.insight-item .insight-copy .method {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+    color: var(--text-main-color);
+}
+
+.insight-item .insight-copy .desc {
+    font-size: 0.9rem;
+    color: var(--text-main-color);
+    opacity: 0.85;
+}
+
+body.light-theme .insight-item {
+    background-color: var(--bs-background);
+}
+
+/* Ensure light theme insight text matches page text color */
+body.light-theme .insights-title {
+    color: var(--text-main-color);
+}
+body.light-theme .insight-item .insight-copy .desc {
+    color: var(--text-main-color);
+    opacity: 1; /* remove fade in light theme */
+}
+
+.insight-more {
+    margin-top: 6px;
+}
+
+.insight-btn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-main-color);
+    background-color: var(--bs-background-dark);
+    color: var(--text-main-color);
+    cursor: pointer;
+}
+
+.insight-btn:hover {
+    filter: brightness(1.05);
+}
+
+body.light-theme .insight-btn {
+    background-color: var(--bs-background);
+}
+
+/* Summary card text color in light theme */
+body.light-theme #summaryCard,
+body.light-theme #summaryCard p,
+body.light-theme #summaryCard li,
+body.light-theme #summaryCard h4,
+body.light-theme #summaryCard strong {
+    color: var(--text-main-color);
+}
+
 .card-header {
     padding: 15px 15px;
     margin-bottom: 0;

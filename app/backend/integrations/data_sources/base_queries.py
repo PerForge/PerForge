@@ -14,6 +14,8 @@
 
 from abc import ABC, abstractmethod
 
+from numpy import str_
+
 class BackEndQueriesBase(ABC):
     @abstractmethod
     def get_test_log(
@@ -45,11 +47,11 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_rps(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -57,15 +59,15 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -73,15 +75,19 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
+        pass
+
+    @abstractmethod
+    def get_throughput_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -89,15 +95,15 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_throughput_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_median_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
-    def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_pct90_response_time_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
         pass
 
     @abstractmethod
@@ -168,4 +174,8 @@ class FrontEndQueriesBase(ABC):
 
     @abstractmethod
     def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+        pass
+
+    @abstractmethod
+    def get_overview_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass

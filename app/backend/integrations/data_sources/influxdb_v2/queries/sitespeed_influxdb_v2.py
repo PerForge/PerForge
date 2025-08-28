@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import override
 from app.backend.integrations.data_sources.base_queries import FrontEndQueriesBase
 
 class SitespeedFluxQueries(FrontEndQueriesBase):
@@ -234,7 +235,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
       |> group()
       '''
-      
+
   def get_custom_var(self, testTitle: str, custom_var: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
@@ -243,3 +244,82 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> group()
       |> distinct(column: "{custom_var}")
       |> first()'''
+
+  def get_overview_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+       return f'''base_data = from(bucket: "{bucket}")
+            |> range(start: {start}, stop: {stop})
+            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+            |> toFloat()
+
+        web_vitals = base_data
+            |> filter(fn: (r) => r["_measurement"] == "largestContentfulPaint" or r["_measurement"] == "firstContentfulPaint" or r["_measurement"] == "fullyLoaded" or r["_measurement"] == "ttfb")
+            |> filter(fn: (r) => r["_field"] == "{aggregation}")
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{
+                Metric:
+                    if r._measurement == "firstContentfulPaint" then "FCP"
+                    else if r._measurement == "largestContentfulPaint" then "LCP"
+                    else if r._measurement == "fullyLoaded" then "Fully Loaded"
+                    else if r._measurement == "ttfb" then "TTFB"
+                    else r._measurement,
+                Value: r._value
+            }}))
+
+        total_transfer = base_data
+            |> filter(fn: (r) => r["_measurement"] == "transferSize" and r["summaryType"] == "pageSummary")
+            |> filter(fn: (r) => not exists r["party"] and not exists r["contentType"])
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{Metric: "Total Transfer Size (KB)", Value: r._value / 1024.0}}))
+
+        total_requests = base_data
+            |> filter(fn: (r) => r["_measurement"] == "requests" and r["_field"] == "value")
+            |> filter(fn: (r) => not exists r["contentType"] and not exists r["party"])
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{Metric: "Total Requests", Value: r._value}}))
+
+        third_party_requests = base_data
+            |> filter(fn: (r) => r["_measurement"] == "requests" and r["_field"] == "value")
+            |> filter(fn: (r) => not exists r["contentType"] and r["party"] == "thirdParty")
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{Metric: "Third-Party Requests", Value: r._value}}))
+
+        transfer_by_content = base_data
+            |> filter(fn: (r) => r["_measurement"] == "transferSize" and r["summaryType"] == "pageSummary")
+            |> filter(fn: (r) => not exists r["party"])
+
+        js_transfer = transfer_by_content
+            |> filter(fn: (r) => r["contentType"] == "javascript" and r["type"] == "ondemand" and r["env"] == "CAN")
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{Metric: "Transfer Size for JavaScript (KB)", Value: r._value / 1024.0}}))
+
+        css_transfer = transfer_by_content
+            |> filter(fn: (r) => r["contentType"] == "css")
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{Metric: "Transfer Size for CSS (KB)", Value: r._value / 1024.0}}))
+
+        image_transfer = transfer_by_content
+            |> filter(fn: (r) => r["contentType"] == "image")
+            |> group(columns: ["_measurement"])
+            |> quantile(q: 0.50)
+            |> map(fn: (r) => ({{Metric: "Transfer Size for Image (KB)", Value: r._value / 1024.0}}))
+
+        union(
+            tables: [
+                web_vitals,
+                total_transfer,
+                total_requests,
+                third_party_requests,
+                js_transfer,
+                css_transfer,
+                image_transfer
+            ]
+        )
+        |> group()
+        |> sort(columns: ["Metric"])
+        '''

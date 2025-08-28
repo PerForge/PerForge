@@ -77,6 +77,9 @@ class SmtpMailReport(ReportingBase):
         elif 'transaction' in keys:
             keys.remove('transaction')
             keys.insert(0, 'transaction')
+        elif 'Metric' in keys:
+            keys.remove('Metric')
+            keys.insert(0, 'Metric')
 
         # Start building the HTML table
         html = ['<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">']

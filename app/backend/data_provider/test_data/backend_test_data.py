@@ -37,7 +37,8 @@ class BackendTestData(BaseTestData):
 
     # Define backend table metrics for lazy loading
     _table_metrics = [
-        'aggregated_data'  # Added aggregated data for NFR validation
+        'aggregated_data',
+        'overview_data'
     ]
 
     def __init__(self) -> None:

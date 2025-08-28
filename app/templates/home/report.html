@@ -30,12 +30,14 @@
                         <div class="card-header-sm">Test details</div>
                         <div class="card-body flex">
                             <div class="pr-10 col-lg-6">
-                                <div>Start time:</div>
+                                <div>Test title:</div>
+                                <div class="m10-top">Start time:</div>
                                 <div class="m10-top">End time:</div>
                                 <div class="m10-top">Duration:</div>
                             </div>
                             <div class="pr-10 col-lg-6">
-                                <div class="secondary-text" id="startTimeDetail"></div>
+                                <div class="secondary-text" id="testTitleDetail">{{ test_title }}</div>
+                                <div class="m10-top secondary-text" id="startTimeDetail"></div>
                                 <div class="m10-top secondary-text" id="endTimeDetail"></div>
                                 <div class="m10-top secondary-text" id="durationDetail"></div>
                             </div>
@@ -85,27 +87,25 @@
                     </div>
                 </div>
             </div>
-            <div class="start-section ms-4 m10-top me-4">
+            <div class="start-section equal-height ms-4 m10-top me-4">
                 <div class="pr-10 col-lg-6">
                     <div class="chart-card">
                         <div class="nopadding chart-container" id="throughputChart"></div>
+                        <div class="chart-insights" id="throughputInsights"></div>
                     </div>
                 </div>
                 <div class="col-lg-6">
                     <div class="chart-card">
                         <div class="nopadding chart-container" id="responseTimeChart"></div>
+                        <div class="chart-insights" id="responseTimeInsights"></div>
                     </div>
                 </div>
             </div>
             <div class="start-section ms-4 m10-top me-4">
-                <div class="pr-10 col-lg-6">
-                    <div class="chart-card">
-                        <div class="nopadding chart-container" id="responseTimeScatterChart"></div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
+                <div class="col-lg-12">
                     <div class="chart-card">
                         <div class="nopadding chart-container" id="overalErrors"></div>
+                        <div class="chart-insights" id="errorsInsights"></div>
                     </div>
                 </div>
             </div>
