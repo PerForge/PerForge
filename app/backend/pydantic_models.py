@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr
-from typing   import Optional, Literal
+from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr, ConfigDict
+from typing import Optional, Literal
+import logging
 
 
 # Cleaning functions
@@ -204,6 +205,8 @@ class TemplateObjectModel(BaseModelWithStripping):
     content    : Optional[str]
     graph_id   : Optional[int]
     template_id: Optional[int] = Field(default=None)
+    ai_graph_switch     : bool = Field(default=False)
+    ai_to_graphs_switch : bool = Field(default=False)
 
 
 class TemplateModel(BaseModelWithStripping):
@@ -214,8 +217,6 @@ class TemplateModel(BaseModelWithStripping):
     title                    : str
     ai_switch                : bool
     ai_aggregated_data_switch: bool = Field(default=False)
-    ai_graph_switch          : bool
-    ai_to_graphs_switch      : bool
     nfrs_switch              : bool
     ml_switch                : bool = Field(default=False)
     template_prompt_id       : Optional[int]
@@ -223,7 +224,7 @@ class TemplateModel(BaseModelWithStripping):
     system_prompt_id         : Optional[int]
     data                     : list[TemplateObjectModel]
 
-    @field_validator('ai_switch', 'ai_aggregated_data_switch', 'ai_graph_switch', 'ai_to_graphs_switch', 'nfrs_switch', 'ml_switch', mode='before')
+    @field_validator('ai_switch', 'ai_aggregated_data_switch', 'nfrs_switch', 'ml_switch', mode='before')
     def empty_str_to_false(cls, v):
         if v is None:
             return False

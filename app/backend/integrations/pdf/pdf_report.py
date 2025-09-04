@@ -308,7 +308,8 @@ class PdfReport(ReportingBase):
 
     def add_graph_to_pdf(self, image, ai_support_response):
         self.pdf_creator.add_image(image)
-        if self.ai_to_graphs_switch and ai_support_response:
+        # Rely on caller to apply per-graph gating; add text only if provided
+        if ai_support_response:
             self.add_text(ai_support_response)
 
     def check_if_table(self, text):
@@ -469,6 +470,11 @@ class PdfReport(ReportingBase):
         for obj in self.data:
             if obj["type"] == "graph":
                 graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                # Inject per-graph AI switch only (no fallback to legacy template-level flags)
+                graph_data = {
+                    **graph_data,
+                    "ai_graph_switch": bool(obj.get("ai_graph_switch")),
+                }
                 # Delegate to ReportingBase unified renderer (supports internal and external graphs)
                 image, ai_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
                 processed_graphs[obj["graph_id"]] = (image, ai_response)
@@ -488,4 +494,9 @@ class PdfReport(ReportingBase):
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 image, ai_response = processed_graphs[obj["graph_id"]]
-                self.add_graph_to_pdf(image, ai_response)
+                # Always add the image
+                self.pdf_creator.add_image(image)
+                # Per-graph decision to append AI text
+                per_graph_ai_to_graphs = bool(obj.get("ai_to_graphs_switch"))
+                if per_graph_ai_to_graphs and ai_response:
+                    self.add_text(ai_response)

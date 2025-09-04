@@ -38,6 +38,73 @@
     .copy-icon:hover {
         opacity: 1;
     }
+    /* Graph item layout */
+    .graph-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px 16px;
+        flex-wrap: wrap;
+    }
+    .graph-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1 1 auto;
+        min-width: 0; /* allow children (name) to shrink and ellipsize in flex */
+    }
+    .graph-name {
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        max-width: 100%;
+    }
+    .graph-name-label {
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+    .graph-name-value {
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: ellipsis;
+    }
+    .graph-toggles {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: nowrap;
+    }
+    .graph-toggles .toggle-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+    /* Render both switches inline horizontally */
+    .graph-toggles .toggle-item .form-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px; /* small space between checkbox and text */
+        margin-bottom: 0; /* override bootstrap's block spacing */
+        flex: 0 0 auto; /* prevent full-width expansion */
+    }
+    /* Align checkbox and text perfectly on the same line */
+    .graph-toggles .toggle-item .form-check .form-check-input {
+        margin-top: 0; /* override Bootstrap's default 0.3em */
+    }
+    .graph-toggles label {
+        margin-bottom: 0;
+    }
+    .graph-toggles .form-check-label {
+        white-space: nowrap;
+    }
+    /* Ensure the disabled caption is red and breaks to a new line under toggles */
+    .ai-disabled-caption {
+        color: #dc3545 !important; /* enforce red even if .form-text sets muted color */
+        flex-basis: 100%; /* take full width under the flex row */
+    }
 </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -124,24 +191,6 @@
                                                         <v-select class="vue-select-imput" v-model="selectedAggregatedDataPrompt" :options="aggregated_data_prompts" label="name" @input="updateAggregatedDataPrompt"></v-select>
                                                         <textarea v-model="aggregatedPromptText" class="form-control mt-3" rows="5" readonly></textarea>
                                                     </div>
-                                                    <div class="d-flex justify-content-between mb-3">
-                                                        <div class="d-flex flex-direction-column">
-                                                            <label class="form-check-label" for="ai_graph_switch">AI graphs analysis</label>
-                                                            <label class="text-description">Clarify if there's a need to conduct an analysis of the graphs. Also, make sure you've chosen a model that can handle image inputs.</label>
-                                                        </div>
-                                                        <div class="form-check form-switch">
-                                                            <input v-model="ai_graph_switch" class="form-check-input" id="ai_graph_switch" type="checkbox" :disabled="!ai_switch" :class="{ 'disabled-checkbox': !ai_switch }" checked="">
-                                                        </div>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between mb-3">
-                                                        <div class="d-flex flex-direction-column">
-                                                            <label class="form-check-label" for="ai_to_graphs_switch">Add AI observations after graphs</label>
-                                                            <label class="text-description">The tool will compile and place the gathered analysis beneath the graph within the report.</label>
-                                                        </div>
-                                                        <div class="form-check form-switch min-h-auto mb-0">
-                                                            <input v-model="ai_to_graphs_switch" class="form-check-input" id="ai_to_graphs_switch" type="checkbox" :disabled="!ai_switch" :class="{ 'disabled-checkbox': !ai_switch }" checked="">
-                                                        </div>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -179,17 +228,39 @@
                                         </div>
                                         <div v-else-if="element.type === 'graph'" class="template-group">
                                             <div class="drag-handle"><i class="fas fa-grip-lines"></i></div>
-                                            <span class="badge badge-primary">GRAPH</span>
-                                            <span class="badge badge-success ms-2" v-if="getGraphTypeById(element.graph_id)">${ getGraphTypeById(element.graph_id) }</span>
-                                            <div class="template-el-label">Name: ${ getGraphNameById(element.graph_id) || 'Graph not found' }</div>
+                                            <div class="graph-header mt-2 ps-2">
+                                                <div class="graph-meta">
+                                                    <span class="badge badge-primary">GRAPH</span>
+                                                    <span class="badge badge-success ms-2" v-if="getGraphTypeById(element.graph_id)">${ getGraphTypeById(element.graph_id) }</span>
+                                                    <div class="template-el-label graph-name" :title="getGraphNameById(element.graph_id) || 'Graph not found'">
+                                                        <span class="graph-name-label">Name:</span>
+                                                        <span class="graph-name-value">${ getGraphNameById(element.graph_id) || 'Graph not found' }</span>
+                                                    </div>
+                                                </div>
+                                                <div class="graph-toggles">
+                                                    <div class="toggle-item">
+                                                        <div class="form-check form-switch min-h-auto mb-0">
+                                                            <input v-model="element.ai_graph_switch" class="form-check-input" :id="'ai_graph_switch_' + element.id" type="checkbox" :disabled="!ai_switch || !graphHasPrompt(element.graph_id)" :class="{ 'disabled-checkbox': !ai_switch || !graphHasPrompt(element.graph_id) }" :title="!graphHasPrompt(element.graph_id) ? 'Disabled: no prompt assigned to this graph' : ''" @change="if (!$event.target.checked) element.ai_to_graphs_switch = false">
+                                                            <label class="form-check-label ms-1" :for="'ai_graph_switch_' + element.id">AI analysis for this graph</label>
+                                                        </div>
+                                                        <div class="form-check form-switch min-h-auto mb-0">
+                                                            <input v-model="element.ai_to_graphs_switch" class="form-check-input" :id="'ai_to_graphs_switch_' + element.id" type="checkbox" :disabled="!ai_switch || !element.ai_graph_switch || !graphHasPrompt(element.graph_id)" :class="{ 'disabled-checkbox': !ai_switch || !element.ai_graph_switch || !graphHasPrompt(element.graph_id) }" :title="!graphHasPrompt(element.graph_id) ? 'Disabled: no prompt assigned to this graph' : ''">
+                                                            <label class="form-check-label ms-1" :for="'ai_to_graphs_switch_' + element.id">Add AI summary under the graph</label>
+                                                        </div>
+                                                        <div v-if="!graphHasPrompt(element.graph_id)" class="form-text text-danger small mt-1 ai-disabled-caption">
+                                                            Disabled: assign a prompt to this graph to enable AI.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="flex-end">
                                                 <button class='btn-close-id btn-close' @click="removeElement(element)" type="button"></button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary mt-3" @click="addTextElement" type="button">Add Text</button>
-                                <button class="btn btn-success mt-3 ms-2" @click="showGraphsModal = true" type="button">Add Graphs</button>
+                                <button class="btn btn-primary" @click="addTextElement" type="button">Add Text</button>
+                                <button class="btn btn-success ms-2" @click="showGraphsModal = true" type="button">Add Graphs</button>
                                 <!-- Switches moved to left column -->
                             </div>
                             <div class="col-12 col-xl-22p">
@@ -361,8 +432,6 @@
                             system_prompt_id: '',
                             ai_switch: false,
                             ai_aggregated_data_switch: false,
-                            ai_graph_switch: false,
-                            ai_to_graphs_switch: false,
                             nfrs_switch: false,
                             ml_switch: false,
                             showBackendVariables: false,
@@ -485,11 +554,10 @@
                                 graph_id: graph.id,
                                 type: 'graph',
                                 content: '', // Add default empty content for graph elements
+                                ai_graph_switch: false,
+                                ai_to_graphs_switch: false,
                                 id: this.idCounter
                             });
-                            if (this.ai_graph_switch) {
-                                this.validateGraphPrompts();
-                            }
                             // Close the modal after selecting a graph
                             this.showGraphsModal = false;
                         },
@@ -562,8 +630,6 @@
                                 "title": this.title,
                                 "ai_switch": this.ai_switch,
                                 ai_aggregated_data_switch: this.ai_aggregated_data_switch,
-                                "ai_graph_switch": this.ai_graph_switch,
-                                "ai_to_graphs_switch": this.ai_to_graphs_switch,
                                 "nfrs_switch": this.nfrs_switch,
                                 "ml_switch": this.ml_switch,
                                 "template_prompt_id": this.template_prompt_id || null,
@@ -622,36 +688,28 @@
                             const graph = this.graphs.find(graph => graph.id === graph_id);
                             return graph ? graph.type : '';
                         },
-                        validateGraphPrompts() {
-                            const graphsInTemplate = this.template.filter(el => el.type === 'graph');
-                            if (graphsInTemplate.length === 0) {
-                                return; // No graphs, no problem
-                            }
-
-                            const graphsWithNoPrompts = graphsInTemplate.some(templateGraph => {
-                                const fullGraph = this.graphs.find(g => g.id === templateGraph.graph_id);
-                                return fullGraph && fullGraph.prompt_id === null;
-                            });
-
-                            if (graphsWithNoPrompts) {
-                                showFlashMessage("A graph in the template is missing a prompt. AI graph analysis is disabled.", "error");
-                                this.ai_graph_switch = false;
-                            }
+                        getGraphById(graph_id) {
+                            const graph = this.graphs.find(graph => graph.id === graph_id);
+                            return graph || null;
+                        },
+                        graphHasPrompt(graph_id) {
+                            const graph = this.getGraphById(graph_id);
+                            return !!(graph && graph.prompt_id);
                         }
                     },
                     watch: {
                         ai_switch(newValue) {
                             if (!newValue) {
                                 this.ai_aggregated_data_switch = false;
-                                this.ai_graph_switch = false;
-                                this.ai_to_graphs_switch = false;
-                            }
-                        },
-                        ai_graph_switch(newValue) {
-                            if (!newValue) {
-                                this.ai_to_graphs_switch = false;
-                            } else {
-                                this.validateGraphPrompts();
+                                // Turn off all per-graph flags when AI is disabled
+                                if (Array.isArray(this.template)) {
+                                    this.template.forEach(item => {
+                                        if (item && item.type === 'graph') {
+                                            item.ai_graph_switch = false;
+                                            item.ai_to_graphs_switch = false;
+                                        }
+                                    });
+                                }
                             }
                         },
                         showGraphsModal(newValue) {
@@ -717,15 +775,51 @@
                                                  this.nfr = this.nfrs[0];
                                              }
                                             this.template = templateData.data;
+                                            // Ensure graph items have AI flags for proper binding
+                                            if (Array.isArray(this.template)) {
+                                                this.template.forEach(item => {
+                                                    if (item && item.type === 'graph') {
+                                                        if (!Object.prototype.hasOwnProperty.call(item, 'ai_graph_switch')) item.ai_graph_switch = false;
+                                                        if (!Object.prototype.hasOwnProperty.call(item, 'ai_to_graphs_switch')) item.ai_to_graphs_switch = false;
+                                                    }
+                                                });
+                                            }
                                             this.template_prompt_id = templateData.template_prompt_id;
                                             this.aggregated_prompt_id = templateData.aggregated_prompt_id;
                                             this.system_prompt_id = templateData.system_prompt_id;
                                             this.ai_switch = templateData.ai_switch;
                                             this.ai_aggregated_data_switch = templateData.ai_aggregated_data_switch;
-                                            this.ai_graph_switch = templateData.ai_graph_switch;
-                                            this.ai_to_graphs_switch = templateData.ai_to_graphs_switch;
                                             this.nfrs_switch = templateData.nfrs_switch;
                                             this.ml_switch = templateData.ml_switch;
+
+                                            // Normalize AI flags on load for backward compatibility and dependency enforcement
+                                            if (Array.isArray(this.template)) {
+                                                // Enforce per-graph dependency: if ai_graph_switch is OFF, ai_to_graphs_switch must be OFF
+                                                this.template.forEach(item => {
+                                                    if (item && item.type === 'graph' && !item.ai_graph_switch) {
+                                                        item.ai_to_graphs_switch = false;
+                                                    }
+                                                });
+                                                // If global AI is disabled, turn off all per-graph AI flags
+                                                if (!this.ai_switch) {
+                                                    this.template.forEach(item => {
+                                                        if (item && item.type === 'graph') {
+                                                            item.ai_graph_switch = false;
+                                                            item.ai_to_graphs_switch = false;
+                                                        }
+                                                    });
+                                                }
+                                                // Ensure graphs without prompts cannot have AI toggles ON
+                                                this.template.forEach(item => {
+                                                    if (item && item.type === 'graph') {
+                                                        const g = this.graphs.find(g => g.id === item.graph_id);
+                                                        if (!g || !g.prompt_id) {
+                                                            item.ai_graph_switch = false;
+                                                            item.ai_to_graphs_switch = false;
+                                                        }
+                                                    }
+                                                });
+                                            }
 
                                             // If cloning, clear the ID so a new template will be created on save
                                             if (cloneTemplateId) {
