@@ -51,43 +51,42 @@ class GraphsAddTypeRelaxNulls(BaseMigration):
             try:
                 prev_fk = connection.execute(text('PRAGMA foreign_keys')).scalar()
                 connection.execute(text('PRAGMA foreign_keys=OFF'))
-                with connection.begin():
-                    # ensure clean temp table
-                    connection.execute(text('DROP TABLE IF EXISTS graphs_new'))
-                    create_sql = text(
-                """
-                CREATE TABLE IF NOT EXISTS graphs_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    project_id INTEGER,
-                    name VARCHAR(120) NOT NULL,
-                    type VARCHAR(20) NOT NULL DEFAULT 'custom',
-                    grafana_id INTEGER,
-                    dash_id INTEGER,
-                    view_panel INTEGER,
-                    width INTEGER NOT NULL,
-                    height INTEGER NOT NULL,
-                    custom_vars VARCHAR(500),
-                    prompt_id INTEGER,
-                    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
-                    FOREIGN KEY(grafana_id) REFERENCES grafana(id) ON DELETE CASCADE,
-                    FOREIGN KEY(dash_id) REFERENCES grafana_dashboards(id) ON DELETE CASCADE,
-                    FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE SET NULL
+                # ensure clean temp table
+                connection.execute(text('DROP TABLE IF EXISTS graphs_new'))
+                create_sql = text(
+            """
+            CREATE TABLE IF NOT EXISTS graphs_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
+                name VARCHAR(120) NOT NULL,
+                type VARCHAR(20) NOT NULL DEFAULT 'custom',
+                grafana_id INTEGER,
+                dash_id INTEGER,
+                view_panel INTEGER,
+                width INTEGER NOT NULL,
+                height INTEGER NOT NULL,
+                custom_vars VARCHAR(500),
+                prompt_id INTEGER,
+                FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY(grafana_id) REFERENCES grafana(id) ON DELETE CASCADE,
+                FOREIGN KEY(dash_id) REFERENCES grafana_dashboards(id) ON DELETE CASCADE,
+                FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE SET NULL
+            )
+            """
                 )
-                """
-                    )
-                    connection.execute(create_sql)
-                    # Copy data; set type='custom' for existing rows
-                    select_cols = 'id, project_id, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id'
-                    connection.execute(text(
-                        f"INSERT INTO graphs_new (id, project_id, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id, type) "
-                        f"SELECT {select_cols}, CASE WHEN project_id IS NULL THEN 'default' ELSE 'custom' END as type FROM {graphs_table}"
-                    ))
-                    # Swap tables
-                    connection.execute(text(f'DROP TABLE {graphs_table}'))
-                    connection.execute(text('ALTER TABLE graphs_new RENAME TO graphs'))
-                    # Indexes
-                    connection.execute(text('CREATE INDEX IF NOT EXISTS ix_graphs_project_id ON graphs (project_id)'))
-                    connection.execute(text('CREATE INDEX IF NOT EXISTS ix_graphs_type ON graphs (type)'))
+                connection.execute(create_sql)
+                # Copy data; set type='custom' for existing rows
+                select_cols = 'id, project_id, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id'
+                connection.execute(text(
+                    f"INSERT INTO graphs_new (id, project_id, name, grafana_id, dash_id, view_panel, width, height, custom_vars, prompt_id, type) "
+                    f"SELECT {select_cols}, CASE WHEN project_id IS NULL THEN 'default' ELSE 'custom' END as type FROM {graphs_table}"
+                ))
+                # Swap tables
+                connection.execute(text(f'DROP TABLE {graphs_table}'))
+                connection.execute(text('ALTER TABLE graphs_new RENAME TO graphs'))
+                # Indexes
+                connection.execute(text('CREATE INDEX IF NOT EXISTS ix_graphs_project_id ON graphs (project_id)'))
+                connection.execute(text('CREATE INDEX IF NOT EXISTS ix_graphs_type ON graphs (type)'))
             finally:
                 # Restore original foreign_keys setting for the connection
                 try:

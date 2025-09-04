@@ -47,30 +47,29 @@ class NFRRowsNormalize(BaseMigration):
             try:
                 prev_fk = connection.execute(text('PRAGMA foreign_keys')).scalar()
                 connection.execute(text('PRAGMA foreign_keys=OFF'))
-                with connection.begin():
-                    connection.execute(text("DROP TABLE IF EXISTS nfr_rows_new"))
-                    connection.execute(text(
-                        """
-                        CREATE TABLE nfr_rows_new (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            regex BOOLEAN,
-                            scope VARCHAR(500) NOT NULL,
-                            metric VARCHAR(120) NOT NULL,
-                            operation VARCHAR(120) NOT NULL,
-                            threshold FLOAT NOT NULL,
-                            nfr_id INTEGER NOT NULL,
-                            FOREIGN KEY(nfr_id) REFERENCES nfrs(id) ON DELETE CASCADE
-                        )
-                        """
-                    ))
-                    connection.execute(text(
-                        """
-                        INSERT INTO nfr_rows_new (id, regex, scope, metric, operation, threshold, nfr_id)
-                        SELECT id, regex, scope, metric, operation, threshold, nfr_id FROM nfr_rows
-                        """
-                    ))
-                    connection.execute(text("DROP TABLE nfr_rows"))
-                    connection.execute(text("ALTER TABLE nfr_rows_new RENAME TO nfr_rows"))
+                connection.execute(text("DROP TABLE IF EXISTS nfr_rows_new"))
+                connection.execute(text(
+                    """
+                    CREATE TABLE nfr_rows_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        regex BOOLEAN,
+                        scope VARCHAR(500) NOT NULL,
+                        metric VARCHAR(120) NOT NULL,
+                        operation VARCHAR(120) NOT NULL,
+                        threshold FLOAT NOT NULL,
+                        nfr_id INTEGER NOT NULL,
+                        FOREIGN KEY(nfr_id) REFERENCES nfrs(id) ON DELETE CASCADE
+                    )
+                    """
+                ))
+                connection.execute(text(
+                    """
+                    INSERT INTO nfr_rows_new (id, regex, scope, metric, operation, threshold, nfr_id)
+                    SELECT id, regex, scope, metric, operation, threshold, nfr_id FROM nfr_rows
+                    """
+                ))
+                connection.execute(text("DROP TABLE nfr_rows"))
+                connection.execute(text("ALTER TABLE nfr_rows_new RENAME TO nfr_rows"))
             finally:
                 try:
                     if str(prev_fk) in ('1', 'ON'):

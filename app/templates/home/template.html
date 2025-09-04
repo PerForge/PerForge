@@ -247,10 +247,10 @@
                                                             <input v-model="element.ai_to_graphs_switch" class="form-check-input" :id="'ai_to_graphs_switch_' + element.id" type="checkbox" :disabled="!ai_switch || !element.ai_graph_switch || !graphHasPrompt(element.graph_id)" :class="{ 'disabled-checkbox': !ai_switch || !element.ai_graph_switch || !graphHasPrompt(element.graph_id) }" :title="!graphHasPrompt(element.graph_id) ? 'Disabled: no prompt assigned to this graph' : ''">
                                                             <label class="form-check-label ms-1" :for="'ai_to_graphs_switch_' + element.id">Add AI summary under the graph</label>
                                                         </div>
-                                                        <div v-if="!graphHasPrompt(element.graph_id)" class="form-text text-danger small mt-1 ai-disabled-caption">
-                                                            Disabled: assign a prompt to this graph to enable AI.
-                                                        </div>
                                                     </div>
+                                                </div>
+                                                <div v-if="!graphHasPrompt(element.graph_id)" class="form-text text-danger small mt-1 ai-disabled-caption">
+                                                    AI checkboxes disabled: assign a prompt to this graph to enable AI.
                                                 </div>
                                             </div>
                                             <div class="flex-end">
