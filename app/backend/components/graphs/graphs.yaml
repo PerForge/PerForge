@@ -3,16 +3,16 @@ graphs:
     type: "default"
     width: 1000
     height: 500
-    prompt_id: null
+    prompt_id: "[BE][SINGLE] Throughput"
 
   - name: "Errors"
     type: "default"
     width: 1000
     height: 500
-    prompt_id: null
+    prompt_id: "[BE][SINGLE] Errors"
 
   - name: "Response Time"
     type: "default"
     width: 1000
     height: 500
-    prompt_id: null
+    prompt_id: "[BE][SINGLE] Response time"

@@ -215,9 +215,15 @@ class AzureWikiReport(ReportingBase):
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                # Inject per-graph AI switch only (no fallback to legacy template-level flags)
+                graph_data = {
+                    **graph_data,
+                    "ai_graph_switch": bool(obj.get("ai_graph_switch")),
+                }
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
-                if self.ai_to_graphs_switch:
+                per_graph_ai_to_graphs = bool(obj.get("ai_to_graphs_switch"))
+                if per_graph_ai_to_graphs and ai_support_response:
                     report_body += self.add_text(ai_support_response)
 
         # Analyze templates after all data is collected

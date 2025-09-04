@@ -17,24 +17,25 @@ import logging
 import os
 import yaml
 
-from app.config                  import db
+from app.config import db
 from app.backend.pydantic_models import GraphModel
-from sqlalchemy                  import or_, and_
+from sqlalchemy import or_, and_
+from app.backend.components.prompts.prompts_db import DBPrompts
 
 
 class DBGraphs(db.Model):
     __tablename__ = 'graphs'
-    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), index=True)
-    name          = db.Column(db.String(120), nullable=False)
-    type          = db.Column(db.String(20), nullable=False, default='custom', index=True)
-    grafana_id    = db.Column(db.Integer, db.ForeignKey('grafana.id', ondelete='CASCADE'), nullable=True)
-    dash_id       = db.Column(db.Integer, db.ForeignKey('grafana_dashboards.id', ondelete='CASCADE'), nullable=True)
-    view_panel    = db.Column(db.Integer, nullable=True)
-    width         = db.Column(db.Integer, nullable=False)
-    height        = db.Column(db.Integer, nullable=False)
-    custom_vars   = db.Column(db.String(500))
-    prompt_id     = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), index=True)
+    name = db.Column(db.String(120), nullable=False)
+    type = db.Column(db.String(20), nullable=False, default='custom', index=True)
+    grafana_id = db.Column(db.Integer, db.ForeignKey('grafana.id', ondelete='CASCADE'), nullable=True)
+    dash_id = db.Column(db.Integer, db.ForeignKey('grafana_dashboards.id', ondelete='CASCADE'), nullable=True)
+    view_panel = db.Column(db.Integer, nullable=True)
+    width = db.Column(db.Integer, nullable=False)
+    height = db.Column(db.Integer, nullable=False)
+    custom_vars = db.Column(db.String(500))
+    prompt_id = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
@@ -188,14 +189,38 @@ class DBGraphs(db.Model):
                     width = item.get('width', 1000)
                     height = item.get('height', 500)
                     custom_vars = item.get('custom_vars')
-                    prompt_id = item.get('prompt_id')
+                    prompt_id_value = item.get('prompt_id')
+
+                    # Resolve prompt_id: YAML may contain a prompt NAME; map it to DB ID, else None
+                    resolved_prompt_id = None
+                    try:
+                        if isinstance(prompt_id_value, int):
+                            resolved_prompt_id = prompt_id_value
+                        elif isinstance(prompt_id_value, str) and prompt_id_value.strip():
+                            prompt_name = prompt_id_value.strip()
+                            # Prefer prompts with place == 'graph'
+                            prompt_obj = db.session.query(DBPrompts).filter(
+                                DBPrompts.name == prompt_name,
+                                DBPrompts.place == 'graph'
+                            ).one_or_none()
+                            if not prompt_obj:
+                                # Fallback: any prompt by that name
+                                prompt_obj = db.session.query(DBPrompts).filter(
+                                    DBPrompts.name == prompt_name
+                                ).one_or_none()
+                            resolved_prompt_id = prompt_obj.id if prompt_obj else None
+                        else:
+                            resolved_prompt_id = None
+                    except Exception:
+                        logging.warning(f"Failed to resolve prompt_id for graph '{name}': {traceback.format_exc()}")
+                        resolved_prompt_id = None
 
                     if name in existing_by_name:
                         g = existing_by_name[name]
                         g.width = width
                         g.height = height
                         g.custom_vars = custom_vars
-                        g.prompt_id = prompt_id
+                        g.prompt_id = resolved_prompt_id
                         updated += 1
                     else:
                         # Create new internal graph (ID will be assigned, existing IDs preserved)
@@ -206,7 +231,7 @@ class DBGraphs(db.Model):
                             width=width,
                             height=height,
                             custom_vars=custom_vars,
-                            prompt_id=prompt_id
+                            prompt_id=resolved_prompt_id
                         )
                         db.session.add(instance)
                         created += 1

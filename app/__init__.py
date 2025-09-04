@@ -39,7 +39,7 @@ from flask_bcrypt import Bcrypt
 from flask_compress import Compress
 
 from app.api import register_blueprints
-from app.migrations import run_migrations
+from app.schema_migrations.runner import MigrationRunner
 
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -89,8 +89,8 @@ with app.app_context():
         DBSMTPMailRecipient.__table__
         ], checkfirst=True)
 
-    # Run migrations to add/modify columns
-    run_migrations()
+    # Run migrations to add/modify columns via base orchestrator
+    MigrationRunner().run()
 
     DBPrompts.load_default_prompts_from_yaml()
 

@@ -51,9 +51,8 @@ class ReportingBase:
         if self.ai_switch:
             self.ai_support_obj = AISupport(project=self.project, system_prompt=self.system_prompt_id)
         self.ai_aggregated_data_switch = template_obj["ai_aggregated_data_switch"]
-        self.ai_graph_switch = template_obj["ai_graph_switch"]
-        self.ai_to_graphs_switch = template_obj["ai_to_graphs_switch"]
         self.ml_switch = template_obj["ml_switch"]
+
         if self.dp_obj.test_type == "front_end":
             self.ml_switch = False # Temporary fix for ML switch
 
@@ -231,7 +230,8 @@ class ReportingBase:
             image = self._render_internal_graph(graph_data)
 
             # Optional AI analysis
-            if self.ai_switch and self.ai_graph_switch and graph_data.get("prompt_id"):
+            ai_graph_enabled = bool(graph_data.get("ai_graph_switch"))
+            if self.ai_switch and ai_graph_enabled and graph_data.get("prompt_id"):
                 ai_support_response = self.ai_support_obj.analyze_graph(graph_data.get("name"), image, graph_data.get("prompt_id"))
             return image, ai_support_response
 
@@ -256,7 +256,8 @@ class ReportingBase:
         url = self.replace_variables(url)
         image = grafana.render_image(url)
 
-        if self.ai_switch and self.ai_graph_switch and graph_data.get("prompt_id"):
+        ai_graph_enabled = bool(graph_data.get("ai_graph_switch"))
+        if self.ai_switch and ai_graph_enabled and graph_data.get("prompt_id"):
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data.get("name"), image, graph_data.get("prompt_id"))
 
         return image, ai_support_response

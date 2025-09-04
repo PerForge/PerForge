@@ -15,6 +15,22 @@
       - Your output should follow the following structure if there is performance issue for a metric:
         - The [performance issue description], indicating performance issue.
       ###Input: response time metric graph
+  - name: "[BE][SINGLE] Errors"
+    type: default
+    place: graph
+    prompt: |
+      ###Task: follow the instructions below to ANALYZE the graph and PROVIDE observations corresponding to constraints
+      ###Instructions:
+      - Assess the trends of each error rate line.
+      - Error rates should remain low and stable. The presence of errors should be minimal and consistent. Isolated errors are acceptable.
+      - Explicitly identify any spikes, surges, or significant increases in each metric.
+      ###Constraints:
+      - Provide one observation per metric as a bullet list, without an opening statement or conclusion, and refrain from using prefixed descriptors such as 'Observations.'
+      - Your output should follow the following structure if there is no performance issue for a metric:
+        - The [metric] is consistently low and stable [with minimal errors/without errors].
+      - Your output should follow the following structure if there is a performance issue for a metric:
+        - The [performance issue description], indicating a problem.
+      ###Input: Errors metric graph
   - name: "[BE][SINGLE] Throughput"
     type: default
     place: graph
