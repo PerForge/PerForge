@@ -35,8 +35,16 @@ HTTP_CONFLICT = 409
 HTTP_INTERNAL_SERVER_ERROR = 500
 
 def get_project_id():
-    """Get the current project ID from cookies."""
-    return request.cookies.get('project')
+    """Get the current project ID from cookies as an integer.
+
+    Returns:
+        int | None: The project ID if present and valid, otherwise None.
+    """
+    raw = request.cookies.get('project')
+    try:
+        return int(raw) if raw is not None else None
+    except (ValueError, TypeError):
+        return None
 
 def api_response(data=None, message=None, status=HTTP_OK, errors=None):
     """

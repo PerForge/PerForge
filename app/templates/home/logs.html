@@ -10,10 +10,49 @@
       <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-                <pre class="ms-4">{{ logs }}</pre>
+                <div class="ms-4 mt-3 mb-2 d-flex align-items-center gap-2">
+                    <button id="refreshBtn" class="btn btn-sm btn-primary" title="Refresh" aria-label="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <label for="tail" class="ms-2">Tail:</label>
+                    <input id="tail" type="number" min="1" max="1000" value="150" class="form-control form-control-sm" style="width: 100px;" />
+                    <span id="status" class="text-muted ms-2"></span>
+                </div>
+                <pre id="logs" class="ms-4" style="white-space: pre-wrap;"></pre>
             </div>
         </div>
         <script>
+        (function() {
+            const el = {
+                logs: document.getElementById('logs'),
+                tail: document.getElementById('tail'),
+                refresh: document.getElementById('refreshBtn'),
+                status: document.getElementById('status')
+            };
+
+            async function loadLogs() {
+                const tail = Math.max(1, Math.min(parseInt(el.tail.value || '150', 10) || 150, 1000));
+                el.status.textContent = 'Loading...';
+                try {
+                    const resp = await fetch(`/api/v1/logs?tail=${tail}`, { credentials: 'same-origin' });
+                    if (!resp.ok) {
+                        throw new Error(`HTTP ${resp.status}`);
+                    }
+                    const json = await resp.json();
+                    const text = (json && json.data && typeof json.data.logs === 'string') ? json.data.logs : 'No logs available';
+                    el.logs.textContent = text;
+                    el.status.textContent = `Showing last ${tail} lines`;
+                } catch (e) {
+                    el.logs.textContent = `Failed to load logs: ${e}`;
+                    el.status.textContent = '';
+                }
+            }
+
+            el.refresh.addEventListener('click', loadLogs);
+            el.tail.addEventListener('change', loadLogs);
+            // Initial load
+            loadLogs();
+        })();
         </script>
     </main>
 {% endblock content %}

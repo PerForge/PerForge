@@ -38,7 +38,8 @@ class FrontendTestData(BaseTestData):
         'cdp_performance_js_heap_total_size',
         'count_per_content_type',
         'first_party_transfer_size',
-        'third_party_transfer_size'
+        'third_party_transfer_size',
+        'overview_data'
     ]
 
     def __init__(self) -> None:

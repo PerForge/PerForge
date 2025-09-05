@@ -15,6 +15,7 @@
 # Standard library imports
 from collections import defaultdict
 from typing import List, Dict, Any, Tuple, Optional, Type
+import logging
 
 # Third-party imports
 import pandas as pd
@@ -165,7 +166,6 @@ class DataProvider:
         if hasattr(test_obj, 'custom_vars'):
             for custom_var in self.ds_obj.custom_vars:
                 value = self.ds_obj.get_custom_var(test_title=test_title, custom_var=custom_var, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
-                
                 test_obj.append_metric("custom_vars", {"name": custom_var, "value": value})
         return test_obj
 
@@ -313,7 +313,12 @@ class DataProvider:
 
     def df_delete_nan_rows(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Selectively remove rows containing NaN values and raise exceptions for problematic data.
+        Remove rows containing NaN values while gracefully handling fully-missing metrics.
+
+        This function will:
+        - Drop any columns that are entirely NaN (e.g., missing metrics) with a warning
+        - Drop remaining rows that contain NaN values across the kept columns
+        - Raise only if the DataFrame is empty or if all columns are entirely NaN
 
         Args:
             df: The DataFrame to process
@@ -322,7 +327,7 @@ class DataProvider:
             A DataFrame with NaN rows removed
 
         Raises:
-            ValueError: If all columns are completely NaN or if some metrics are missing
+            ValueError: If the DataFrame is empty or if all columns are completely NaN
         """
         # Check if the DataFrame is empty
         if df.empty:
@@ -335,10 +340,13 @@ class DataProvider:
         if len(all_nan_columns) == len(df.columns):
             raise ValueError(f"All metrics data is missing: {', '.join(all_nan_columns)}")
 
-        # If some columns are completely NaN, log a warning but continue with remaining columns
+        # If some columns are completely NaN, log a warning and drop them, continue with remaining columns
         if all_nan_columns:
-            # Raise an exception with information about which metrics are missing
-            raise ValueError(f"Some metrics data is completely missing: {', '.join(all_nan_columns)}")
+            logging.warning(
+                "Dropping metrics with no data: %s",
+                ", ".join(all_nan_columns)
+            )
+            df = df.drop(columns=all_nan_columns)
 
         # If no columns are completely NaN, proceed with normal dropna
         return df.dropna()
@@ -423,7 +431,7 @@ class DataProvider:
         """
         # If ML analysis is already present, do not run it again
         if test_obj.ml_anomalies is not None:
-            return
+            return test_obj.ml_metrics
 
         merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
 
@@ -447,6 +455,7 @@ class DataProvider:
         test_obj.ml_html_summary = ml_html_summary
         test_obj.ml_summary = ml_summary
         test_obj.performance_status = performance_status
+        test_obj.ml_metrics = metrics
 
         return metrics
 
@@ -478,6 +487,9 @@ class DataProvider:
 
         pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
+
+        throughputPerReq = self.ds_obj.get_throughput_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        metrics["throughputPerReq"] = self.transform_to_json(throughputPerReq)
 
         # Collect the aggregated table data
         metrics_table: MetricsTable = test_obj.get_table('aggregated_data')

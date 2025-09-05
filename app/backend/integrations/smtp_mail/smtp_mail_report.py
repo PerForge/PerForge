@@ -15,12 +15,11 @@
 import time
 
 
-from app.backend.integrations.reporting_base      import ReportingBase
-from app.backend.integrations.report_registry     import ReportRegistry
+from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.integrations.smtp_mail.smtp_mail import SmtpMail
-from app.backend.integrations.grafana.grafana     import Grafana
-from app.backend.components.graphs.graphs_db      import DBGraphs
-from datetime                                     import datetime
+from app.backend.components.graphs.graphs_db import DBGraphs
+from datetime import datetime
 
 
 @ReportRegistry.register("smtp_mail")
@@ -29,7 +28,7 @@ class SmtpMailReport(ReportingBase):
     def __init__(self, project):
         super().__init__(project)
         self.report_body = ""
-        self.images      = []
+        self.images = []
 
     def set_template(self, template, db_config, action_id):
         super().set_template(template, db_config)
@@ -49,22 +48,17 @@ class SmtpMailReport(ReportingBase):
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        url = self.grafana_obj.generate_url_to_render_graph(graph_data, self.current_start_timestamp, self.current_end_timestamp, current_test_title, baseline_test_title)
-        url = self.replace_variables(url)
-        image = self.grafana_obj.render_image(url)
+        # Use centralized renderer (supports internal Plotly and external Grafana)
+        image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
         if image:
-            timestamp  = str(round(time.time() * 1000))
+            timestamp = str(round(time.time() * 1000))
             content_id = f'{graph_data["id"]}_{timestamp}'.replace(" ", "_")
-            file_name  = f'{content_id}.png'
-            self.images.append({'file_name':file_name, 'data': image, 'content_id': content_id})
+            file_name = f'{content_id}.png'
+            self.images.append({'file_name': file_name, 'data': image, 'content_id': content_id})
             graph = f'<img src="cid:{content_id}" width="900" alt="{content_id}" /><br>'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
-        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"] is not None:
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-            return graph, ai_support_response
-        else:
-            return graph, ""
+        return graph, (ai_support_response or "")
 
     def format_table(self, metrics):
         if not metrics:
@@ -83,6 +77,9 @@ class SmtpMailReport(ReportingBase):
         elif 'transaction' in keys:
             keys.remove('transaction')
             keys.insert(0, 'transaction')
+        elif 'Metric' in keys:
+            keys.remove('Metric')
+            keys.insert(0, 'Metric')
 
         # Start building the HTML table
         html = ['<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">']
@@ -144,7 +141,7 @@ class SmtpMailReport(ReportingBase):
             return self.replace_variables(self.title)
 
     def generate_report(self, tests, action_id, template_group=None):
-        page_title  = None
+        page_title = None
 
         def process_test(test, isgroup):
             nonlocal page_title
@@ -154,14 +151,16 @@ class SmtpMailReport(ReportingBase):
                 db_config = test.get('db_config')
                 self.set_template(template_id, db_config, action_id)
 
-                test_title            = test.get('test_title')
-                baseline_test_title   = test.get('baseline_test_title')
+                test_title = test.get('test_title')
+                baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
+                additional_context = test.get('additional_context')
+                self.collect_data(test_title, baseline_test_title, additional_context)
 
                 # Determine the final wiki page title once
                 if page_title is None:
                     if isgroup:
-                        page_title  = self.generate_path(True)
+                        page_title = self.generate_path(True)
                     else:
                         page_title = self.generate_path(False)
                 self.report_body += self.generate(test_title, baseline_test_title)
@@ -192,17 +191,21 @@ class SmtpMailReport(ReportingBase):
             if obj["type"] == "text":
                 report_body += self.add_text(obj["content"])
             elif obj["type"] == "graph":
-                graph_data       = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
+                graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
+                # Inject per-graph AI switch only (no fallback to legacy template-level flags)
+                graph_data = {
+                    **graph_data,
+                    "ai_graph_switch": bool(obj.get("ai_graph_switch")),
+                }
                 graph, ai_support_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
                 report_body += graph
-                if self.ai_to_graphs_switch:
+                per_graph_ai_to_graphs = bool(obj.get("ai_to_graphs_switch"))
+                if per_graph_ai_to_graphs and ai_support_response:
                     report_body += self.add_text(ai_support_response)
 
         # Analyze templates after all data is collected
         if self.nfrs_switch or self.ai_switch or self.ml_switch:
             self.analyze_template()
-
         # Replace variables in the entire report body at the end
         report_body = self.replace_variables(report_body)
         return report_body

@@ -328,7 +328,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
                     p.field("count", float(row["count"]))
                     points.append(p)
 
-        # Active threads series: emit one "jmeter" point per window with transaction="internal"
+        # Active threads series: emit one "jmeter" point per window with transaction="default"
         if "allThreads" in df.columns and not df["allThreads"].isna().all():
             at_series = df["allThreads"].astype(float)
             at_max = at_series.resample(aggregation_window).max().fillna(0).astype(int)
@@ -350,7 +350,7 @@ class InfluxdbV2Insertion(DataInsertionBase):
             p = Point("jmeter").time(ts.to_pydatetime())
             p.tag(test_title_tag, test_title)
             p.tag("backend_listener", "perforge")
-            p.tag("transaction", "internal")
+            p.tag("transaction", "default")
             p.field("minAT", float(at_min.loc[ts]))
             p.field("maxAT", float(at_max.loc[ts]))
             p.field("meanAT", float(at_mean.loc[ts]))

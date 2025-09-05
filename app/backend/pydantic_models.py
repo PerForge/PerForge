@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr
-from typing   import Optional
+from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr, ConfigDict
+from typing import Optional, Literal
+import logging
 
 
 # Cleaning functions
@@ -44,6 +45,7 @@ class InfluxdbModel(BaseModelWithStripping):
     listener  : str
     tmz       : str = Field(default="UTC")
     test_title_tag_name: str = Field(default="testTitle")
+    regex: Optional[str] = Field(default=None)
     custom_vars: list[str] = Field(default_factory=list)
     is_default: bool
 
@@ -167,9 +169,10 @@ class GraphModel(BaseModelWithStripping):
     id         : Optional[int]
     project_id : Optional[int]
     name       : str
-    grafana_id : int
-    dash_id    : int
-    view_panel : int
+    type       : Literal['default', 'custom'] = Field(default='custom')
+    grafana_id : Optional[int]
+    dash_id    : Optional[int]
+    view_panel : Optional[int]
     width      : int
     height     : int
     custom_vars: Optional[str]
@@ -181,6 +184,20 @@ class GraphModel(BaseModelWithStripping):
             values['custom_vars'] = values.pop('custom_vars')
         return values
 
+    @model_validator(mode='after')
+    def validate_by_type(self):
+        if self.type == 'custom':
+            missing = []
+            if self.grafana_id is None:
+                missing.append('grafana_id')
+            if self.dash_id is None:
+                missing.append('dash_id')
+            if self.view_panel is None:
+                missing.append('view_panel')
+            if missing:
+                raise ValueError(f"External graph requires fields: {', '.join(missing)}")
+        return self
+
 
 class TemplateObjectModel(BaseModelWithStripping):
     id         : Optional[int] = Field(default=None)
@@ -188,6 +205,8 @@ class TemplateObjectModel(BaseModelWithStripping):
     content    : Optional[str]
     graph_id   : Optional[int]
     template_id: Optional[int] = Field(default=None)
+    ai_graph_switch     : bool = Field(default=False)
+    ai_to_graphs_switch : bool = Field(default=False)
 
 
 class TemplateModel(BaseModelWithStripping):
@@ -198,8 +217,6 @@ class TemplateModel(BaseModelWithStripping):
     title                    : str
     ai_switch                : bool
     ai_aggregated_data_switch: bool = Field(default=False)
-    ai_graph_switch          : bool
-    ai_to_graphs_switch      : bool
     nfrs_switch              : bool
     ml_switch                : bool = Field(default=False)
     template_prompt_id       : Optional[int]
@@ -207,7 +224,7 @@ class TemplateModel(BaseModelWithStripping):
     system_prompt_id         : Optional[int]
     data                     : list[TemplateObjectModel]
 
-    @field_validator('ai_switch', 'ai_aggregated_data_switch', 'ai_graph_switch', 'ai_to_graphs_switch', 'nfrs_switch', 'ml_switch', mode='before')
+    @field_validator('ai_switch', 'ai_aggregated_data_switch', 'nfrs_switch', 'ml_switch', mode='before')
     def empty_str_to_false(cls, v):
         if v is None:
             return False
@@ -238,8 +255,7 @@ class NFRObjectModel(BaseModelWithStripping):
     scope    : str
     metric   : str
     operation: str
-    threshold: int
-    weight   : Optional[int]
+    threshold: float
     nfr_id   : Optional[int] = Field(default=None)
 
 

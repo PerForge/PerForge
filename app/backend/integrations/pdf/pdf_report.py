@@ -17,22 +17,22 @@ import ast
 import json
 import re
 
-from app.backend.integrations.reporting_base   import ReportingBase
-from app.backend.integrations.report_registry  import ReportRegistry
-from app.backend.integrations.grafana.grafana  import Grafana
-from app.backend.components.graphs.graphs_db   import DBGraphs
-from io                                       import BytesIO
-from PIL                                      import Image as PILImage
-from reportlab.lib.colors                     import Color
-from reportlab.lib.enums                      import TA_LEFT
-from reportlab.lib.pagesizes                  import A4, landscape
-from reportlab.lib.styles                     import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units                      import inch
-from reportlab.lib.utils                      import ImageReader
-from reportlab.pdfbase                        import ttfonts
-from reportlab.pdfbase.pdfmetrics             import registerFont, registerFontFamily
-from reportlab.platypus                       import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
-from datetime                                 import datetime
+from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.report_registry import ReportRegistry
+from app.backend.components.graphs.graphs_db import DBGraphs
+from io import BytesIO
+from PIL import Image as PILImage
+from PIL import ImageChops
+from reportlab.lib.colors import Color
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import ttfonts
+from reportlab.pdfbase.pdfmetrics import registerFont, registerFontFamily
+from reportlab.platypus import (BaseDocTemplate, Frame, Image, PageTemplate, Paragraph, Spacer, Table, TableStyle)
+from datetime import datetime
 
 
 class Pdf:
@@ -50,16 +50,16 @@ class Pdf:
     }
 
     def __init__(self, pdf_io, margin=15, theme='dark'):
-        self.doc              = BaseDocTemplate(pdf_io, pagesize=landscape(A4), leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
-        self.elements         = []
-        self.logo_path        = os.path.join('app', 'static', 'assets', 'img', 'logo.png')
+        self.doc = BaseDocTemplate(pdf_io, pagesize=landscape(A4), leftMargin=margin, rightMargin=margin, topMargin=margin, bottomMargin=margin)
+        self.elements = []
+        self.logo_path = os.path.join('app', 'static', 'assets', 'img', 'logo.png')
         registerFont(ttfonts.TTFont('NunitoSans', os.path.join('app', 'static', 'assets', 'fonts', 'NunitoSans_7pt-Regular.ttf')))
         registerFont(ttfonts.TTFont('NunitoSans-Bold', os.path.join('app', 'static', 'assets', 'fonts', 'NunitoSans_7pt-Bold.ttf')))
         registerFontFamily('NunitoSans', normal='NunitoSans', bold='NunitoSans-Bold')
-        self.title_font    = 'NunitoSans-Bold'
-        self.regular_font  = 'NunitoSans'
+        self.title_font = 'NunitoSans-Bold'
+        self.regular_font = 'NunitoSans'
         self.header_height = 50
-        self.title_size    = 14
+        self.title_size = 14
 
         # Create a custom page template with a gray background
         def on_page(canvas, doc):
@@ -71,18 +71,27 @@ class Pdf:
 
         def draw_header(canvas):
             # Adjust the y-coordinate of the rectangle to move it closer to the top
-            header_radius    = 10
+            header_radius = 10
             header_text_size = 16
-            rect_y           = landscape(A4)[1] - self.header_height
-
-            # Draw the new rectangle with full width and rounded bottom edges
-            canvas.setFillColor(self.header_color)
-            canvas.roundRect(0, rect_y, landscape(A4)[0], 60, header_radius, fill=1, stroke=0)
-
+            rect_y = landscape(A4)[1] - self.header_height
             # Add the logo
-            logo = ImageReader(self.logo_path)
-            logo_width, logo_height = logo.getSize()
-            logo_scale        = 40 / logo_height  # Scale the logo to fit the rectangle height
+            # Load logo and trim transparent/white borders
+            try:
+                pil_logo = PILImage.open(self.logo_path).convert('RGBA')
+                alpha = pil_logo.split()[-1]
+                bbox = alpha.getbbox()
+                if not bbox:
+                    bg = PILImage.new('RGBA', pil_logo.size, (255, 255, 255, 255))
+                    diff = ImageChops.difference(pil_logo, bg)
+                    bbox = diff.getbbox()
+                if bbox:
+                    pil_logo = pil_logo.crop(bbox)
+                logo = ImageReader(pil_logo)
+                logo_width, logo_height = pil_logo.size
+            except Exception:
+                logo = ImageReader(self.logo_path)
+                logo_width, logo_height = logo.getSize()
+            logo_scale = 30 / logo_height  # Scale the logo to fit the rectangle height
             logo_width_scaled = logo_width * logo_scale
 
             # Add the title
@@ -92,17 +101,18 @@ class Pdf:
             title_width = canvas.stringWidth(title_text, self.title_font, header_text_size)
 
             # Calculate the combined width and adjust positions
-            combined_width = logo_width_scaled + title_width
-            logo_x         = (landscape(A4)[0] - combined_width) / 2
-            title_x        = logo_x + logo_width_scaled
+            spacing = 10  # Gap between logo and title (points)
+            combined_width = logo_width_scaled + spacing + title_width
+            logo_x = (landscape(A4)[0] - combined_width) / 2
+            title_x = logo_x + logo_width_scaled + spacing
 
-             # Draw the logo and title
+            # Draw the logo and title
             logo_y = rect_y + (self.header_height - logo_height * logo_scale) / 2  # Vertically center the logo within the rectangle
-            canvas.drawImage(self.logo_path, logo_x, logo_y, logo_width_scaled, logo_height * logo_scale, mask='auto')
+            canvas.drawImage(logo, logo_x, logo_y, logo_width_scaled, logo_height * logo_scale, mask='auto')
 
             # Calculate the title height and adjust the position
             title_height = header_text_size * 0.8
-            title_y      = rect_y + (self.header_height - title_height) / 2
+            title_y = rect_y + (self.header_height - title_height) / 2
             canvas.drawString(title_x, title_y, title_text)
 
         frame = Frame(margin, margin, self.doc.width, self.doc.height, id='normal', showBoundary=0)
@@ -121,14 +131,14 @@ class Pdf:
         self.background_color = self.THEMES[self.theme]['background']
 
     def add_title(self, title_text):
-        styles      = getSampleStyleSheet()
+        styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
-            name      = 'Title',
-            parent    = styles['Heading1'],
-            fontSize  = self.title_size,
+            name = 'Title',
+            parent = styles['Heading1'],
+            fontSize = self.title_size,
             alignment = TA_LEFT,
             textColor = self.text_color,
-            fontName  = self.title_font
+            fontName = self.title_font
         )
         title = Paragraph(title_text, title_style)
         self.elements.append(Spacer(1, 0.25 * inch))
@@ -136,15 +146,15 @@ class Pdf:
 
     def add_image(self, image):
         image_io = BytesIO(image)
-        img      = PILImage.open(image_io)
+        img = PILImage.open(image_io)
         img_width, img_height = img.size
-        max_width  = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin
+        max_width = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin
         max_height = landscape(A4)[1] - self.doc.topMargin - self.doc.bottomMargin - 0.25 * inch  # Subtract the height of the Spacer
         if img_width > max_width:
             img_height = img_height * (max_width / img_width)
-            img_width  = max_width
+            img_width = max_width
         if img_height > max_height:
-            img_width  = img_width * (max_height / img_height)
+            img_width = img_width * (max_height / img_height)
             img_height = max_height
         # Create a new BytesIO object for the resized image
         resized_image_io = BytesIO()
@@ -225,19 +235,19 @@ class Pdf:
         self.elements.append(table)
 
     def add_text(self, text):
-        styles                 = getSampleStyleSheet()
-        normal_style           = styles["Normal"]
-        normal_style.fontName  = self.regular_font
+        styles = getSampleStyleSheet()
+        normal_style = styles["Normal"]
+        normal_style.fontName = self.regular_font
         normal_style.textColor = self.text_color
-        text                   = text.replace('\n', '<br/>')
+        text = text.replace('\n', '<br/>')
         self.elements.append(Paragraph(text, normal_style))
 
     def add_text_summary(self, text):
-        styles                 = getSampleStyleSheet()
-        normal_style           = styles["Normal"]
-        normal_style.fontName  = self.regular_font
+        styles = getSampleStyleSheet()
+        normal_style = styles["Normal"]
+        normal_style.fontName = self.regular_font
         normal_style.textColor = self.text_color
-        text                   = text.replace('\n', '<br/>')
+        text = text.replace('\n', '<br/>')
         self.elements.insert(3, Paragraph(text, normal_style))
 
     def build(self):
@@ -261,27 +271,14 @@ class RoundedImage(Image):
 class PdfReport(ReportingBase):
     def __init__(self, project, theme='dark'):
         super().__init__(project)
-        self.pdf_io      = BytesIO()
-        self.theme       = theme
+        self.pdf_io = BytesIO()
+        self.theme = theme
         self.pdf_creator = Pdf(self.pdf_io, theme=self.theme)
         self.pdf_creator.elements.append(Spacer(1, self.pdf_creator.header_height))
 
 
     def set_template(self, template, db_config):
         super().set_template(template, db_config)
-
-    def add_graph(self, graph_data, current_test_title, baseline_test_title):
-        # Use the timestamps from current_test_obj instead of direct attributes
-        start_timestamp = self.current_test_obj.start_time_timestamp
-        end_timestamp = self.current_test_obj.end_time_timestamp
-
-        url = self.grafana_obj.generate_url_to_render_graph(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
-        url = self.replace_variables(url)
-        image = self.grafana_obj.render_image(url)
-        ai_support_response = None
-        if self.ai_switch and self.ai_graph_switch and graph_data["prompt_id"]:
-            ai_support_response = self.ai_support_obj.analyze_graph(graph_data["name"], image, graph_data["prompt_id"])
-        return image, ai_support_response
 
     def add_group_text(self, text):
         self.add_text(text)
@@ -311,13 +308,14 @@ class PdfReport(ReportingBase):
 
     def add_graph_to_pdf(self, image, ai_support_response):
         self.pdf_creator.add_image(image)
-        if self.ai_to_graphs_switch and ai_support_response:
+        # Rely on caller to apply per-graph gating; add text only if provided
+        if ai_support_response:
             self.add_text(ai_support_response)
 
     def check_if_table(self, text):
         try:
             # Safely evaluate the string to a Python literal
-            text   = text.replace('\\"', '"')
+            text = text.replace('\\"', '"')
             result = ast.literal_eval(text)
 
             # Check if the result is a list of lists
@@ -336,7 +334,7 @@ class PdfReport(ReportingBase):
         whitespace. Returns ``None`` when the input is not a pure title block.
         """
         pattern = re.compile(r'^\s*<(?:title|h1|h2)>(.*?)</?(?:title|h1|h2)>\s*$', re.IGNORECASE | re.DOTALL)
-        match   = pattern.match(text)
+        match = pattern.match(text)
         if match:
             return match.group(1).strip()
         return None
@@ -382,6 +380,10 @@ class PdfReport(ReportingBase):
         elif 'page' in keys:
             keys.remove('page')
             keys.insert(0, 'page')
+        # Fallback to page if no transaction column
+        elif 'Metric' in keys:
+            keys.remove('Metric')
+            keys.insert(0, 'Metric')
 
         # Create the table data structure with header row
         table_data = [keys]
@@ -407,23 +409,25 @@ class PdfReport(ReportingBase):
         return json.dumps(table_data)
 
     def generate_report(self, tests, template_group=None, theme='dark'):
-        page_title  = None
+        page_title = None
         self.pdf_creator.set_theme(theme)
 
         def process_test(test, isgroup):
             nonlocal page_title
             template_id = test.get('template_id')
             if template_id:
-                db_config            = test.get('db_config')
+                db_config = test.get('db_config')
                 self.set_template(template_id, db_config)
-                test_title           = test.get('test_title')
-                baseline_test_title  = test.get('baseline_test_title')
+                test_title = test.get('test_title')
+                baseline_test_title = test.get('baseline_test_title')
                 self.collect_data(test_title, baseline_test_title)
+                additional_context = test.get('additional_context')
+                self.collect_data(test_title, baseline_test_title, additional_context)
 
                 # Determine overall PDF title once
                 if page_title is None:
                     if isgroup:
-                        page_title  = self.generate_title(True)
+                        page_title = self.generate_title(True)
                     else:
                         page_title = self.generate_title(False)
 
@@ -466,8 +470,13 @@ class PdfReport(ReportingBase):
         for obj in self.data:
             if obj["type"] == "graph":
                 graph_data = DBGraphs.get_config_by_id(project_id=self.project, id=obj["graph_id"])
-                self.grafana_obj = Grafana(project=self.project, id=graph_data["grafana_id"])
-                image, ai_response = self.add_graph(graph_data, current_test_title, baseline_test_title)
+                # Inject per-graph AI switch only (no fallback to legacy template-level flags)
+                graph_data = {
+                    **graph_data,
+                    "ai_graph_switch": bool(obj.get("ai_graph_switch")),
+                }
+                # Delegate to ReportingBase unified renderer (supports internal and external graphs)
+                image, ai_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
                 processed_graphs[obj["graph_id"]] = (image, ai_response)
 
         # Pre-process all text to trigger replace_variables and load tables
@@ -485,4 +494,9 @@ class PdfReport(ReportingBase):
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 image, ai_response = processed_graphs[obj["graph_id"]]
-                self.add_graph_to_pdf(image, ai_response)
+                # Always add the image
+                self.pdf_creator.add_image(image)
+                # Per-graph decision to append AI text
+                per_graph_ai_to_graphs = bool(obj.get("ai_to_graphs_switch"))
+                if per_graph_ai_to_graphs and ai_response:
+                    self.add_text(ai_response)

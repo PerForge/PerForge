@@ -53,7 +53,7 @@ def get_graphs():
                 errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
             )
 
-        graph_configs = DBGraphs.get_configs(project_id=project_id)
+        graph_configs = DBGraphs.get_configs(project_id=project_id, include_defaults=True)
         return api_response(data={"graphs": graph_configs})
     except Exception as e:
         logging.error(f"Error getting graphs: {str(e)}")

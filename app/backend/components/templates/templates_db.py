@@ -15,27 +15,25 @@
 import traceback
 import logging
 
-from app.config                  import db
+from app.config import db
 from app.backend.pydantic_models import TemplateModel
-from sqlalchemy.orm              import joinedload
+from sqlalchemy.orm import joinedload
 
 class DBTemplates(db.Model):
-    __tablename__             = 'templates'
-    id                        = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    project_id                = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
-    name                      = db.Column(db.String(120), nullable=False)
-    nfr                       = db.Column(db.Integer, db.ForeignKey('nfrs.id', ondelete='SET NULL'))
-    title                     = db.Column(db.String(120), nullable=False)
-    ai_switch                 = db.Column(db.Boolean, default=False)
+    __tablename__ = 'templates'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    nfr = db.Column(db.Integer, db.ForeignKey('nfrs.id', ondelete='SET NULL'))
+    title = db.Column(db.String(120), nullable=False)
+    ai_switch = db.Column(db.Boolean, default=False)
     ai_aggregated_data_switch = db.Column(db.Boolean, default=False)
-    ai_graph_switch           = db.Column(db.Boolean, default=False)
-    ai_to_graphs_switch       = db.Column(db.Boolean, default=False)
-    nfrs_switch               = db.Column(db.Boolean, default=False)
-    ml_switch                 = db.Column(db.Boolean, default=False)
-    template_prompt_id        = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
-    aggregated_prompt_id      = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
-    system_prompt_id          = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
-    data                      = db.relationship('DBTemplateData', backref='templates', cascade='all, delete-orphan', lazy=True)
+    nfrs_switch = db.Column(db.Boolean, default=False)
+    ml_switch = db.Column(db.Boolean, default=False)
+    template_prompt_id = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
+    aggregated_prompt_id = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
+    system_prompt_id = db.Column(db.Integer, db.ForeignKey('prompts.id', ondelete='SET NULL'))
+    data = db.relationship('DBTemplateData', backref='templates', cascade='all, delete-orphan', lazy=True)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
@@ -149,11 +147,13 @@ class DBTemplates(db.Model):
 
 class DBTemplateData(db.Model):
     __tablename__ = 'template_data'
-    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    type          = db.Column(db.String(120), nullable=False)
-    content       = db.Column(db.Text)
-    graph_id      = db.Column(db.Integer, db.ForeignKey('graphs.id', ondelete='CASCADE'))
-    template_id   = db.Column(db.Integer, db.ForeignKey('templates.id', ondelete='CASCADE'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    type = db.Column(db.String(120), nullable=False)
+    content = db.Column(db.Text)
+    graph_id = db.Column(db.Integer, db.ForeignKey('graphs.id', ondelete='CASCADE'))
+    template_id = db.Column(db.Integer, db.ForeignKey('templates.id', ondelete='CASCADE'), nullable=False)
+    ai_graph_switch = db.Column(db.Boolean, default=False)
+    ai_to_graphs_switch = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}

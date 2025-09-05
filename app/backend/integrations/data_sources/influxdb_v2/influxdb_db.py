@@ -32,6 +32,7 @@ class DBInfluxdb(db.Model):
     listener      = db.Column(db.String(120), nullable=False)
     tmz           = db.Column(db.String(120), nullable=False)
     test_title_tag_name = db.Column(db.String(120), nullable=False)
+    regex = db.Column(db.String(500))
     custom_vars   = db.Column(db.String(500))
     is_default    = db.Column(db.Boolean, default=False)
 

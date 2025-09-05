@@ -715,6 +715,8 @@
       const transformedList = bulkSelectInstance.getSelectedRows();
       const selectedRows = {};
       const output = JSON.parse(selectedAction.value.toString());
+      const additionalContextEl = document.getElementById('additionalContext');
+      const additionalContextVal = additionalContextEl ? (additionalContextEl.value || '').trim() : '';
 
       if (transformedList.length === 0) {
         showResultModal("Please choose at least one test.");
@@ -752,6 +754,12 @@
         };
         if (test.baseline_test_title && test.baseline_test_title !== "no data") {
           newTest.baseline_test_title = test.baseline_test_title;
+        }
+        // Prefer per-row additional_context; fallback to global input
+        if (test.additional_context && String(test.additional_context).trim() !== "") {
+          newTest.additional_context = String(test.additional_context).trim();
+        } else if (additionalContextVal) {
+          newTest.additional_context = additionalContextVal;
         }
         return newTest;
       });

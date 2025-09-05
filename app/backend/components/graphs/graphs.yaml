@@ -1,0 +1,18 @@
+graphs:
+  - name: "Throughput and Users"
+    type: "default"
+    width: 1000
+    height: 500
+    prompt_id: "[BE][SINGLE] Throughput"
+
+  - name: "Errors"
+    type: "default"
+    width: 1000
+    height: 500
+    prompt_id: "[BE][SINGLE] Errors"
+
+  - name: "Response Time"
+    type: "default"
+    width: 1000
+    height: 500
+    prompt_id: "[BE][SINGLE] Response time"
