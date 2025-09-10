@@ -141,7 +141,6 @@ class ReportingBase:
         self.parameters['ai_summary'] = ""
 
         all_tables = self.current_test_obj.get_all_tables()
-        all_tables_json = self.current_test_obj.get_all_tables_json()
 
         # 1. NFR validation
         if self.nfrs_switch:
@@ -157,6 +156,10 @@ class ReportingBase:
         if self.ai_switch:
             # Use JSON string of all tables for AI analysis
             if self.ai_aggregated_data_switch:
+                # Apply baseline to all tables only when aggregated data analysis is requested
+                if getattr(self, "baseline_test_obj", None) is not None:
+                    self._apply_baseline_to_all_tables()
+                all_tables_json = self.current_test_obj.get_all_tables_json()
                 self.ai_support_obj.analyze_aggregated_data(all_tables_json, self.aggregated_prompt_id)
 
             # Generate template summary, including NFR and ML summaries
@@ -261,6 +264,46 @@ class ReportingBase:
             ai_support_response = self.ai_support_obj.analyze_graph(graph_data.get("name"), image, graph_data.get("prompt_id"))
 
         return image, ai_support_response
+
+    def _apply_baseline_to_all_tables(self) -> None:
+        """
+        If a baseline test is available, preload all current tables and apply baseline metrics
+        so subsequent consumers (e.g., get_all_tables_json()) include comparison fields.
+
+        This mirrors the lazy baseline wiring done in replace_variables() but applies it
+        globally during data collection.
+
+        Safe to call multiple times.
+        """
+        try:
+            # Ensure both current and baseline objects are present and support table access
+            if (
+                getattr(self, "current_test_obj", None) is None
+                or getattr(self, "baseline_test_obj", None) is None
+                or not hasattr(self.current_test_obj, "get_all_tables")
+                or not hasattr(self.baseline_test_obj, "get_table")
+            ):
+                return
+
+            # Preload all current tables with default aggregation
+            current_tables = self.current_test_obj.get_all_tables() or {}
+
+            # Use the same aggregation for baseline tables
+            aggregation = getattr(self.current_test_obj, "aggregation", None)
+
+            for table_name, table in current_tables.items():
+                if table is None:
+                    continue
+                try:
+                    baseline_table = self.baseline_test_obj.get_table(table_name, aggregation)
+                    if baseline_table is not None and getattr(baseline_table, "metrics", None):
+                        table.set_baseline_metrics(baseline_table.metrics)
+                except Exception as e:
+                    logging.warning(
+                        f"_apply_baseline_to_all_tables: failed to apply baseline for table '{table_name}': {e}"
+                    )
+        except Exception as e:
+            logging.warning(f"_apply_baseline_to_all_tables: unexpected error: {e}")
 
     def _collect_parameters(self, test_obj: BaseTestData, prefix: str = "") -> Dict[str, Any]:
         """
@@ -391,3 +434,6 @@ class ReportingBase:
 
         if additional_context:
             self.parameters['additional_context'] = additional_context
+
+        # Baseline application for tables is deferred to analyze_template() and only
+        # executed when aggregated data analysis is enabled, to avoid unnecessary loading.
