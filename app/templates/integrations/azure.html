@@ -73,7 +73,14 @@
                                 {{ form.azure_project_id(class="form-control", placeholder="e.g. my-project") }}
                                 <label for="identifier" class="mt-2">Identifier:</label>
                                 {{ form.identifier(class="form-control", placeholder="e.g. my-identifier") }}
-                                <label for="path_to_report" class="mt-2">Path To Report:</label>
+                                <label for="path_to_report" class="mt-2">Path To Report:
+                                    <span class="tooltip-container">
+                                        <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                        <span class="tooltip-content">
+                                          Variables available here: ${current_month}, ${current_day}.
+                                        </span>
+                                      </span>
+                                </label>
                                 {{ form.path_to_report(class="form-control", placeholder="e.g. my-path-to-report") }}
                                 <label for="is_default" class="mt-2">Is Default:</label>
                                 {{ form.is_default(class="form-control") }}

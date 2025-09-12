@@ -347,15 +347,40 @@ class ReportingBase:
                     param_name = f"{prefix}{report_name}"
                     parameters[param_name] = str(test_obj.get_metric(attr_name))
 
+        # Include data source bucket if available from DataProvider.ds_obj
+        try:
+            ds_obj = getattr(self, "dp_obj", None)
+            if ds_obj is not None and getattr(ds_obj, "ds_obj", None) is not None:
+                bucket = getattr(ds_obj.ds_obj, "bucket", None)
+                if bucket:
+                    parameters["bucket"] = str(bucket)
+        except Exception as e:
+            logging.warning(f"_collect_parameters: could not read data source bucket: {e}")
+
         # Add a single, global report generation timestamp (no prefix)
         # Use the DataProvider helper to honour data source timezones.
-        if hasattr(self, "dp_obj") and "report_timestamp" not in parameters:
+        if hasattr(self, "dp_obj"):
             try:
-                parameters["report_timestamp"] = self.dp_obj.get_current_timestamp()
+                # Report timestamp
+                if "report_timestamp" not in parameters:
+                    parameters["report_timestamp"] = self.dp_obj.get_current_timestamp()
+                # Current month (e.g., September)
+                if "current_month" not in parameters:
+                    parameters["current_month"] = self.dp_obj.get_current_timestamp("%B")
+                # Current day (e.g., 12)
+                if "current_day" not in parameters:
+                    day_str = self.dp_obj.get_current_timestamp("%d")
+                    parameters["current_day"] = str(int(day_str)) if day_str.isdigit() else day_str
             except Exception:
-                # Fallback to a simple UTC timestamp if anything goes wrong
+                # Fallback to UTC if anything goes wrong
                 from datetime import datetime, timezone
-                parameters["report_timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+                now = datetime.now(timezone.utc)
+                if "report_timestamp" not in parameters:
+                    parameters["report_timestamp"] = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+                if "current_month" not in parameters:
+                    parameters["current_month"] = now.strftime("%B")
+                if "current_day" not in parameters:
+                    parameters["current_day"] = str(now.day)
         return parameters
 
     def _create_grafana_link(self, test_obj: BaseTestData, test_title: str, prefix: str = "") -> Dict[str, str]:

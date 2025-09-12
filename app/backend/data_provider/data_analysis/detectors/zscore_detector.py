@@ -108,6 +108,13 @@ class ZScoreDetector(BaseDetector):
             axis=1
         )
 
+        # Step 3.5: Apply contextual validator (20 before/after median, 15% of current metric)
+        df = engine.filter_contextual_anomalies(
+            df,
+            metric,
+            f'{metric}_anomaly_z_score'
+        )
+
         # Step 4: Ensure endpoints are not marked as anomalies
         df.iloc[0, df.columns.get_loc(f'{metric}_anomaly_z_score')] = 1
         df.iloc[-1, df.columns.get_loc(f'{metric}_anomaly_z_score')] = 1

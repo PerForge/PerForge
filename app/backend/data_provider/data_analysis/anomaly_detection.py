@@ -54,7 +54,10 @@ class AnomalyDetectionEngine:
             'slope_threshold': 1.000,
             'p_value_threshold': 0.05,
             'numpy_var_threshold': 0.003,
-            'cv_threshold': 0.07
+            'cv_threshold': 0.07,
+            'context_median_window': 10,
+            'context_median_pct': 0.15,
+            'context_median_enabled': True
         }
 
         # Validate and update parameters
@@ -337,6 +340,71 @@ class AnomalyDetectionEngine:
                     return "Normal"
 
         df[anomaly_col] = df.apply(check_and_update, axis=1)
+        return df
+
+    def filter_contextual_anomalies(self, df: pd.DataFrame, metric: str, method_flag_col: str) -> pd.DataFrame:
+        """
+        Validate candidate anomalies against local neighborhood median.
+
+        If abs(x_i - median(neighbors)) <= context_median_pct * |median(neighbors)|,
+        then the point is reclassified as normal (1) in method_flag_col.
+
+        Neighbors are up to `context_median_window` points before and after, excluding the point itself.
+
+        Args:
+            df: DataFrame with the metric and method_flag_col (-1 for anomaly, 1 for normal)
+            metric: Metric column name
+            method_flag_col: Per-method anomaly flag column
+
+        Returns:
+            Updated DataFrame with filtered method_flag_col
+        """
+        if not getattr(self, 'context_median_enabled', True):
+            return df
+        if metric not in df.columns or method_flag_col not in df.columns:
+            return df
+        df = df.copy()
+        window = int(getattr(self, 'context_median_window', 20))
+        pct = float(getattr(self, 'context_median_pct', 0.15))
+
+        values = df[metric].to_numpy()
+        n = len(df)
+
+        # Only evaluate indices flagged as anomalies by the method
+        flags = df[method_flag_col].to_numpy(copy=True)
+
+        for i in range(n):
+            if flags[i] != -1:
+                continue
+
+            start = max(0, i - window)
+            end = min(n, i + window + 1)
+
+            # neighbors excluding the current point
+            prev_vals = values[start:i]
+            next_vals = values[i + 1:end]
+
+            if prev_vals.size == 0 and next_vals.size == 0:
+                continue
+
+            neighbors = np.concatenate([prev_vals, next_vals]) if prev_vals.size and next_vals.size else (
+                prev_vals if prev_vals.size else next_vals
+            )
+
+            # Remove NaNs
+            neighbors = neighbors[~np.isnan(neighbors)]
+            if neighbors.size == 0:
+                continue
+
+            neighbor_median = float(np.median(neighbors))
+            # Use current point magnitude as denominator to match "15% of metric"
+            denom = max(abs(float(values[i])), 1e-12)
+            diff = abs(float(values[i]) - neighbor_median)
+
+            if diff <= pct * denom:
+                # Reclassify as normal
+                df.iloc[i, df.columns.get_loc(method_flag_col)] = 1
+
         return df
 
     def detect_anomalies(self, df, metric, period_type):
