@@ -114,6 +114,13 @@ class IsolationForestDetector(BaseDetector):
                 anomaly_column=f'{metric}_anomaly_isf'
             )
 
+            # Contextual validator: reclassify small local deviations as normal
+            non_missing_rows = engine.filter_contextual_anomalies(
+                non_missing_rows,
+                metric,
+                f'{metric}_anomaly_isf'
+            )
+
             # Ensure endpoints are marked as normal points
             non_missing_rows.iloc[0, non_missing_rows.columns.get_loc(f'{metric}_anomaly_isf')] = 1
             non_missing_rows.iloc[-1, non_missing_rows.columns.get_loc(f'{metric}_anomaly_isf')] = 1
