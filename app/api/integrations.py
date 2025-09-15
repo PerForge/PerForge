@@ -287,6 +287,42 @@ def get_integrations_by_type(integration_type):
             errors=[{"code": "integration_error", "message": str(e)}]
         )
 
+@integrations_api.route('/api/v1/integrations/outputs', methods=['GET'])
+@api_error_handler
+def get_output_integrations():
+    """
+    Get output configurations for the current project.
+
+    Returns:
+        JSON response with a list of output configurations.
+    """
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        if not project_data:
+            return api_response(
+                message=f"Project with ID {project_id} not found",
+                status=HTTP_NOT_FOUND,
+                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
+            )
+
+        output_configs = DBProjects.get_project_output_configs(project_id=project_id)
+        return api_response(data={"output_configs": output_configs})
+    except Exception as e:
+        logging.error(f"Error getting output integrations: {str(e)}")
+        return api_response(
+            message="Error retrieving output integrations",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
 @integrations_api.route('/api/v1/integrations', methods=['POST'])
 @api_error_handler
 def create_integration():

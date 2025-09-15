@@ -429,6 +429,14 @@ const apiClient = {
      */
     integrations: {
         /**
+         * Get output integrations for the current project (cookie-based)
+         *
+         * @returns {Promise} - Promise that resolves with output configurations
+         */
+        getOutputs: function() {
+            return apiClient.get('/integrations/outputs');
+        },
+        /**
          * Get all integrations
          *
          * @returns {Promise} - Promise that resolves with integrations data
@@ -678,15 +686,6 @@ const apiClient = {
      * Tests API
      */
     tests: {
-        /**
-         * Get test configurations
-         *
-         * @returns {Promise} - Promise that resolves with test configurations
-         */
-        getConfigurations: function() {
-            return apiClient.get('/tests');
-        },
-
         /**
          * Get test data for a specific data source
          *

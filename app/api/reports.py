@@ -54,55 +54,6 @@ def _ensure_report_types_loaded():
         except ImportError as e:
             logging.warning(f"Could not import report module {module_name}: {e}")
 
-@reports_api.route('/api/v1/tests', methods=['GET'])
-@api_error_handler
-def get_tests():
-    """
-    Get all test configurations for the current project.
-
-    Returns:
-        A JSON response with test configurations
-    """
-    try:
-        project_id = get_project_id()
-        if not project_id:
-            return api_response(
-                message="No project selected",
-                status=HTTP_BAD_REQUEST,
-                errors=[{"code": "missing_project", "message": "No project selected"}]
-            )
-
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        if not project_data:
-            return api_response(
-                message=f"Project with ID {project_id} not found",
-                status=HTTP_NOT_FOUND,
-                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
-            )
-
-        influxdb_configs = DBInfluxdb.get_configs(project_id=project_id)
-        db_configs = []
-        for config in influxdb_configs:
-            db_configs.append({"id": config["id"], "name": config["name"], "source_type": "influxdb_v2"})
-
-        template_configs = DBTemplates.get_configs_brief(project_id=project_id)
-        template_group_configs = DBTemplateGroups.get_configs(project_id=project_id)
-        output_configs = DBProjects.get_project_output_configs(id=project_id)
-
-        return api_response(data={
-            "db_configs": db_configs,
-            "templates": template_configs,
-            "template_groups": template_group_configs,
-            "output_configs": output_configs
-        })
-    except Exception as e:
-        logging.error(f"Error getting test configurations: {str(e)}")
-        return api_response(
-            message=ErrorMessages.ER00009.value,
-            status=HTTP_BAD_REQUEST,
-            errors=[{"code": "test_config_error", "message": str(e)}]
-        )
-
 @reports_api.route('/api/v1/tests/data', methods=['GET'])
 @api_error_handler
 def get_test_data():
