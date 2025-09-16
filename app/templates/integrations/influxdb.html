@@ -71,8 +71,24 @@
                                     </div>
                                     <label for="timeout" class="mt-2">Timeout:</label>
                                     {{ form.timeout(class="form-control", placeholder="e.g. 60000") }}
-                                    <label for="bucket" class="mt-2">Bucket:</label>
+                                    <label for="bucket" class="mt-2">Bucket or regex:
+                                        <span class="tooltip-container">
+                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
+                                            <span class="tooltip-content">
+                                              Regex is RE2 (Flux). Backend anchors your pattern automatically as <code>^…$</code>.
+                                              Examples:
+                                              <ul style="margin: 0 0 0 1rem; padding: 0;">
+                                                <li>Only listed buckets: <code>(jmeter|jmeter2|jmeter3)</code></li>
+                                                <li>All buckets: <code>.*</code></li>
+                                                <li>Prefix “jmeter-”: <code>jmeter-.*</code></li>
+                                              </ul>
+                                              Tip: escape <code>/</code> as <code>\/</code> if needed.
+                                            </span>
+                                          </span>
+                                    </label>
                                     {{ form.bucket(class="form-control", placeholder="e.g. my-bucket") }}
+                                    <label for="bucket_regex_bool" class="mt-2">Enable bucket regex:</label>
+                                    {{ form.bucket_regex_bool(class="form-control") }}
                                     <label for="listener" class="input-label mt-2">Backend listener:
                                         <span class="tooltip-container">
                                             <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -232,7 +248,8 @@
                 regex: document.getElementById('regex').value,
                 tmz: document.getElementById('tmz').value,
                 test_title_tag_name: document.getElementById('test_title_tag_name').value,
-                is_default: document.getElementById('is_default').value === 'True'
+                is_default: document.getElementById('is_default').value === 'True',
+                bucket_regex_bool: document.getElementById('bucket_regex_bool').value === 'True'
             };
 
             const varInputs = document.querySelectorAll('.customVarInput');

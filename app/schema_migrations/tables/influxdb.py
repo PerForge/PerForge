@@ -45,7 +45,25 @@ class InfluxdbAddCustomVarsRegex(BaseMigration):
             log.info("Migration for 'regex' applied successfully.")
 
 
+class InfluxdbAddBucketRegexBool(BaseMigration):
+    name = "influxdb: add bucket_regex_bool"
+
+    def apply(self, connection, inspector):
+        table_name = 'influxdb'
+        try:
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+        except Exception:
+            # Table may not exist yet; let create_all handle schema creation
+            return
+
+        if 'bucket_regex_bool' not in columns:
+            log.info(f"Applying migration: Adding column 'bucket_regex_bool' to table '{table_name}'")
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN bucket_regex_bool BOOLEAN DEFAULT 0"))
+            log.info("Migration for 'bucket_regex_bool' applied successfully.")
+
+
 # Export list of migrations for this table (supports multiple in the future)
 MIGRATIONS = [
     InfluxdbAddCustomVarsRegex(),
+    InfluxdbAddBucketRegexBool(),
 ]

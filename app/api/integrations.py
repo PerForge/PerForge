@@ -27,6 +27,7 @@ from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
 from app.backend.components.secrets.secrets_db import DBSecrets
 from influxdb_client import InfluxDBClient
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
@@ -271,6 +272,21 @@ def get_integrations_by_type(integration_type):
             # annotate with type for consistency
             for cfg in configs:
                 cfg['integration_type'] = integration_type
+
+            # For influxdb type: if bucket_regex_bool is true on a config,
+            # fetch actual bucket names from InfluxDB and attach them to the config
+            if integration_type.lower() == 'influxdb':
+                for cfg in configs:
+                    try:
+                        if cfg.get('bucket_regex_bool'):
+                            # Use the configured 'bucket' as a regex to filter bucket names
+                            name_regex = cfg.get('bucket') or None
+                            with InfluxdbV2(project=project_id, id=cfg.get('id')) as ds:
+                                buckets = ds.list_buckets(name_regex=name_regex)
+                            cfg['buckets'] = buckets
+                    except Exception as e:
+                        logging.warning(f"Failed to list buckets for influxdb config id={cfg.get('id')}: {e}")
+                        cfg['buckets'] = []
 
             return api_response(data={"integrations": configs, "integration_type": integration_type})
         except ValueError as e:

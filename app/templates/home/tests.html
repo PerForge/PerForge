@@ -368,18 +368,44 @@
                             select.innerHTML = '';
 
                             items.forEach(cfg => {
-                                // Normalize to the structure expected by the rest of the page
-                                const valueObj = {
-                                    id: cfg.id,
-                                    name: cfg.name,
-                                    source_type: 'influxdb_v2',
-                                    listener: cfg.listener
+                                const makeOption = (bucketName, labelSuffix = null) => {
+                                    const valueObj = {
+                                        id: cfg.id,
+                                        name: cfg.name,
+                                        source_type: 'influxdb_v2',
+                                        listener: cfg.listener,
+                                        bucket: bucketName
+                                    };
+                                    const opt = document.createElement('option');
+                                    opt.value = JSON.stringify(valueObj);
+                                    opt.textContent = labelSuffix ? `${cfg.name} - ${labelSuffix}` : cfg.name;
+                                    select.appendChild(opt);
                                 };
-                                const opt = document.createElement('option');
-                                opt.value = JSON.stringify(valueObj); // preserve key order as set above
-                                opt.textContent = cfg.name;
-                                select.appendChild(opt);
+
+                                const hasBuckets = Array.isArray(cfg.buckets) && cfg.buckets.length > 0;
+                                const isRegex = cfg.bucket_regex_bool === true || cfg.bucket_regex_bool === 'True';
+                                if (isRegex) {
+                                    if (hasBuckets) {
+                                        // Expand into one option per resolved bucket
+                                        cfg.buckets.forEach(b => makeOption(b, b));
+                                    } else {
+                                        // Regex enabled but no buckets matched -> skip this integration entirely
+                                    }
+                                } else {
+                                    // Regex disabled: fallback to single option with configured bucket
+                                    makeOption(cfg.bucket);
+                                }
                             });
+
+                            // If no options were added, show a disabled placeholder
+                            if (select.options.length === 0) {
+                                const opt = document.createElement('option');
+                                opt.textContent = 'No matching datasources';
+                                opt.disabled = true;
+                                opt.selected = true;
+                                opt.value = '';
+                                select.appendChild(opt);
+                            }
 
                             // Try to restore previous selection by cookie exact match
                             let restored = false;
@@ -465,6 +491,14 @@
                     const signal = currentAbortController.signal;
 
                     var dataSource = $("#dataSourceId").val();
+                    if (!dataSource) {
+                        // No datasource selected/available (e.g., regex produced no buckets)
+                        $("#spinner").hide();
+                        // Clear table body and exit gracefully
+                        var tableBody = document.getElementById("bulk-select-body");
+                        if (tableBody) tableBody.innerHTML = '';
+                        return;
+                    }
                     const dataSourceJson = JSON.parse(dataSource);
                     const sourceType = encodeURIComponent(dataSourceJson.source_type);
                     const id = encodeURIComponent(dataSourceJson.id);
@@ -474,7 +508,8 @@
                     apiClient.tests.getTestData(sourceType, id,
                         {
                             page: currentPage,
-                            page_size: pageSize
+                            page_size: pageSize,
+                            bucket: dataSourceJson.bucket
                         },
                         { signal })
                         .then((response) => {
@@ -685,7 +720,7 @@
                         if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
                             btn.classList.add('disabled');
                         } else {
-                            btn.href = `/report?test_title=${test.test_title}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}`;
+                            btn.href = `/report?test_title=${encodeURIComponent(test.test_title)}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}&bucket=${encodeURIComponent(dataSourceJson.bucket)}`;
                         }
                         reportCell.appendChild(btn);
                     });

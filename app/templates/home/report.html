@@ -168,7 +168,8 @@
             const testTitle = "{{ test_title }}"; // Pass the value from the template
             const source_type = "{{ source_type }}";
             const id = "{{ id }}";
-            fetchAndDisplayTestData(testTitle, source_type, id);
+            const bucket = "{{ bucket }}";
+            fetchAndDisplayTestData(testTitle, source_type, id, bucket);
         });
     </script>
 </main>

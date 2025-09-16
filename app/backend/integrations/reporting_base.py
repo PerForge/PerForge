@@ -45,7 +45,12 @@ class ReportingBase:
         self.template_prompt_id = template_obj["template_prompt_id"]
         self.aggregated_prompt_id = template_obj["aggregated_prompt_id"]
         self.system_prompt_id = template_obj["system_prompt_id"]
-        self.dp_obj = DataProvider(project=self.project, source_type=db_config.get("source_type"), id=db_config.get("id"))
+        self.dp_obj = DataProvider(
+            project=self.project,
+            source_type=db_config.get("source_type"),
+            id=db_config.get("id"),
+            bucket=(db_config or {}).get("bucket")
+        )
         self.nfrs_switch = template_obj["nfrs_switch"]
         self.ai_switch = template_obj["ai_switch"]
         if self.ai_switch:

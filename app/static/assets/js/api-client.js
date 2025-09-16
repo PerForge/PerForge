@@ -669,15 +669,16 @@ const apiClient = {
          * Get report data for a specific test
          *
          * @param {string} testTitle - Test title
-         * @param {string} sourceType - Source type (e.g., "influxdb_v2", "timescaledb")
+         * @param {string} sourceType - Source type (e.g., "influxdb_v2")
          * @param {string} id - Optional ID
          * @returns {Promise} - Promise that resolves with report data
          */
-        getReportData: function(testTitle, sourceType, id) {
+        getReportData: function(testTitle, sourceType, id, bucket) {
             return apiClient.post('/reports/data', {
                 test_title: testTitle,
                 source_type: sourceType,
-                id: id
+                id: id,
+                bucket: bucket
             });
         }
     },
@@ -689,7 +690,7 @@ const apiClient = {
         /**
          * Get test data for a specific data source
          *
-         * @param {string} sourceType - Source type (e.g., "influxdb_v2", "timescaledb")
+         * @param {string} sourceType - Source type (e.g., "influxdb_v2")
          * @param {string} id - Optional ID for the data source
          * @returns {Promise} - Promise that resolves with test data
          */

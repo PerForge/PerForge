@@ -15,26 +15,27 @@
 import traceback
 import logging
 
-from app.config                  import db
+from app.config import db
 from app.backend.pydantic_models import InfluxdbModel
 
 
 class DBInfluxdb(db.Model):
     __tablename__ = 'influxdb'
-    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    project_id    = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
-    name          = db.Column(db.String(120), nullable=False)
-    url           = db.Column(db.String(120), nullable=False)
-    org_id        = db.Column(db.String(120), nullable=False)
-    token         = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
-    timeout       = db.Column(db.Integer, nullable=False)
-    bucket        = db.Column(db.String(120), nullable=False)
-    listener      = db.Column(db.String(120), nullable=False)
-    tmz           = db.Column(db.String(120), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    url = db.Column(db.String(120), nullable=False)
+    org_id = db.Column(db.String(120), nullable=False)
+    token = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
+    timeout = db.Column(db.Integer, nullable=False)
+    bucket = db.Column(db.String(120), nullable=False)
+    listener = db.Column(db.String(120), nullable=False)
+    tmz = db.Column(db.String(120), nullable=False)
     test_title_tag_name = db.Column(db.String(120), nullable=False)
     regex = db.Column(db.String(500))
-    custom_vars   = db.Column(db.String(500))
-    is_default    = db.Column(db.Boolean, default=False)
+    bucket_regex_bool = db.Column(db.Boolean, default=False)
+    custom_vars = db.Column(db.String(500))
+    is_default = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}

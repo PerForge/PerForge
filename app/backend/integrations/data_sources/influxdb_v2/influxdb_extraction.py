@@ -19,6 +19,7 @@ from app.backend.integrations.data_sources.base_extraction import DataExtraction
 from app.backend.integrations.data_sources.base_queries import BackEndQueriesBase, FrontEndQueriesBase
 from app.backend.integrations.data_sources.influxdb_v2.queries.influxdb_backend_listener_client import InfluxDBBackendListenerClientImpl
 from app.backend.integrations.data_sources.influxdb_v2.queries.sitespeed_influxdb_v2 import SitespeedFluxQueries
+from app.backend.integrations.data_sources.influxdb_v2.queries.meta import InfluxDBMetaQueries
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
 from app.backend.components.secrets.secrets_db import DBSecrets
 from app.backend.errors import ErrorMessages
@@ -79,6 +80,7 @@ class InfluxdbV2(DataExtractionBase):
             self.token = DBSecrets.get_config_by_id(project_id=self.project, id=config["token"])["value"]
             self.timeout = config["timeout"]
             self.bucket = config["bucket"]
+            self.bucket_regex_bool = config.get("bucket_regex_bool", False)
             self.listener = config["listener"]
             self.regex = config["regex"]
             self.test_title_tag_name = config["test_title_tag_name"]
@@ -713,7 +715,6 @@ class InfluxdbV2(DataExtractionBase):
     # HELPER FUNCTIONS
     # ===================================================================
 
-
     def _execute_query(self, query: str) -> List[Dict[str, Any]]:
         try:
             flux_tables = self.influxdb_connection.query_api().query(query)
@@ -729,6 +730,28 @@ class InfluxdbV2(DataExtractionBase):
             logging.error(ErrorMessages.ER00056.value.format(query))
             logging.error(er)
             raise
+
+    def list_buckets(self, name_regex: str | None = None) -> List[str]:
+        """
+        Return a list of bucket names available in the connected InfluxDB organization
+        (excluding internal buckets like _monitoring and _tasks).
+
+        If name_regex is provided, filter buckets by this regex pattern.
+        """
+        try:
+            query = InfluxDBMetaQueries.get_buckets(name_regex=name_regex)
+            print(query)
+            flux_tables = self.influxdb_connection.query_api().query(query)
+            names = []
+            for table in flux_tables:
+                for record in table.records:
+                    name = record.values.get("name")
+                    if name:
+                        names.append(name)
+            return sorted(set(names))
+        except Exception as er:
+            logging.error(f"Error listing buckets for {self.name}: {er}")
+            return []
 
     def process_data(self, flux_tables):
         data = []
