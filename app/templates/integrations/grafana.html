@@ -11,107 +11,151 @@
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
                 <div class="center-section">
-                    <div class="card mb-3 width-700" data-component-card="data-component-card">
+                    <div class="card mb-3 pf-card-wide" data-component-card="data-component-card">
                         <div class="card-header">
-                            <div class="justify-content-between align-items-center">
-                                <h4 class="mb-0">Grafana
-                                    <span class="tooltip-container">
-                                      <a href="https://perforge.app/docs/configuration/integrations#grafana" target="_blank">
-                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      </a>
-                                      <span class="tooltip-content" style="font-size: 16px;">
-                                          Click to learn more
-                                      </span>
-                                    </span>
-                                </h4>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="mb-0">Grafana Integration</h4>
+                                    <small class="text-muted">Set up your Grafana connection and defaults for dashboards.</small>
+                                </div>
+                                <a class="btn btn-sm btn-outline-secondary" href="https://perforge.app/docs/configuration/integrations#grafana" target="_blank">
+                                    <i class="fa-regular fa-circle-question me-1"></i>
+                                    Docs
+                                </a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" id="grafanaForm" onsubmit="return handleFormSubmit(event)">
-                                <div class="center-section">
+                            <form method="POST" id="grafanaForm" class="pf-form" onsubmit="return handleFormSubmit(event)">
+                                <div>
                                     {{ form.hidden_tag() }}
                                     {% if grafana_config %}
                                         <input type="hidden" name="id" id="config_id" value="{{ grafana_config }}">
                                     {% endif %}
-                                    <label for="name" class="input-label mt-2">Name:</label>
-                                    {{ form.name(id='name', class_='form-control', placeholder="e.g. My Grafana Connection") }}
-                                    <label for="server" class="input-label mt-2">Server:</label>
-                                    {{ form.server(id='server', class_='form-control', placeholder="e.g. http://localhost:3000") }}
-                                    <label for="token" class="input-label mt-2">Token:</label>
-                                    <select class="form-control" name="token" id="token" required>
-                                        <option value="">--- Select the secret ---</option>
-                                        <option value="create_new">--- Create a new secret ---</option>
-                                        {% for secret in secret_configs %}
-                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <div id="new_secret_fields" style="display: none; width: 100%;">
-                                        <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control", placeholder="e.g. GRAFANA_TOKEN">
-                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">
-                                            Scope:
-                                            <span class="tooltip-container d-inline-block me-1">
-                                                <span class="fa-regular fa-circle-question"></span>
-                                                <span class="tooltip-content">
-                                                    Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                                    <div class="row g-3 mt-1">
+                                        <div class="col-12">
+                                            <label for="name" class="form-label required">Name
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Display name for this connection (used in dashboards).</span>
                                                 </span>
-                                            </span>
-                                        </label>
-                                        <select class="form-control" id="new_secret_scope">
-                                            <option value="project">Current project</option>
-                                            <option value="">All projects</option>
-                                        </select>
-                                        <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control", placeholder="e.g. my-super-secret-token">
-                                    </div>
-                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
-                                        Please select a token
-                                    </div>
-
-                                    <label for="org_id" class="input-label mt-2">Organization ID:</label>
-                                    {{ form.org_id(id='org_id', class_='form-control', placeholder="e.g. 1") }}
-
-                                    <label for="test_title" class="input-label mt-2">Test title tag name:
-                                        <span class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <span class="tooltip-content">
-                                              The variable name on dashboard used to select the test title for querying the results. 'testTitle' is default.
-                                            </span>
-                                        </span>
-                                    </label>
-                                    {{ form.test_title(id='test_title', class_='form-control', placeholder="e.g. testTitle") }}
-
-                                    <label for="baseline_test_title" class="input-label mt-2">Baseline test title tag name:
-                                        <span class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <span class="tooltip-content">
-                                              The variable name on dashboard used to select the baseline test title for querying the results. It is used on comparison dashboard. 'baseline_testTitle' is default.
-                                            </span>
-                                        </span>
-                                    </label>
-                                    {{ form.baseline_test_title(id='baseline_test_title', class_='form-control', placeholder="e.g. baseline_testTitle") }}
-
-                                    <label for="is_default" class="input-label mt-2">Is Default:</label>
-                                    {{ form.is_default(id='is_default', class_='form-control') }}
-
-                                    <label for="dashboards" class="input-label mt-2">Dashboards:</label>
-                                    <div id="dashboards-container" style="width: 100%;">
+                                            </label>
+                                            {{ form.name(id='name', class_='form-control', placeholder="e.g. My Grafana") }}
+                                        </div>
+                                        <div class="pf-two-col">
+                                            <div>
+                                                <label for="server" class="form-label required">URL
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Grafana base URL including scheme and port.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.server(id='server', class_='form-control', placeholder="e.g. http://localhost:3000") }}
+                                            </div>
+                                            <div>
+                                                <label for="org_id" class="form-label required">Org ID
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Grafana organization ID. Find it via the org switcher (top-left), under Administration → Organizations, or in the URL as /orgs/<id>.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.org_id(id='org_id', class_='form-control', placeholder="e.g. 1") }}
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="token" class="form-label required">Token</label>
+                                            <select class="form-select" name="token" id="token" required>
+                                                <option value="">--- Select the secret ---</option>
+                                                <option value="create_new">--- Create a new secret ---</option>
+                                                {% for secret in secret_configs %}
+                                                    <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                                Please select a token
+                                            </div>
+                                        </div>
+                                        <div class="col-12 hidden" id="new_secret_fields">
+                                            <div class="card card-body border-1">
+                                                <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label for="new_secret_name" class="form-label">Secret Name</label>
+                                                            <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. GRAFANA_TOKEN">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label for="new_secret_scope" class="form-label">
+                                                                Scope
+                                                                <span class="tooltip-container d-inline-block ms-1">
+                                                                    <span class="tooltip-content">Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.</span>
+                                                                </span>
+                                                            </label>
+                                                            <select class="form-select" id="new_secret_scope">
+                                                                <option value="project">Current project</option>
+                                                                <option value="">All projects</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <label for="new_secret_value" class="form-label">Secret Value</label>
+                                                            <div class="input-group">
+                                                                <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
+                                                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('new_secret_value', this)" aria-label="Toggle secret visibility">
+                                                                    <i class="fa-regular fa-eye"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Org ID moved next to URL above -->
+                                        <div class="pf-two-col">
+                                            <div>
+                                                <label for="test_title" class="form-label required">Test Title variable name
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Name of the variable on the Grafana dashboard used to select the test title (e.g., <code>testTitle</code>).</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.test_title(id='test_title', class_='form-control', placeholder="e.g. testTitle") }}
+                                            </div>
+                                            <div>
+                                                <label for="baseline_test_title" class="form-label">Baseline test title variable
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">[Optional] Dashboard variable used to select the baseline test title for comparison dashboards (e.g., <code>baseline_testTitle</code>).</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.baseline_test_title(id='baseline_test_title', class_='form-control', placeholder="e.g. baseline_testTitle") }}
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="dashboards" class="form-label required">Dashboards
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Add Grafana dashboards to link with this integration. Use dashboard path like <code>/d/&lt;uid&gt;/&lt;slug&gt;</code> (e.g., <code>/d/jmeter-test-results/jmeter-test-results</code>). You can add multiple dashboards; use the Add Dashboard button. Deleting a row only unlinks it here.</span>
+                                                </span>
+                                            </label>
+                                            <div id="dashboards-container" style="width: 100%;">
                                         {% for dashboard in form.dashboards %}
                                         <div class="flex m10-top">
                                             <input type="hidden" name="dashboards-{{ loop.index0 }}-id" value="{{ dashboard.form.id.data or '' }}">
                                             <input type="text" class="form-control dashboardInput" required="" name="dashboards-{{ loop.index0 }}-content" id="dashboards-{{ loop.index0 }}-content" value="{{ dashboard.form.content.data or '' }}" placeholder="e.g. /d/jmeter-test-results/jmeter-test-results">
-                                            <button type="button" class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
+                                            <button type="button" class="btn btn-outline-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
                                         </div>
                                         {% endfor %}
                                     </div>
-                                    <div>
-                                        <button class="btn btn-primary mt-5" type="button" id="addDashboardButton" onclick="addDashboard()">Add Dashboard</button>
-                                        <button class="btn btn-secondary ms-2 mt-5" type="button" id="testGrafanaBtn" onclick="testGrafana()">Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
-                                        <button class="btn btn-primary ms-2 mt-5" type="submit">Save</button>
-                                        {% if grafana_config %}
-                                            <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
-                                        {% endif %}
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <button class="btn btn-outline-primary" type="button" id="addDashboardButton" onclick="addDashboard()"><i class="fa-solid fa-plus me-1"></i>Add Dashboard</button>
                                     </div>
+                                </div>
+                                <div class="card-footer mt-3">
+                                <div class="pf-footer-actions">
+                                    <button class="btn btn-secondary" type="button" id="testGrafanaBtn" onclick="testGrafana()"><i class="fa-solid fa-satellite-dish me-1"></i>Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
+                                    {% if grafana_config %}
+                                        <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="fa-regular fa-trash-can me-1"></i>Delete</a>
+                                    {% endif %}
+                                    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                                    <div class="ms-1">
+                                        <input type="checkbox" class="btn-check" id="is_default" name="is_default" autocomplete="off" {% if form.is_default.data %}checked{% endif %}>
+                                        <label class="btn btn-outline-secondary" for="is_default">
+                                            <i class="fa-solid fa-star me-1 icon-on"></i>
+                                            <i class="fa-regular fa-star me-1 icon-off"></i>
+                                            Default
+                                        </label>
+                                    </div>
+                                  </div>
                                 </div>
                             </form>
                             <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
@@ -168,7 +212,14 @@
                           </div>`;
               var container = document.createElement('div');
               container.innerHTML = html;
-              document.getElementById('dashboards-container').appendChild(container.firstChild);
+              var row = container.firstChild;
+              document.getElementById('dashboards-container').appendChild(row);
+              // attach focus hint to the newly added dashboard input using the Dashboards label tooltip content
+              var dashboardsLabel = document.querySelector('#grafanaForm label[for="dashboards"] .tooltip-content');
+              var newInput = row.querySelector('.dashboardInput');
+              if (dashboardsLabel && newInput) {
+                  attachFocusHintWithContent(newInput, dashboardsLabel.innerHTML);
+              }
             };
 
             window.removeDashboard = function(e) {
@@ -225,14 +276,14 @@
             }
 
             const integrationId = document.getElementById('config_id')?.value;
-            const form = document.getElementById('grafanaForm');
+            const formEl = document.getElementById('grafanaForm');
             const data = {
-                name: form.name.value,
-                server: form.server.value,
-                org_id: form.org_id.value,
-                test_title: form.test_title.value,
-                baseline_test_title: form.baseline_test_title.value,
-                is_default: form.is_default.value === 'True',
+                name: formEl.name.value,
+                server: formEl.server.value,
+                org_id: formEl.org_id.value,
+                test_title: formEl.test_title.value,
+                baseline_test_title: formEl.baseline_test_title.value,
+                is_default: document.getElementById('is_default')?.checked || false,
                 dashboards: []
             };
 
@@ -310,15 +361,22 @@
                 });
         }
 
-        document.getElementById('token').addEventListener('change', function() {
-            const newSecretFields = document.getElementById('new_secret_fields');
-            newSecretFields.style.display = this.value === 'create_new' ? 'block' : 'none';
-
+        const tokenSelectEl = document.getElementById('token');
+        function toggleNewSecretFields() {
+            const container = document.getElementById('new_secret_fields');
+            if (!container) return;
+            const shouldShow = tokenSelectEl.value === 'create_new';
+            container.classList.toggle('hidden', !shouldShow);
+        }
+        tokenSelectEl.addEventListener('change', function() {
+            toggleNewSecretFields();
             if (this.value) {
                 this.classList.remove('is-invalid');
                 document.getElementById('tokenError').style.display = 'none';
             }
         });
+        // Set initial visibility immediately
+        toggleNewSecretFields();
 
         document.getElementById('deleteButton')?.addEventListener('click', function() {
             const integrationId = document.getElementById('config_id').value;
@@ -338,6 +396,85 @@
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
           return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Focus-driven hints: similar to InfluxDB page
+        function attachFocusHint(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const label = document.querySelector('label[for="' + inputId + '"]');
+            const contentEl = label ? label.querySelector('.tooltip-content') : null;
+            if (!contentEl) return;
+            const parent = input.parentElement;
+            if (!parent) return;
+            parent.classList.add('has-focus-hint');
+            let hint = parent.querySelector('.focus-hint-overlay');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.className = 'form-hint focus-hint-overlay aside';
+                hint.innerHTML = '<i class="fas fa-info-circle icon" aria-hidden="true"></i><div>' + contentEl.innerHTML + '</div>';
+                parent.appendChild(hint);
+            }
+            function show() {
+                const hintWidth = 320; // keep in sync with CSS
+                const gap = 16; // visual gap from field
+                const rect = parent.getBoundingClientRect();
+                const spaceLeft = rect.left;
+                const spaceRight = window.innerWidth - rect.right;
+                hint.classList.remove('aside', 'aside-right');
+                if (spaceLeft >= hintWidth + gap) {
+                    hint.classList.add('aside');
+                } else if (spaceRight >= hintWidth + gap) {
+                    hint.classList.add('aside-right');
+                }
+                hint.classList.add('is-visible');
+            }
+            function hide() { hint.classList.remove('is-visible'); }
+            input.addEventListener('focus', show);
+            input.addEventListener('blur', hide);
+        }
+
+        // Attach focus hint to an arbitrary input using provided HTML content
+        function attachFocusHintWithContent(input, contentHtml) {
+            if (!input || !contentHtml) return;
+            const parent = input.parentElement;
+            if (!parent) return;
+            parent.classList.add('has-focus-hint');
+            let hint = parent.querySelector('.focus-hint-overlay');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.className = 'form-hint focus-hint-overlay aside';
+                hint.innerHTML = '<i class="fas fa-info-circle icon" aria-hidden="true"></i><div>' + contentHtml + '</div>';
+                parent.appendChild(hint);
+            }
+            function show() {
+                const hintWidth = 320; const gap = 16; const rect = parent.getBoundingClientRect();
+                const spaceLeft = rect.left; const spaceRight = window.innerWidth - rect.right;
+                hint.classList.remove('aside', 'aside-right');
+                if (spaceLeft >= hintWidth + gap) { hint.classList.add('aside'); }
+                else if (spaceRight >= hintWidth + gap) { hint.classList.add('aside-right'); }
+                hint.classList.add('is-visible');
+            }
+            function hide() { hint.classList.remove('is-visible'); }
+            input.addEventListener('focus', show);
+            input.addEventListener('blur', hide);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const labels = document.querySelectorAll('#grafanaForm label[for]');
+            labels.forEach(label => {
+                const id = label.getAttribute('for');
+                if (label.querySelector('.tooltip-content') && document.getElementById(id)) {
+                    attachFocusHint(id);
+                }
+            });
+            // Additionally attach the Dashboards label tooltip to each existing dashboard input
+            const dashboardsContent = document.querySelector('#grafanaForm label[for="dashboards"] .tooltip-content');
+            if (dashboardsContent) {
+                document.querySelectorAll('.dashboardInput').forEach(inp => {
+                    attachFocusHintWithContent(inp, dashboardsContent.innerHTML);
+                });
+            }
         });
 
         // Test Grafana connectivity using current form inputs
