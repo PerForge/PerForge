@@ -95,6 +95,28 @@ class DBPrompts(db.Model):
             raise
 
     @classmethod
+    def get_id_by_name(cls, project_id, name, place=None):
+        try:
+            base_query = db.session.query(cls.id).filter(cls.name == name)
+            if place is not None:
+                base_query = base_query.filter(cls.place == place)
+
+            # Prefer project-specific prompt first
+            row = base_query.filter(cls.project_id == project_id).one_or_none()
+            if row:
+                return row[0]
+
+            # Fallback to global prompt (project_id is NULL)
+            row = base_query.filter(cls.project_id.is_(None)).one_or_none()
+            if row:
+                return row[0]
+
+            return None
+        except Exception:
+            logging.warning(str(traceback.format_exc()))
+            raise
+
+    @classmethod
     def update(cls, data):
         try:
             validated_data = PromptModel(**data)

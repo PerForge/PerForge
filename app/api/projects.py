@@ -29,6 +29,7 @@ from app.backend.components.nfrs.nfrs_db import DBNFRs
 from app.backend.components.graphs.graphs_db import DBGraphs
 from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.components.templates.templates_db import DBTemplates
+from app.backend.components.prompts.prompts_db import DBPrompts
 from app.backend.errors import ErrorMessages
 from app import db
 
@@ -403,35 +404,50 @@ def _create_example_data(project_id: str) -> None:
         try:
             default_graph_data = DBGraphs.get_configs(project_id, include_defaults=True)
             default_graphs = [{'id': g['id'], 'name': g['name']} for g in default_graph_data if g.get('project_id') is None and g.get('type') == 'default']
+            for default_graph in default_graphs:
+                if default_graph['name'] == 'Throughput and Users':
+                    default_troughput_graph_id = default_graph['id']
+                if default_graph['name'] == 'Response Time':
+                    default_response_time_graph_id = default_graph['id']
+                if default_graph['name'] == 'Errors':
+                    default_errors_graph_id = default_graph['id']
         except Exception as e:
             logging.warning(f"Failed to fetch default graphs for project {project_id}: {e}")
+
+        try:
+            system_prompt_id = DBPrompts.get_id_by_name(None, name="System message", place="system")
+            aggregated_data_prompt_id_be = DBPrompts.get_id_by_name(None, name="[BE][COMPARISON] Aggregated data", place="aggregated_data")
+            template_prompt_id_be = DBPrompts.get_id_by_name(None, name="[BE][COMPARISON] Template summary", place="template")
+            aggregated_data_prompt_id_fe = DBPrompts.get_id_by_name(None, name="[FE][COMPARISON] Aggregated data", place="aggregated_data")
+            template_prompt_id_fe = DBPrompts.get_id_by_name(None, name="[FE][COMPARISON] Template summary", place="template")
+        except Exception as e:
+            logging.warning(f"Failed to fetch default prompts for project {project_id}: {e}")
 
         # Template example for Confluence
         confluence_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for Confluence",
-            "nfr": nfr_example_id,
+            "nfr": None,
             "title": "[EXAMPLE] REPORT for Confluence",
-            "ai_switch": False,
-            "ai_aggregated_data_switch": False,
-            "ai_graph_switch": False,
-            "ai_to_graphs_switch": False,
-            "nfrs_switch": True,
+            "ai_switch": True,
+            "ai_aggregated_data_switch": True,
+            "nfrs_switch": False,
             "ml_switch": True,
-            "template_prompt_id": None,
-            "aggregated_prompt_id": None,
-            "system_prompt_id": None,
-            "data": [
-                {"content":"<h2>Executive summaries</h2>\nTimestamp when report was generated: ${report_timestamp}<br/>\n<strong>Current run:</strong> from ${current_start_time} to ${current_end_time}<br/>\n<strong>Baseline run:</strong> from ${baseline_start_time} to ${baseline_end_time}<br/>\n<h2>Summary</h2>\n<h3>AI insights</h3>\n<p>${ai_summary}</p>\n<h3>NFR compliance</h3>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${nfr_summary}\n</ac:rich-text-body>\n</ac:structured-macro>\n<h3>ML anomalies</h3>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${ml_summary}\n</ac:rich-text-body>\n</ac:structured-macro>\n<h2>Key KPI comparison</h2>\n<table>\n  <thead>\n    <tr><th>KPI</th><th>Baseline</th><th>Current</th></tr>\n  </thead>\n  <tbody>\n    <tr><td>Max active users</td>\n<td>${baseline_max_active_users}</td>\n<td>${current_max_active_users}</td></tr>\n    <tr><td>Median throughput (RPS)</td>\n<td>${baseline_median_throughput}</td>\n<td>${current_median_throughput}</td></tr>\n    <tr><td>Median response time (ms)</td>\n<td>${baseline_median_response_time_stats}</td>\n<td>${current_median_response_time_stats}</td></tr>\n    <tr><td>P90 response time (ms)</td>\n<td>${baseline_pct90_response_time_stats}</td>\n<td>${current_pct90_response_time_stats}</td></tr>\n    <tr><td>Error rate&nbsp;%</td>\n<td>${baseline_errors_pct_stats}</td>\n<td>${current_errors_pct_stats}</td></tr>\n  </tbody>\n</table>\n<h3>Grafana dashboards</h3>\n<ul>\n<li>Baseline: <a href=\"${baseline_grafana_link}\">baseline_grafana_link</a></li>\n<li>Current: <a href=\"${current_grafana_link}\">current_grafana_link</a></li>\n</ul>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"<h2>Example graph using Expand:</h2>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
-                {"content":"</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"<h2>Aggregated data example in Expand</h2>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${aggregated_data_table_}\n</ac:rich-text-body>\n</ac:structured-macro>","graph_id":None,"template_id":None,"type":"text"}]
-        }
-
-        for default_graph in default_graphs:
-            confluence_template['data'].append({"content":f"<h2>{default_graph['name']}</h2>","graph_id":None,"template_id":None,"type":"text"})
-            confluence_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+            "template_prompt_id": template_prompt_id_be,
+            "aggregated_prompt_id": aggregated_data_prompt_id_be,
+            "system_prompt_id": system_prompt_id,
+            "data":
+                [
+                    {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"Timestamp when report was generated: ${report_timestamp}<br/>\nCurrent run: from ${current_start_time} to ${current_end_time}<br/>\nBaseline run: from ${baseline_start_time} to ${baseline_end_time}<br/>\n${ai_summary}\n<h3>ML anomalies</h3>\n<ac:structured-macro ac:name=\"expand\" xmlns:ac=\"http://atlassian.com/schema/confluence/4/ac\">\n  <ac:parameter ac:name=\"title\">Click to open..</ac:parameter>\n  <ac:rich-text-body>\n${ml_summary}\n</ac:rich-text-body>\n</ac:structured-macro>\n<h2>Key KPI comparison</h2>\n${overview_data_table_}\n<h3>Grafana dashboards</h3>\n<ul>\n<li>Baseline: <a href=\"${baseline_grafana_link}\">baseline_grafana_link</a></li>\n<li>Current: <a href=\"${current_grafana_link}\">current_grafana_link</a></li>\n</ul>","graph_id":None,"template_id":None,"type":"text"},
+                    {"graph_id":None,"type":"text","content":"<h2>Throughput and Users</h2>"},
+                    {"graph_id":default_troughput_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                    {"graph_id":None,"type":"text","content":"<h2>Errors</h2>"},
+                    {"graph_id":default_errors_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                    {"graph_id":None,"type":"text","content":"<h2>Response Time</h2>"},
+                    {"graph_id":default_response_time_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                    {"graph_id":None,"type":"text","content":"<h2>Aggregated data</h2>\n${aggregated_data_table_}"}
+                ]
+            }
 
         DBTemplates.save(project_id, confluence_template)
 
@@ -439,27 +455,25 @@ def _create_example_data(project_id: str) -> None:
         jira_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for Jira",
-            "nfr": nfr_example_id,
+            "nfr": None,
             "title": "[EXAMPLE] REPORT for Jira",
-            "ai_switch": False,
-            "ai_aggregated_data_switch": False,
-            "ai_graph_switch": False,
-            "ai_to_graphs_switch": False,
-            "nfrs_switch": True,
+            "ai_switch": True,
+            "ai_aggregated_data_switch": True,
+            "nfrs_switch": False,
             "ml_switch": True,
-            "template_prompt_id": None,
-            "aggregated_prompt_id": None,
-            "system_prompt_id": None,
+            "template_prompt_id": template_prompt_id_be,
+            "aggregated_prompt_id": aggregated_data_prompt_id_be,
+            "system_prompt_id": system_prompt_id,
             "data": [
-                {"content":"h2. Executive summaries\n\nTimestamp when report was generated: ${report_timestamp}\\\n*Current run:* from ${current_start_time} to ${current_end_time}\\\n*Baseline run:* from ${baseline_start_time} to ${baseline_end_time}\n\nh2. Summary\n{code:title=AI insights|borderStyle=solid}\n${ai_summary}\n{code}\n\n{code:title=NFR compliance|borderStyle=solid}\n${nfr_summary}\n{code}\n\n{code:title=ML anomalies|borderStyle=solid}\n${ml_summary}\n{code}\n\nh2. Key KPI comparison\n\n|| KPI || Baseline || Current ||\n| Max active users | ${baseline_max_active_users} | ${current_max_active_users} |\n| Median throughput (RPS) | ${baseline_median_throughput} | ${current_median_throughput} |\n| Median response time (ms) | ${baseline_median_response_time_stats} | ${current_median_response_time_stats} |\n| P90 response time (ms) | ${baseline_pct90_response_time_stats} | ${current_pct90_response_time_stats} |\n| Error rate % | ${baseline_errors_pct_stats} | ${current_errors_pct_stats} |\n\nh3. Grafana dashboards\n\n*Baseline:* [baseline_grafana_link|${baseline_grafana_link}]. \\\n*Current:* [current_grafana_link|${current_grafana_link}].\n\nh2. Example graph","graph_id":None,"template_id":None,"type":"text"},
-                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
-                {"content":"h2. Aggregated data\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
-                ]
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"Timestamp when report was generated: ${report_timestamp}\n*Current run:* from ${current_start_time} to ${current_end_time}\n*Baseline run:* from ${baseline_start_time} to ${baseline_end_time}\nh2. Summary\n{code:title=AI insights|borderStyle=solid}\n${ai_summary}\n{code}\n{code:title=ML anomalies|borderStyle=solid}\n${ml_summary}\n{code}\nh2. Key KPI comparison\n${overview_data_table_}\nh3. Grafana dashboards\n*Baseline:* [baseline_grafana_link|${baseline_grafana_link}].\n*Current:* [current_grafana_link|${current_grafana_link}].\nh2. Throughput and Users","graph_id":None,"template_id":None,"type":"text"},
+                {"graph_id":default_troughput_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"graph_id":None,"type":"text","content":"h2. Errors"},
+                {"graph_id":default_errors_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"graph_id":None,"type":"text","content":"h2. Response Time"},
+                {"graph_id":default_response_time_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"h2. Aggregated data\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
+            ]
         }
-
-        for default_graph in default_graphs:
-            jira_template['data'].append({"content":f"h2. {default_graph['name']}","graph_id":None,"template_id":None,"type":"text"})
-            jira_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
 
         DBTemplates.save(project_id, jira_template)
 
@@ -467,28 +481,25 @@ def _create_example_data(project_id: str) -> None:
         azure_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for Azure",
-            "nfr": nfr_example_id,
+            "nfr": None,
             "title": "[EXAMPLE] REPORT for Azure",
-            "ai_switch": False,
-            "ai_aggregated_data_switch": False,
-            "ai_graph_switch": False,
-            "ai_to_graphs_switch": False,
-            "nfrs_switch": True,
+            "ai_switch": True,
+            "ai_aggregated_data_switch": True,
+            "nfrs_switch": False,
             "ml_switch": True,
-            "template_prompt_id": None,
-            "aggregated_prompt_id": None,
-            "system_prompt_id": None,
+            "template_prompt_id": template_prompt_id_be,
+            "aggregated_prompt_id": aggregated_data_prompt_id_be,
+            "system_prompt_id": system_prompt_id,
             "data": [
-                {"content":"# Executive summaries\nTimestamp when report was generated: ${report_timestamp}  \n**Current run:** from ${current_start_time} to ${current_end_time}  \n**Baseline run:** from ${baseline_start_time} to ${baseline_end_time}  \n\n# Summary\n---\n## AI insights  \n${ai_summary}  \n\n## NFR compliance  \n```${nfr_summary}```\n\n## ML anomalies  \n```${ml_summary}```\n\n## Key KPI comparison  \n| KPI                      | Baseline                      | Current                       |\n|---------------------------|-------------------------------|-------------------------------|\n| Max active users         | ${baseline_max_active_users}  | ${current_max_active_users}  |\n| Median throughput (RPS)  | ${baseline_median_throughput} | ${current_median_throughput} |\n| Median response time (ms)| ${baseline_median_response_time_stats} | ${current_median_response_time_stats} |\n| P90 response time (ms)   | ${baseline_pct90_response_time_stats} | ${current_pct90_response_time_stats} |\n| Error rate %             | ${baseline_errors_pct_stats} | ${current_errors_pct_stats}  |\n\n### Grafana dashboards  \n- **Baseline:** [baseline_grafana_link](${baseline_grafana_link})  \n- **Current:** [current_grafana_link](${current_grafana_link})","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"## Throughput graph:","graph_id":None,"template_id":None,"type":"text"},
-                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
-                {"content":"## Aggregated data:\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
-            ]
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"Timestamp when report was generated: ${report_timestamp}  \n**Current run:** from ${current_start_time} to ${current_end_time}  \n**Baseline run:** from ${baseline_start_time} to ${baseline_end_time}  \n\n${ai_summary}  \n\n## ML anomalies  \n${ml_summary}\n\n## Key KPI comparison  \n${overview_data_table_}\n\n### Grafana dashboards  \n- **Baseline:** [baseline_grafana_link](${baseline_grafana_link})  \n- **Current:** [current_grafana_link](${current_grafana_link})","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"## Throughput and Users","graph_id":None,"template_id":None,"type":"text"},
+                {"graph_id":default_troughput_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"graph_id":None,"type":"text","content":"## Errors"},
+                {"graph_id":default_errors_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"graph_id":None,"type":"text","content":"## Response Time"},
+                {"graph_id":default_response_time_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"## Aggregated data:\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}]
         }
-
-        for default_graph in default_graphs:
-            azure_template['data'].append({"content":f"## {default_graph['name']}","graph_id":None,"template_id":None,"type":"text"})
-            azure_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
 
         DBTemplates.save(project_id, azure_template)
 
@@ -496,34 +507,30 @@ def _create_example_data(project_id: str) -> None:
         pdf_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for PDF",
-            "nfr": nfr_example_id,
+            "nfr": None,
             "title": "[EXAMPLE] REPORT for PDF",
-            "ai_switch": False,
-            "ai_aggregated_data_switch": False,
-            "ai_graph_switch": False,
-            "ai_to_graphs_switch": False,
-            "nfrs_switch": True,
+            "ai_switch": True,
+            "ai_aggregated_data_switch": True,
+            "nfrs_switch": False,
             "ml_switch": True,
-            "template_prompt_id": None,
-            "aggregated_prompt_id": None,
-            "system_prompt_id": None,
+            "template_prompt_id": template_prompt_id_be,
+            "aggregated_prompt_id": aggregated_data_prompt_id_be,
+            "system_prompt_id": system_prompt_id,
             "data": [
-                {"content":"<h2>Executive summaries</h2>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"Timestamp when report was generated: ${report_timestamp}  \nCurrent run: from ${current_start_time} to ${current_end_time}  \nBaseline run: from ${baseline_start_time} to ${baseline_end_time}","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"<h2>Summary</h2>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"AI insights:\n${ai_summary}  \n\nNFR compliance:\n${nfr_summary}\n\nML anomalies:\n${ml_summary}","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"<h2>Key KPI comparison</h2>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"[[\"KPI\", \"Baseline Value\", \"Current Value\"],\n[\"Max active users\", \"${baseline_max_active_users}\", \"${current_max_active_users}\"],\n[\"Median throughput (RPS)\", \"${baseline_median_throughput}\", \"${current_median_throughput}\"],\n[\"Median response time (ms)\", \"${baseline_median_response_time_stats}\", \"${current_median_response_time_stats}\"],\n[\"P90 response time (ms)\", \"${baseline_pct90_response_time_stats}\", \"${current_pct90_response_time_stats}\"],\n[\"Error rate %\", \"${baseline_errors_pct_stats}\", \"${current_errors_pct_stats}\"]]","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"<h2>Throughput graph</h2>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
-                {"content":"<h2>Aggregated data</h2>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Executive summaries</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"Timestamp when report was generated: ${report_timestamp}\nCurrent run: from ${current_start_time} to ${current_end_time}  \nBaseline run: from ${baseline_start_time} to ${baseline_end_time}","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Summary</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"AI insights:\n${ai_summary}  \n\nML anomalies:\n${ml_summary}","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Key KPI comparison</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"${overview_data_table_}","graph_id":None,"template_id":None,"type":"text"},{"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Throughput and Users</h2>","graph_id":None,"template_id":None,"type":"text"},{"ai_graph_switch":True,"ai_to_graphs_switch":True,"content":None,"graph_id":default_troughput_graph_id,"template_id":None,"type":"graph"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Errors</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":True,"ai_to_graphs_switch":True,"content":None,"graph_id":default_errors_graph_id,"template_id":None,"type":"graph"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Response Time</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":True,"ai_to_graphs_switch":True,"content":None,"graph_id":default_response_time_graph_id,"template_id":None,"type":"graph"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Aggregated data</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
             ]
         }
-
-        for default_graph in default_graphs:
-            pdf_template['data'].append({"content":f"<h2>{default_graph['name']}</h2>","graph_id":None,"template_id":None,"type":"text"})
-            pdf_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
 
         DBTemplates.save(project_id, pdf_template)
 
@@ -531,28 +538,52 @@ def _create_example_data(project_id: str) -> None:
         smtp_template = {
             "id": None,
             "name": "[EXAMPLE] REPORT for SMTP",
-            "nfr": nfr_example_id,
+            "nfr": None,
             "title": "[EXAMPLE] REPORT for SMTP",
-            "ai_switch": False,
-            "ai_aggregated_data_switch": False,
-            "ai_graph_switch": False,
-            "ai_to_graphs_switch": False,
-            "nfrs_switch": True,
+            "ai_switch": True,
+            "ai_aggregated_data_switch": True,
+            "nfrs_switch": False,
             "ml_switch": True,
-            "template_prompt_id": None,
-            "aggregated_prompt_id": None,
-            "system_prompt_id": None,
+            "template_prompt_id": template_prompt_id_be,
+            "aggregated_prompt_id": aggregated_data_prompt_id_be,
+            "system_prompt_id": system_prompt_id,
             "data": [
-                {"content":"<h1>Executive Summaries</h1>\n<p><strong>Timestamp when report was generated:</strong> ${report_timestamp}</p>\n<p><strong>Current run:</strong> from ${current_start_time} to ${current_end_time}</p>\n<p><strong>Baseline run:</strong> from ${baseline_start_time} to ${baseline_end_time}</p>\n<h1>Summary</h1>\n<hr>\n<h2>AI Insights</h2>\n<p>${ai_summary}</p>\n<h2>NFR Compliance</h2>\n<pre>${nfr_summary}</pre>\n<h2>ML Anomalies</h2>\n<pre>${ml_summary}</pre>\n<h2>Key KPI Comparison</h2>\n<table>\n        <thead>\n            <tr>\n                <th>KPI</th>\n                <th>Baseline</th>\n                <th>Current</th>\n            </tr>\n        </thead>\n        <tbody>\n            <tr>\n                <td>Max active users</td>\n                <td>${baseline_max_active_users}</td>\n                <td>${current_max_active_users}</td>\n            </tr>\n            <tr>\n                <td>Median throughput (RPS)</td>\n                <td>${baseline_median_throughput}</td>\n                <td>${current_median_throughput}</td>\n            </tr>\n            <tr>\n                <td>Median response time (ms)</td>\n                <td>${baseline_median_response_time_stats}</td>\n                <td>${current_median_response_time_stats}</td>\n            </tr>\n            <tr>\n                <td>P90 response time (ms)</td>\n                <td>${baseline_pct90_response_time_stats}</td>\n                <td>${current_pct90_response_time_stats}</td>\n            </tr>\n            <tr>\n                <td>Error rate %</td>\n                <td>${baseline_errors_pct_stats}</td>\n                <td>${current_errors_pct_stats}</td>\n            </tr>\n        </tbody>\n</table>\n<h3>Grafana Dashboards</h3>\n<p>\n    <strong>Baseline:</strong> <a href=\"${baseline_grafana_link}\" target=\"_blank\">baseline_grafana_link</a>\n</p>\n<p>\n    <strong>Current:</strong> <a href=\"${current_grafana_link}\" target=\"_blank\">current_grafana_link</a>\n</p>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":"<h1>Throughput graph</h1>","graph_id":None,"template_id":None,"type":"text"},
-                {"content":None,"graph_id":graph_example_id,"template_id":None,"type":"graph"},
-                {"content":"<h1>Aggregated data</h1>\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"Timestamp when report was generated:</strong> ${report_timestamp}</p>\n<p><strong>Current run:</strong> from ${current_start_time} to ${current_end_time}</p>\n<p><strong>Baseline run:</strong> from ${baseline_start_time} to ${baseline_end_time}</p>\n<h1>Summary</h1>\n<hr>\n<p>${ai_summary}</p>\n<h2>ML Anomalies</h2>\n<pre>${ml_summary}</pre>\n<h2>Key KPI Comparison</h2>\n${overview_data_table_}\n<h3>Grafana Dashboards</h3>\n<p>\n    <strong>Baseline:</strong> <a href=\"${baseline_grafana_link}\" target=\"_blank\">baseline_grafana_link</a>\n</p>\n<p>\n    <strong>Current:</strong> <a href=\"${current_grafana_link}\" target=\"_blank\">current_grafana_link</a>\n</p>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h1>Throughput and Users</h1>","graph_id":None,"template_id":None,"type":"text"},
+                {"graph_id":default_troughput_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"graph_id":None,"type":"text","content":"<h1>Errors</h1>"},
+                {"graph_id":default_errors_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"graph_id":None,"type":"text","content":"<h1>Response Time</h1>"},
+                {"graph_id":default_response_time_graph_id,"type":"graph","content":"","ai_graph_switch":True,"ai_to_graphs_switch":True},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h1>Aggregated data</h1>\n${aggregated_data_table_}","graph_id":None,"template_id":None,"type":"text"}
             ]
         }
 
-        for default_graph in default_graphs:
-            smtp_template['data'].append({"content":f"<h1>{default_graph['name']}</h1>","graph_id":None,"template_id":None,"type":"text"})
-            smtp_template['data'].append({"content":None,"graph_id":default_graph['id'],"template_id":None,"type":"graph"})
+        DBTemplates.save(project_id, smtp_template)
+
+
+        # Template example for Confluence FE results
+        smtp_template = {
+            "id": None,
+            "name": "[EXAMPLE][FE] REPORT for Confluence",
+            "nfr": None,
+            "title": "[EXAMPLE][FE] REPORT for Confluence",
+            "ai_switch": True,
+            "ai_aggregated_data_switch": True,
+            "nfrs_switch": False,
+            "ml_switch": False,
+            "template_prompt_id": template_prompt_id_fe,
+            "aggregated_prompt_id": aggregated_data_prompt_id_fe,
+            "system_prompt_id": system_prompt_id,
+            "data": [
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"Timestamp when report was generated: ${report_timestamp}<br/>\nCurrent run: from ${current_start_time} to ${current_end_time}<br/>\nBaseline run: from ${baseline_start_time} to ${baseline_end_time}<br/>\n${ai_summary}\n<h2>Key KPI comparison</h2>\n${overview_data_table_}","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Web Vitals:</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"${google_web_vitals_table_median}","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>First-party transfer size:</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"${first_party_transfer_size_table_}","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"<h2>Third-party transfer size:</h2>","graph_id":None,"template_id":None,"type":"text"},
+                {"ai_graph_switch":False,"ai_to_graphs_switch":False,"content":"${third_party_transfer_size_table_}","graph_id":None,"template_id":None,"type":"text"}]
+        }
 
         DBTemplates.save(project_id, smtp_template)
 

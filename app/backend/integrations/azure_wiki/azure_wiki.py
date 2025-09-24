@@ -102,7 +102,9 @@ class AzureWiki(Integration):
     def create_or_update_page(self, path, page_content):
         response = self.put_page(path, page_content)
         if response.status_code != 201:
-            for x in range(1,5):
+            logging.warning('ERROR: failed to upload the page to wiki')
+            logging.warning("An error occurred: " + str(response.content))
+            for x in range(1,3):
                 if "WikiAncestorPageNotFoundException" in str(response.content):
                     newPage  = '/'.join(path.split('/')[:-x])
                     response = self.put_page(newPage, '')

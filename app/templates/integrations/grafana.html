@@ -325,7 +325,8 @@
 
                 apiClient.secrets.create(secretData)
                     .then(response => {
-                        saveIntegrationWithToken(response.id);
+                        const secretId = response?.data?.secret_id ?? response?.secret_id ?? response?.id;
+                        saveIntegrationWithToken(secretId);
                     })
                     .catch(error => {
                         console.error('Error creating secret:', error);
