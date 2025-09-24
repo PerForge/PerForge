@@ -28,26 +28,17 @@
                                     <div class="d-flex align-items-center ms-2">
                                         <label for="dataSourceId" class="form-label mb-0 me-2">Datasource:</label>
                                         <select class="form-select" id="dataSourceId">
-                                            {% for db in db_configs %}
-                                                <option value='{{ db | tojson | safe }}'>{{ db.name }}</option>
-                                            {% endfor %}
                                         </select>
                                     </div>
                                 </div>
                                 <div class="d-flex" id="bulk-select-actions">
                                     <select class="form-select ms-2" id="selectedAction" style="min-width: 180px;">
                                         <option value='{"type": "none"}' selected="selected">Select an action</option>
-                                        {% for output in output_configs %}
-                                            <option value='{{ output | tojson | safe }}'>{{ output.name }}</option>
-                                        {% endfor %}
                                         <option value='{"type": "pdf_report"}'>PDF file</option>
                                         <option value='{"type": "delete"}'>Delete test</option>
                                     </select>
                                     <select class="form-select ms-2" id="templateGroupName" style="min-width: 310px;">
                                         <option value='' selected="selected">Select a template group (optional)</option>
-                                        {% for template_group in template_groups %}
-                                            <option value="{{ template_group.id }}">{{ template_group.name }}</option>
-                                        {% endfor %}
                                     </select>
                                     <button class="btn btn-secondary ms-2" id="show-api" style="min-width: 110px;">
                                         <div>Show API</div>
@@ -291,15 +282,204 @@
                     }
                 }
 
-                const templates = JSON.parse('{{ templates | tojson }}');
-                if (!templates) {
-                    templates = []
-                }
+                let templates = [];
 
                 let baselineTitles = []; // global list of available baseline tests
 
-                // Initial load after everything is initialized
-                loadData();
+                // Helper: populate per-row Template selects after templates are loaded
+                function populateTemplateSelects() {
+                    const selects = document.querySelectorAll('select[template-test-id]');
+                    selects.forEach(selectTemplate => {
+                        const currentValue = selectTemplate.value;
+                        // Rebuild options
+                        selectTemplate.innerHTML = '';
+                        const defaultTemplateOption = document.createElement('option');
+                        defaultTemplateOption.value = 'no data';
+                        defaultTemplateOption.textContent = 'Select a template';
+                        selectTemplate.appendChild(defaultTemplateOption);
+
+                        if (Array.isArray(templates)) {
+                            templates.forEach(tmp => {
+                                const option = document.createElement('option');
+                                option.value = tmp.id;
+                                option.textContent = tmp.name;
+                                selectTemplate.appendChild(option);
+                            });
+                        }
+
+                        // Try to preserve previous selection if still valid
+                        if (currentValue && currentValue !== 'no data') {
+                            selectTemplate.value = currentValue;
+                        }
+                    });
+                }
+
+                // Load templates and template groups via API (can happen after tests data)
+                function loadTemplatesAndGroups() {
+                    const tplPromise = window.apiClient.templates.getAll()
+                        .then(resp => {
+                            if (resp.status === 'success' && resp.data && Array.isArray(resp.data.templates)) {
+                                templates = resp.data.templates;
+                            } else {
+                                templates = [];
+                            }
+                            // Update any existing row selects with newly fetched templates
+                            populateTemplateSelects();
+                        })
+                        .catch(() => { templates = []; });
+
+                    const groupsPromise = window.apiClient.templateGroups.getAll()
+                        .then(resp => {
+                            const selectEl = document.getElementById('templateGroupName');
+                            if (selectEl) {
+                                // Reset options
+                                selectEl.innerHTML = '';
+                                const defaultOpt = document.createElement('option');
+                                defaultOpt.value = '';
+                                defaultOpt.selected = true;
+                                defaultOpt.textContent = 'Select a template group (optional)';
+                                selectEl.appendChild(defaultOpt);
+
+                                const groups = (resp.status === 'success' && resp.data && Array.isArray(resp.data.template_groups)) ? resp.data.template_groups : [];
+                                groups.forEach(group => {
+                                    const opt = document.createElement('option');
+                                    opt.value = group.id;
+                                    opt.textContent = group.name;
+                                    selectEl.appendChild(opt);
+                                });
+                            }
+                        })
+                        .catch(() => { /* ignore */ });
+
+                    return Promise.all([tplPromise, groupsPromise]);
+                }
+
+                // Load InfluxDB datasources via API and populate the select
+                function loadDatasources() {
+                    const select = document.getElementById('dataSourceId');
+                    // Keep a copy of cookie/localStorage to try and restore selection
+                    const savedCookie = getCookie('selectedDataSource');
+                    const savedId = localStorage.getItem('selectedDataSourceId');
+
+                    return window.apiClient.get('/integrations/type/influxdb')
+                        .then(resp => {
+                            const items = (resp && resp.status === 'success' && resp.data && Array.isArray(resp.data.integrations)) ? resp.data.integrations : [];
+                            // Clear current options
+                            select.innerHTML = '';
+
+                            items.forEach(cfg => {
+                                const makeOption = (bucketName, labelSuffix = null) => {
+                                    const valueObj = {
+                                        id: cfg.id,
+                                        name: cfg.name,
+                                        source_type: 'influxdb_v2',
+                                        listener: cfg.listener,
+                                        bucket: bucketName
+                                    };
+                                    const opt = document.createElement('option');
+                                    opt.value = JSON.stringify(valueObj);
+                                    opt.textContent = labelSuffix ? `${cfg.name} - ${labelSuffix}` : cfg.name;
+                                    select.appendChild(opt);
+                                };
+
+                                const hasBuckets = Array.isArray(cfg.buckets) && cfg.buckets.length > 0;
+                                const isRegex = cfg.bucket_regex_bool === true || cfg.bucket_regex_bool === 'True';
+                                if (isRegex) {
+                                    if (hasBuckets) {
+                                        // Expand into one option per resolved bucket
+                                        cfg.buckets.forEach(b => makeOption(b, b));
+                                    } else {
+                                        // Regex enabled but no buckets matched -> skip this integration entirely
+                                    }
+                                } else {
+                                    // Regex disabled: fallback to single option with configured bucket
+                                    makeOption(cfg.bucket);
+                                }
+                            });
+
+                            // If no options were added, show a disabled placeholder
+                            if (select.options.length === 0) {
+                                const opt = document.createElement('option');
+                                opt.textContent = 'No matching datasources';
+                                opt.disabled = true;
+                                opt.selected = true;
+                                opt.value = '';
+                                select.appendChild(opt);
+                            }
+
+                            // Try to restore previous selection by cookie exact match
+                            let restored = false;
+                            if (savedCookie) {
+                                for (let i = 0; i < select.options.length; i++) {
+                                    if (select.options[i].value === savedCookie) {
+                                        select.selectedIndex = i;
+                                        restored = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            // Fallback: restore by ID
+                            if (!restored && savedId) {
+                                for (let i = 0; i < select.options.length; i++) {
+                                    try {
+                                        const val = JSON.parse(select.options[i].value);
+                                        if (String(val.id) == String(savedId)) {
+                                            select.selectedIndex = i;
+                                            restored = true;
+                                            break;
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                }
+                            }
+                            // Default to first option if nothing restored
+                            if (!restored && select.options.length > 0) {
+                                select.selectedIndex = 0;
+                            }
+                        });
+                }
+
+                // Load Output Configs for Actions dropdown
+                function loadOutputConfigs() {
+                    const select = document.getElementById('selectedAction');
+                    if (!select) {
+                        return Promise.resolve();
+                    }
+                    return window.apiClient.get('/integrations/outputs')
+                        .then(resp => {
+                            const outputs = (resp && resp.status === 'success' && resp.data && Array.isArray(resp.data.output_configs)) ? resp.data.output_configs : [];
+                            // Insert options after the default 'none' and before static actions
+                            // Find index of first static action (pdf_report). We'll append before these two if needed, or just before end.
+                            const staticStartIndex = Array.from(select.options).findIndex(opt => {
+                                try { return JSON.parse(opt.value).type === 'pdf_report'; } catch (e) { return false; }
+                            });
+
+                            outputs.forEach(out => {
+                                const opt = document.createElement('option');
+                                opt.value = JSON.stringify(out);
+                                opt.textContent = out.name || `Output ${out.id}`;
+                                if (staticStartIndex > -1) {
+                                    select.insertBefore(opt, select.options[staticStartIndex]);
+                                } else {
+                                    select.appendChild(opt);
+                                }
+                            });
+                        })
+                        .catch(() => { /* ignore */ });
+                }
+
+                // Initial load: load datasources first, then tests, then templates/groups and output configs
+                loadDatasources()
+                    .then(() => {
+                        loadData();
+                        loadTemplatesAndGroups();
+                        loadOutputConfigs();
+                    })
+                    .catch(() => {
+                        // Even if datasources failed to load, try to proceed to show error states in loadData
+                        loadData();
+                        loadTemplatesAndGroups();
+                        loadOutputConfigs();
+                    });
 
                 function loadData(){
                     // If there's a pending request, abort it.
@@ -311,6 +491,14 @@
                     const signal = currentAbortController.signal;
 
                     var dataSource = $("#dataSourceId").val();
+                    if (!dataSource) {
+                        // No datasource selected/available (e.g., regex produced no buckets)
+                        $("#spinner").hide();
+                        // Clear table body and exit gracefully
+                        var tableBody = document.getElementById("bulk-select-body");
+                        if (tableBody) tableBody.innerHTML = '';
+                        return;
+                    }
                     const dataSourceJson = JSON.parse(dataSource);
                     const sourceType = encodeURIComponent(dataSourceJson.source_type);
                     const id = encodeURIComponent(dataSourceJson.id);
@@ -320,7 +508,8 @@
                     apiClient.tests.getTestData(sourceType, id,
                         {
                             page: currentPage,
-                            page_size: pageSize
+                            page_size: pageSize,
+                            bucket: dataSourceJson.bucket
                         },
                         { signal })
                         .then((response) => {
@@ -531,7 +720,7 @@
                         if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
                             btn.classList.add('disabled');
                         } else {
-                            btn.href = `/report?test_title=${test.test_title}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}`;
+                            btn.href = `/report?test_title=${encodeURIComponent(test.test_title)}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}&bucket=${encodeURIComponent(dataSourceJson.bucket)}`;
                         }
                         reportCell.appendChild(btn);
                     });

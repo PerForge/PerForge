@@ -429,6 +429,14 @@ const apiClient = {
      */
     integrations: {
         /**
+         * Get output integrations for the current project (cookie-based)
+         *
+         * @returns {Promise} - Promise that resolves with output configurations
+         */
+        getOutputs: function() {
+            return apiClient.get('/integrations/outputs');
+        },
+        /**
          * Get all integrations
          *
          * @returns {Promise} - Promise that resolves with integrations data
@@ -661,15 +669,16 @@ const apiClient = {
          * Get report data for a specific test
          *
          * @param {string} testTitle - Test title
-         * @param {string} sourceType - Source type (e.g., "influxdb_v2", "timescaledb")
+         * @param {string} sourceType - Source type (e.g., "influxdb_v2")
          * @param {string} id - Optional ID
          * @returns {Promise} - Promise that resolves with report data
          */
-        getReportData: function(testTitle, sourceType, id) {
+        getReportData: function(testTitle, sourceType, id, bucket) {
             return apiClient.post('/reports/data', {
                 test_title: testTitle,
                 source_type: sourceType,
-                id: id
+                id: id,
+                bucket: bucket
             });
         }
     },
@@ -679,18 +688,9 @@ const apiClient = {
      */
     tests: {
         /**
-         * Get test configurations
-         *
-         * @returns {Promise} - Promise that resolves with test configurations
-         */
-        getConfigurations: function() {
-            return apiClient.get('/tests');
-        },
-
-        /**
          * Get test data for a specific data source
          *
-         * @param {string} sourceType - Source type (e.g., "influxdb_v2", "timescaledb")
+         * @param {string} sourceType - Source type (e.g., "influxdb_v2")
          * @param {string} id - Optional ID for the data source
          * @returns {Promise} - Promise that resolves with test data
          */

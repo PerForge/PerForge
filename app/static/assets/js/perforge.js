@@ -738,11 +738,12 @@
         }
       }
 
-      // Filter db_config to only include required fields (id and source_type)
+      // Build db_config from selected datasource; include bucket
       const fullDbId = JSON.parse(selectedDb.value);
       const dbId = {
         id: fullDbId.id,
-        source_type: fullDbId.source_type
+        source_type: fullDbId.source_type,
+        bucket: fullDbId.bucket
       };
 
       // Filter each test object to include required fields, preserving baseline_test_title

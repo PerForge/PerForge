@@ -1,6 +1,6 @@
 // page-scripts.js
 
-async function fetchAndDisplayTestData(testTitle, sourceType, id) {
+async function fetchAndDisplayTestData(testTitle, sourceType, id, bucket) {
     const loadingScreen = document.getElementById('loading-screen');
     const loadingMessage = document.getElementById('loading-message');
 
@@ -8,7 +8,7 @@ async function fetchAndDisplayTestData(testTitle, sourceType, id) {
     showLoadingScreen(loadingScreen, loadingMessage);
 
     try {
-        const data = await fetchData(testTitle, sourceType, id);
+        const data = await fetchData(testTitle, sourceType, id, bucket);
         handleFetchedData(data);
         // Hide the loading screen
         hideLoadingScreen(loadingScreen);
@@ -20,9 +20,9 @@ async function fetchAndDisplayTestData(testTitle, sourceType, id) {
     }
 }
 
-async function fetchData(testTitle, sourceType, id) {
+async function fetchData(testTitle, sourceType, id, bucket) {
     try {
-        const response = await apiClient.reports.getReportData(testTitle, sourceType, id);
+        const response = await apiClient.reports.getReportData(testTitle, sourceType, id, bucket);
         return response.data;
     } catch (error) {
         console.error('API error:', error);

@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask import render_template, request
-from app   import app
+from flask import render_template, request, abort
+from app import app
 
 @app.route('/report', methods=['GET'])
 def report_page():
@@ -23,16 +23,23 @@ def report_page():
     Query Parameters:
         test_title: The title of the test
         source_type: The type of data source
-        id: Optional ID for the data source
+        id: ID for the data source (required)
+        bucket: Bucket to be used by the report page (required)
 
     Returns:
         Rendered report.html template
     """
     test_title = request.args.get('test_title', '')
     source_type = request.args.get('source_type', '')
-    id = request.args.get('id', None)
+    id = request.args.get('id')
+    bucket = request.args.get('bucket')
+
+    # id and bucket are required for the report flow
+    if not id or not bucket:
+        return abort(400, description="Missing required parameters: id and bucket")
 
     return render_template('home/report.html',
                           test_title=test_title,
                           source_type=source_type,
-                          id=id)
+                          id=id,
+                          bucket=bucket)

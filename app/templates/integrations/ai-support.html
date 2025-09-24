@@ -11,96 +11,165 @@
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
                 <div class="center-section">
-                    <div class="card mb-3 margin-all-10 width-700" data-component-card="data-component-card">
+                    <div class="card mb-3 pf-card-wide" data-component-card="data-component-card">
                         <div class="card-header">
-                            <div class="justify-content-between align-items-center">
-                                <h4 class="mb-0">AI support
-                                    <span class="tooltip-container">
-                                      <a href="https://perforge.app/docs/configuration/integrations#ai-support" target="_blank">
-                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      </a>
-                                      <span class="tooltip-content" style="font-size: 16px;">
-                                          Click to learn more
-                                      </span>
-                                    </span>
-                                </h4>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="mb-0">AI Support Integration</h4>
+                                    <small class="text-muted">Configure your AI provider and models for report generation and insights.</small>
+                                </div>
+                                <a class="btn btn-sm btn-outline-secondary" href="https://perforge.app/docs/configuration/integrations#ai-support" target="_blank">
+                                    <i class="fa-regular fa-circle-question me-1"></i>
+                                    Docs
+                                </a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <form id="aiSupportForm" onsubmit="return handleFormSubmit(event)">
+                            <form id="aiSupportForm" class="pf-form" onsubmit="return handleFormSubmit(event)">
                                 {{ form.hidden_tag() }}
-                                <div class="center-section">
+                                <div>
                                     {% if ai_support_config %}
                                         <input type="hidden" name="id" id="config_id" value="{{ ai_support_config }}">
                                     {% else %}
                                         <input type="hidden" name="id" id="config_id">
                                     {% endif %}
-                                    <label for="name">Name:</label>
-                                    {{ form.name(class="form-control", placeholder="e.g. My AI Support Connection") }}
-                                    <label for="ai_provider" class="mt-2">AI Provider:</label>
-                                    {{ form.ai_provider(class="form-control") }}
-                                    <div id="div_azure_url" style="display: none; width: 100%;">
-                                      <label for="azure_url" class="mt-2" style="display: block; text-align: center;">Azure URL:</label>
-                                      {{ form.azure_url(class="form-control", id="azure_url", placeholder="e.g. https://api.openai.com") }}
-                                    </div>
-                                    <div id="div_api_version" style="display: none; width: 100%;">
-                                        <label for="api_version" class="mt-2" style="display: block; text-align: center;">Api version:</label>
-                                        {{ form.api_version(class="form-control", id="api_version", placeholder="e.g. 2023-06-01") }}
-                                      </div>
-                                    <label for="ai_text_model" class="input-label mt-2">AI Text model:</label>
-                                    {{ form.ai_text_model(class="form-control", placeholder="e.g. gpt-4o") }}
-                                    <label for="ai_image_model" class="input-label mt-2">AI Image model:</label>
-                                    {{ form.ai_image_model(class="form-control", placeholder="e.g. gpt-4o") }}
-                                    <label for="token" class="input-label mt-2">Token:</label>
-                                    <select class="form-control" name="token" id="token" required>
-                                        <option value="">--- Select the secret ---</option>
-                                        <option value="create_new">--- Create a new secret ---</option>
-                                        {% for secret in secret_configs %}
-                                            <option value="{{ secret.id }}" {% if secret.id == form.token.data %}selected{% endif %}>{{ secret.key }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <div id="new_secret_fields" style="display: none; width: 100%;">
-                                        <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. AI_TOKEN">
-                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">
-                                            Scope:
-                                            <span class="tooltip-container d-inline-block me-1">
-                                                <span class="fa-regular fa-circle-question"></span>
-                                                <span class="tooltip-content">
-                                                    Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                                    <div class="row g-3 mt-1">
+                                        <div class="col-12">
+                                            <label for="name" class="form-label required">Name
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Display name for this connection.</span>
                                                 </span>
-                                            </span>
-                                        </label>
-                                        <select class="form-control" id="new_secret_scope">
-                                            <option value="project">Current project</option>
-                                            <option value="">All projects</option>
-                                        </select>
-                                        <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
+                                            </label>
+                                            {{ form.name(id='name', class_='form-control', placeholder="e.g. My AI Support") }}
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="ai_provider" class="form-label required">AI Provider
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Choose your AI provider. Azure OpenAI requires Azure-specific fields.</span>
+                                                </span>
+                                            </label>
+                                            {{ form.ai_provider(id='ai_provider', class_='form-control') }}
+                                        </div>
+                                        <div id="div_azure_fields" style="display: none; width: 100%;">
+                                            <div class="pf-two-col">
+                                                <div>
+                                                    <label for="azure_url" class="form-label">Azure URL
+                                                        <span class="tooltip-container">
+                                                            <span class="tooltip-content">Base endpoint for Azure OpenAI (e.g., https://your-resource.openai.azure.com).</span>
+                                                        </span>
+                                                    </label>
+                                                    {{ form.azure_url(id='azure_url', class_='form-control', placeholder="e.g. https://your-resource.openai.azure.com") }}
+                                                </div>
+                                                <div>
+                                                    <label for="api_version" class="form-label">API version
+                                                        <span class="tooltip-container">
+                                                            <span class="tooltip-content">Azure OpenAI API version (e.g., 2024-02-15-preview).</span>
+                                                        </span>
+                                                    </label>
+                                                    {{ form.api_version(id='api_version', class_='form-control', placeholder="e.g. 2024-02-15-preview") }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="pf-two-col">
+                                            <div>
+                                                <label for="ai_text_model" class="form-label required">AI Text model
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Model used for text (e.g., gpt-4o, gpt-4.1, o3-mini).</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.ai_text_model(id='ai_text_model', class_='form-control', placeholder="e.g. gpt-4o") }}
+                                            </div>
+                                            <div>
+                                                <label for="ai_image_model" class="form-label required">AI Image model
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Model used for images (e.g., gpt-4o, dall-e-3, flux).</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.ai_image_model(id='ai_image_model', class_='form-control', placeholder="e.g. gpt-4o") }}
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="token" class="form-label required">Token</label>
+                                            <select class="form-select" name="token" id="token" required>
+                                                <option value="">--- Select the secret ---</option>
+                                                <option value="create_new">--- Create a new secret ---</option>
+                                                {% for secret in secret_configs %}
+                                                    <option value="{{ secret.id }}" {% if secret.id == form.token.data %}selected{% endif %}>{{ secret.key }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div id="tokenError" class="invalid-feedback" style="display: none;">Please select a token</div>
+                                        </div>
+                                        <div class="col-12 hidden" id="new_secret_fields">
+                                            <div class="card card-body border-1">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label for="new_secret_name" class="form-label">Secret Name</label>
+                                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. AI_TOKEN">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="new_secret_scope" class="form-label">
+                                                            Scope
+                                                            <span class="tooltip-container d-inline-block ms-1">
+                                                                <span class="tooltip-content">Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.</span>
+                                                            </span>
+                                                        </label>
+                                                        <select class="form-select" id="new_secret_scope">
+                                                            <option value="project">Current project</option>
+                                                            <option value="">All projects</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label for="new_secret_value" class="form-label">Secret Value</label>
+                                                        <div class="input-group">
+                                                            <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
+                                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('new_secret_value', this)" aria-label="Toggle secret visibility">
+                                                                <i class="fa-regular fa-eye"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="pf-two-col">
+                                            <div>
+                                                <label for="temperature" class="form-label">Temperature (0.1–1.0)
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Controls randomness: lower is more deterministic, higher is more creative.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.temperature(id='temperature', class_='form-control', placeholder="e.g. 0.2") }}
+                                            </div>
+                                            <div class="d-flex justify-content-center align-items-center" style="text-align: center;">
+                                                <div>
+                                                    <label class="form-label d-block">Conversation memory
+                                                        <span class="tooltip-container">
+                                                            <span class="tooltip-content">Enable to allow the model to use previous conversation context. Increases token usage.</span>
+                                                        </span>
+                                                    </label>
+                                                    <div class="form-check form-switch d-inline-flex align-items-center justify-content-center">
+                                                        <input class="form-check-input" type="checkbox" id="conversation_memory" name="conversation_memory" {% if form.conversation_memory.data %}checked{% endif %}>
+                                                        <label class="form-check-label ms-2" for="conversation_memory">Keep recent context</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
-                                        Please select a token
+                                    <div class="card-footer mt-3">
+                                        <div class="pf-footer-actions">
+                                            {% if ai_support_config %}
+                                                <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="fa-regular fa-trash-can me-1"></i>Delete</a>
+                                            {% endif %}
+                                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                                            <div class="ms-1">
+                                                <input type="checkbox" class="btn-check" id="is_default" name="is_default" autocomplete="off" {% if form.is_default.data %}checked{% endif %}>
+                                                <label class="btn btn-outline-secondary" for="is_default">
+                                                    <i class="fa-solid fa-star me-1 icon-on"></i>
+                                                    <i class="fa-regular fa-star me-1 icon-off"></i>
+                                                    Default
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <label for="temperature" class="mt-2">Temperature (0.1-1.0):</label>
-                                    {{ form.temperature(class="form-control", placeholder="e.g. 0.2") }}
-                                    <label for="conversation_memory" class="mt-2">
-                                        Conversation Memory:
-                                        <span class="tooltip-container d-inline-block me-1">
-                                            <span class="fa-regular fa-circle-question"></span>
-                                            <span class="tooltip-content">
-                                                Enabling this allows the LLM to access previous requests for better context when generating reports.
-                                                <br>
-                                                Note: This will increase token consumption.
-                                            </span>
-                                        </span>
-                                    </label>
-                                    {{ form.conversation_memory(class="form-control") }}
-                                    <label for="is_default" class="mt-2">Is Default:</label>
-                                    {{ form.is_default(class="form-control") }}
-                                    <button class="btn btn-primary mt-5" type="submit">Save</button>
-                                    {% if ai_support_config %}
-                                        <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
-                                    {% endif %}
                                 </div>
                             </form>
                             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
@@ -133,24 +202,92 @@
         function validateForm() {
             const tokenSelect = document.getElementById('token');
             const tokenError = document.getElementById('tokenError');
-
-            if (!tokenSelect.value) {
-                tokenSelect.classList.add('is-invalid');
-                tokenError.style.display = 'block';
-                return false;
-            }
-
-            tokenSelect.classList.remove('is-invalid');
+            if (!tokenSelect.value) { tokenError.style.display = 'block'; return false; }
             tokenError.style.display = 'none';
             return true;
         }
 
+        const tokenSelectEl = document.getElementById('token');
+        function toggleNewSecretFields() {
+            const container = document.getElementById('new_secret_fields');
+            if (!container) return;
+            const shouldShow = tokenSelectEl.value === 'create_new';
+            container.classList.toggle('hidden', !shouldShow);
+        }
+        tokenSelectEl.addEventListener('change', function() {
+            toggleNewSecretFields();
+            if (this.value) { document.getElementById('tokenError').style.display = 'none'; }
+        });
+        toggleNewSecretFields();
+
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            const icon = btn?.querySelector('i');
+            if (icon) { icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash'); }
+        }
+
+        // Focus-driven hints
+        function attachFocusHint(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const label = document.querySelector('label[for="' + inputId + '"]');
+            const contentEl = label ? label.querySelector('.tooltip-content') : null;
+            if (!contentEl) return;
+            const parent = input.parentElement; if (!parent) return;
+            parent.classList.add('has-focus-hint');
+            let hint = parent.querySelector('.focus-hint-overlay');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.className = 'form-hint focus-hint-overlay aside';
+                hint.innerHTML = '<i class="fas fa-info-circle icon" aria-hidden="true"></i><div>' + contentEl.innerHTML + '</div>';
+                parent.appendChild(hint);
+            }
+            function show() {
+                const hintWidth = 320; const gap = 16; const rect = parent.getBoundingClientRect();
+                const spaceLeft = rect.left; const spaceRight = window.innerWidth - rect.right;
+                hint.classList.remove('aside', 'aside-right');
+                if (spaceLeft >= hintWidth + gap) { hint.classList.add('aside'); }
+                else if (spaceRight >= hintWidth + gap) { hint.classList.add('aside-right'); }
+                hint.classList.add('is-visible');
+            }
+            function hide() { hint.classList.remove('is-visible'); }
+            input.addEventListener('focus', show);
+            input.addEventListener('blur', hide);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const labels = document.querySelectorAll('#aiSupportForm label[for]');
+            labels.forEach(label => {
+                const id = label.getAttribute('for');
+                if (label.querySelector('.tooltip-content') && document.getElementById(id)) {
+                    attachFocusHint(id);
+                }
+            });
+
+            const aiProviderInput = document.getElementById('ai_provider');
+            const azureFieldsDiv = document.getElementById('div_azure_fields');
+            const azureUrlInput = document.getElementById('azure_url');
+            const azureApiInput = document.getElementById('api_version');
+
+            function updateAzureVisibility() {
+                if (aiProviderInput.value === 'azure_openai') {
+                    azureFieldsDiv.style.display = 'block';
+                } else {
+                    azureFieldsDiv.style.display = 'none';
+                    if (azureUrlInput) azureUrlInput.value = '';
+                    if (azureApiInput) azureApiInput.value = '';
+                }
+            }
+            aiProviderInput.addEventListener('change', updateAzureVisibility);
+            updateAzureVisibility();
+        });
+
         function handleFormSubmit(event) {
             event.preventDefault();
-
-            if (!validateForm()) {
-                return;
-            }
+            if (!validateForm()) { return; }
 
             const form = document.getElementById('aiSupportForm');
             const data = {
@@ -158,151 +295,65 @@
                 ai_provider: form.ai_provider.value,
                 ai_text_model: form.ai_text_model.value,
                 ai_image_model: form.ai_image_model.value,
-                temperature: form.temperature.value,
-                conversation_memory: form.conversation_memory.value,
-                is_default: form.is_default.value === 'True',
-                azure_url: form.azure_url.value,
-                api_version: form.api_version.value
+                temperature: parseFloat(document.getElementById('temperature').value),
+                conversation_memory: document.getElementById('conversation_memory').checked,
+                is_default: document.getElementById('is_default').checked,
+                azure_url: document.getElementById('azure_url')?.value || '',
+                api_version: document.getElementById('api_version')?.value || ''
             };
 
             const integrationId = document.getElementById('config_id').value;
             const tokenSelect = document.getElementById('token');
-
-            const saveIntegrationWithToken = (tokenId) => {
-                data.token = tokenId;
-                saveIntegration(integrationId, data);
-            };
+            const saveIntegrationWithToken = (tokenId) => { data.token = tokenId; saveIntegration(integrationId, data); };
 
             if (tokenSelect.value === 'create_new') {
                 const newSecretName = document.getElementById('new_secret_name').value;
                 const newSecretValue = document.getElementById('new_secret_value').value;
                 const newSecretScope = document.getElementById('new_secret_scope').value;
-
-                if (!newSecretName || !newSecretValue) {
-                    showFlashMessage('Secret name and value are required.', 'error');
-                    return;
-                }
-
-                const secretData = {
-                    key: newSecretName,
-                    value: newSecretValue,
-                    project_id: newSecretScope === 'project' ? true : null
-                };
-
+                if (!newSecretName || !newSecretValue) { showFlashMessage('Secret name and value are required.', 'error'); return; }
+                const secretData = { key: newSecretName, value: newSecretValue };
+                if (newSecretScope === 'project') { secretData.project_id = '{{ project_id }}'; }
                 apiClient.secrets.create(secretData)
-                    .then(response => {
-                        if (response && response.data && response.data.secret_id) {
-                            saveIntegrationWithToken(response.data.secret_id);
-                        } else {
-                            throw new Error('Failed to get secret ID from response.');
-                        }
-                    })
+                    .then(response => { saveIntegrationWithToken(response.id); })
                     .catch(error => {
                         console.error('Error creating secret:', error);
-                        const errorMessage = error.responseJSON?.errors?.[0]?.message || error.message || 'An error occurred while creating the secret.';
+                        const errorMessage = error.responseJSON?.message || error.message || 'An error occurred while creating the secret.';
                         showFlashMessage(errorMessage, 'error');
                     });
             } else {
-                if (!tokenSelect.value) {
-                    showFlashMessage('Please select a token or create a new one.', 'error');
-                    return;
-                }
+                if (!tokenSelect.value) { showFlashMessage('Please select a token or create a new one.', 'error'); return; }
                 saveIntegrationWithToken(tokenSelect.value);
             }
         }
 
         function saveIntegration(integrationId, data) {
-            let apiPromise;
-
-            if (integrationId) {
-                // Update existing integration
-                apiPromise = apiClient.integrations.update(integrationId, data, 'ai_support');
-            } else {
-                // Create new integration
-                apiPromise = apiClient.integrations.create(data, 'ai_support');
-            }
-
+            const apiPromise = integrationId ? apiClient.integrations.update(integrationId, data, 'ai_support') : apiClient.integrations.create(data, 'ai_support');
             apiPromise
-                .then(response => {
-                    // Show success message
-                    const message = integrationId ? "Integration updated successfully." : "Integration added successfully.";
-                    showFlashMessage(message, "success");
-
-                    // Redirect to integrations page after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/integrations?tab=ai-support';
-                    }, 1000);
+                .then(() => {
+                    const message = integrationId ? 'Integration updated successfully.' : 'Integration added successfully.';
+                    showFlashMessage(message, 'success');
+                    setTimeout(() => { window.location.href = '/integrations?tab=ai-support'; }, 1000);
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showFlashMessage(error.message || "An error occurred while saving the integration.", "error");
+                    showFlashMessage(error.message || 'An error occurred while saving the integration.', 'error');
                 });
         }
 
         // Handle delete confirmation
-        document.getElementById('confirmDelete').addEventListener('click', function() {
+        document.getElementById('confirmDelete')?.addEventListener('click', function() {
             const integrationId = document.getElementById('config_id').value;
-
             apiClient.integrations.delete(integrationId, 'ai_support')
-                .then(response => {
-                    // Close the modal
+                .then(() => {
                     const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-                    modal.hide();
-
-                    // Show success message
-                    showFlashMessage("Integration deleted successfully.", "success");
-
-                    // Redirect to integrations page after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/integrations?tab=ai-support';
-                    }, 1000);
+                    modal?.hide();
+                    showFlashMessage('Integration deleted successfully.', 'success');
+                    setTimeout(() => { window.location.href = '/integrations?tab=ai-support'; }, 1000);
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showFlashMessage(error.message || "An error occurred while deleting the integration.", "error");
+                    showFlashMessage(error.message || 'An error occurred while deleting the integration.', 'error');
                 });
         });
-
-        // Add event listener to token select for real-time validation
-        document.getElementById('token').addEventListener('change', function() {
-            const newSecretFields = document.getElementById('new_secret_fields');
-            newSecretFields.style.display = this.value === 'create_new' ? 'block' : 'none';
-
-            if (this.value) {
-                this.classList.remove('is-invalid');
-                document.getElementById('tokenError').style.display = 'none';
-            }
-        });
-
-        window.onload = function() {
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl)
-            });
-
-            var aiProviderInput = document.getElementById('ai_provider');
-            var azureUrlDiv = document.getElementById('div_azure_url');
-            var azureUrlInput = document.getElementById('azure_url');
-            var azureApiDiv = document.getElementById('div_api_version');
-            var azureApiInput = document.getElementById('api_version');
-
-            aiProviderInput.addEventListener('change', function() {
-                if (this.value === 'azure_openai') {
-                    azureUrlDiv.style.display = 'block';
-                    azureApiDiv.style.display = 'block';
-                } else {
-                    azureUrlDiv.style.display = 'none';
-                    azureUrlInput.value = '';
-                    azureApiDiv.style.display = 'none';
-                    azureApiInput.value = '';
-                }
-            });
-
-            // Check the initial value of 'ai_provider'
-            if (aiProviderInput.value === 'azure_openai') {
-                azureUrlDiv.style.display = 'block';
-                azureApiDiv.style.display = 'block';
-            }
-        }
     </script>
 {% endblock content %}
