@@ -92,7 +92,11 @@ class InfluxdbV2(DataExtractionBase):
     def _initialize_client(self):
         try:
             self.influxdb_connection = InfluxDBClient(
-                url=self.url, org=self.org_id, token=self.token, timeout=int(self.timeout)
+                url=self.url,
+                org=self.org_id,
+                token=self.token,
+                timeout=int(self.timeout),
+                verify_ssl=False,
             )
         except Exception as er:
             logging.error(ErrorMessages.ER00052.value.format(self.name))

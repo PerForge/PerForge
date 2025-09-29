@@ -262,7 +262,10 @@
                 const secretData = { key: newSecretName, value: newSecretValue };
                 if (newSecretScope === 'project') { secretData.project_id = '{{ project_id }}'; }
                 apiClient.secrets.create(secretData)
-                    .then(response => { saveIntegrationWithToken(response.id); })
+                    .then(response => {
+                        const secretId = response?.data?.secret_id ?? response?.secret_id ?? response?.id;
+                        saveIntegrationWithToken(secretId);
+                    })
                     .catch(error => {
                         console.error('Error creating secret:', error);
                         const errorMessage = error.responseJSON?.message || error.message || 'An error occurred while creating the secret.';
