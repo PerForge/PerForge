@@ -22,10 +22,7 @@ import traceback
 from flask import Blueprint, request, send_file
 from app.backend.data_provider.data_provider import DataProvider
 from app.backend.integrations.report_registry import ReportRegistry
-from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
 from app.backend.components.projects.projects_db import DBProjects
-from app.backend.components.templates.templates_db import DBTemplates
-from app.backend.components.templates.template_groups_db import DBTemplateGroups
 from app.backend.errors import ErrorMessages
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
@@ -53,55 +50,6 @@ def _ensure_report_types_loaded():
             importlib.import_module(module_name)
         except ImportError as e:
             logging.warning(f"Could not import report module {module_name}: {e}")
-
-@reports_api.route('/api/v1/tests', methods=['GET'])
-@api_error_handler
-def get_tests():
-    """
-    Get all test configurations for the current project.
-
-    Returns:
-        A JSON response with test configurations
-    """
-    try:
-        project_id = get_project_id()
-        if not project_id:
-            return api_response(
-                message="No project selected",
-                status=HTTP_BAD_REQUEST,
-                errors=[{"code": "missing_project", "message": "No project selected"}]
-            )
-
-        project_data = DBProjects.get_config_by_id(id=project_id)
-        if not project_data:
-            return api_response(
-                message=f"Project with ID {project_id} not found",
-                status=HTTP_NOT_FOUND,
-                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
-            )
-
-        influxdb_configs = DBInfluxdb.get_configs(project_id=project_id)
-        db_configs = []
-        for config in influxdb_configs:
-            db_configs.append({"id": config["id"], "name": config["name"], "source_type": "influxdb_v2"})
-
-        template_configs = DBTemplates.get_configs_brief(project_id=project_id)
-        template_group_configs = DBTemplateGroups.get_configs(project_id=project_id)
-        output_configs = DBProjects.get_project_output_configs(id=project_id)
-
-        return api_response(data={
-            "db_configs": db_configs,
-            "templates": template_configs,
-            "template_groups": template_group_configs,
-            "output_configs": output_configs
-        })
-    except Exception as e:
-        logging.error(f"Error getting test configurations: {str(e)}")
-        return api_response(
-            message=ErrorMessages.ER00009.value,
-            status=HTTP_BAD_REQUEST,
-            errors=[{"code": "test_config_error", "message": str(e)}]
-        )
 
 @reports_api.route('/api/v1/tests/data', methods=['GET'])
 @api_error_handler
@@ -153,7 +101,9 @@ def get_test_data():
                 errors=[{"code": "missing_param", "message": "Missing source_type parameter"}]
             )
 
-        ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id)
+        # Determine bucket: prefer query param, fallback to integration config
+        bucket = request.args.get('bucket')
+        ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id, bucket=bucket)
 
         # Retrieve all titles once and slice in-memory for pagination
         titles = ds_obj.get_tests_titles()
@@ -293,7 +243,7 @@ def generate_report():
             try:
                 for test in data['tests']:
                     db_config = test.get('db_config')
-                    dp = DataProvider(project=project_id, source_type=db_config['source_type'], id=db_config['id'])
+                    dp = DataProvider(project=project_id, source_type=db_config['source_type'], id=db_config['id'], bucket=db_config['bucket'])
                     dp.ds_obj.delete_test_data(test['test_title'])
                 return api_response(message="Tests deleted successfully", status=HTTP_OK)
             except Exception as e:
@@ -341,7 +291,7 @@ def get_report_data():
 
     Request Body:
         test_title: The title of the test
-        source_type: The type of data source (e.g., "influxdb_v2", "timescaledb")
+        source_type: The type of data source (e.g., "influxdb_v2")
         id: Optional ID for the data source
 
     Returns:
@@ -390,7 +340,9 @@ def get_report_data():
                 errors=[{"code": "missing_param", "message": "Missing source_type parameter"}]
             )
 
-        dp = DataProvider(project=project_id, source_type=source_type, id=source_id)
+        # Prefer bucket passed from UI; fallback to integration config
+        bucket = data.get('bucket')
+        dp = DataProvider(project=project_id, source_type=source_type, id=source_id, bucket=bucket)
         metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status = dp.collect_test_data_for_report_page(test_title=test_title)
 
         response_data = {

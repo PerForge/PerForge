@@ -55,8 +55,7 @@ class OpenAIProvider(AIProvider):
             self.image_llm = ChatOpenAI(
                 model=ai_image_model,
                 openai_api_key=token,
-                temperature=temperature,
-                max_tokens=300
+                temperature=temperature
             )
 
             self.models_created = True
@@ -254,7 +253,6 @@ class AzureOpenAIProvider(OpenAIProvider):
                 azure_endpoint=azure_url,
                 openai_api_key=token,
                 temperature=temperature,
-                max_tokens=300,
                 http_client=httpx.Client(timeout=30)
             )
 

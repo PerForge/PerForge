@@ -11,124 +11,202 @@
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
                 <div class="center-section">
-                    <div class="card mb-3 width-700" data-component-card="data-component-card">
+                    <div class="card mb-3 pf-card-wide" data-component-card="data-component-card">
                         <div class="card-header">
-                            <div class="justify-content-between align-items-center">
-                                <h4 class="mb-0">Influxdb
-                                    <span class="tooltip-container">
-                                      <a href="https://perforge.app/docs/configuration/integrations#influxdb" target="_blank">
-                                          <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                      </a>
-                                      <span class="tooltip-content" style="font-size: 16px;">
-                                          Click to learn more
-                                      </span>
-                                    </span>
-                                </h4>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="mb-0">InfluxDB Integration</h4>
+                                    <small class="text-muted">Set up your InfluxDB connection for reading JMeter test results.</small>
+                                </div>
+                                <a class="btn btn-sm btn-outline-secondary" href="https://perforge.app/docs/configuration/integrations#influxdb" target="_blank">
+                                    <i class="fa-regular fa-circle-question me-1"></i>
+                                    Docs
+                                </a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" id="influxdbForm" onsubmit="return handleFormSubmit(event)">
+                            <form method="POST" id="influxdbForm" class="pf-form" onsubmit="return handleFormSubmit(event)">
                                 {{ form.hidden_tag() }}
-                                <div class="center-section">
+                                <div>
                                     {% if influxdb_config %}
                                         <input type="hidden" name="id" id="config_id" value="{{ influxdb_config }}">
                                     {% endif %}
-                                    <label for="name">Name:</label>
-                                    {{ form.name(class="form-control", placeholder="e.g. My InfluxDB Connection") }}
-                                    <label for="url" class="mt-2">Url:</label>
-                                    {{ form.url(class="form-control", placeholder="e.g. http://localhost:8086") }}
-                                    <label for="org_id" class="mt-2">Org:</label>
-                                    {{ form.org_id(class="form-control", placeholder="e.g. my-organization") }}
-                                    <label for="token" class="input-label mt-2">Token:</label>
-                                    <select class="form-control" name="token" id="token" required>
-                                        <option value="">--- Select the secret ---</option>
-                                        <option value="create_new">--- Create a new secret ---</option>
-                                        {% for secret in secret_configs %}
-                                            <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <div id="new_secret_fields" style="display: none; width: 100%;">
-                                        <label for="new_secret_name" class="mt-2" style="display: block; text-align: center;">Secret Name:</label>
-                                        <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. INFLUX_TOKEN">
-                                        <label for="new_secret_scope" class="mt-2" style="display: block; text-align: center;">
-                                            Scope:
-                                            <span class="tooltip-container d-inline-block me-1">
-                                                <span class="fa-regular fa-circle-question"></span>
-                                                <span class="tooltip-content">
-                                                    Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.
+                                    <div class="row g-3 mt-1">
+                                        <div class="col-12">
+                                            <label for="name" class="form-label required">Name
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Display name for this connection (used in charts and dashboards).</span>
                                                 </span>
+                                            </label>
+                                            {{ form.name(class="form-control", placeholder="e.g. My InfluxDB") }}
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="url" class="form-label required">URL
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">InfluxDB base URL including scheme and port.</span>
+                                                </span>
+                                            </label>
+                                            {{ form.url(class="form-control", placeholder="e.g. http://localhost:8086") }}
+                                        </div>
+                                        <div class="pf-two-col">
+                                            <div>
+                                                <label for="org_id" class="form-label required">Org
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Organization name in InfluxDB UI (top-left org switcher).</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.org_id(class="form-control", placeholder="e.g. my-organization") }}
+                                            </div>
+                                            <div>
+                                                <label for="timeout" class="form-label required">Timeout
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">HTTP request timeout in milliseconds (e.g., 60000 = 60s).</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.timeout(class="form-control", placeholder="e.g. 60000") }}
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="token" class="form-label required">Token</label>
+                                            <select class="form-select" name="token" id="token" required>
+                                                <option value="">--- Select the secret ---</option>
+                                                <option value="create_new">--- Create a new secret ---</option>
+                                                {% for secret in secret_configs %}
+                                                    <option value="{{ secret.id }}" {% if form.token.data == secret.id %} selected {% endif %}>{{ secret.key }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div id="tokenError" class="invalid-feedback" style="display: none;">
+                                                Please select a token
+                                            </div>
+                                        </div>
+                                        <div class="col-12 hidden" id="new_secret_fields">
+                                            <div class="card card-body border-1">
+                                                <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label for="new_secret_name" class="form-label">Secret Name</label>
+                                                            <input type="text" id="new_secret_name" class="form-control" placeholder="e.g. INFLUX_TOKEN">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label for="new_secret_scope" class="form-label">
+                                                                Scope
+                                                                <span class="tooltip-container d-inline-block ms-1">
+                                                                    <span class="tooltip-content">Scope determines secret visibility: "ALL" makes it visible across all projects, while "Project" restricts access to the current project.</span>
+                                                                </span>
+                                                            </label>
+                                                            <select class="form-select" id="new_secret_scope">
+                                                                <option value="project">Current project</option>
+                                                                <option value="">All projects</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <label for="new_secret_value" class="form-label">Secret Value</label>
+                                                            <div class="input-group">
+                                                                <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
+                                                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('new_secret_value', this)" aria-label="Toggle secret visibility">
+                                                                    <i class="fa-regular fa-eye"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="bucket" class="form-label required">Bucket name or regex
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">
+                                                      You can enter an exact bucket name, or provide a regex to match multiple buckets; if using a regex, enable the "Enable bucket regex" switch.
+                                                      Regex is RE2 (Flux). Backend anchors your pattern automatically as <code>^…$</code>.
+                                                      Examples:
+                                                      <ul style="margin: 0 0 0 1rem; padding: 0;">
+                                                        <li>Only listed buckets: <code>(jmeter|jmeter2|jmeter3)</code></li>
+                                                        <li>All buckets: <code>.*</code></li>
+                                                        <li>Prefix “jmeter-”: <code>jmeter-.*</code></li>
+                                                      </ul>
+                                                      Tip: escape <code>/</code> as <code>\\/</code> if needed.
+                                                    </span>
+                                                  </span>
+                                            </label>
+                                            <div class="pf-inline-with-switch">
+                                                <div class="field">
+                                                    {{ form.bucket(class="form-control", placeholder="e.g. my-bucket") }}
+                                                </div>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="bucket_regex_bool" name="bucket_regex_bool" {% if form.bucket_regex_bool.data %}checked{% endif %}>
+                                                    <label class="form-check-label" for="bucket_regex_bool">Enable bucket regex</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="listener" class="form-label required">Backend listener
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Please be aware that the default listener for JMeter is the first one.</span>
+                                                </span>
+                                            </label>
+                                            {{ form.listener(class="form-select") }}
+                                        </div>
+                                        <div class="pf-three-col">
+                                            <div>
+                                                <label for="test_title_tag_name" class="form-label required">Test Title variable name
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">Name of the variable/tag your Backend Listener writes to InfluxDB for the test title (e.g., <code>testTitle</code>). PerForge uses it to retrieve data.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.test_title_tag_name(class="form-control", placeholder="e.g. testTitle") }}
+                                            </div>
+                                            <div>
+                                                <label for="regex" class="form-label">Request/Transaction regex
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">[Optional] Regex enables the separation of requests and transactions. It will be used in the following format: r.transaction =~ /{regex}/. For example, if all your requests follow a naming pattern such as R01_homepage and R02_login, you can use a regex like R.* to match them.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.regex(class="form-control", placeholder="e.g. R.*") }}
+                                            </div>
+                                            <div>
+                                                <label for="tmz" class="form-label required">Timezone
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">The timezone will be used when generating timestamps in a human-readable format. If no timezone is specified, UTC will be used by default. For example, a timestamp might use 'US/Eastern'. More available timezones can be found here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
+                                            </div>
+                                        </div>
+                                        <label for="custom_vars-0-content" class="form-label">Custom variables name
+                                            <span class="tooltip-container">
+                                                <span class="tooltip-content">[Optional] Define custom InfluxDB tags to extract and expose as template parameters. Example: if you add <code>build</code>, you can use <code>${current_build}</code> or <code>${baseline_build}</code> in templates.</span>
                                             </span>
                                         </label>
-                                        <select class="form-control" id="new_secret_scope">
-                                            <option value="project">Current project</option>
-                                            <option value="">All projects</option>
-                                        </select>
-                                        <label for="new_secret_value" class="mt-2" style="display: block; text-align: center;">Secret Value:</label>
-                                        <input type="password" id="new_secret_value" class="form-control" placeholder="e.g. my-super-secret-token">
-                                    </div>
-                                    <div id="tokenError" class="invalid-feedback" style="display: none;">
-                                        Please select a token
-                                    </div>
-                                    <label for="timeout" class="mt-2">Timeout:</label>
-                                    {{ form.timeout(class="form-control", placeholder="e.g. 60000") }}
-                                    <label for="bucket" class="mt-2">Bucket:</label>
-                                    {{ form.bucket(class="form-control", placeholder="e.g. my-bucket") }}
-                                    <label for="listener" class="input-label mt-2">Backend listener:
-                                        <span class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <span class="tooltip-content">
-                                              Please be aware that the default listener for JMeter is the first one.
-                                            </span>
-                                          </span>
-                                    </label>
-                                    {{ form.listener(class="form-control") }}
-                                    <label for="test_title_tag_name" class="input-label mt-2">Test Title Tag Name:</label>
-                                    {{ form.test_title_tag_name(class="form-control", placeholder="e.g. testTitle") }}
-                                    <label for="regex" class="input-label mt-2">Request/Transaction regex (optional):
-                                        <span class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <span class="tooltip-content">
-                                                Optional regex enables the separation of requests and transactions. It will be used in the following format: r.transaction =~ /{regex}/. For example, if all your requests follow a naming pattern such as R01_homepage and R02_login, you can use a regex like R.* to match them.
-                                            </span>
-                                          </span>
-                                    </label>
-                                    {{ form.regex(class="form-control", placeholder="e.g. R.*") }}
-                                    <label for="tmz" class="mt-2">Timezone:
-                                        <span class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <span class="tooltip-content">
-                                              The timezone will be used when generating timestamps in a human-readable format. If no timezone is specified, UTC will be used by default. For example, a timestamp might use 'US/Eastern'. More available timezones can be found here: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
-                                            </span>
-                                        </span>
-                                    </label>
-                                    {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
-                                    <label for="is_default" class="mt-2">Is Default:</label>
-                                    {{ form.is_default(class="form-control") }}
-                                    <label for="custom_vars" class="input-label mt-2">Custom Vars (optional):
-                                        <span class="tooltip-container">
-                                            <span class="fa-regular fa-circle-question me-2 mt-2"></span>
-                                            <span class="tooltip-content">
-                                              Define custom influxdb tags to extract and expose as template parameters. For example if you defined `build` tag, then you can use it in your templates as `${current_build}` or `${baseline_build}`.
-                                            </span>
-                                          </span>
-                                    </label>
-                                    <div id="custom-vars-container" style="width: 100%;">
-                                        {% for var in form.custom_vars %}
-                                        <div class="flex m10-top">
-                                            <input type="text" class="form-control customVarInput" name="custom_vars-{{ loop.index0 }}-content" id="custom_vars-{{ loop.index0 }}-content" value="{{ var.data or '' }}" placeholder="e.g. build">
-                                            <button type="button" class="btn btn-secondary ms-2" onclick="removeCustomVar(this)">Delete</button>
+                                        <div id="custom-vars-container" class="pf-custom-vars" style="width: 100%;">
+                                            {% for var in form.custom_vars %}
+                                            <div class="flex m10-top">
+                                                <input type="text" class="form-control customVarInput" name="custom_vars-{{ loop.index0 }}-content" id="custom_vars-{{ loop.index0 }}-content" value="{{ var.data or '' }}" placeholder="e.g. build">
+                                                <button type="button" class="btn btn-outline-secondary ms-2" onclick="removeCustomVar(this)"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
+                                            </div>
+                                            {% endfor %}
                                         </div>
-                                        {% endfor %}
+
+                                        <div class="d-flex flex-wrap gap-2 mt-4">
+                                            <button class="btn btn-outline-primary" type="button" id="addVarButton" onclick="addCustomVar()"><i class="fa-solid fa-plus me-1"></i>Add Variable</button>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <button class="btn btn-primary mt-5 me-2" type="button" id="addVarButton" onclick="addCustomVar()">Add Variable</button>
-                                        <button class="btn btn-secondary mt-5 me-2" type="button" id="testIntegrationBtn" onclick="testIntegration()">Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
-                                        <button class="btn btn-primary mt-5" type="submit">Save</button>
-                                        {% if influxdb_config %}
-                                            <a class="btn btn-danger ms-2 mt-5" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</a>
-                                        {% endif %}
+
+                                    <div class="card-footer mt-3">
+                                        <div class="pf-footer-actions">
+                                            <button class="btn btn-secondary" type="button" id="testIntegrationBtn" onclick="testIntegration()"><i class="fa-solid fa-satellite-dish me-1"></i>Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
+                                            {% if influxdb_config %}
+                                                <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="fa-regular fa-trash-can me-1"></i>Delete</a>
+                                            {% endif %}
+                                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                                            <div class="ms-1">
+                                                <input type="checkbox" class="btn-check" id="is_default" name="is_default" autocomplete="off" {% if form.is_default.data %}checked{% endif %}>
+                                                <label class="btn btn-outline-secondary" for="is_default">
+                                                    <i class="fa-solid fa-star me-1 icon-on"></i>
+                                                    <i class="fa-regular fa-star me-1 icon-off"></i>
+                                                    Default
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
                             </form>
                             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
                               <div class="modal-dialog">
@@ -172,23 +250,30 @@
             return true;
         }
 
-        document.getElementById('token').addEventListener('change', function() {
-            const newSecretFields = document.getElementById('new_secret_fields');
-            newSecretFields.style.display = this.value === 'create_new' ? 'block' : 'none';
-
+        const tokenSelectEl = document.getElementById('token');
+        function toggleNewSecretFields() {
+            const container = document.getElementById('new_secret_fields');
+            if (!container) return;
+            const shouldShow = tokenSelectEl.value === 'create_new';
+            container.classList.toggle('hidden', !shouldShow);
+        }
+        tokenSelectEl.addEventListener('change', function() {
+            toggleNewSecretFields();
             if (this.value) {
                 this.classList.remove('is-invalid');
                 document.getElementById('tokenError').style.display = 'none';
             }
         });
+        // Set initial visibility immediately
+        toggleNewSecretFields();
 
         // Custom vars dynamic UI
         document.addEventListener('DOMContentLoaded', function() {
             window.addCustomVar = function() {
                 var count = document.querySelectorAll('.customVarInput').length;
-                var html = `<div class="flex m10-top">
-                                <input type="text" class="form-control customVarInput" name="custom_vars-${count}-content" id="custom_vars-${count}-content" placeholder="e.g. build">
-                                <button type="button" class="btn btn-secondary ms-2" onclick="removeCustomVar(this)">Delete</button>
+                var html = `<div class=\"flex m10-top\">\n\
+                                <input type=\"text\" class=\"form-control customVarInput\" name=\"custom_vars-${count}-content\" id=\"custom_vars-${count}-content\" placeholder=\"e.g. build\">\n\
+                                <button type=\"button\" class=\"btn btn-outline-secondary ms-2\" onclick=\"removeCustomVar(this)\"><i class=\"fa-regular fa-trash-can me-1\"></i>Delete</button>\n\
                             </div>`;
                 var container = document.createElement('div');
                 container.innerHTML = html;
@@ -215,6 +300,18 @@
             }
         });
 
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            const icon = btn?.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            }
+        }
+
         function handleFormSubmit(event) {
             event.preventDefault();
 
@@ -232,7 +329,8 @@
                 regex: document.getElementById('regex').value,
                 tmz: document.getElementById('tmz').value,
                 test_title_tag_name: document.getElementById('test_title_tag_name').value,
-                is_default: document.getElementById('is_default').value === 'True'
+                is_default: document.getElementById('is_default').checked,
+                bucket_regex_bool: document.getElementById('bucket_regex_bool').checked
             };
 
             const varInputs = document.querySelectorAll('.customVarInput');
@@ -304,10 +402,10 @@
         }
 
         function testIntegration() {
-    const testBtn = document.getElementById('testIntegrationBtn');
-    const spinner = testBtn.querySelector('.spinner-border');
-    testBtn.disabled = true;
-    spinner.style.display = 'inline-block';
+            const testBtn = document.getElementById('testIntegrationBtn');
+            const spinner = testBtn.querySelector('.spinner-border');
+            testBtn.disabled = true;
+            spinner.style.display = 'inline-block';
             const urlInput = document.getElementById('url');
             const orgInput = document.getElementById('org_id');
             const bucketInput = document.getElementById('bucket');
@@ -315,6 +413,8 @@
 
             if (!urlInput.value || !orgInput.value || !bucketInput.value) {
                 showFlashMessage('Please fill URL, Org and Bucket fields before testing.', 'error');
+                testBtn.disabled = false;
+                spinner.style.display = 'none';
                 return;
             }
 
@@ -326,6 +426,8 @@
 
             if (!tokenSelect.value) {
                 showFlashMessage('Please select a token or create a new one before testing.', 'error');
+                testBtn.disabled = false;
+                spinner.style.display = 'none';
                 return;
             }
 
@@ -333,6 +435,8 @@
                 const newTokenValue = document.getElementById('new_secret_value').value;
                 if (!newTokenValue) {
                     showFlashMessage('Enter the new secret value before testing.', 'error');
+                    testBtn.disabled = false;
+                    spinner.style.display = 'none';
                     return;
                 }
                 payload.token = newTokenValue;
@@ -379,6 +483,53 @@
                     console.error('Error:', error);
                     showFlashMessage(error.message || "An error occurred while deleting the integration.", "error");
                 });
+        });
+
+        // Focus-driven hints: show tooltip content below inputs when focused
+        function attachFocusHint(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const label = document.querySelector('label[for="' + inputId + '"]');
+            const contentEl = label ? label.querySelector('.tooltip-content') : null;
+            if (!contentEl) return;
+            const parent = input.parentElement;
+            if (!parent) return;
+            parent.classList.add('has-focus-hint');
+            let hint = parent.querySelector('.focus-hint-overlay');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.className = 'form-hint focus-hint-overlay aside';
+                hint.innerHTML = '<i class="fas fa-info-circle icon" aria-hidden="true"></i><div>' + contentEl.innerHTML + '</div>';
+                parent.appendChild(hint);
+            }
+            function show() {
+                // Decide placement to avoid going off-screen
+                const hintWidth = 320; // keep in sync with CSS
+                const gap = 16; // visual gap from field
+                const rect = parent.getBoundingClientRect();
+                const spaceLeft = rect.left;
+                const spaceRight = window.innerWidth - rect.right;
+                hint.classList.remove('aside', 'aside-right');
+                if (spaceLeft >= hintWidth + gap) {
+                    hint.classList.add('aside');
+                } else if (spaceRight >= hintWidth + gap) {
+                    hint.classList.add('aside-right');
+                } // else: default bottom overlay
+                hint.classList.add('is-visible');
+            }
+            function hide() { hint.classList.remove('is-visible'); }
+            input.addEventListener('focus', show);
+            input.addEventListener('blur', hide);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const labels = document.querySelectorAll('#influxdbForm label[for]');
+            labels.forEach(label => {
+                const id = label.getAttribute('for');
+                if (label.querySelector('.tooltip-content') && document.getElementById(id)) {
+                    attachFocusHint(id);
+                }
+            });
         });
     </script>
 {% endblock content %}

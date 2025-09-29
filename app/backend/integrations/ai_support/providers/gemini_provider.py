@@ -58,10 +58,10 @@ class GeminiProvider(AIProvider):
             )
 
             # Initialize embeddings for potential future use
-            self.embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/embedding-001",
-                google_api_key=token
-            )
+            # self.embeddings = GoogleGenerativeAIEmbeddings(
+            #     model="models/embedding-001",
+            #     google_api_key=token
+            # )
 
             self.models_created = True
             self.provider_name = "gemini"

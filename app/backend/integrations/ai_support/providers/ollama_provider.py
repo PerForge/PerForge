@@ -64,10 +64,10 @@ class OllamaProvider(AIProvider):
             )
 
             # Initialize embeddings for potential future use
-            self.embeddings = OllamaEmbeddings(
-                model=ai_text_model,
-                base_url=base_url
-            )
+            # self.embeddings = OllamaEmbeddings(
+            #     model=ai_text_model,
+            #     base_url=base_url
+            # )
 
             self.models_created = True
             self.provider_name = "ollama"

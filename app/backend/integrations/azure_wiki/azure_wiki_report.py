@@ -157,9 +157,9 @@ class AzureWikiReport(ReportingBase):
 
     def generate_path(self, isgroup):
         if isgroup:
-            return self.output_obj.get_path() + self.replace_variables(self.group_title)
+            return self.replace_variables(self.output_obj.get_path() + self.group_title)
         else:
-            return self.output_obj.get_path() +self.replace_variables(self.title)
+            return self.replace_variables(self.output_obj.get_path() + self.title)
 
     def generate_report(self, tests, action_id, template_group=None):
         page_title = None

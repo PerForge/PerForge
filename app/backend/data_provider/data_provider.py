@@ -33,7 +33,7 @@ class DataProvider:
     DataProvider class manages data extraction, transformation, and analysis for performance tests.
 
     This class serves as a central hub for handling performance test data, providing:
-    - Data extraction from various sources (InfluxDB, TimeScaleDB)
+    - Data extraction from various sources (InfluxDB)
     - Data transformation and preprocessing
     - Performance metrics calculation and aggregation
     - Support for both backend and frontend test types
@@ -50,14 +50,15 @@ class DataProvider:
         "sitespeed_influxdb_v2": "front_end",
     }
 
-    def __init__(self, project: Any, source_type: Any, id: Optional[str] = None) -> None:
+    def __init__(self, project: Any, source_type: Any, id: str, bucket: str) -> None:
         """
         Initialize DataProvider with project settings and data source configuration.
 
         Args:
             project: Project configuration object with settings
-            source_type: Data source type identifier (e.g., "influxdb_v2", "timescaledb")
-            id: Optional identifier for specific data source instance
+            source_type: Data source type identifier (e.g., "influxdb_v2")
+            id: Identifier for specific data source instance
+            bucket: Override for the data source bucket (applied post-initialization)
         """
         self.project = project
         self.source_type = source_type
@@ -65,6 +66,12 @@ class DataProvider:
 
         # Determine the test type based on the source type
         self.test_type = self.source_to_test_type_map.get(self.ds_obj.listener, "back_end")
+
+        # Apply bucket override
+        try:
+            self.ds_obj.bucket = bucket
+        except Exception as e:
+            logging.warning(f"DataProvider: failed to apply bucket override: {e}")
 
     # Timestamp helper
     def get_current_timestamp(self, fmt: str = "%Y-%m-%d %H:%M:%S %Z") -> str:

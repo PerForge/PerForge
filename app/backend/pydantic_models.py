@@ -46,6 +46,7 @@ class InfluxdbModel(BaseModelWithStripping):
     tmz       : str = Field(default="UTC")
     test_title_tag_name: str = Field(default="testTitle")
     regex: Optional[str] = Field(default=None)
+    bucket_regex_bool: bool = Field(default=False)
     custom_vars: list[str] = Field(default_factory=list)
     is_default: bool
 

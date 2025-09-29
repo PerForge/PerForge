@@ -45,7 +45,12 @@ class ReportingBase:
         self.template_prompt_id = template_obj["template_prompt_id"]
         self.aggregated_prompt_id = template_obj["aggregated_prompt_id"]
         self.system_prompt_id = template_obj["system_prompt_id"]
-        self.dp_obj = DataProvider(project=self.project, source_type=db_config.get("source_type"), id=db_config.get("id"))
+        self.dp_obj = DataProvider(
+            project=self.project,
+            source_type=db_config.get("source_type"),
+            id=db_config.get("id"),
+            bucket=(db_config or {}).get("bucket")
+        )
         self.nfrs_switch = template_obj["nfrs_switch"]
         self.ai_switch = template_obj["ai_switch"]
         if self.ai_switch:
@@ -141,7 +146,6 @@ class ReportingBase:
         self.parameters['ai_summary'] = ""
 
         all_tables = self.current_test_obj.get_all_tables()
-        all_tables_json = self.current_test_obj.get_all_tables_json()
 
         # 1. NFR validation
         if self.nfrs_switch:
@@ -157,6 +161,10 @@ class ReportingBase:
         if self.ai_switch:
             # Use JSON string of all tables for AI analysis
             if self.ai_aggregated_data_switch:
+                # Apply baseline to all tables only when aggregated data analysis is requested
+                if getattr(self, "baseline_test_obj", None) is not None:
+                    self._apply_baseline_to_all_tables()
+                all_tables_json = self.current_test_obj.get_all_tables_json()
                 self.ai_support_obj.analyze_aggregated_data(all_tables_json, self.aggregated_prompt_id)
 
             # Generate template summary, including NFR and ML summaries
@@ -262,6 +270,46 @@ class ReportingBase:
 
         return image, ai_support_response
 
+    def _apply_baseline_to_all_tables(self) -> None:
+        """
+        If a baseline test is available, preload all current tables and apply baseline metrics
+        so subsequent consumers (e.g., get_all_tables_json()) include comparison fields.
+
+        This mirrors the lazy baseline wiring done in replace_variables() but applies it
+        globally during data collection.
+
+        Safe to call multiple times.
+        """
+        try:
+            # Ensure both current and baseline objects are present and support table access
+            if (
+                getattr(self, "current_test_obj", None) is None
+                or getattr(self, "baseline_test_obj", None) is None
+                or not hasattr(self.current_test_obj, "get_all_tables")
+                or not hasattr(self.baseline_test_obj, "get_table")
+            ):
+                return
+
+            # Preload all current tables with default aggregation
+            current_tables = self.current_test_obj.get_all_tables() or {}
+
+            # Use the same aggregation for baseline tables
+            aggregation = getattr(self.current_test_obj, "aggregation", None)
+
+            for table_name, table in current_tables.items():
+                if table is None:
+                    continue
+                try:
+                    baseline_table = self.baseline_test_obj.get_table(table_name, aggregation)
+                    if baseline_table is not None and getattr(baseline_table, "metrics", None):
+                        table.set_baseline_metrics(baseline_table.metrics)
+                except Exception as e:
+                    logging.warning(
+                        f"_apply_baseline_to_all_tables: failed to apply baseline for table '{table_name}': {e}"
+                    )
+        except Exception as e:
+            logging.warning(f"_apply_baseline_to_all_tables: unexpected error: {e}")
+
     def _collect_parameters(self, test_obj: BaseTestData, prefix: str = "") -> Dict[str, Any]:
         """
         Extract all metrics from a test data object and format them as parameters with optional prefix.
@@ -304,15 +352,40 @@ class ReportingBase:
                     param_name = f"{prefix}{report_name}"
                     parameters[param_name] = str(test_obj.get_metric(attr_name))
 
+        # Include data source bucket if available from DataProvider.ds_obj
+        try:
+            ds_obj = getattr(self, "dp_obj", None)
+            if ds_obj is not None and getattr(ds_obj, "ds_obj", None) is not None:
+                bucket = getattr(ds_obj.ds_obj, "bucket", None)
+                if bucket:
+                    parameters["bucket"] = str(bucket)
+        except Exception as e:
+            logging.warning(f"_collect_parameters: could not read data source bucket: {e}")
+
         # Add a single, global report generation timestamp (no prefix)
         # Use the DataProvider helper to honour data source timezones.
-        if hasattr(self, "dp_obj") and "report_timestamp" not in parameters:
+        if hasattr(self, "dp_obj"):
             try:
-                parameters["report_timestamp"] = self.dp_obj.get_current_timestamp()
+                # Report timestamp
+                if "report_timestamp" not in parameters:
+                    parameters["report_timestamp"] = self.dp_obj.get_current_timestamp()
+                # Current month (e.g., September)
+                if "current_month" not in parameters:
+                    parameters["current_month"] = self.dp_obj.get_current_timestamp("%B")
+                # Current day (e.g., 12)
+                if "current_day" not in parameters:
+                    day_str = self.dp_obj.get_current_timestamp("%d")
+                    parameters["current_day"] = str(int(day_str)) if day_str.isdigit() else day_str
             except Exception:
-                # Fallback to a simple UTC timestamp if anything goes wrong
+                # Fallback to UTC if anything goes wrong
                 from datetime import datetime, timezone
-                parameters["report_timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+                now = datetime.now(timezone.utc)
+                if "report_timestamp" not in parameters:
+                    parameters["report_timestamp"] = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+                if "current_month" not in parameters:
+                    parameters["current_month"] = now.strftime("%B")
+                if "current_day" not in parameters:
+                    parameters["current_day"] = str(now.day)
         return parameters
 
     def _create_grafana_link(self, test_obj: BaseTestData, test_title: str, prefix: str = "") -> Dict[str, str]:
@@ -391,3 +464,6 @@ class ReportingBase:
 
         if additional_context:
             self.parameters['additional_context'] = additional_context
+
+        # Baseline application for tables is deferred to analyze_template() and only
+        # executed when aggregated data analysis is enabled, to avoid unnecessary loading.

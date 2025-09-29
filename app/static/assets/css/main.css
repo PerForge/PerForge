@@ -5,6 +5,19 @@
 *::after {
   box-sizing: border-box; }
 
+/* Extra safety for long inline code/links inside hints */
+.pf-form .focus-hint-overlay code { white-space: pre-wrap; word-break: break-all; }
+
+/* Consistent icon-to-text spacing in PF form buttons */
+.pf-form .btn { display: inline-flex; align-items: center; white-space: nowrap; }
+.pf-form .btn > i { margin-right: 0.4rem !important; }
+
+/* Default toggle icons: show "off" icon when unchecked, show "on" icon when checked */
+.pf-footer-actions .btn-check + .btn .icon-off { display: inline-block; }
+.pf-footer-actions .btn-check:checked + .btn .icon-off { display: none; }
+.pf-footer-actions .btn-check + .btn .icon-on { display: none; }
+.pf-footer-actions .btn-check:checked + .btn .icon-on { display: inline-block; }
+
 :root {
     --bs-blue: #0d6efd;
     --bs-indigo: #6610f2;
@@ -3539,5 +3552,158 @@ body.light-theme .theme-switcher-btn {
     -ms-flex: 0 0 55%;
     flex: 0 0 55%;
     max-width: 55%;
+  }
+}
+
+/* ==========================================================
+   PerForge reusable form helpers (migrated from forms.css)
+   ========================================================== */
+
+/* Container to make cards comfortably wide on desktop */
+.pf-card-wide {
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Base form look-and-feel */
+.pf-form .form-label { font-weight: 600; }
+.pf-form small.text-muted { display: block; margin-top: .25rem; }
+.pf-form .form-control,
+.pf-form .form-select { min-height: 44px; }
+.pf-form .input-group .btn { min-height: 44px; }
+/* Small red asterisk for important/required fields */
+.pf-form .form-label.required::after { content: " *"; color: var(--bs-danger); font-weight: 700; font-size: 0.8em; margin-left: 2px; vertical-align: text-top; }
+
+/* Grid helpers */
+.pf-two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.pf-two-col-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: center; }
+
+/* Align switches nicely in grid rows */
+.pf-two-col-2-1 .form-check { display: flex; align-items: center; margin: 0; }
+.pf-form .form-check { display: flex; align-items: center; }
+.pf-form .form-check-input { margin-top: 0; }
+.pf-form .form-check-label { margin-bottom: 0; line-height: 1; }
+/* Add small gap between switch and its label */
+.pf-form .form-check.form-switch .form-check-input { margin-right: 0.5rem; }
+
+/* Tooltip icon polish inside labels */
+.pf-form label .fa-circle-question { opacity: .7; transition: opacity .15s ease; }
+.pf-form label .fa-circle-question:hover { opacity: 1; }
+
+/* Custom vars list helpers */
+.pf-custom-vars .flex { display: flex; align-items: center; }
+.pf-custom-vars .customVarInput { flex: 1; }
+/* Match custom vars row spacing to the unified 0.75rem rhythm */
+.pf-custom-vars .m10-top { margin-top: 0.75rem; }
+/* No top gap before the first custom var row */
+.pf-custom-vars .m10-top:first-child { margin-top: 0; }
+/* Remove bottom margin on the Custom Vars label to close the gap above inputs */
+.pf-form label[for^="custom_vars-"] { margin-bottom: 0; }
+
+/* Footer actions: always centered with spacing */
+.pf-footer-actions { display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap; width: 100%; }
+/* Footer 'Default' toggle polished states */
+.pf-footer-actions .btn-check + .btn .icon-on { display: none; }
+.pf-footer-actions .btn-check + .btn .icon-off { display: inline-block; }
+.pf-footer-actions .btn-check:checked + .btn { background-color: var(--bs-success); border-color: var(--bs-success); color: #fff; }
+.pf-footer-actions .btn-check:checked + .btn .icon-on { display: inline-block; }
+.pf-footer-actions .btn-check:checked + .btn .icon-off { display: none; }
+
+/* Ensure btn-check inputs are visually hidden (fallback if Bootstrap CSS isn't present) */
+.btn-check {
+  position: absolute !important;
+  clip: rect(0,0,0,0) !important;
+  clip-path: inset(50%) !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+}
+
+/* Remove top gutter spacing before the first field in PF forms */
+.pf-form .row > *:first-child { margin-top: 0; }
+/* If the first row uses mt-1 utility, remove it inside PF forms */
+.pf-form .row.mt-1 { margin-top: 0 !important; }
+/* Use a concise vertical gutter for all .row blocks inside PF forms */
+.pf-form .row { --gutter-y: 0.75rem; }
+/* Match helper grid gaps to the same rhythm */
+.pf-form .pf-two-col,
+.pf-form .pf-two-col-2-1 { gap: 0.75rem; }
+/* Three-column helper */
+.pf-three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+
+/* Inline field with trailing control (e.g., switch) */
+.pf-inline-with-switch { display: flex; align-items: center; gap: 0.75rem; }
+.pf-inline-with-switch .field { flex: 1; min-width: 0; }
+
+/* Focus-driven hint overlays: show below input without affecting layout */
+.pf-form .has-focus-hint { position: relative; }
+.pf-form .focus-hint-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 2000;
+  pointer-events: none; /* avoid intercepting clicks */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+  /* Make sure long text/URLs don't overflow */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+/* Visible state */
+.pf-form .focus-hint-overlay.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity .16s ease, transform .16s ease;
+}
+/* Aside (left) variant */
+.pf-form .focus-hint-overlay.aside {
+  left: auto;
+  right: calc(100% + 16px);
+  top: 0;
+  width: 320px;
+  transform: translateX(4px);
+}
+.pf-form .focus-hint-overlay.aside.is-visible {
+  transform: translateX(0);
+}
+/* Aside (right) variant */
+.pf-form .focus-hint-overlay.aside-right {
+  right: auto;
+  left: calc(100% + 16px);
+  top: 0;
+  width: 320px;
+  transform: translateX(-4px);
+}
+.pf-form .focus-hint-overlay.aside-right.is-visible {
+  transform: translateX(0);
+}
+/* Responsive fallback: on small screens, show below input instead of left */
+@media (max-width: 991.98px) {
+  .pf-form .focus-hint-overlay.aside {
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    width: auto;
+    transform: translateY(-4px);
+  }
+  .pf-form .focus-hint-overlay.aside.is-visible {
+    transform: translateY(0);
+  }
+  .pf-form .focus-hint-overlay.aside-right {
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    width: auto;
+    transform: translateY(-4px);
+  }
+  .pf-form .focus-hint-overlay.aside-right.is-visible {
+    transform: translateY(0);
   }
 }

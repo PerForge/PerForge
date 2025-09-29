@@ -27,6 +27,7 @@ from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
 from app.backend.components.secrets.secrets_db import DBSecrets
 from influxdb_client import InfluxDBClient
+from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
@@ -272,6 +273,21 @@ def get_integrations_by_type(integration_type):
             for cfg in configs:
                 cfg['integration_type'] = integration_type
 
+            # For influxdb type: if bucket_regex_bool is true on a config,
+            # fetch actual bucket names from InfluxDB and attach them to the config
+            if integration_type.lower() == 'influxdb':
+                for cfg in configs:
+                    try:
+                        if cfg.get('bucket_regex_bool'):
+                            # Use the configured 'bucket' as a regex to filter bucket names
+                            name_regex = cfg.get('bucket') or None
+                            with InfluxdbV2(project=project_id, id=cfg.get('id')) as ds:
+                                buckets = ds.list_buckets(name_regex=name_regex)
+                            cfg['buckets'] = buckets
+                    except Exception as e:
+                        logging.warning(f"Failed to list buckets for influxdb config id={cfg.get('id')}: {e}")
+                        cfg['buckets'] = []
+
             return api_response(data={"integrations": configs, "integration_type": integration_type})
         except ValueError as e:
             return api_response(
@@ -283,6 +299,42 @@ def get_integrations_by_type(integration_type):
         logging.error(f"Error getting integrations by type: {str(e)}")
         return api_response(
             message="Error retrieving integrations by type",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
+@integrations_api.route('/api/v1/integrations/outputs', methods=['GET'])
+@api_error_handler
+def get_output_integrations():
+    """
+    Get output configurations for the current project.
+
+    Returns:
+        JSON response with a list of output configurations.
+    """
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        project_data = DBProjects.get_config_by_id(id=project_id)
+        if not project_data:
+            return api_response(
+                message=f"Project with ID {project_id} not found",
+                status=HTTP_NOT_FOUND,
+                errors=[{"code": "not_found", "message": f"Project with ID {project_id} not found"}]
+            )
+
+        output_configs = DBProjects.get_project_output_configs(project_id=project_id)
+        return api_response(data={"output_configs": output_configs})
+    except Exception as e:
+        logging.error(f"Error getting output integrations: {str(e)}")
+        return api_response(
+            message="Error retrieving output integrations",
             status=HTTP_BAD_REQUEST,
             errors=[{"code": "integration_error", "message": str(e)}]
         )
@@ -570,7 +622,13 @@ def ping_influxdb():
 
         # Attempt connection
         try:
-            client = InfluxDBClient(url=url, org=org_id, token=token, timeout=5000)
+            client = InfluxDBClient(
+                url=url,
+                org=org_id,
+                token=token,
+                timeout=5000,
+                verify_ssl=False,
+            )
             # Simple health check plus bucket existence validation
             health = client.health()
             if health.status != 'pass':
