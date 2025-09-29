@@ -622,7 +622,13 @@ def ping_influxdb():
 
         # Attempt connection
         try:
-            client = InfluxDBClient(url=url, org=org_id, token=token, timeout=5000)
+            client = InfluxDBClient(
+                url=url,
+                org=org_id,
+                token=token,
+                timeout=5000,
+                verify_ssl=False,
+            )
             # Simple health check plus bucket existence validation
             health = client.health()
             if health.status != 'pass':

@@ -95,7 +95,11 @@ class InfluxdbV2Insertion(DataInsertionBase):
             return
         try:
             self.influxdb_connection = InfluxDBClient(
-                url=self.url, org=self.org_id, token=self.token, timeout=int(self.timeout or 60000)
+                url=self.url,
+                org=self.org_id,
+                token=self.token,
+                timeout=int(self.timeout or 60000),
+                verify_ssl=False,
             )
         except Exception as er:
             logging.error(ErrorMessages.ER00052.value.format(self.name))
