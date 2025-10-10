@@ -50,6 +50,8 @@ class InfluxdbV2(DataExtractionBase):
         self.set_config(id)
         self.tmz_utc = tz.tzutc()
         self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
+        self._target_tz = self.tmz_human or self.tmz_utc
+
         if self.listener in self.queries_map:
             # Instantiate the correct client class
             self.queries = self.queries_map[self.listener]()
@@ -130,15 +132,26 @@ class InfluxdbV2(DataExtractionBase):
             if not df.empty:
                 # Ensure start_time and end_time are timezone-aware and converted to human tz
                 if "start_time" in df.columns:
-                    df["start_time"] = pd.to_datetime(df["start_time"], utc=True).dt.tz_convert(self.tmz_human)
+                    df["start_time"] = pd.to_datetime(df["start_time"], utc=True).dt.tz_convert(self._target_tz)
                 if "end_time" in df.columns:
-                    df["end_time"] = pd.to_datetime(df["end_time"], utc=True).dt.tz_convert(self.tmz_human)
+                    df["end_time"] = pd.to_datetime(df["end_time"], utc=True).dt.tz_convert(self._target_tz)
 
             return df.to_dict(orient="records")
         except Exception as er:
             logging.error(ErrorMessages.ER00057.value.format(self.name))
             logging.error(er)
             return []
+
+    def _localize_timestamp(self, timestamp: datetime | None) -> datetime | None:
+        """Convert timestamp to configured timezone, assuming UTC if naive."""
+        if timestamp is None:
+            return None
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=self.tmz_utc)
+        try:
+            return timestamp.astimezone(self._target_tz)
+        except Exception:
+            return timestamp
 
     def _fetch_tests_titles(self) -> List[Dict[str, Any]]:
         try:
@@ -787,7 +800,7 @@ class InfluxdbV2(DataExtractionBase):
         data = []
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                timestamp = flux_record['_time']
+                timestamp = self._localize_timestamp(flux_record['_time'])
                 value = flux_record['_value']
                 data.append({'timestamp': timestamp, 'value': value})
 
@@ -800,12 +813,12 @@ class InfluxdbV2(DataExtractionBase):
 
         for table in result:
             for record in table.records:
-                timestamp = record.get_time()
+                timestamp = self._localize_timestamp(record.get_time())
                 value = record.get_value()
                 transaction = record.values.get('transaction')
 
                 grouped_records[transaction].append({
-                    'timestamp': timestamp.isoformat(),
+                    'timestamp': timestamp.isoformat() if timestamp else None,
                     'value': value,
                     "anomaly": "Normal"
                 })
@@ -830,7 +843,7 @@ class InfluxdbV2(DataExtractionBase):
 
         for flux_table in flux_tables:
             for flux_record in flux_table:
-                timestamp = flux_record['_time']
+                timestamp = self._localize_timestamp(flux_record['_time'])
                 value = flux_record['_value']
                 transaction = flux_record['transaction']
 
