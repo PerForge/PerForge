@@ -162,14 +162,23 @@ class InfluxdbV2(DataExtractionBase):
                     if time_format == "human":
                         return datetime.strftime(flux_record["_time"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
                     elif time_format == "iso":
-                        start_time_dt = flux_record["_time"] - timedelta(seconds=10)
+                        start_time_dt = flux_record["_time"] - timedelta(seconds=30)
                         return datetime.strftime(start_time_dt, "%Y-%m-%dT%H:%M:%SZ")
                     elif time_format == "timestamp":
                         return int(flux_record["_time"].astimezone(self.tmz_utc).timestamp() * 1000)
+
+            logging.warning(
+                "InfluxdbV2: no start time found for test '%s' (bucket=%s, listener=%s)",
+                test_title,
+                self.bucket,
+                self.listener,
+            )
         except Exception as er:
             logging.error(ErrorMessages.ER00059.value.format(self.name))
             logging.error(er)
             return None
+
+        return None
 
     def _fetch_end_time(self, test_title: str, time_format: str) -> Any:
         try:
@@ -180,14 +189,23 @@ class InfluxdbV2(DataExtractionBase):
                     if time_format == "human":
                         return datetime.strftime(flux_record["_time"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
                     elif time_format == "iso":
-                        end_time_dt = flux_record["_time"] + timedelta(seconds=10)
+                        end_time_dt = flux_record["_time"] + timedelta(seconds=30)
                         return datetime.strftime(end_time_dt, "%Y-%m-%dT%H:%M:%SZ")
                     elif time_format == "timestamp":
                         return int(flux_record["_time"].astimezone(self.tmz_utc).timestamp() * 1000)
+
+            logging.warning(
+                "InfluxdbV2: no end time found for test '%s' (bucket=%s, listener=%s)",
+                test_title,
+                self.bucket,
+                self.listener,
+            )
         except Exception as er:
             logging.error(ErrorMessages.ER00060.value.format(self.name))
             logging.error(er)
             return None
+
+        return None
 
     def _fetch_custom_var(self, test_title: str, custom_var: str, start: str, end: str) -> Any:
         try:
