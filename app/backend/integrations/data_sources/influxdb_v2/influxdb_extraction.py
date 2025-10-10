@@ -126,6 +126,14 @@ class InfluxdbV2(DataExtractionBase):
 
             records = self._execute_query(query)
             df = pd.DataFrame(records)
+
+            if not df.empty:
+                # Ensure start_time and end_time are timezone-aware and converted to human tz
+                if "start_time" in df.columns:
+                    df["start_time"] = pd.to_datetime(df["start_time"], utc=True).dt.tz_convert(self.tmz_human)
+                if "end_time" in df.columns:
+                    df["end_time"] = pd.to_datetime(df["end_time"], utc=True).dt.tz_convert(self.tmz_human)
+
             return df.to_dict(orient="records")
         except Exception as er:
             logging.error(ErrorMessages.ER00057.value.format(self.name))
