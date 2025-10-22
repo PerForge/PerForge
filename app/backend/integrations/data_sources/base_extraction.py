@@ -52,8 +52,11 @@ def validate_time_format(func):
         result = func(self, *args, **kwargs)
 
         try:
-            valid_formats[time_format](result)
+            validation_result = valid_formats[time_format](result)
         except (ValueError, TypeError):
+            raise ValueError(f"Invalid return format for {time_format} time: {result}")
+
+        if not validation_result:
             raise ValueError(f"Invalid return format for {time_format} time: {result}")
 
         return result
