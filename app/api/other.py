@@ -160,12 +160,15 @@ def receive_test_upload():
       - influxdb_id: ID of the selected InfluxDB integration
       - test_title: Title of the test
       - aggregation_window: Optional pandas offset string (e.g., '5s', '30s', '1min', '500ms')
+      - bucket: Optional InfluxDB bucket override (when integration is configured with regex and UI selected a concrete bucket)
     """
     try:
         influxdb_id = request.form.get('influxdb_id')
         test_title = request.form.get('test_title')
         # optional aggregation window for resampling (e.g., '5s', '30s', '1min', '500ms')
         aggregation_window = (request.form.get('aggregation_window') or '5s').strip().lower()
+        # optional bucket override selected on UI (for regex-enabled integrations)
+        bucket_override = (request.form.get('bucket') or '').strip()
         file = request.files.get('file')
 
         errors = []
@@ -219,6 +222,9 @@ def receive_test_upload():
         # Check uniqueness of the prefixed test_title in InfluxDB
         try:
             with InfluxdbV2(project=project_id, id=int(influxdb_id)) as extractor:
+                # If UI provided a concrete bucket, use it for the uniqueness check
+                if bucket_override:
+                    extractor.bucket = bucket_override
                 existing = extractor.get_tests_titles() or []
                 existing_titles = {rec.get("test_title") for rec in existing if isinstance(rec, dict)}
                 if test_title in existing_titles:
@@ -238,6 +244,9 @@ def receive_test_upload():
         written = 0
         try:
             with InfluxdbV2Insertion(project=project_id, id=int(influxdb_id)) as inserter:
+                # If UI provided a concrete bucket, override target bucket for write
+                if bucket_override:
+                    inserter.bucket = bucket_override
                 result = inserter.write_upload(df=df, test_title=test_title, write_events=True, aggregation_window=aggregation_window)
                 written = int(result.get("points_written", 0))
         except ValueError as ve:
@@ -265,6 +274,7 @@ def receive_test_upload():
                 "content_type": getattr(file, 'mimetype', None),
                 "points_written": written,
                 "aggregation_window": aggregation_window,
+                "bucket": bucket_override or None,
             },
             message=f"Upload processed successfully; wrote {written} points to InfluxDB"
         )
