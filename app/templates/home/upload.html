@@ -25,10 +25,12 @@
           <div class="card-body">
             <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
               <div class="mb-3">
-                <label for="influxdbId" class="form-label">InfluxDB integration</label>
-                <select class="form-select" id="influxdbId" name="influxdb_id" required disabled>
-                  <option value="" selected>Loading integrations...</option>
+                <label for="dataSourceId" class="form-label">Datasource (InfluxDB bucket)</label>
+                <select class="form-select" id="dataSourceId" required disabled>
+                  <option value="" selected>Loading datasources...</option>
                 </select>
+                <input type="hidden" id="influxdbIdInput" name="influxdb_id">
+                <input type="hidden" id="bucketInput" name="bucket">
                 <div class="form-hint">
                   <i class="fas fa-info-circle icon" aria-hidden="true"></i>
                   <div>
@@ -95,7 +97,9 @@
       const fileInput = document.getElementById('fileInput');
       const fileName = document.getElementById('fileName');
       const uploadBtn = document.getElementById('uploadBtn');
-      const influxSelect = document.getElementById('influxdbId');
+      const dataSourceSelect = document.getElementById('dataSourceId');
+      const influxdbIdInput = document.getElementById('influxdbIdInput');
+      const bucketInput = document.getElementById('bucketInput');
       const testTitleInput = document.getElementById('testTitle');
       const aggregationInput = document.getElementById('aggregationWindow');
 
@@ -181,8 +185,8 @@
           showFlashError('Please choose a .csv or .jtl file.');
           return;
         }
-        if (influxSelect.disabled || !influxSelect.value) {
-          showFlashError('Please select a valid InfluxDB integration.');
+        if (dataSourceSelect.disabled || !dataSourceSelect.value) {
+          showFlashError('Please select a valid InfluxDB bucket.');
           return;
         }
         if (!testTitleInput.value.trim()) {
@@ -194,6 +198,12 @@
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Uploading...';
         try {
+          // Ensure hidden inputs reflect current selection
+          try {
+            const selected = JSON.parse(dataSourceSelect.value);
+            influxdbIdInput.value = selected.id;
+            bucketInput.value = selected.bucket || '';
+          } catch (e) { /* ignore parse errors */ }
           const formData = new FormData(this);
           const res = await fetch('/api/v1/uploads/test', {
             method: 'POST',
@@ -217,36 +227,74 @@
         }
       });
 
-      // Load integrations by type (influxdb) and populate selector
-      async function loadIntegrations() {
+      // Load datasources (expand regex-configured integrations into concrete buckets)
+      async function loadDatasources() {
         try {
-          influxSelect.innerHTML = '<option value="" selected>Loading integrations...</option>';
-          influxSelect.disabled = true;
+          dataSourceSelect.innerHTML = '<option value="" selected>Loading datasources...</option>';
+          dataSourceSelect.disabled = true;
           const res = await fetch('/api/v1/integrations/type/influxdb', { headers: { 'Accept': 'application/json' } });
           const json = await res.json();
           const all = (json && json.data && json.data.integrations) || [];
-          const integrations = all.filter(cfg => cfg && cfg.listener === 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient');
-          influxSelect.innerHTML = '';
-          if (!Array.isArray(integrations) || integrations.length === 0) {
-            influxSelect.innerHTML = '<option value="" disabled selected>No compatible InfluxDB integrations found</option>';
-            influxSelect.disabled = true;
+          const items = all.filter(cfg => cfg && cfg.listener === 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient');
+          dataSourceSelect.innerHTML = '';
+          if (!Array.isArray(items) || items.length === 0) {
+            dataSourceSelect.innerHTML = '<option value="" disabled selected>No compatible InfluxDB buckets found</option>';
+            dataSourceSelect.disabled = true;
             return;
           }
-          let defaultIndex = 0;
-          integrations.forEach((cfg, idx) => {
-            const opt = new Option(cfg.name || cfg.id, cfg.id);
-            influxSelect.add(opt);
-            if (cfg.is_default) defaultIndex = idx;
+
+          const addOption = (cfg, bucketName, labelSuffix = null) => {
+            const valueObj = {
+              id: cfg.id,
+              name: cfg.name,
+              source_type: 'influxdb_v2',
+              listener: cfg.listener,
+              bucket: bucketName
+            };
+            const opt = new Option(labelSuffix ? `${cfg.name} - ${labelSuffix}` : cfg.name, JSON.stringify(valueObj));
+            dataSourceSelect.add(opt);
+          };
+
+          items.forEach(cfg => {
+            const isRegex = cfg.bucket_regex_bool === true || cfg.bucket_regex_bool === 'True';
+            const hasBuckets = Array.isArray(cfg.buckets) && cfg.buckets.length > 0;
+            if (isRegex) {
+              if (hasBuckets) {
+                cfg.buckets.forEach(b => addOption(cfg, b, b));
+              }
+              // if regex with no buckets matched -> skip
+            } else {
+              addOption(cfg, cfg.bucket);
+            }
           });
-          influxSelect.selectedIndex = defaultIndex;
-          influxSelect.disabled = false;
+
+          if (dataSourceSelect.options.length === 0) {
+            const opt = new Option('No matching datasources', '');
+            opt.disabled = true; opt.selected = true;
+            dataSourceSelect.add(opt);
+          } else {
+            dataSourceSelect.selectedIndex = 0;
+            try {
+              const sel = JSON.parse(dataSourceSelect.value);
+              influxdbIdInput.value = sel.id;
+              bucketInput.value = sel.bucket || '';
+            } catch (e) { /* ignore */ }
+            dataSourceSelect.disabled = false;
+          }
         } catch (err) {
-          influxSelect.innerHTML = '<option value="" disabled selected>Error loading integrations</option>';
-          influxSelect.disabled = true;
-          console.error('Failed to load integrations', err);
+          dataSourceSelect.innerHTML = '<option value="" disabled selected>Error loading datasources</option>';
+          dataSourceSelect.disabled = true;
+          console.error('Failed to load datasources', err);
         }
       }
-      loadIntegrations();
+      dataSourceSelect.addEventListener('change', () => {
+        try {
+          const sel = JSON.parse(dataSourceSelect.value);
+          influxdbIdInput.value = sel.id;
+          bucketInput.value = sel.bucket || '';
+        } catch (e) { /* ignore */ }
+      });
+      loadDatasources();
     })();
   </script>
 </main>
