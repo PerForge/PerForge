@@ -16,16 +16,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get purge -y --auto-remove \
     gcc \
     build-essential
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    ca-certificates \
-  && wget -qO- https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /usr/share/keyrings/google-linux-signing-keyring.gpg \
-  && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-  && apt-get update && apt-get install -y --no-install-recommends \
-    google-chrome-stable \
-    fonts-liberation \
-  && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+  arch="$(dpkg --print-architecture)"; \
+  if [ "$arch" = "amd64" ]; then \
+    apt-get update && apt-get install -y --no-install-recommends wget gnupg ca-certificates; \
+    wget -qO- https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /usr/share/keyrings/google-linux-signing-keyring.gpg; \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list; \
+    apt-get update && apt-get install -y --no-install-recommends google-chrome-stable fonts-liberation; \
+  else \
+    apt-get update && apt-get install -y --no-install-recommends chromium fonts-liberation; \
+  fi; \
+  rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
