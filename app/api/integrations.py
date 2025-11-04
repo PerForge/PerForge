@@ -16,6 +16,7 @@
 Integrations API endpoints.
 """
 import logging
+import re
 import concurrent.futures
 from flask import Blueprint, request
 from app.backend.components.projects.projects_db import DBProjects
@@ -34,6 +35,7 @@ from app.api.base import (
     api_response, api_error_handler, get_project_id,
    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
+from atlassian import Confluence
 
 # Create a Blueprint for integrations API
 integrations_api = Blueprint('integrations_api', __name__)
@@ -600,6 +602,7 @@ def ping_influxdb():
         url = data.get('url')
         org_id = data.get('org_id')
         bucket = data.get('bucket')
+        bucket_regex_bool = bool(data.get('bucket_regex_bool'))
         token = data.get('token')
         token_id = data.get('token_id')
         org_id = data.get('org_id')
@@ -645,9 +648,28 @@ def ping_influxdb():
                 raise RuntimeError(f"Organization '{org_id}' not found or not accessible with provided credentials")
 
             buckets_api = client.buckets_api()
-            bucket_obj = next((b for b in buckets_api.find_buckets().buckets if b.name == bucket), None)
-            if not bucket_obj:
-                raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
+            all_buckets = buckets_api.find_buckets().buckets or []
+
+            if bucket_regex_bool:
+                pattern = bucket or ''
+                # Anchor automatically if not provided
+                anchored = pattern
+                if not pattern.startswith('^'):
+                    anchored = '^' + anchored
+                if not pattern.endswith('$'):
+                    anchored = anchored + '$'
+                try:
+                    rgx = re.compile(anchored)
+                except re.error as e:
+                    raise RuntimeError(f"Invalid bucket regex: {pattern} ({e})")
+
+                matched = [b for b in all_buckets if b and getattr(b, 'name', None) and rgx.search(b.name)]
+                if not matched:
+                    raise RuntimeError(f"No buckets matching regex '{pattern}' for provided credentials")
+            else:
+                bucket_obj = next((b for b in all_buckets if b.name == bucket), None)
+                if not bucket_obj:
+                    raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
 
             client.close()
             return api_response(message="Ping successful")
@@ -662,6 +684,104 @@ def ping_influxdb():
         logging.error(f"Error pinging InfluxDB: {str(e)}")
         return api_response(
             message="Error pinging InfluxDB",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
+@integrations_api.route('/api/v1/integrations/atlassian_confluence/ping', methods=['POST'])
+@api_error_handler
+def ping_atlassian_confluence():
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        data = request.get_json(silent=True) or {}
+        org_url = (data.get('org_url') or '').strip()
+        space_key = (data.get('space_key') or '').strip()
+        token_type = (data.get('token_type') or '').strip().lower()
+        email = (data.get('email') or '').strip()
+        token = data.get('token')
+        token_id = data.get('token_id')
+
+        if not org_url or not space_key or not token_type or (not token and not token_id):
+            return api_response(
+                message="Required parameters are missing (org_url, space_key, token_type, token/token_id)",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "org_url, space_key, token_type and token/token_id are required"}]
+            )
+
+        if token_type == 'api_token' and not email:
+            return api_response(
+                message="Email is required for api_token authentication",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "email is required for api_token"}]
+            )
+
+        if not token and token_id:
+            secret = DBSecrets.get_config_by_id(project_id=project_id, id=token_id)
+            if not secret:
+                return api_response(
+                    message=f"Secret with ID {token_id} not found",
+                    status=HTTP_NOT_FOUND,
+                    errors=[{"code": "not_found", "message": f"Secret with ID {token_id} not found"}]
+                )
+            token = secret['value']
+
+        try:
+            if token_type == 'api_token':
+                client = Confluence(url=org_url, username=email, password=token)
+            else:
+                client = Confluence(url=org_url, token=token)
+
+            space = client.get_space(space_key)
+
+            if isinstance(space, dict):
+                status_code = str(space.get('statusCode') or space.get('status') or '')
+                if status_code in ('401', '403'):
+                    return api_response(
+                        message="Invalid credentials or access denied",
+                        status=int(status_code),
+                        errors=[{"code": "unauthorized", "message": str(space.get('message') or 'Access denied')}]
+                    )
+                if status_code == '404':
+                    return api_response(
+                        message="Space not found",
+                        status=HTTP_NOT_FOUND,
+                        errors=[{"code": "not_found", "message": "Space not found"}]
+                    )
+                if space.get('key') and str(space.get('key')).lower() == space_key.lower():
+                    return api_response(message="Ping successful")
+
+            if space:
+                return api_response(message="Ping successful")
+
+            return api_response(
+                message="Unable to reach Confluence or space not accessible",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "ping_failed", "message": "No data returned"}]
+            )
+        except Exception as e:
+            logging.error(f"Confluence ping failed: {str(e)}")
+            status = getattr(e, 'status_code', None) or getattr(e, 'status', None)
+            if status is None and hasattr(e, 'response'):
+                try:
+                    status = getattr(e.response, 'status_code', None)
+                except Exception:
+                    status = None
+            return api_response(
+                message="Unable to reach Confluence",
+                status=int(status) if isinstance(status, int) else HTTP_BAD_REQUEST,
+                errors=[{"code": "ping_failed", "message": str(e)}]
+            )
+    except Exception as e:
+        logging.error(f"Error pinging Confluence: {str(e)}")
+        return api_response(
+            message="Error pinging Confluence",
             status=HTTP_BAD_REQUEST,
             errors=[{"code": "integration_error", "message": str(e)}]
         )

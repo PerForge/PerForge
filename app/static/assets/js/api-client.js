@@ -757,20 +757,57 @@ function showFlashMessage(message, type) {
     // Determine which message container to use based on the type
     const messageType = type === 'error' ? 'bad-msg' : 'good-msg';
     const messageContainer = document.getElementById(messageType);
+    const otherContainer = document.getElementById(type === 'error' ? 'good-msg' : 'bad-msg');
 
     if (messageContainer) {
-        // Set the message text
-        const msgElement = messageContainer.querySelector("#msg");
-        if (msgElement) {
-            msgElement.textContent = message;
+        // Ensure inner alert markup exists (it may have been removed by Bootstrap dismiss)
+        let msgElement = messageContainer.querySelector('#msg');
+        if (!msgElement) {
+            const isError = type === 'error';
+            const iconClass = isError ? 'fas fa-times-circle' : 'fas fa-check-circle';
+            const alertClass = isError ? 'alert alert-danger' : 'alert alert-success';
+            messageContainer.innerHTML = `
+                <div class="${alertClass} d-flex align-items-center" role="alert">
+                  <span class="${iconClass} fs-3 me-3"></span>
+                  <p class="mb-0 flex-1" id="msg"></p>
+                  <button class="btn-close" type="button" aria-label="Close"></button>
+                </div>
+            `;
+            const closeBtn = messageContainer.querySelector('.btn-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    messageContainer.style.display = 'none';
+                });
+            }
+            msgElement = messageContainer.querySelector('#msg');
+        }
+        if (msgElement) { msgElement.textContent = message; }
+
+        // Clear any existing hide timer to avoid hiding a newly shown message
+        if (messageContainer._hideTimeout) {
+            clearTimeout(messageContainer._hideTimeout);
+            messageContainer._hideTimeout = null;
+        }
+
+        // Hide the other container if visible
+        if (otherContainer) {
+            if (otherContainer._hideTimeout) {
+                clearTimeout(otherContainer._hideTimeout);
+                otherContainer._hideTimeout = null;
+            }
+            otherContainer.style.display = 'none';
         }
 
         // Show the message
         messageContainer.style.display = "block";
 
-        // Auto-dismiss after 4 seconds
-        setTimeout(() => {
+        // Ensure visibility
+        try { messageContainer.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+
+        // Auto-dismiss after 4 seconds, store timer handle on the element
+        messageContainer._hideTimeout = setTimeout(() => {
             messageContainer.style.display = "none";
+            messageContainer._hideTimeout = null;
         }, 4000);
     }
 }
