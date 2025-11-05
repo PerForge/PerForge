@@ -34,3 +34,4 @@ langchain_openai==0.3.32
 lxml==6.0.0
 plotly==6.2.0
 kaleido==1.0.0
+waitress==3.0.2
