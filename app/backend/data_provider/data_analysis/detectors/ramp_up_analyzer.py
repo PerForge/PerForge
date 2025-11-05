@@ -57,32 +57,37 @@ class RampUpPeriodAnalyzer(BaseDetector):
             DataFrame with added anomaly detection results
         """
         df = df.copy()
+
         anomaly_col = f'{metric}_anomaly'
         if anomaly_col not in df.columns:
             df[anomaly_col] = 'Normal'
 
         if df is not None:
             # Calculate rolling correlation between metric and base_metric (e.g., response time vs users)
-            df['rolling_correlation'] = df[metric].rolling(window=engine.rolling_window).apply(
-                lambda x: x.corr(df[self.base_metric])
-            )
+            df['rolling_correlation'] = df[metric].rolling(window=engine.rolling_window).corr(df[self.base_metric])
 
             # Track potential tipping point using consecutive threshold violations
             tipping_point = False
             count = 0
             tipping_point_rt = None
             tipping_point_index = None
+            n_eff = int(pd.Series(df['rolling_correlation']).count())
+            frac = float(getattr(engine, 'ramp_up_required_breaches_fraction', 0.15))
+            min_breaches = int(getattr(engine, 'ramp_up_required_breaches_min', 3))
+            max_breaches = int(getattr(engine, 'ramp_up_required_breaches_max', 5))
+            required_breaches = min(max_breaches, max(min_breaches, int(frac * n_eff))) if n_eff > 0 else max_breaches
 
             # Iterate through correlations to find sustained threshold violations
             for i in range(len(df)):
-                if self.threshold_condition(df['rolling_correlation'].iloc[i]):
+                corr_val = df['rolling_correlation'].iloc[i]
+                if pd.notna(corr_val) and self.threshold_condition(corr_val):
                     count += 1
                     # Store first violation point as potential tipping point
                     if count == 1 and i > 0:
                         tipping_point_rt = df.iloc[i - 1]
                         tipping_point_index = df.index[i - 1]
                     # Consider tipping point confirmed after 5 consecutive violations
-                    if count >= 5:
+                    if count >= required_breaches:
                         tipping_point = True
                         break
                 else:
