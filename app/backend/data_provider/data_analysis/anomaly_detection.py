@@ -50,6 +50,10 @@ class AnomalyDetectionEngine:
             'z_score_threshold': 3,
             'rolling_window': 5,
             'rolling_correlation_threshold': 0.4,
+            'ramp_up_required_breaches_min': 3,
+            'ramp_up_required_breaches_max': 5,
+            'ramp_up_required_breaches_fraction': 0.15,
+            'ramp_up_base_metric': 'overalUsers',
             'fixed_load_percentage': 60,
             'slope_threshold': 1.000,
             'p_value_threshold': 0.05,
@@ -69,7 +73,7 @@ class AnomalyDetectionEngine:
             MetricStabilityDetector(),
             RampUpPeriodAnalyzer(
                 threshold_condition=lambda x: x < self.rolling_correlation_threshold,
-                base_metric="overalUsers"
+                base_metric=self.ramp_up_base_metric
             )
         ]
         self.anomaly_detectors = self.detectors if self.detectors is not None else []
