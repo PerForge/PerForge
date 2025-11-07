@@ -849,7 +849,7 @@ def ping_ai_support():
             'ai_text_model': ai_text_model,
             'ai_image_model': ai_image_model or ai_text_model,
             'token': token,
-            'temperature': 0.1,
+            'temperature': 1,
             'system_prompt': 'You are a diagnostics helper. Reply briefly.'
         }
         if ai_provider == 'azure_openai':
