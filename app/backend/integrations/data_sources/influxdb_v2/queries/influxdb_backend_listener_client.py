@@ -142,7 +142,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
                 }},
             )
 
-            stats2 = from(bucket: "{bucket}")
+            base_stats2 = from(bucket: "{bucket}")
             |> range(start: {start}, stop: {stop})
             |> filter(fn: (r) => r._measurement == "jmeter")
             |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
@@ -150,9 +150,36 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r["statut"] == "all")
             {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
             |> keep(columns: ["_value", "transaction", "_field"])
-            |> group(columns: ["transaction","_field"])
-            |> median()
-            |> toInt()
+
+            avg_stat = base_stats2
+              |> filter(fn: (r) => r._field == "avg")
+              |> group(columns: ["transaction"])
+              |> mean()
+              |> toInt()
+              |> set(key: "_field", value: "avg")
+
+            p50_stat = base_stats2
+              |> filter(fn: (r) => r._field == "pct50.0")
+              |> group(columns: ["transaction"])
+              |> quantile(q: 0.50)
+              |> toInt()
+              |> set(key: "_field", value: "pct50.0")
+
+            p75_stat = base_stats2
+              |> filter(fn: (r) => r._field == "pct75.0")
+              |> group(columns: ["transaction"])
+              |> quantile(q: 0.75)
+              |> toInt()
+              |> set(key: "_field", value: "pct75.0")
+
+            p90_stat = base_stats2
+              |> filter(fn: (r) => r._field == "pct90.0")
+              |> group(columns: ["transaction"])
+              |> quantile(q: 0.90)
+              |> toInt()
+              |> set(key: "_field", value: "pct90.0")
+
+            stats2 = union(tables: [avg_stat, p50_stat, p75_stat, p90_stat])
             |> group()
             |> pivot(rowKey: ["transaction"], columnKey: ["_field"], valueColumn: "_value")
             |> map(fn: (r) => ({{
