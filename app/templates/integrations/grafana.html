@@ -142,11 +142,11 @@
                                 </div>
                                 <div class="card-footer mt-3">
                                 <div class="pf-footer-actions">
-                                    <button class="btn btn-secondary" type="button" id="testGrafanaBtn" onclick="testGrafana()"><i class="fa-solid fa-satellite-dish me-1"></i>Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                     {% if grafana_config %}
                                         <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="fa-regular fa-trash-can me-1"></i>Delete</a>
                                     {% endif %}
-                                    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                                    <button class="btn btn-secondary" type="button" id="testGrafanaBtn" onclick="testGrafana()"><i class="fa-solid fa-satellite-dish me-1"></i>Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
+                                    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                     <div class="ms-1">
                                         <input type="checkbox" class="btn-check" id="is_default" name="is_default" autocomplete="off" {% if form.is_default.data %}checked{% endif %}>
                                         <label class="btn btn-outline-secondary" for="is_default">
@@ -277,6 +277,10 @@
 
             const integrationId = document.getElementById('config_id')?.value;
             const formEl = document.getElementById('grafanaForm');
+            const saveBtn = formEl?.querySelector('button[type="submit"]');
+            const saveSpinner = saveBtn?.querySelector('.spinner-border');
+            if (saveBtn) saveBtn.disabled = true;
+            if (saveSpinner) saveSpinner.style.display = 'inline-block';
             const data = {
                 name: formEl.name.value,
                 server: formEl.server.value,
@@ -312,17 +316,11 @@
 
                 if (!newSecretName || !newSecretValue) {
                     showFlashMessage('Secret name and value are required.', 'error');
+                    if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                     return;
                 }
-
-                const secretData = {
-                    key: newSecretName,
-                    value: newSecretValue,
-                };
-                if (newSecretScope === 'project') {
-                    secretData.project_id = '{{ project_id }}';
-                }
-
+                const secretData = { key: newSecretName, value: newSecretValue };
+                if (newSecretScope === 'project') { secretData.project_id = '{{ project_id }}'; }
                 apiClient.secrets.create(secretData)
                     .then(response => {
                         const secretId = response?.data?.secret_id ?? response?.secret_id ?? response?.id;
@@ -331,11 +329,12 @@
                     .catch(error => {
                         console.error('Error creating secret:', error);
                         const errorMessage = error.responseJSON?.message || error.message || 'An error occurred while creating the secret.';
-                        showFlashMessage(errorMessage, 'error');
+                        showFlashMessage(errorMessage, 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                     });
             } else {
                 if (!tokenSelect.value) {
                     showFlashMessage('Please select a token or create a new one.', 'error');
+                    if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                     return;
                 }
                 saveIntegrationWithToken(tokenSelect.value);
@@ -359,6 +358,10 @@
                     console.error('Error:', error);
                     const errorMessage = error.responseJSON?.error || error.responseJSON?.message || error.message || "An error occurred while saving the integration.";
                     showFlashMessage(errorMessage, "error");
+                    const formEl = document.getElementById('grafanaForm');
+                    const saveBtn = formEl?.querySelector('button[type="submit"]');
+                    const saveSpinner = saveBtn?.querySelector('.spinner-border');
+                    if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                 });
         }
 

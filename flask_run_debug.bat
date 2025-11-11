@@ -2,4 +2,4 @@
 call env\Scripts\activate
 pip install -r requirements.txt
 set FLASK_APP=run.py
-waitress-serve --listen=0.0.0.0:7878 --threads=8 run:app
+flask run --host=0.0.0.0 --port=7878 --debug

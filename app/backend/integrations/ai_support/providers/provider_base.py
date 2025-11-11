@@ -14,6 +14,7 @@
 
 import logging
 import traceback
+import re
 from abc import ABC, abstractmethod
 from typing import Dict
 
@@ -40,6 +41,8 @@ class AIProvider(ABC):
         self.output_tokens = 0
         self.system_prompt = system_prompt
         self.provider_name = "base"  # Should be overridden by subclasses
+        self.last_error_status = None
+        self.last_error_message = None
 
     @abstractmethod
     def analyze_graph(self, graph: bytes, prompt: str) -> str:
@@ -104,6 +107,23 @@ class AIProvider(ABC):
         err_info = traceback.format_exc()
         logging.warning(f"Detailed error info: {err_info}")
         logging.warning(f"Prompt details: {prompt}")
+
+        status = None
+        try:
+            status = getattr(error, 'status_code', None) or getattr(error, 'status', None)
+            if status is None and hasattr(error, 'response'):
+                resp = getattr(error, 'response')
+                status = getattr(resp, 'status_code', None)
+            if status is None:
+                m = re.search(r"Error code:\s*(\d{3})", str(error))
+                if m:
+                    status = int(m.group(1))
+        except Exception:
+            pass
+
+        self.last_error_status = status
+        self.last_error_message = str(error)
+
         return f"Failed to receive a response from the AI (check logs)."
 
     def _get_initialization_error_message(self) -> str:
@@ -151,3 +171,10 @@ class AIProvider(ABC):
         """
         response = self.send_prompt(prompt)
         return {"text": response}
+
+    def clear_last_error(self) -> None:
+        self.last_error_status = None
+        self.last_error_message = None
+
+    def get_last_error_status(self):
+        return self.last_error_status

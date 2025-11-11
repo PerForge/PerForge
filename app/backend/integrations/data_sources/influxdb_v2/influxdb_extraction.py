@@ -783,7 +783,6 @@ class InfluxdbV2(DataExtractionBase):
         """
         try:
             query = InfluxDBMetaQueries.get_buckets(name_regex=name_regex)
-            print(query)
             flux_tables = self.influxdb_connection.query_api().query(query)
             names = []
             for table in flux_tables:

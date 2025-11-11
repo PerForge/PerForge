@@ -16,6 +16,8 @@
 Integrations API endpoints.
 """
 import logging
+import re
+import concurrent.futures
 from flask import Blueprint, request
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.integrations.ai_support.ai_support_db import DBAISupport
@@ -25,6 +27,7 @@ from app.backend.integrations.atlassian_jira.atlassian_jira_db import DBAtlassia
 from app.backend.integrations.azure_wiki.azure_wiki_db import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
+from app.backend.integrations.ai_support.providers.provider_factory import ProviderFactory
 from app.backend.components.secrets.secrets_db import DBSecrets
 from influxdb_client import InfluxDBClient
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
@@ -32,6 +35,7 @@ from app.api.base import (
     api_response, api_error_handler, get_project_id,
    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
 )
+from atlassian import Confluence
 
 # Create a Blueprint for integrations API
 integrations_api = Blueprint('integrations_api', __name__)
@@ -547,7 +551,7 @@ def ping_grafana():
         try:
             import requests
             headers = {"Authorization": f"Bearer {token}"} if token else {}
-            resp = requests.get(f"{url.rstrip('/')}/api/org", headers=headers, timeout=5, verify=False)
+            resp = requests.get(f"{url.rstrip('/')}/api/org", headers=headers, timeout=30, verify=False)
             if resp.status_code == 200:
                 if org_id:
                     try:
@@ -598,6 +602,7 @@ def ping_influxdb():
         url = data.get('url')
         org_id = data.get('org_id')
         bucket = data.get('bucket')
+        bucket_regex_bool = bool(data.get('bucket_regex_bool'))
         token = data.get('token')
         token_id = data.get('token_id')
         org_id = data.get('org_id')
@@ -626,7 +631,7 @@ def ping_influxdb():
                 url=url,
                 org=org_id,
                 token=token,
-                timeout=5000,
+                timeout=30000,
                 verify_ssl=False,
             )
             # Simple health check plus bucket existence validation
@@ -643,9 +648,28 @@ def ping_influxdb():
                 raise RuntimeError(f"Organization '{org_id}' not found or not accessible with provided credentials")
 
             buckets_api = client.buckets_api()
-            bucket_obj = next((b for b in buckets_api.find_buckets().buckets if b.name == bucket), None)
-            if not bucket_obj:
-                raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
+            all_buckets = buckets_api.find_buckets().buckets or []
+
+            if bucket_regex_bool:
+                pattern = bucket or ''
+                # Anchor automatically if not provided
+                anchored = pattern
+                if not pattern.startswith('^'):
+                    anchored = '^' + anchored
+                if not pattern.endswith('$'):
+                    anchored = anchored + '$'
+                try:
+                    rgx = re.compile(anchored)
+                except re.error as e:
+                    raise RuntimeError(f"Invalid bucket regex: {pattern} ({e})")
+
+                matched = [b for b in all_buckets if b and getattr(b, 'name', None) and rgx.search(b.name)]
+                if not matched:
+                    raise RuntimeError(f"No buckets matching regex '{pattern}' for provided credentials")
+            else:
+                bucket_obj = next((b for b in all_buckets if b.name == bucket), None)
+                if not bucket_obj:
+                    raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
 
             client.close()
             return api_response(message="Ping successful")
@@ -660,6 +684,231 @@ def ping_influxdb():
         logging.error(f"Error pinging InfluxDB: {str(e)}")
         return api_response(
             message="Error pinging InfluxDB",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
+@integrations_api.route('/api/v1/integrations/atlassian_confluence/ping', methods=['POST'])
+@api_error_handler
+def ping_atlassian_confluence():
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        data = request.get_json(silent=True) or {}
+        org_url = (data.get('org_url') or '').strip()
+        space_key = (data.get('space_key') or '').strip()
+        token_type = (data.get('token_type') or '').strip().lower()
+        email = (data.get('email') or '').strip()
+        token = data.get('token')
+        token_id = data.get('token_id')
+
+        if not org_url or not space_key or not token_type or (not token and not token_id):
+            return api_response(
+                message="Required parameters are missing (org_url, space_key, token_type, token/token_id)",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "org_url, space_key, token_type and token/token_id are required"}]
+            )
+
+        if token_type == 'api_token' and not email:
+            return api_response(
+                message="Email is required for api_token authentication",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "email is required for api_token"}]
+            )
+
+        if not token and token_id:
+            secret = DBSecrets.get_config_by_id(project_id=project_id, id=token_id)
+            if not secret:
+                return api_response(
+                    message=f"Secret with ID {token_id} not found",
+                    status=HTTP_NOT_FOUND,
+                    errors=[{"code": "not_found", "message": f"Secret with ID {token_id} not found"}]
+                )
+            token = secret['value']
+
+        try:
+            if token_type == 'api_token':
+                client = Confluence(url=org_url, username=email, password=token)
+            else:
+                client = Confluence(url=org_url, token=token)
+
+            space = client.get_space(space_key)
+
+            if isinstance(space, dict):
+                status_code = str(space.get('statusCode') or space.get('status') or '')
+                if status_code in ('401', '403'):
+                    return api_response(
+                        message="Invalid credentials or access denied",
+                        status=int(status_code),
+                        errors=[{"code": "unauthorized", "message": str(space.get('message') or 'Access denied')}]
+                    )
+                if status_code == '404':
+                    return api_response(
+                        message="Space not found",
+                        status=HTTP_NOT_FOUND,
+                        errors=[{"code": "not_found", "message": "Space not found"}]
+                    )
+                if space.get('key') and str(space.get('key')).lower() == space_key.lower():
+                    return api_response(message="Ping successful")
+
+            if space:
+                return api_response(message="Ping successful")
+
+            return api_response(
+                message="Unable to reach Confluence or space not accessible",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "ping_failed", "message": "No data returned"}]
+            )
+        except Exception as e:
+            logging.error(f"Confluence ping failed: {str(e)}")
+            status = getattr(e, 'status_code', None) or getattr(e, 'status', None)
+            if status is None and hasattr(e, 'response'):
+                try:
+                    status = getattr(e.response, 'status_code', None)
+                except Exception:
+                    status = None
+            return api_response(
+                message="Unable to reach Confluence",
+                status=int(status) if isinstance(status, int) else HTTP_BAD_REQUEST,
+                errors=[{"code": "ping_failed", "message": str(e)}]
+            )
+    except Exception as e:
+        logging.error(f"Error pinging Confluence: {str(e)}")
+        return api_response(
+            message="Error pinging Confluence",
+            status=HTTP_BAD_REQUEST,
+            errors=[{"code": "integration_error", "message": str(e)}]
+        )
+
+@integrations_api.route('/api/v1/integrations/ai_support/ping', methods=['POST'])
+@api_error_handler
+def ping_ai_support():
+    """Ping AI Support provider by attempting a minimal text request using provided settings.
+    Expected JSON payload:
+        {
+            "ai_provider": "openai|azure_openai|gemini",
+            "ai_text_model": "...",
+            "ai_image_model": "...",   # optional for ping
+            "token": "<optional: raw token>",
+            "token_id": "<optional: id of secret>",
+            "azure_url": "<required for azure_openai>",
+            "api_version": "<required for azure_openai>"
+        }
+    """
+    try:
+        project_id = get_project_id()
+        if not project_id:
+            return api_response(
+                message="No project selected",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_project", "message": "No project selected"}]
+            )
+
+        data = request.get_json(silent=True) or {}
+        ai_provider = (data.get('ai_provider') or '').strip().lower()
+        ai_text_model = (data.get('ai_text_model') or '').strip()
+        ai_image_model = (data.get('ai_image_model') or '').strip()
+        token = data.get('token')
+        token_id = data.get('token_id')
+        azure_url = (data.get('azure_url') or '').strip()
+        api_version = (data.get('api_version') or '').strip()
+
+        if not ai_provider or not ai_text_model or (not token and not token_id):
+            return api_response(
+                message="Required parameters are missing (ai_provider, ai_text_model, token/token_id)",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "ai_provider, ai_text_model and token/token_id are required"}]
+            )
+
+        if ai_provider == 'azure_openai' and (not azure_url or not api_version):
+            return api_response(
+                message="Azure parameters missing (azure_url, api_version)",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "missing_params", "message": "azure_url and api_version are required for azure_openai"}]
+            )
+
+        # Resolve token from secrets if only token_id provided
+        if not token and token_id:
+            secret = DBSecrets.get_config_by_id(project_id=project_id, id=token_id)
+            if not secret:
+                return api_response(
+                    message=f"Secret with ID {token_id} not found",
+                    status=HTTP_NOT_FOUND,
+                    errors=[{"code": "not_found", "message": f"Secret with ID {token_id} not found"}]
+                )
+            token = secret['value']
+
+        # Prepare provider args
+        provider_args = {
+            'ai_text_model': ai_text_model,
+            'ai_image_model': ai_image_model or ai_text_model,
+            'token': token,
+            'temperature': 1,
+            'system_prompt': 'You are a diagnostics helper. Reply briefly.'
+        }
+        if ai_provider == 'azure_openai':
+            provider_args['azure_url'] = azure_url
+            provider_args['api_version'] = api_version
+
+        try:
+            provider = ProviderFactory.create_provider(provider_type=ai_provider, **provider_args)
+            if provider is None:
+                return api_response(
+                    message=f"Unsupported AI provider: {ai_provider}",
+                    status=HTTP_BAD_REQUEST,
+                    errors=[{"code": "invalid_provider", "message": f"Unsupported provider {ai_provider}"}]
+                )
+
+            # Minimal request to verify credentials/connectivity with explicit 30s timeout
+            def _do_ping():
+                return provider.send_prompt("ping")
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_do_ping)
+                try:
+                    if hasattr(provider, 'clear_last_error'):
+                        provider.clear_last_error()
+                    resp_text = future.result(timeout=30)
+                except concurrent.futures.TimeoutError:
+                    return api_response(
+                        message="Ping timed out after 30 seconds",
+                        status=HTTP_BAD_REQUEST,
+                        errors=[{"code": "timeout", "message": "AI provider did not respond within 30 seconds"}]
+                    )
+
+            if isinstance(resp_text, str):
+                cleaned = resp_text.strip().lower()
+                if cleaned and not cleaned.startswith("error:") and not cleaned.startswith("failed"):
+                    return api_response(message="Ping successful")
+
+            status_override = getattr(provider, 'get_last_error_status', None)
+            status = status_override() if callable(status_override) else None
+            status = status or HTTP_BAD_REQUEST
+            detail = getattr(provider, 'last_error_message', None)
+            if not detail and isinstance(resp_text, str):
+                detail = resp_text
+            return api_response(
+                message="Unable to reach AI provider",
+                status=status,
+                errors=[{"code": "ping_failed", "message": str(detail or "Ping failed")}]
+            )
+        except Exception as e:
+            logging.error(f"AI Support ping failed: {str(e)}")
+            return api_response(
+                message="Unable to reach AI provider",
+                status=HTTP_BAD_REQUEST,
+                errors=[{"code": "ping_failed", "message": str(e)}]
+            )
+    except Exception as e:
+        logging.error(f"Error pinging AI Support: {str(e)}")
+        return api_response(
+            message="Error pinging AI Support",
             status=HTTP_BAD_REQUEST,
             errors=[{"code": "integration_error", "message": str(e)}]
         )

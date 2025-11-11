@@ -1,6 +1,6 @@
 services:
   perforge:
-    image: perforge/perforge-app:2.1.3
+    image: perforge/perforge-app:2.1.4
     container_name: perforge
     ports:
       - "7878:7878"

@@ -134,7 +134,8 @@
                                             {% if atlassian_confluence_config %}
                                                 <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="fa-regular fa-trash-can me-1"></i>Delete</a>
                                             {% endif %}
-                                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                                            <button class="btn btn-secondary" type="button" id="testConfluenceBtn" onclick="testConfluence()"><i class="fa-solid fa-satellite-dish me-1"></i>Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
+                                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                             <div class="ms-1">
                                                 <input type="checkbox" class="btn-check" id="is_default" name="is_default" autocomplete="off" {% if form.is_default.data %}checked{% endif %}>
                                                 <label class="btn btn-outline-secondary" for="is_default">
@@ -248,6 +249,10 @@
           if (!validateForm()) { return; }
 
           const form = document.getElementById('confluenceForm');
+          const saveBtn = form?.querySelector('button[type="submit"]');
+          const saveSpinner = saveBtn?.querySelector('.spinner-border');
+          if (saveBtn) saveBtn.disabled = true;
+          if (saveSpinner) saveSpinner.style.display = 'inline-block';
           const integrationId = document.getElementById('config_id')?.value;
           const data = {
               name: form.name.value,
@@ -266,7 +271,7 @@
               const newSecretName = document.getElementById('new_secret_name').value;
               const newSecretValue = document.getElementById('new_secret_value').value;
               const newSecretScope = document.getElementById('new_secret_scope').value;
-              if (!newSecretName || !newSecretValue) { showFlashMessage('Secret name and value are required.', 'error'); return; }
+              if (!newSecretName || !newSecretValue) { showFlashMessage('Secret name and value are required.', 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none'; return; }
               const secretData = { key: newSecretName, value: newSecretValue };
               if (newSecretScope === 'project') { secretData.project_id = '{{ project_id }}'; }
               apiClient.secrets.create(secretData)
@@ -277,10 +282,10 @@
                   .catch(error => {
                       console.error('Error creating secret:', error);
                       const errorMessage = error.responseJSON?.message || error.message || 'An error occurred while creating the secret.';
-                      showFlashMessage(errorMessage, 'error');
+                      showFlashMessage(errorMessage, 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                   });
           } else {
-              if (!tokenSelect.value) { showFlashMessage('Please select a token or create a new one.', 'error'); return; }
+              if (!tokenSelect.value) { showFlashMessage('Please select a token or create a new one.', 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none'; return; }
               saveIntegrationWithToken(tokenSelect.value);
           }
       }
@@ -296,7 +301,78 @@
               .catch(error => {
                   console.error('Error:', error);
                   showFlashMessage(error.message || 'An error occurred while saving the integration.', 'error');
+                  const form = document.getElementById('confluenceForm');
+                  const saveBtn = form?.querySelector('button[type="submit"]');
+                  const saveSpinner = saveBtn?.querySelector('.spinner-border');
+                  if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
               });
+      }
+
+      function testConfluence() {
+          const testBtn = document.getElementById('testConfluenceBtn');
+          const spinner = testBtn?.querySelector('.spinner-border');
+          if (testBtn) testBtn.disabled = true;
+          if (spinner) spinner.style.display = 'inline-block';
+
+          try {
+              const form = document.getElementById('confluenceForm');
+              const tokenSelect = document.getElementById('token');
+              const tokenType = form.token_type.value;
+
+              const payload = {
+                  org_url: form.org_url.value?.trim(),
+                  space_key: form.space_key.value?.trim(),
+                  token_type: tokenType?.trim().toLowerCase()
+              };
+
+              if (payload.token_type === 'api_token') {
+                  const email = form.email.value?.trim();
+                  if (!email) { showFlashMessage('Email is required for API token.', 'error'); return; }
+                  payload.email = email;
+              }
+
+              if (!payload.org_url || !payload.space_key || !payload.token_type) {
+                  showFlashMessage('Please fill required fields: Org URL, Space key, Token type.', 'error');
+                  return;
+              }
+
+              if (tokenSelect.value === 'create_new') {
+                  const newTokenValue = document.getElementById('new_secret_value').value;
+                  if (!newTokenValue) { showFlashMessage('Enter the new secret value to test.', 'error'); return; }
+                  payload.token = newTokenValue;
+              } else {
+                  if (!tokenSelect.value) { showFlashMessage('Please select a token or create a new one before testing.', 'error'); return; }
+                  payload.token_id = tokenSelect.value;
+              }
+
+              fetch('/api/v1/integrations/atlassian_confluence/ping', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+              })
+              .then(response => response.json().then(body => ({ status: response.status, body })))
+              .then(({ status, body }) => {
+                  if (status >= 200 && status < 300) {
+                      showFlashMessage('Connection successful.', 'success');
+                  } else {
+                      const errorMessage = body?.errors?.[0]?.message || body?.message || 'Ping failed.';
+                      showFlashMessage(errorMessage, 'error');
+                  }
+              })
+              .catch(err => {
+                  console.error('Ping error:', err);
+                  showFlashMessage(err.message || 'Ping failed.', 'error');
+              })
+              .finally(() => {
+                  if (testBtn) testBtn.disabled = false;
+                  if (spinner) spinner.style.display = 'none';
+              });
+          } catch (e) {
+              console.error('Test error:', e);
+              showFlashMessage('Unexpected error during test.', 'error');
+              if (testBtn) testBtn.disabled = false;
+              if (spinner) spinner.style.display = 'none';
+          }
       }
 
       document.getElementById('deleteButton')?.addEventListener('click', function() {

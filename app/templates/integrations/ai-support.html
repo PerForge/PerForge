@@ -159,7 +159,8 @@
                                             {% if ai_support_config %}
                                                 <a class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="fa-regular fa-trash-can me-1"></i>Delete</a>
                                             {% endif %}
-                                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save</button>
+                                            <button class="btn btn-secondary" type="button" id="testAISupportBtn" onclick="testAISupport()"><i class="fa-solid fa-satellite-dish me-1"></i>Test <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
+                                            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i>Save <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true" style="display:none;"></span></button>
                                             <div class="ms-1">
                                                 <input type="checkbox" class="btn-check" id="is_default" name="is_default" autocomplete="off" {% if form.is_default.data %}checked{% endif %}>
                                                 <label class="btn btn-outline-secondary" for="is_default">
@@ -290,6 +291,10 @@
             if (!validateForm()) { return; }
 
             const form = document.getElementById('aiSupportForm');
+            const saveBtn = form?.querySelector('button[type="submit"]');
+            const saveSpinner = saveBtn?.querySelector('.spinner-border');
+            if (saveBtn) saveBtn.disabled = true;
+            if (saveSpinner) saveSpinner.style.display = 'inline-block';
             const data = {
                 name: form.name.value,
                 ai_provider: form.ai_provider.value,
@@ -306,11 +311,30 @@
             const tokenSelect = document.getElementById('token');
             const saveIntegrationWithToken = (tokenId) => { data.token = tokenId; saveIntegration(integrationId, data); };
 
+            const buildPingPayload = (withTokenValue, tokenValue) => {
+                const payload = {
+                    ai_provider: data.ai_provider,
+                    ai_text_model: data.ai_text_model
+                };
+                if (data.ai_image_model) { payload.ai_image_model = data.ai_image_model; }
+                if (data.ai_provider === 'azure_openai') {
+                    if (!data.azure_url || !data.api_version) {
+                        showFlashMessage('Please fill Azure URL and API version for Azure OpenAI.', 'error');
+                        return null;
+                    }
+                    payload.azure_url = data.azure_url;
+                    payload.api_version = data.api_version;
+                }
+                if (withTokenValue) { payload.token = tokenValue; } else { payload.token_id = tokenValue; }
+                return payload;
+            };
+
             if (tokenSelect.value === 'create_new') {
                 const newSecretName = document.getElementById('new_secret_name').value;
                 const newSecretValue = document.getElementById('new_secret_value').value;
                 const newSecretScope = document.getElementById('new_secret_scope').value;
-                if (!newSecretName || !newSecretValue) { showFlashMessage('Secret name and value are required.', 'error'); return; }
+                if (!newSecretName || !newSecretValue) { showFlashMessage('Secret name and value are required.', 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none'; return; }
+
                 const secretData = { key: newSecretName, value: newSecretValue };
                 if (newSecretScope === 'project') { secretData.project_id = '{{ project_id }}'; }
                 apiClient.secrets.create(secretData)
@@ -321,10 +345,10 @@
                     .catch(error => {
                         console.error('Error creating secret:', error);
                         const errorMessage = error.responseJSON?.message || error.message || 'An error occurred while creating the secret.';
-                        showFlashMessage(errorMessage, 'error');
+                        showFlashMessage(errorMessage, 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                     });
             } else {
-                if (!tokenSelect.value) { showFlashMessage('Please select a token or create a new one.', 'error'); return; }
+                if (!tokenSelect.value) { showFlashMessage('Please select a token or create a new one.', 'error'); if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none'; return; }
                 saveIntegrationWithToken(tokenSelect.value);
             }
         }
@@ -340,7 +364,94 @@
                 .catch(error => {
                     console.error('Error:', error);
                     showFlashMessage(error.message || 'An error occurred while saving the integration.', 'error');
+                    const form = document.getElementById('aiSupportForm');
+                    const saveBtn = form?.querySelector('button[type="submit"]');
+                    const saveSpinner = saveBtn?.querySelector('.spinner-border');
+                    if (saveBtn) saveBtn.disabled = false; if (saveSpinner) saveSpinner.style.display = 'none';
                 });
+        }
+
+        function testAISupport() {
+            const testBtn = document.getElementById('testAISupportBtn');
+            const spinner = testBtn.querySelector('.spinner-border');
+            testBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+
+            try {
+                const provider = document.getElementById('ai_provider').value;
+                const aiTextModel = document.getElementById('ai_text_model').value.trim();
+                const aiImageModel = document.getElementById('ai_image_model').value.trim();
+                const tokenSelect = document.getElementById('token');
+
+                if (!provider) {
+                    showFlashMessage('Please select AI provider.', 'error');
+                    return;
+                }
+                if (!aiTextModel) {
+                    showFlashMessage('Please enter AI Text model before testing.', 'error');
+                    return;
+                }
+
+                const payload = {
+                    ai_provider: provider,
+                    ai_text_model: aiTextModel
+                };
+                if (aiImageModel) { payload.ai_image_model = aiImageModel; }
+
+                if (tokenSelect.value === 'create_new') {
+                    const newTokenValue = document.getElementById('new_secret_value').value;
+                    if (!newTokenValue) {
+                        showFlashMessage('Enter the new secret value before testing.', 'error');
+                        return;
+                    }
+                    payload.token = newTokenValue;
+                } else {
+                    if (!tokenSelect.value) {
+                        showFlashMessage('Please select a token or create a new one before testing.', 'error');
+                        return;
+                    }
+                    payload.token_id = tokenSelect.value;
+                }
+
+                if (provider === 'azure_openai') {
+                    const azureUrl = document.getElementById('azure_url')?.value.trim();
+                    const apiVersion = document.getElementById('api_version')?.value.trim();
+                    if (!azureUrl || !apiVersion) {
+                        showFlashMessage('Please fill Azure URL and API version for Azure OpenAI.', 'error');
+                        return;
+                    }
+                    payload.azure_url = azureUrl;
+                    payload.api_version = apiVersion;
+                }
+
+                fetch('/api/v1/integrations/ai_support/ping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                    .then(response => response.json().then(body => ({ status: response.status, body })))
+                    .then(({ status, body }) => {
+                        if (status >= 200 && status < 300) {
+                            showFlashMessage('Connection successful.', 'success');
+                        } else {
+                            const errorMessage = body?.errors?.[0]?.message || body.message || 'Ping failed.';
+                            showFlashMessage(errorMessage, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Ping error:', err);
+                        showFlashMessage(err.message || 'Ping failed.', 'error');
+                    })
+                    .finally(() => {
+                        testBtn.disabled = false;
+                        spinner.style.display = 'none';
+                    });
+            } catch (e) {
+                console.error('Test error:', e);
+                showFlashMessage('Unexpected error during test.', 'error');
+                testBtn.disabled = false;
+                spinner.style.display = 'none';
+            }
         }
 
         // Handle delete confirmation
