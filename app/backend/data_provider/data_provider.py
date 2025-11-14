@@ -490,6 +490,30 @@ class DataProvider:
 
         metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
 
+        # Collect overall anomaly windows from the anomaly detection engine for
+        # visualization (e.g. shaded bands on charts).
+        overall_anomaly_windows: Dict[str, List[Dict[str, str]]] = {}
+        engine = getattr(self, "anomaly_detection_engine", None)
+        if engine is not None:
+            overall_list = getattr(engine, "overall_anomalies", []) or []
+            for oa in overall_list:
+                metric = oa.get("metric")
+                start_time = oa.get("start_time")
+                end_time = oa.get("end_time")
+                if not metric or start_time is None or end_time is None:
+                    continue
+                try:
+                    start_iso = pd.to_datetime(start_time).isoformat()
+                except Exception:
+                    start_iso = str(start_time)
+                try:
+                    end_iso = pd.to_datetime(end_time).isoformat()
+                except Exception:
+                    end_iso = str(end_time)
+                overall_anomaly_windows.setdefault(metric, []).append(
+                    {"start": start_iso, "end": end_iso}
+                )
+
         # Fetch additional response time per request data
         avgResponseTimePerReq = self._get_per_req_series(test_obj, 'rt_avg', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
@@ -513,7 +537,16 @@ class DataProvider:
         # Collect the outputs
         statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)
         test_details = self.get_test_details(test_title=test_title, test_obj=test_obj)
-        return metrics, test_obj.ml_anomalies, statistics, test_details, test_obj.aggregated_table, test_obj.ml_html_summary, test_obj.performance_status
+        return (
+            metrics,
+            test_obj.ml_anomalies,
+            statistics,
+            test_details,
+            test_obj.aggregated_table,
+            test_obj.ml_html_summary,
+            test_obj.performance_status,
+            overall_anomaly_windows,
+        )
 
     def _get_per_req_series(self, test_obj: BaseTestData, key: str, test_title: str, start: str, end: str):
         cache_key = (key, start, end)

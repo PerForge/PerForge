@@ -112,10 +112,12 @@ class PlotlyImageRenderer:
             {"name": "Throughput", "data": throughput, "anomalies": throughput_anomalies, "anomalyMessages": throughput_msgs, "color": "rgba(31, 119, 180, 1)", "yAxisUnit": "r/s"},
             {"name": "Users", "data": users, "anomalies": [], "anomalyMessages": [], "color": "rgba(0, 155, 162, 0.8)", "yAxisUnit": "vu", "useRightYAxis": True},
         ]
+        overall_windows = (chart_data.get("overall_anomaly_windows") or {}).get("overalThroughput") or []
         return self._build_line_chart(
             title="Throughput and Users",
             labels=timestamps,
             metrics=metrics,
+            anomaly_windows=overall_windows,
             output_path=output_path,
             width=width,
             height=height,
@@ -134,10 +136,17 @@ class PlotlyImageRenderer:
             {"name": "Median Response Time", "data": med_vals, "anomalies": med_ano, "anomalyMessages": med_msgs, "color": "rgba(23, 100, 254, 0.8)", "yAxisUnit": "ms"},
             {"name": "90Pct Response Time", "data": p90_vals, "anomalies": p90_ano, "anomalyMessages": p90_msgs, "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
         ]
+        # Union anomaly windows across RT overall metrics
+        overall_windows_rt = []
+        overall_map = chart_data.get("overall_anomaly_windows") or {}
+        for key in ("overalAvgResponseTime", "overalMedianResponseTime", "overal90PctResponseTime"):
+            wins = overall_map.get(key) or []
+            overall_windows_rt.extend(wins)
         return self._build_line_chart(
             title="Response Time",
             labels=timestamps,
             metrics=metrics,
+            anomaly_windows=overall_windows_rt,
             output_path=output_path,
             width=width,
             height=height,
@@ -151,10 +160,12 @@ class PlotlyImageRenderer:
         metrics = [
             {"name": "Errors", "data": err_vals, "anomalies": [], "anomalyMessages": [], "color": "rgba(255, 8, 8, 0.8)", "yAxisUnit": "er"},
         ]
+        overall_windows = (chart_data.get("overall_anomaly_windows") or {}).get("overalErrors") or []
         return self._build_line_chart(
             title="Errors",
             labels=timestamps,
             metrics=metrics,
+            anomaly_windows=overall_windows,
             output_path=output_path,
             width=width,
             height=height,
@@ -226,11 +237,11 @@ class PlotlyImageRenderer:
                 h.addFilter(_PkgLevelFilter(prefixes, level))
                 setattr(h, "_pf_quiet_kaleido_filter", True)
 
-    def _build_line_chart(self, title: str, labels: List[datetime], metrics: List[Dict[str, Any]], output_path: str, *, width: int, height: int, image_format: str) -> str:
-        fig = self._build_line_chart_figure(title=title, labels=labels, metrics=metrics)
+    def _build_line_chart(self, title: str, labels: List[datetime], metrics: List[Dict[str, Any]], output_path: str, *, width: int, height: int, image_format: str, anomaly_windows: Optional[List[Dict[str, Any]]] = None) -> str:
+        fig = self._build_line_chart_figure(title=title, labels=labels, metrics=metrics, anomaly_windows=anomaly_windows)
         return self._save(fig, output_path, width, height, image_format)
 
-    def _build_line_chart_figure(self, title: str, labels: List[datetime], metrics: List[Dict[str, Any]]) -> go.Figure:
+    def _build_line_chart_figure(self, title: str, labels: List[datetime], metrics: List[Dict[str, Any]], anomaly_windows: Optional[List[Dict[str, Any]]] = None) -> go.Figure:
         traces: List[go.Scatter] = []
         # Prepare colors for axes
         left_metric = next((m for m in metrics if not m.get("useRightYAxis")), metrics[0])
@@ -241,16 +252,13 @@ class PlotlyImageRenderer:
         for m in metrics:
             anomalies: List[bool] = m.get("anomalies", []) or [False] * len(m.get("data", []))
             anomaly_msgs: List[str] = m.get("anomalyMessages", []) or [""] * len(m.get("data", []))
-            marker_colors = [self.styling["marker_color_anomaly"] if a else self.styling["marker_color_normal"] for a in anomalies]
-            marker_sizes = [self.styling["marker_size"] if a else 0 for a in anomalies]
 
             trace = go.Scatter(
                 x=labels,
                 y=m["data"],
-                mode="lines+markers",
+                mode="lines",  # lines only; no markers/dots
                 name=m["name"],
                 line=dict(shape=self.styling["line_shape"], width=self.styling["line_width"], color=m["color"]),
-                marker=dict(color=marker_colors, size=marker_sizes),
                 hoverinfo="x+y+text",
                 text=[msg if anomalies[i] else "" for i, msg in enumerate(anomaly_msgs)],
                 yaxis="y2" if m.get("useRightYAxis") else "y",
@@ -258,6 +266,65 @@ class PlotlyImageRenderer:
             traces.append(trace)
 
         layout = self._base_layout(title, left_y_color=left_y_color, right_y_color=right_y_color, metrics=metrics)
+
+        # Add shaded anomaly bands if explicit windows were provided
+        try:
+            shapes: List[Dict[str, Any]] = []
+            if anomaly_windows:
+                # Normalize and merge overlapping windows
+                normalized = []
+                for win in anomaly_windows:
+                    if not win:
+                        continue
+                    raw_start = win.get("start") or win.get("x0")
+                    raw_end = win.get("end") or win.get("x1")
+                    if not raw_start or not raw_end:
+                        continue
+                    try:
+                        s = self._parse_ts(str(raw_start))
+                        e = self._parse_ts(str(raw_end))
+                    except Exception:
+                        continue
+                    if s <= e:
+                        normalized.append({"start": s, "end": e})
+                    else:
+                        normalized.append({"start": e, "end": s})
+
+                normalized.sort(key=lambda w: w["start"])
+                merged: List[Dict[str, datetime]] = []
+                for win in normalized:
+                    if not merged:
+                        merged.append({"start": win["start"], "end": win["end"]})
+                        continue
+                    last = merged[-1]
+                    if win["start"] <= last["end"]:
+                        if win["end"] > last["end"]:
+                            last["end"] = win["end"]
+                    else:
+                        merged.append({"start": win["start"], "end": win["end"]})
+
+                for win in merged:
+                    shapes.append(
+                        dict(
+                            type="rect",
+                            xref="x",
+                            yref="paper",
+                            x0=win["start"],
+                            x1=win["end"],
+                            y0=0,
+                            y1=1,
+                            fillcolor="rgba(220, 53, 69, 0.25)",
+                            line=dict(width=0),
+                        )
+                    )
+
+            if shapes:
+                # Preserve any existing shapes in layout_config
+                base_shapes = list(layout.shapes) if getattr(layout, "shapes", None) else []
+                layout.shapes = tuple(base_shapes + shapes)
+        except Exception as e:
+            logging.warning(f"_build_line_chart_figure: failed to attach anomaly window shapes: {e}")
+
         fig = go.Figure(data=traces, layout=layout)
         return fig
 
@@ -363,10 +430,12 @@ class PlotlyImageRenderer:
             {"name": "Throughput", "data": throughput, "anomalies": throughput_anomalies, "anomalyMessages": throughput_msgs, "color": "rgba(31, 119, 180, 1)", "yAxisUnit": "r/s"},
             {"name": "Users", "data": users, "anomalies": [], "anomalyMessages": [], "color": "rgba(0, 155, 162, 0.8)", "yAxisUnit": "vu", "useRightYAxis": True},
         ]
+        overall_windows = (chart_data.get("overall_anomaly_windows") or {}).get("overalThroughput") or []
         fig = self._build_line_chart_figure(
             title="Throughput and Users",
             labels=timestamps,
             metrics=metrics,
+            anomaly_windows=overall_windows,
         )
         return self._to_image_bytes(fig, width=width, height=height, image_format=image_format)
 
@@ -381,10 +450,16 @@ class PlotlyImageRenderer:
             {"name": "Median Response Time", "data": med_vals, "anomalies": med_ano, "anomalyMessages": med_msgs, "color": "rgba(23, 100, 254, 0.8)", "yAxisUnit": "ms"},
             {"name": "90Pct Response Time", "data": p90_vals, "anomalies": p90_ano, "anomalyMessages": p90_msgs, "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
         ]
+        overall_windows_rt: List[Dict[str, Any]] = []
+        overall_map = chart_data.get("overall_anomaly_windows") or {}
+        for key in ("overalAvgResponseTime", "overalMedianResponseTime", "overal90PctResponseTime"):
+            wins = overall_map.get(key) or []
+            overall_windows_rt.extend(wins)
         fig = self._build_line_chart_figure(
             title="Response Time",
             labels=timestamps,
             metrics=metrics,
+            anomaly_windows=overall_windows_rt,
         )
         return self._to_image_bytes(fig, width=width, height=height, image_format=image_format)
 
@@ -394,10 +469,12 @@ class PlotlyImageRenderer:
         metrics = [
             {"name": "Errors", "data": err_vals, "anomalies": [], "anomalyMessages": [], "color": "rgba(255, 8, 8, 0.8)", "yAxisUnit": "er"},
         ]
+        overall_windows = (chart_data.get("overall_anomaly_windows") or {}).get("overalErrors") or []
         fig = self._build_line_chart_figure(
             title="Errors",
             labels=timestamps,
             metrics=metrics,
+            anomaly_windows=overall_windows,
         )
         return self._to_image_bytes(fig, width=width, height=height, image_format=image_format)
 
