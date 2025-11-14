@@ -18,6 +18,10 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from typing import Literal
+from app.backend.data_provider.data_analysis.constants import (
+    COL_OVERALL_THROUGHPUT,
+    COL_TXN_RPS,
+)
 
 class IsolationForestDetector(BaseDetector):
     """
@@ -78,11 +82,19 @@ class IsolationForestDetector(BaseDetector):
         """
         df = df.copy()
 
-        # Determine which features are actually available in the DataFrame
-        candidate_features = [metric]
-        if engine.isf_feature_metric != metric:
-            candidate_features.append(engine.isf_feature_metric)
-        available_features = [f for f in candidate_features if f in df.columns]
+        per_txn_context = (COL_TXN_RPS in df.columns)
+
+        features = [metric]
+        if per_txn_context:
+            if COL_TXN_RPS in df.columns:
+                features.append(COL_TXN_RPS)
+        else:
+            if engine.isf_feature_metric != metric and engine.isf_feature_metric in df.columns:
+                features.append(engine.isf_feature_metric)
+            elif COL_OVERALL_THROUGHPUT in df.columns and COL_OVERALL_THROUGHPUT != metric:
+                features.append(COL_OVERALL_THROUGHPUT)
+
+        available_features = [f for f in features if f in df.columns]
 
         # If no expected features are available, return with default 'Normal' anomaly column
         if not available_features:
