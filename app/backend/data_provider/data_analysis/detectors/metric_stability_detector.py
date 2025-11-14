@@ -18,6 +18,7 @@ from typing import Literal
 from sklearn.linear_model import LinearRegression
 import numpy as np
 from scipy import stats
+from app.backend.data_provider.data_analysis.constants import OVERALL_METRIC_DISPLAY
 
 class MetricStabilityDetector(BaseDetector):
     """
@@ -122,12 +123,14 @@ class MetricStabilityDetector(BaseDetector):
         cleaned_data = self._remove_outliers(y)
         cleaned_data = engine.normalize_metric(cleaned_data, metric)
 
+        metric_label = OVERALL_METRIC_DISPLAY.get(metric, metric)
+
         # Step 2: Check for constant behavior
         if np.var(cleaned_data, ddof=1) < engine.numpy_var_threshold:
             engine.add_output(
                 status='passed',
                 method='TrendAnalysis',
-                description=f'Metric {metric} is constant throughout the test.',
+                description=f'{metric_label} is constant throughout the test.',
                 value=None
             )
             return df
@@ -155,21 +158,21 @@ class MetricStabilityDetector(BaseDetector):
             engine.add_output(
                 status='failed',
                 method='TrendAnalysis',
-                description=f'Metric {metric} shows high variability without a clear trend.',
+                description=f'{metric_label} shows high variability without a clear trend.',
                 value={'slope': slope, 'cv': cv, 'p_value': p_value}
             )
         elif trend == "noisy but stable":
             engine.add_output(
                 status='passed',
                 method='TrendAnalysis',
-                description=f'Metric {metric} shows some variation but remains stable.',
+                description=f'{metric_label} shows some variation but remains stable.',
                 value={'slope': slope, 'cv': cv, 'p_value': p_value}
             )
         elif trend in ["constant increase", "constant decrease"]:
             engine.add_output(
                 status='failed',
                 method='TrendAnalysis',
-                description=f'Metric {metric} shows a {trend} pattern.',
+                description=f'{metric_label} shows a {trend} pattern.',
                 value={'slope': slope, 'cv': cv}
             )
         else:
@@ -180,7 +183,7 @@ class MetricStabilityDetector(BaseDetector):
             engine.add_output(
                 status='failed',
                 method='TrendAnalysis',
-                description=(f'Metric {metric} is unstable with {" and ".join(variations)}. 'f'The overall pattern shows {trend}.'),
+                description=(f'{metric_label} is unstable with {" and ".join(variations)}. 'f'The overall pattern shows {trend}.'),
                 value={'slope': slope, 'cv': cv, 'p_value': p_value}
             )
 

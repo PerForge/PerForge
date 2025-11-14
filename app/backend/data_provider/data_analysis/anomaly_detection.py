@@ -15,7 +15,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from typing import List, Dict, Any, Literal, Tuple
+from typing import List, Dict, Any, Literal, Tuple, Optional
 import logging
 from app.backend.errors import ErrorMessages
 from collections import defaultdict
@@ -25,6 +25,7 @@ from app.backend.data_provider.data_analysis.detectors import (
     MetricStabilityDetector,
     RampUpPeriodAnalyzer
 )
+from app.backend.data_provider.data_analysis.constants import OVERALL_METRIC_KEYS, OVERALL_METRIC_DISPLAY, COL_TXN_RPS, COL_OVERALL_RPS, COL_ERR_RATE
 
 class AnomalyDetectionEngine:
     """
@@ -42,6 +43,9 @@ class AnomalyDetectionEngine:
             detectors: List of detector instances to use
         """
         self.output = []
+        # Internal store for overall metric anomalies (per window), to be
+        # enriched with per-transaction attribution before final output is built.
+        self.overall_anomalies: List[Dict[str, Any]] = []
         # Define default parameters
         default_params = {
             'contamination': 0.001,
@@ -61,7 +65,11 @@ class AnomalyDetectionEngine:
             'cv_threshold': 0.07,
             'context_median_window': 10,
             'context_median_pct': 0.15,
-            'context_median_enabled': True
+            'context_median_enabled': True,
+            'merge_gap_samples': 4,
+            'per_txn_coverage': 0.8,
+            'per_txn_max_k': 50,
+            'per_txn_min_points': 6
         }
 
         # Validate and update parameters
@@ -90,23 +98,6 @@ class AnomalyDetectionEngine:
         final_params = {**default_params, **params}
         for key, value in final_params.items():
             setattr(self, key, value)
-
-    def add_output(self, status: Literal['passed', 'failed'], method: str, description: str, value: Any = None):
-        """
-        Add a new output entry to the anomaly detection results
-
-        Args:
-            status: Status of the anomaly (must be either 'passed' or 'failed')
-            method: Name of the detection method
-            description: Description of the anomaly or result
-            value: Optional value associated with the result
-        """
-        self.output.append({
-            'status': status,
-            'method': method,
-            'description': description,
-            'value': value
-        })
 
     def add_anomaly_detector(self, detector):
         self.anomaly_detectors.append(detector)
@@ -158,6 +149,22 @@ class AnomalyDetectionEngine:
         df.drop(columns=columns, inplace=True)
         return df
 
+    def add_output(self, status: Literal['passed', 'failed'], method: str, description: str, value: Any = None):
+        """
+        Add a new output entry to the anomaly detection results
+
+        Args:
+            status: Status of the anomaly (must be either 'passed' or 'failed')
+            method: Name of the detection method
+            description: Description of the anomaly or result
+            value: Optional value associated with the result
+        """
+        self.output.append({
+            'status': status,
+            'method': method,
+            'description': description,
+            'value': value
+        })
     def process_anomalies(self, merged_df):
         # Iterate over the columns to find metric and anomaly columns
         for col in merged_df.columns:
@@ -168,157 +175,294 @@ class AnomalyDetectionEngine:
                     # Call the collect_anomalies function
                     self.collect_anomalies(merged_df, metric_col, col)
 
-    def collect_anomalies(self, df, metric, anomaly_cl):
+    def _has_overall_anomalies(self, fixed_load_period: pd.DataFrame) -> bool:
+        """Return True if any overall anomaly windows have been recorded.
+
+        The argument ``fixed_load_period`` is kept for compatibility but is no
+        longer inspected. This helper now simply checks whether
+        ``self.overall_anomalies`` contains any entries, which are populated by
+        ``collect_anomalies`` via ``_record_overall_anomaly_window``.
         """
-        Collect and analyze anomalies in the time series data.
+        try:
+            anomalies = getattr(self, 'overall_anomalies', [])
+            return bool(anomalies)
+        except Exception:
+            return False
 
-        Args:
-            df (DataFrame): Input dataframe containing time series data
-            metric (str): Name of the metric column to analyze
-            anomaly_cl (str): Name of the column containing anomaly flags
+    def _record_overall_anomaly_window(self, metric: str, start_time, end_time, baseline_value: float, summary: Dict[str, Any]) -> None:
+        """Record an overall-metric anomaly window for later enrichment.
 
-        The method tracks consecutive anomalies and combines them into single events
-        when they occur close to each other (within the buffer_size window).
+        This helper creates an internal anomaly entry capturing the
+        window, direction, and significant value. It does not modify
+        self.output; that will be built in a later step.
         """
-        def format_time_range(start, end):
-            """Format the time range for anomaly description.
+        try:
+            direction = summary.get('direction')
+            significant_value = summary.get('significant_value', baseline_value)
+        except Exception:
+            direction = None
+            significant_value = baseline_value
+        try:
+            anomaly = {
+                'id': len(self.overall_anomalies),
+                'metric': metric,
+                'start_time': start_time,
+                'end_time': end_time,
+                'direction': direction,
+                'significant_value': significant_value,
+                'baseline': baseline_value,
+                'summary': summary,
+                'transactions': [],
+            }
+            self.overall_anomalies.append(anomaly)
+        except Exception:
+            # Fail silently; this helper must not break anomaly collection.
+            pass
 
-            Returns only time if start and end dates are the same,
-            otherwise returns full datetime.
-            """
-            start_date = start.strftime('%Y-%m-%d')
-            end_date = end.strftime('%Y-%m-%d')
+    def _summarize_anomaly_window(self, baseline_value: float, values: List[float]) -> Dict[str, Any]:
+        """Summarize a single anomaly window.
 
-            if start_date == end_date:
-                return (f"{start.strftime('%H:%M:%S')} to "
-                       f"{end.strftime('%H:%M:%S')}")
-            else:
-                return (f"{start.strftime('%Y-%m-%d %H:%M:%S')} to "
-                       f"{end.strftime('%Y-%m-%d %H:%M:%S')}")
+        Given a baseline reference value and a list of observed values within the
+        anomaly window, determine whether the anomaly is an increase or decrease,
+        compute min/max/mean, and the absolute delta from baseline.
+        """
+        if values is None or len(values) == 0:
+            return {
+                'baseline': float(baseline_value) if baseline_value is not None else 0.0,
+                'min': float(baseline_value) if baseline_value is not None else 0.0,
+                'max': float(baseline_value) if baseline_value is not None else 0.0,
+                'mean': float(baseline_value) if baseline_value is not None else 0.0,
+                'direction': 'increase',
+                'significant_value': float(baseline_value) if baseline_value is not None else 0.0,
+                'delta_abs': 0.0,
+            }
 
-        # Initialize tracking variables
-        anomaly_started = False  # Flag to track if we're currently in an anomaly period
-        start_time = None        # Start time of current anomaly
-        end_time = None         # End time of current anomaly
-        baseline_value = None    # Reference value for comparison
-        anomalies_detected = False  # Flag to track if any anomalies were found
-        anomaly_values = []      # Values during anomaly period
-        buffer_size = 3         # Number of normal points needed to confirm anomaly end
-        normal_points_buffer = []  # Buffer for tracking return to normal
-        current_methods = set()   # Set of detection methods that identified the anomaly
+        # filter out NaNs
+        arr = np.array(values, dtype=float)
+        arr = arr[~np.isnan(arr)]
+        if arr.size == 0:
+            return {
+                'baseline': float(baseline_value) if baseline_value is not None else 0.0,
+                'min': float(baseline_value) if baseline_value is not None else 0.0,
+                'max': float(baseline_value) if baseline_value is not None else 0.0,
+                'mean': float(baseline_value) if baseline_value is not None else 0.0,
+                'direction': 'increase',
+                'significant_value': float(baseline_value) if baseline_value is not None else 0.0,
+                'delta_abs': 0.0,
+            }
 
-        def calculate_baseline(series, window=3):
-            """Calculate baseline value using rolling mean."""
-            return series.rolling(window=window, min_periods=1).mean().iloc[0]
+        baseline = float(baseline_value) if baseline_value is not None else float(arr[0])
+        v_min = float(np.min(arr))
+        v_max = float(np.max(arr))
+        v_mean = float(np.mean(arr))
 
-        # Process each data point
-        for index, row in df.iterrows():
-            current_value = row[metric]
-            is_anomaly = 'Anomaly' in str(row[anomaly_cl]) and 'potential saturation point' not in str(row[anomaly_cl])
-
-            if is_anomaly:
-                # Extract detection methods from anomaly flag
-                methods = set(row[anomaly_cl].replace('Anomaly: ', '').split(', '))
-                current_methods.update(methods)
-
-                if not anomaly_started:
-                    # Start of new anomaly period
-                    anomaly_started = True
-                    start_time = index
-                    # Calculate baseline from previous normal points
-                    prev_idx = df.index.get_loc(index)
-                    if prev_idx > 0:
-                        prev_values = df[metric].iloc[max(0, prev_idx-3):prev_idx]
-                        baseline_value = calculate_baseline(prev_values)
-                    else:
-                        baseline_value = current_value
-
-                anomaly_values.append(current_value)
-                end_time = index
-                normal_points_buffer = []  # Reset buffer
-                anomalies_detected = True
-            else:
-                if anomaly_started:
-                    # Track potential end of anomaly period
-                    normal_points_buffer.append(current_value)
-                    if len(normal_points_buffer) >= buffer_size:
-                        # Confirm end of anomaly period
-                        if anomaly_values:
-                            # Calculate anomaly characteristics
-                            max_val = max(anomaly_values)
-                            min_val = min(anomaly_values)
-                            is_increase = max_val > baseline_value
-                            significant_value = max_val if is_increase else min_val
-
-                            # Generate description
-                            description = (
-                                f"An anomaly was detected in {metric} from "
-                                f"{format_time_range(start_time, end_time)}, "
-                                f"with the metric {'increasing' if is_increase else 'dropping'} "
-                                f"to {significant_value:.2f}."
-                            )
-
-                            # Record the anomaly
-                            self.output.append({
-                                'status': 'failed',
-                                'method': ', '.join(current_methods),
-                                'description': description,
-                                'value': significant_value
-                            })
-
-                        # Reset tracking variables
-                        anomaly_started = False
-                        anomaly_values = []
-                        current_methods.clear()
-                        normal_points_buffer = []
-
-        # Handle case where anomaly continues until end of data
-        if anomaly_started and anomaly_values:
-            max_val = max(anomaly_values)
-            min_val = min(anomaly_values)
-            is_increase = max_val > baseline_value
-            significant_value = max_val if is_increase else min_val
-
-            description = (
-                f"An anomaly was detected in {metric} from "
-                f"{format_time_range(start_time, end_time)}, "
-                f"with the metric {'increasing' if is_increase else 'dropping'} "
-                f"to {significant_value:.2f}."
-            )
-
-            self.output.append({
-                'status': 'failed',
-                'method': ', '.join(current_methods),
-                'description': description,
-                'value': significant_value
-            })
-
-        # Record if no anomalies were detected
-        if not anomalies_detected:
-            self.output.append({
-                'status': 'passed',
-                'method': 'N/A',
-                'description': f'No anomalies detected in {metric}',
-                'value': None
-            })
-
-    def _append_anomaly_result(self, metric, method, start_time, end_time, prev_normal_value, post_anomaly_value, anomaly_values):
-        mean_value = np.mean([val for val in [prev_normal_value, post_anomaly_value] if val is not None])
-        description = f"An anomaly was detected in {metric} from {start_time} to {end_time}, with the metric "
-
-        # Round anomaly values to 2 decimal places
-        rounded_anomaly_values = [round(val, 2) for val in anomaly_values]
-
-        if mean_value < np.max(anomaly_values):
-            description += f"increasing to {np.max(rounded_anomaly_values):.2f}."
+        delta_up = v_max - baseline
+        delta_down = baseline - v_min
+        if delta_up >= delta_down:
+            direction = 'increase'
+            significant_value = v_max
+            delta_abs = max(0.0, float(delta_up))
         else:
-            description += f"dropping to {np.min(rounded_anomaly_values):.2f}."
-        self.output.append({
-            'status': 'failed',
-            'method': method,
-            'description': description,
-            'value': np.max(rounded_anomaly_values) if mean_value < np.max(rounded_anomaly_values) else np.min(rounded_anomaly_values)
-        })
+            direction = 'decrease'
+            significant_value = v_min
+            delta_abs = max(0.0, float(delta_down))
+
+        return {
+            'baseline': baseline,
+            'min': v_min,
+            'max': v_max,
+            'mean': v_mean,
+            'direction': direction,
+            'significant_value': significant_value,
+            'delta_abs': delta_abs,
+        }
+
+    def collect_anomalies(self, df, metric, anomaly_cl):
+        """Collect anomaly windows for a metric.
+
+        This new implementation:
+        - Derives a boolean anomaly flag column from ``anomaly_cl``.
+        - Uses ``_extract_anomaly_windows`` to find contiguous windows.
+        - Records each window via ``_record_overall_anomaly_window``.
+
+        It does *not* write anything to ``self.output``; later steps will
+        be responsible for building user-facing output from the recorded
+        windows.
+        """
+        try:
+            df_idx = df.copy()
+            if 'timestamp' in df_idx.columns and df_idx.index.name != 'timestamp':
+                df_idx = df_idx.set_index('timestamp')
+        except Exception:
+            df_idx = df.copy()
+
+        if anomaly_cl in df_idx.columns:
+            flags = df_idx[anomaly_cl].apply(
+                lambda v: isinstance(v, str)
+                and 'Anomaly' in str(v)
+                and 'potential saturation point' not in str(v)
+            )
+        else:
+            flags = pd.Series(False, index=df_idx.index)
+
+        df_idx[f'{metric}_anomaly_flag'] = flags.astype(bool)
+
+        cols = [c for c in [metric, f'{metric}_anomaly_flag'] if c in df_idx.columns]
+        if cols:
+            df_for_windows = df_idx[cols]
+        else:
+            df_for_windows = df_idx[[f'{metric}_anomaly_flag']]
+
+        windows = self._extract_anomaly_windows(df_for_windows, metric)
+
+        for w in windows:
+            try:
+                start_raw = w.get('start')
+                end_raw = w.get('end')
+                start_time = pd.to_datetime(start_raw) if start_raw is not None else None
+                end_time = pd.to_datetime(end_raw) if end_raw is not None else None
+                baseline_value = w.get('baseline')
+                summary = w
+                self._record_overall_anomaly_window(metric, start_time, end_time, baseline_value, summary)
+            except Exception:
+                # Recording windows must not break overall processing.
+                continue
+
+    # def collect_anomalies_old(self, df, metric, anomaly_cl):
+    #     """
+    #     Collect and analyze anomalies in the time series data.
+
+    #     Args:
+    #         df (DataFrame): Input dataframe containing time series data
+    #         metric (str): Name of the metric column to analyze
+    #         anomaly_cl (str): Name of the column containing anomaly flags
+
+    #     The method tracks consecutive anomalies and combines them into single events
+    #     when they occur close to each other (within the buffer_size window).
+    #     """
+    #     def format_time_range(start, end):
+    #         """Format the time range for anomaly description.
+
+    #         Returns only time if start and end dates are the same,
+    #         otherwise returns full datetime.
+    #         """
+    #         start_date = start.strftime('%Y-%m-%d')
+    #         end_date = end.strftime('%Y-%m-%d')
+
+    #         if start_date == end_date:
+    #             return (f"{start.strftime('%H:%M:%S')} to "
+    #                    f"{end.strftime('%H:%M:%S')}")
+    #         else:
+    #             return (f"{start.strftime('%Y-%m-%d %H:%M:%S')} to "
+    #                    f"{end.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    #     # Initialize tracking variables
+    #     anomaly_started = False  # Flag to track if we're currently in an anomaly period
+    #     start_time = None        # Start time of current anomaly
+    #     end_time = None         # End time of current anomaly
+    #     baseline_value = None    # Reference value for comparison
+    #     anomalies_detected = False  # Flag to track if any anomalies were found
+    #     anomaly_values = []      # Values during anomaly period
+    #     buffer_size = 3         # Number of normal points needed to confirm anomaly end
+    #     normal_points_buffer = []  # Buffer for tracking return to normal
+    #     current_methods = set()   # Set of detection methods that identified the anomaly
+
+    #     def calculate_baseline(series, window=3):
+    #         """Calculate baseline value using rolling mean."""
+    #         return series.rolling(window=window, min_periods=1).mean().iloc[0]
+
+    #     # Process each data point
+    #     for index, row in df.iterrows():
+    #         current_value = row[metric]
+    #         is_anomaly = 'Anomaly' in str(row[anomaly_cl]) and 'potential saturation point' not in str(row[anomaly_cl])
+
+    #         if is_anomaly:
+    #             # Extract detection methods from anomaly flag
+    #             methods = set(row[anomaly_cl].replace('Anomaly: ', '').split(', '))
+    #             current_methods.update(methods)
+
+    #             if not anomaly_started:
+    #                 # Start of new anomaly period
+    #                 anomaly_started = True
+    #                 start_time = index
+    #                 # Calculate baseline from previous normal points
+    #                 prev_idx = df.index.get_loc(index)
+    #                 if prev_idx > 0:
+    #                     prev_values = df[metric].iloc[max(0, prev_idx-3):prev_idx]
+    #                     baseline_value = calculate_baseline(prev_values)
+    #                 else:
+    #                     baseline_value = current_value
+
+    #             anomaly_values.append(current_value)
+    #             end_time = index
+    #             normal_points_buffer = []  # Reset buffer
+    #             anomalies_detected = True
+    #         else:
+    #             if anomaly_started:
+    #                 # Track potential end of anomaly period
+    #                 normal_points_buffer.append(current_value)
+    #                 if len(normal_points_buffer) >= buffer_size:
+    #                     # Confirm end of anomaly period
+    #                     if anomaly_values:
+    #                         summary = self._summarize_anomaly_window(baseline_value, anomaly_values)
+    #                         direction = summary.get('direction', 'increase')
+    #                         significant_value = summary.get('significant_value', baseline_value)
+
+    #                         # Record internal representation of this overall anomaly window
+    #                         self._record_overall_anomaly_window(metric, start_time, end_time, baseline_value, summary)
+
+    #                         # Generate description
+    #                         description = (
+    #                             f"An anomaly was detected in {metric} from "
+    #                             f"{format_time_range(start_time, end_time)}, "
+    #                             f"with the metric {'increasing' if direction == 'increase' else 'dropping'} "
+    #                             f"to {significant_value:.2f}."
+    #                         )
+
+    #                         # self.output.append({
+    #                         #     'status': 'failed',
+    #                         #     'method': ', '.join(current_methods),
+    #                         #     'description': description,
+    #                         #     'value': significant_value
+    #                         # })
+
+    #                     # Reset tracking variables
+    #                     anomaly_started = False
+    #                     anomaly_values = []
+    #                     current_methods.clear()
+    #                     normal_points_buffer = []
+
+    #     # Handle case where anomaly continues until end of data
+    #     if anomaly_started and anomaly_values:
+    #         summary = self._summarize_anomaly_window(baseline_value, anomaly_values)
+    #         direction = summary.get('direction', 'increase')
+    #         significant_value = summary.get('significant_value', baseline_value)
+
+    #         # Record internal representation of this overall anomaly window
+    #         self._record_overall_anomaly_window(metric, start_time, end_time, baseline_value, summary)
+
+    #         description = (
+    #             f"An anomaly was detected in {metric} from "
+    #             f"{format_time_range(start_time, end_time)}, "
+    #             f"with the metric {'increasing' if direction == 'increase' else 'dropping'} "
+    #             f"to {significant_value:.2f}."
+    #         )
+
+    #         self.output.append({
+    #             'status': 'failed',
+    #             'method': ', '.join(current_methods),
+    #             'description': description,
+    #             'value': significant_value
+    #         })
+
+    #     # Record if no anomalies were detected
+    #     if not anomalies_detected:
+    #         self.output.append({
+    #             'status': 'passed',
+    #             'method': 'N/A',
+    #             'description': f'No anomalies detected in {metric}',
+    #             'value': None
+    #         })
 
     def update_anomaly_status(self, df, metric, anomaly_metric, method):
         anomaly_col = f'{metric}_anomaly'
@@ -577,7 +721,7 @@ class AnomalyDetectionEngine:
 
         return "\n".join(html_parts), performance_status
 
-    def analyze_test_data(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]]):
+    def analyze_test_data(self, merged_df: pd.DataFrame, standard_metrics: Dict[str, Dict[str, Any]], data_provider=None, test_obj=None):
         """
         Analyze test data and prepare results.
 
@@ -605,6 +749,10 @@ class AnomalyDetectionEngine:
                         metric=metric,
                         period_type='fixed_load'
                     )
+            try:
+                self.fixed_load_period_annotated = fixed_load_period.copy()
+            except Exception:
+                self.fixed_load_period_annotated = fixed_load_period
 
         # Ensure columns match between periods
         missing_columns = set(fixed_load_period.columns) - set(ramp_up_period.columns)
@@ -615,7 +763,717 @@ class AnomalyDetectionEngine:
         merged_df = pd.concat([ramp_up_period, fixed_load_period], axis=0)
         metrics = self.prepare_final_metrics(merged_df, standard_metrics)
 
+        has_any_overall_anomaly = False
         if is_fixed_load:
-            self.process_anomalies(merged_df)
+            # For gating and attribution we only consider anomalies detected
+            # in the fixed-load period, not during ramp-up.
+            self.process_anomalies(fixed_load_period)
+            has_any_overall_anomaly = self._has_overall_anomalies(fixed_load_period)
+
+        self._run_per_transaction_pipeline(
+            is_fixed_load=is_fixed_load,
+            has_any_overall_anomaly=has_any_overall_anomaly,
+            data_provider=data_provider,
+            test_obj=test_obj
+        )
+
+        # Build user-facing overall anomaly entries (including any
+        # per-transaction contributions) from the internal windows.
+        self._build_output_from_overall_anomalies()
 
         return metrics, is_fixed_load, self.output
+
+    def _run_per_transaction_pipeline(self, *, is_fixed_load: bool, has_any_overall_anomaly: bool, data_provider=None, test_obj=None) -> None:
+        try:
+            if is_fixed_load and has_any_overall_anomaly and data_provider is not None and test_obj is not None:
+                try:
+                    data_provider.build_per_transaction_long_frame(test_obj=test_obj, sampling_interval_sec=30)
+                except Exception as e:
+                    logging.warning(f"Failed to build per-transaction long frame: {e}")
+
+                try:
+                    if getattr(self, 'anomaly_detectors', None) is not None and getattr(test_obj, 'per_txn_df_long', None) is not None:
+                        sel = self.select_transactions_for_analysis(
+                            test_obj.per_txn_df_long,
+                            metrics=None,
+                            txn_col='transaction',
+                            rps_col='rps',
+                            overall_rps_col='overall_rps'
+                        )
+                        setattr(test_obj, 'per_txn_selection', sel)
+                        setattr(test_obj, 'per_txn_df_long_selected', sel.get('df_long_selected'))
+                except Exception as e:
+                    logging.warning(f"Per-transaction selection failed: {e}")
+
+                try:
+                    if getattr(test_obj, 'per_txn_df_long_selected', None) is not None:
+                        det = self.detect_and_window_per_transaction(
+                            test_obj.per_txn_df_long_selected,
+                            metrics=None,
+                            txn_col='transaction'
+                        )
+                        setattr(test_obj, 'per_txn_windows', det.get('by_txn'))
+                        setattr(test_obj, 'per_txn_df_long_annotated', det.get('annotated'))
+                except Exception as e:
+                    logging.warning(f"Per-transaction detection/windowing failed: {e}")
+
+                try:
+                    if getattr(test_obj, 'per_txn_windows', None) is not None:
+                        merged_txn = self.merge_and_score_per_transaction(
+                            {'by_txn': getattr(test_obj, 'per_txn_windows'), 'annotated': getattr(test_obj, 'per_txn_df_long_annotated')},
+                            txn_col='transaction'
+                        )
+                        setattr(test_obj, 'per_txn_merged_windows', merged_txn.get('by_txn'))
+                        setattr(test_obj, 'per_txn_events_raw', merged_txn.get('events'))
+                        try:
+                            dataset = self.build_transaction_events_dataset(
+                                dataset_id='ev_txn_anomalies',
+                                name='Transaction anomalies',
+                                events=merged_txn.get('events')
+                            )
+                            setattr(test_obj, 'per_txn_events_dataset', dataset)
+                        except Exception as ie:
+                            logging.warning(f"Building per-transaction events dataset failed: {ie}")
+                except Exception as e:
+                    logging.warning(f"Per-transaction merge/score failed: {e}")
+
+                try:
+                    if getattr(test_obj, 'per_txn_merged_windows', None) is not None:
+                        per_txn_bundle = {
+                            'by_txn': getattr(test_obj, 'per_txn_merged_windows'),
+                            'annotated': getattr(test_obj, 'per_txn_df_long_annotated')
+                        }
+                        attribution = self.attribute_overall_to_transactions(
+                            overall_metrics=OVERALL_METRIC_KEYS,
+                            per_txn=per_txn_bundle,
+                            txn_col='transaction',
+                            top_n=None
+                        )
+                        setattr(test_obj, 'overall_txn_attribution', attribution)
+                except Exception as e:
+                    logging.warning(f"Overall→transaction attribution failed: {e}")
+        except Exception as e:
+            logging.warning(f"Per-transaction pipeline failed: {e}")
+
+    def select_transactions_for_analysis(self, df_long: pd.DataFrame, metrics: List[str] = None, txn_col: str = 'transaction', rps_col: str = 'rps', overall_rps_col: str = 'overall_rps') -> Dict[str, Any]:
+        if df_long is None or df_long.empty:
+            result = {
+                'selected_transactions': [],
+                'selection': {
+                    'cumulative_share': 0.0,
+                    'total_txns': 0,
+                    'after_points_txns': 0,
+                    'selected_count': 0
+                },
+                'df_long_selected': df_long
+            }
+            self.transaction_selection = result
+            return result
+        txns = df_long[txn_col].dropna().unique().tolist()
+        total_txns = len(txns)
+        if total_txns == 0:
+            result = {
+                'selected_transactions': [],
+                'selection': {
+                    'cumulative_share': 0.0,
+                    'total_txns': 0,
+                    'after_points_txns': 0,
+                    'selected_count': 0
+                },
+                'df_long_selected': df_long.head(0).copy()
+            }
+            self.transaction_selection = result
+            return result
+        g = df_long.groupby(txn_col, dropna=True)
+        recs = []
+        for txn, sub in g:
+            points = len(sub)
+            mean_rps = pd.to_numeric(sub.get(rps_col), errors='coerce').mean()
+            mean_overall = pd.to_numeric(sub.get(overall_rps_col), errors='coerce').mean()
+            denom = float(mean_overall) if pd.notna(mean_overall) and float(mean_overall) > 0 else 0.0
+            share = float(mean_rps) / denom if denom > 0 else 0.0
+            recs.append((txn, points, share))
+        cand = pd.DataFrame(recs, columns=['transaction', 'points', 'share'])
+        min_points = int(getattr(self, 'per_txn_min_points', 6))
+        after_points = cand[cand['points'] >= min_points]
+        if after_points.empty:
+            top1 = cand.sort_values('share', ascending=False).head(1)
+            selected = top1['transaction'].tolist()
+            cumulative_share = float(top1['share'].sum()) if not top1.empty else 0.0
+        else:
+            after_points = after_points.sort_values('share', ascending=False)
+            coverage = float(getattr(self, 'per_txn_coverage', 0.8))
+            max_k = int(getattr(self, 'per_txn_max_k', 50))
+            cum = after_points['share'].cumsum()
+            if (cum >= coverage).any():
+                upto = after_points.index.get_loc((cum >= coverage).idxmax()) + 1
+                selected_df = after_points.iloc[:upto]
+            else:
+                selected_df = after_points
+            if len(selected_df) > max_k:
+                selected_df = selected_df.iloc[:max_k]
+            selected = selected_df['transaction'].tolist()
+            cumulative_share = float(selected_df['share'].sum()) if not selected_df.empty else 0.0
+        result = {
+            'selected_transactions': selected,
+            'selection': {
+                'cumulative_share': cumulative_share,
+                'total_txns': total_txns,
+                'after_points_txns': int((cand['points'] >= min_points).sum()),
+                'selected_count': len(selected)
+            }
+        }
+        df_sel = df_long[df_long[txn_col].isin(selected)].copy() if selected else df_long.head(0).copy()
+        result['df_long_selected'] = df_sel
+        self.transaction_selection = result
+        return result
+
+    def _detect_group(self, g: pd.DataFrame, metric: str) -> pd.DataFrame:
+        if metric in g.columns:
+            cols = ["timestamp", metric]
+            for extra in (COL_TXN_RPS, COL_OVERALL_RPS, COL_ERR_RATE):
+                if extra in g.columns:
+                    cols.append(extra)
+            df = g[cols].copy()
+        else:
+            df = g[["timestamp"]].copy()
+        if metric not in g.columns or df.empty:
+            df.set_index('timestamp', inplace=True)
+            df[f'{metric}_anomaly_flag'] = False
+            return df
+        df.set_index('timestamp', inplace=True)
+        # For per-transaction analysis, run anomaly detectors only (exclude trend/stability)
+        original_detectors = self.anomaly_detectors
+        try:
+            self.anomaly_detectors = [d for d in original_detectors if d.__class__.__name__ != 'MetricStabilityDetector']
+            df = self.detect_anomalies(df, metric=metric, period_type='fixed_load')
+        finally:
+            self.anomaly_detectors = original_detectors
+        col = f'{metric}_anomaly'
+        if col in df.columns:
+            flags = df[col].apply(lambda v: isinstance(v, str) and 'Anomaly' in v and 'potential saturation point' not in str(v))
+        else:
+            flags = pd.Series(False, index=df.index)
+        df[f'{metric}_anomaly_flag'] = flags.astype(bool)
+        return df
+
+    def _extract_anomaly_windows(self, df_idx: pd.DataFrame, metric: str) -> List[Dict[str, Any]]:
+        if df_idx.empty or f'{metric}_anomaly_flag' not in df_idx.columns:
+            return []
+        flags = df_idx[f'{metric}_anomaly_flag'].to_numpy()
+        ts = df_idx.index.to_numpy()
+        n = len(flags)
+        if n == 0:
+            return []
+        max_gap = int(getattr(self, 'merge_gap_samples', 1))
+        windows = []
+        in_win = False
+        start_i = None
+        gap = 0
+        last_true_i = None
+        for i in range(n):
+            if flags[i]:
+                if not in_win:
+                    in_win = True
+                    start_i = i
+                    gap = 0
+                last_true_i = i
+                gap = 0
+            else:
+                if in_win:
+                    gap += 1
+                    if gap > max_gap:
+                        end_i = last_true_i if last_true_i is not None else i - 1
+                        if start_i is not None and end_i is not None and end_i >= start_i:
+                            windows.append((start_i, end_i))
+                        in_win = False
+                        start_i = None
+                        gap = 0
+        if in_win and start_i is not None:
+            end_i = last_true_i if last_true_i is not None else n - 1
+            if end_i >= start_i:
+                windows.append((start_i, end_i))
+
+        # Prepare metric series if available for window summarization
+        vals = None
+        if metric in df_idx.columns:
+            try:
+                vals = pd.to_numeric(df_idx[metric], errors='coerce')
+            except Exception:
+                vals = None
+
+        result = []
+        for s_i, e_i in windows:
+            ts_start = ts[s_i]
+            ts_end = ts[e_i]
+            try:
+                duration_sec = float((pd.Timestamp(ts_end) - pd.Timestamp(ts_start)).total_seconds())
+            except Exception:
+                duration_sec = float(e_i - s_i)
+
+            window_payload = {
+                'start': pd.Timestamp(ts_start).isoformat() if hasattr(pd.Timestamp(ts_start), 'isoformat') else str(ts_start),
+                'end': pd.Timestamp(ts_end).isoformat() if hasattr(pd.Timestamp(ts_end), 'isoformat') else str(ts_end),
+                'durationSec': duration_sec,
+                'points': int(e_i - s_i + 1),
+                'metric': metric
+            }
+
+            # Attach direction / min / max / mean / delta_abs when we have metric values
+            if vals is not None:
+                try:
+                    # Use a simple pre-window baseline from previous points
+                    k = int(getattr(self, 'baseline_window', 5))
+                except Exception:
+                    k = 5
+                pre_start = max(0, s_i - k)
+                pre_vals = vals.iloc[pre_start:s_i]
+                if pre_vals.notna().any():
+                    baseline_value = float(pre_vals.median())
+                else:
+                    cur_val = vals.iloc[s_i] if s_i < len(vals) else np.nan
+                    baseline_value = float(cur_val) if not np.isnan(cur_val) else None
+                win_vals = vals.iloc[s_i:e_i + 1]
+                summary = self._summarize_anomaly_window(baseline_value, win_vals.tolist())
+                window_payload.update(summary)
+
+            result.append(window_payload)
+        return result
+
+    def detect_and_window_per_transaction(self, df_long_selected: pd.DataFrame, metrics: List[str] = None, txn_col: str = 'transaction') -> Dict[str, Any]:
+        if df_long_selected is None or df_long_selected.empty:
+            self.transaction_windows = {'by_txn': {}, 'annotated': df_long_selected}
+            return self.transaction_windows
+        df = df_long_selected.copy()
+        m_present = [m for m in (metrics or ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate']) if m in df.columns]
+        by_txn = {}
+        annotated_parts = []
+        for txn, g in df.groupby(txn_col, dropna=True):
+            g = g.sort_values('timestamp').copy()
+            g_idx = g.set_index('timestamp')
+            windows_by_metric = {}
+            for metric in m_present:
+                det_df = self._detect_group(g, metric)
+                # align detected flags back to group timestamps
+                flags = det_df.get(f'{metric}_anomaly_flag', pd.Series(False, index=det_df.index))
+                # merge flags into g_idx
+                aligned_flags = flags.reindex(g_idx.index, method=None, fill_value=False)
+                aligned_flags = aligned_flags.astype(bool)
+                g_idx[f'{metric}_anomaly_flag'] = aligned_flags
+                windows = self._extract_anomaly_windows(g_idx[[c for c in [metric, f'{metric}_anomaly_flag'] if c in g_idx.columns]], metric)
+                if windows:
+                    windows_by_metric[metric] = windows
+            by_txn[txn] = {'windows_by_metric': windows_by_metric}
+            annotated_parts.append(g_idx.reset_index())
+        annotated = pd.concat(annotated_parts, axis=0, ignore_index=True).sort_values(['timestamp', txn_col])
+        self.transaction_windows = {'by_txn': by_txn, 'annotated': annotated}
+        return self.transaction_windows
+
+    def _merge_windows_across_metrics(self, windows_by_metric: Dict[str, List[Dict[str, Any]]], sample_seconds: float, merge_gap_samples: int) -> List[Dict[str, Any]]:
+        # Flatten windows across metrics
+        all_wins = []
+        for metric, wins in windows_by_metric.items():
+            for w in wins:
+                try:
+                    s = pd.to_datetime(w['start'])
+                    e = pd.to_datetime(w['end'])
+                except Exception:
+                    s = pd.Timestamp(w['start'])
+                    e = pd.Timestamp(w['end'])
+                all_wins.append({
+                    'start': s,
+                    'end': e,
+                    'metric': metric,
+                    'direction': w.get('direction')
+                })
+        if not all_wins:
+            return []
+        all_wins.sort(key=lambda x: x['start'])
+        tol = float(max(0, merge_gap_samples)) * float(sample_seconds)
+        merged = []
+        # maintain current cluster
+        cur = None
+        for w in all_wins:
+            if cur is None:
+                cur = {
+                    'start': w['start'],
+                    'end': w['end'],
+                    'metrics': {w['metric']: {'count': 1, 'direction': w.get('direction')}}
+                }
+                continue
+            gap_sec = (w['start'] - cur['end']).total_seconds()
+            if gap_sec <= tol and (w['start'] <= cur['end'] or gap_sec <= tol):
+                # extend cluster
+                if w['end'] > cur['end']:
+                    cur['end'] = w['end']
+                entry = cur['metrics'].setdefault(w['metric'], {'count': 0, 'direction': None})
+                entry['count'] += 1
+                if w.get('direction') is not None:
+                    entry['direction'] = w.get('direction')
+            else:
+                merged.append(cur)
+                cur = {
+                    'start': w['start'],
+                    'end': w['end'],
+                    'metrics': {w['metric']: {'count': 1, 'direction': w.get('direction')}}
+                }
+        if cur is not None:
+            merged.append(cur)
+        return merged
+
+    def _severity_label(self, score: float) -> str:
+        s = float(max(0.0, min(1.0, score)))
+        if s >= 0.60:
+            return 'critical'
+        if s >= 0.40:
+            return 'high'
+        if s >= 0.25:
+            return 'medium'
+        if s >= 0.10:
+            return 'low'
+        return 'none'
+
+    def merge_and_score_per_transaction(self, transaction_windows: Dict[str, Any], txn_col: str = 'transaction') -> Dict[str, Any]:
+        if not transaction_windows or 'by_txn' not in transaction_windows or 'annotated' not in transaction_windows:
+            self.transaction_merged = {}
+            self.transaction_events = []
+            return {'by_txn': {}, 'events': []}
+        annotated = transaction_windows['annotated']
+        by_txn = transaction_windows['by_txn']
+        merged_by_txn: Dict[str, Any] = {}
+        events: List[Dict[str, Any]] = []
+        # per transaction processing
+        for txn, data in by_txn.items():
+            g = annotated[annotated[txn_col] == txn].copy()
+            g = g.sort_values('timestamp')
+            g_idx = g.set_index('timestamp')
+            # derive sample seconds from index
+            try:
+                diffs = g_idx.index.to_series().diff().dropna().dt.total_seconds()
+                sample_seconds = float(diffs.median()) if len(diffs) else 5.0
+            except Exception:
+                sample_seconds = 5.0
+            mg = int(getattr(self, 'merge_gap_samples', 1))
+            merged_windows = self._merge_windows_across_metrics(data.get('windows_by_metric', {}), sample_seconds, mg)
+            merged_by_txn[txn] = merged_windows
+            # score each merged window
+            for w in merged_windows:
+                w_start = w['start']
+                w_end = w['end']
+                # compute weight within window
+                try:
+                    slice_df = g_idx[(g_idx.index >= w_start) & (g_idx.index <= w_end)]
+                except Exception:
+                    slice_df = g_idx
+                mean_rps = float(pd.to_numeric(slice_df.get('rps'), errors='coerce').mean()) if 'rps' in slice_df.columns else 0.0
+                mean_overall = float(pd.to_numeric(slice_df.get('overall_rps'), errors='coerce').mean()) if 'overall_rps' in slice_df.columns else 0.0
+                weight = (mean_rps / mean_overall) if (mean_overall and mean_overall > 0) else 0.0
+                # aggregate metric contributions for this window (names only)
+                metrics_list = []
+                for m_name in w.get('metrics', {}).keys():
+                    metrics_list.append({'name': m_name})
+
+                # choose window-level direction from merged metrics (propagated from _summarize_anomaly_window)
+                direction = None
+                for m_name, meta in w.get('metrics', {}).items():
+                    d = None
+                    if isinstance(meta, dict):
+                        d = meta.get('direction')
+                    if d is not None:
+                        direction = d
+                        break
+
+                # impact: depend only on transaction load share
+                duration_sec = max(0.0, float((w_end - w_start).total_seconds()))
+                impact = float(weight)
+                events.append({
+                    'transaction': txn,
+                    'window': {'start': w_start.isoformat(), 'end': w_end.isoformat(), 'durationSec': duration_sec},
+                    'metrics': metrics_list,
+                    'volume': {'mean_rps': mean_rps, 'share': weight},
+                    'direction': direction,
+                    'impact': impact
+                })
+        # sort events by impact desc
+        events.sort(key=lambda e: e.get('impact', 0.0), reverse=True)
+        self.transaction_merged = merged_by_txn
+        self.transaction_events = events
+        return {'by_txn': merged_by_txn, 'events': events}
+
+    def _extract_windows_from_anomaly_col(self, df_idx: pd.DataFrame, metric: str) -> List[Dict[str, Any]]:
+        col = f"{metric}_anomaly"
+        if df_idx is None or df_idx.empty or col not in df_idx.columns:
+            return []
+        flags = df_idx[col].apply(lambda v: isinstance(v, str) and 'Anomaly' in v and 'potential saturation point' not in str(v)).to_numpy()
+        ts = df_idx.index.to_numpy()
+        n = len(flags)
+        if n == 0:
+            return []
+        max_gap = int(getattr(self, 'merge_gap_samples', 1))
+        windows = []
+        in_win = False
+        start_i = None
+        gap = 0
+        last_true_i = None
+        for i in range(n):
+            if flags[i]:
+                if not in_win:
+                    in_win = True
+                    start_i = i
+                    gap = 0
+                last_true_i = i
+                gap = 0
+            else:
+                if in_win:
+                    gap += 1
+                    if gap > max_gap:
+                        end_i = last_true_i if last_true_i is not None else i - 1
+                        if start_i is not None and end_i is not None and end_i >= start_i:
+                            windows.append((start_i, end_i))
+                        in_win = False
+                        start_i = None
+                        gap = 0
+        if in_win and start_i is not None:
+            end_i = last_true_i if last_true_i is not None else n - 1
+            if end_i >= start_i:
+                windows.append((start_i, end_i))
+        result: List[Dict[str, Any]] = []
+        for s_i, e_i in windows:
+            ts_start = ts[s_i]
+            ts_end = ts[e_i]
+            try:
+                duration_sec = float((pd.Timestamp(ts_end) - pd.Timestamp(ts_start)).total_seconds())
+            except Exception:
+                duration_sec = float(e_i - s_i)
+            result.append({
+                'metric': metric,
+                'start': pd.Timestamp(ts_start),
+                'end': pd.Timestamp(ts_end),
+                'durationSec': duration_sec
+            })
+        return result
+
+    def attribute_overall_to_transactions(self, overall_metrics: List[str], per_txn: Dict[str, Any], txn_col: str = 'transaction', top_n: Optional[int] = None) -> Dict[str, Any]:
+        # If there is no per-transaction data or no overall anomalies, nothing to do.
+        overall_list = getattr(self, 'overall_anomalies', [])
+        if not per_txn or not overall_list:
+            self.overall_txn_attribution = {'by_metric': {}}
+            return self.overall_txn_attribution
+
+        merged_by_txn = per_txn.get('by_txn', {}) if isinstance(per_txn, dict) else {}
+        annotated_txn = per_txn.get('annotated') if isinstance(per_txn, dict) else None
+        result_by_metric: Dict[str, Any] = {}
+
+        # Initialise per-metric containers
+        for m in overall_metrics:
+            result_by_metric[m] = []
+
+        for oa in overall_list:
+            m = oa.get('metric')
+            if m not in overall_metrics:
+                continue
+            o_start = oa.get('start_time')
+            o_end = oa.get('end_time')
+            if o_start is None or o_end is None:
+                continue
+            try:
+                o_start_ts = pd.to_datetime(o_start)
+                o_end_ts = pd.to_datetime(o_end)
+            except Exception:
+                continue
+
+            # Prepare container for this anomaly's transaction contributions
+            if 'transactions' not in oa or oa['transactions'] is None:
+                oa['transactions'] = []
+
+            for txn, clusters in merged_by_txn.items():
+                if not clusters:
+                    continue
+                best_overlap = 0.0
+                best_metrics = None
+                best_window = None
+                for c in clusters:
+                    c_start = c.get('start')
+                    c_end = c.get('end')
+                    if c_start is None or c_end is None:
+                        continue
+                    try:
+                        c_start_ts = pd.to_datetime(c_start)
+                        c_end_ts = pd.to_datetime(c_end)
+                    except Exception:
+                        continue
+                    # overlap between overall anomaly window and txn cluster
+                    s = max(o_start_ts, c_start_ts)
+                    e = min(o_end_ts, c_end_ts)
+                    overlap = (e - s).total_seconds() if e > s else 0.0
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        best_metrics = c.get('metrics', {})
+                        best_window = (s, e)
+                if best_overlap <= 0.0 or best_window is None:
+                    continue
+
+                # Compute transaction share within the overlapping window
+                share = 0.0
+                if annotated_txn is not None and not annotated_txn.empty:
+                    g = annotated_txn[annotated_txn[txn_col] == txn].copy()
+                    if not g.empty:
+                        g_idx = g.set_index('timestamp')
+                        try:
+                            slice_df = g_idx[(g_idx.index >= best_window[0]) & (g_idx.index <= best_window[1])]
+                        except Exception:
+                            slice_df = g_idx
+                        mean_rps = float(pd.to_numeric(slice_df.get('rps'), errors='coerce').mean()) if 'rps' in slice_df.columns else 0.0
+                        mean_overall = float(pd.to_numeric(slice_df.get('overall_rps'), errors='coerce').mean()) if 'overall_rps' in slice_df.columns else 0.0
+                        if mean_overall and mean_overall > 0:
+                            share = mean_rps / mean_overall
+
+                # Choose anomaly direction from the best_metrics (if any)
+                direction = None
+                if best_metrics:
+                    for m_name, meta in best_metrics.items():
+                        d = None
+                        if isinstance(meta, dict):
+                            d = meta.get('direction')
+                        if d is not None:
+                            direction = d
+                            break
+
+                duration_sec = best_overlap
+                impact = float(share)
+                contrib = {
+                    'overall_metric': m,
+                    'overall_window': {
+                        'start': o_start_ts.isoformat(),
+                        'end': o_end_ts.isoformat()
+                    },
+                    'transaction': txn,
+                    'overlapWindow': {
+                        'start': best_window[0].isoformat(),
+                        'end': best_window[1].isoformat(),
+                        'durationSec': duration_sec
+                    },
+                    'direction': direction,
+                    'share': share,
+                    'impact': impact
+                }
+
+                # Attach to per-metric summary and to the anomaly itself
+                result_by_metric[m].append(contrib)
+                oa['transactions'].append({
+                    'transaction': txn,
+                    'direction': direction,
+                    'share': share,
+                    'impact': impact,
+                    'overlapWindow': contrib['overlapWindow'],
+                })
+
+        # Rank and optionally truncate per metric
+        for m, contribs in result_by_metric.items():
+            contribs.sort(key=lambda x: x.get('impact', 0.0), reverse=True)
+            if top_n and top_n > 0:
+                result_by_metric[m] = contribs[:top_n]
+
+        self.overall_txn_attribution = {'by_metric': result_by_metric}
+        return self.overall_txn_attribution
+
+    def _build_output_from_overall_anomalies(self, top_txn: int = 5) -> None:
+        """Append overall anomaly entries to ``self.output`` from ``self.overall_anomalies``.
+
+        The base description follows the legacy pattern used in the old
+        ``collect_anomalies`` implementation. If per-transaction contributions
+        were attached via ``attribute_overall_to_transactions``, an additional
+        sentence is appended listing the top contributing transactions.
+        """
+
+        def _format_time_range(start, end):
+            try:
+                start_ts = pd.to_datetime(start)
+                end_ts = pd.to_datetime(end)
+            except Exception:
+                return f"{start}–{end}"
+            start_date = start_ts.strftime('%Y-%m-%d')
+            end_date = end_ts.strftime('%Y-%m-%d')
+            if start_date == end_date:
+                return f"{start_ts.strftime('%H:%M:%S')}–{end_ts.strftime('%H:%M:%S')}"
+            return f"{start_ts.strftime('%Y-%m-%d %H:%M:%S')}–{end_ts.strftime('%Y-%m-%d %H:%M:%S')}"
+
+        overall_list = getattr(self, 'overall_anomalies', [])
+        if not overall_list:
+            return
+
+        for oa in overall_list:
+            metric = oa.get('metric')
+            start_time = oa.get('start_time')
+            end_time = oa.get('end_time')
+            direction = oa.get('direction') or 'increase'
+            significant_value = oa.get('significant_value')
+
+            if start_time is None or end_time is None or metric is None:
+                continue
+
+            try:
+                value_str = f"{float(significant_value):.2f}" if significant_value is not None else "N/A"
+            except Exception:
+                value_str = str(significant_value)
+
+            time_range_str = _format_time_range(start_time, end_time)
+            metric_label = OVERALL_METRIC_DISPLAY.get(metric, metric)
+            base_desc = (
+                f"{metric_label} {time_range_str}: "
+                f"{'increased' if direction == 'increase' else 'decreased'} "
+                f"to {value_str}."
+            )
+
+            desc = base_desc
+            txns = oa.get('transactions') or []
+            if txns:
+                # Sort by impact (load share) and take top N
+                txns_sorted = sorted(txns, key=lambda t: t.get('impact', 0.0), reverse=True)
+                if top_txn and top_txn > 0:
+                    txns_sorted = txns_sorted[:top_txn]
+                parts = []
+                for t in txns_sorted:
+                    name = t.get('transaction') or 'unknown'
+                    direction_txn = t.get('direction') or 'unknown'
+                    parts.append(f"{name} ({direction_txn})")
+                if parts:
+                    desc = f"{base_desc} Likely contributing transactions: " + ", ".join(parts) + "."
+
+            # For now, method is generic; detectors contributing are encoded in
+            # the anomaly columns that produced the windows.
+            self.output.append({
+                'status': 'failed',
+                'method': 'AnomalyDetection',
+                'description': desc,
+                'value': significant_value
+            })
+
+    def build_transaction_events_dataset(self, dataset_id: str = 'ev_txn_anomalies', name: str = 'Transaction anomalies', events: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        ev = events if events is not None else getattr(self, 'transaction_events', None)
+        if not ev:
+            dataset = {'id': dataset_id, 'type': 'events', 'name': name, 'events': []}
+            self.transaction_events_dataset = dataset
+            return dataset
+        payload = []
+        for e in ev:
+            txn = e.get('transaction')
+            window = e.get('window') or {}
+            t = window.get('start')
+            volume = e.get('volume') or {}
+            share = volume.get('share', 0.0)
+            metrics = e.get('metrics') or []
+            payload.append({
+                't': t,
+                'type': 'transaction_anomaly',
+                'meta': {
+                    'transaction': txn,
+                    'window': window,
+                    'metrics': metrics,
+                    'volume': volume,
+                    'impact': e.get('impact'),
+                }
+            })
+        dataset = {'id': dataset_id, 'type': 'events', 'name': name, 'events': payload}
+        self.transaction_events_dataset = dataset
+        return dataset

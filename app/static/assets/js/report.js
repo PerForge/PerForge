@@ -49,7 +49,8 @@ function handleFetchedData(data) {
         test_details: testDetails,
         aggregated_table: aggregatedTable,
         summary,
-        performance_status
+        performance_status,
+        overall_anomaly_windows: overallAnomalyWindows
     } = data;
 
     updateTestDetails(testDetails);
@@ -57,7 +58,7 @@ function handleFetchedData(data) {
     updateCards(statistics);
     updateTable(aggregatedTable);
     updateAnalysisTable(analysisData);
-    createGraphs(chartData, styling, layoutConfig);
+    createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows || {});
     renderAnalysisInsights(analysisData);
     // Ensure newly created charts match the current theme
     if (typeof updateAllPlotlyChartsTheme === 'function') {
@@ -422,13 +423,15 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
     } catch (e) { /* no-op */ }
 }
 
-function createGraphs(chartData, styling, layoutConfig) {
+function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows) {
     const overalAvg = chartData.overalAvgResponseTime?.data || [];
     const overalMedian = chartData.overalMedianResponseTime?.data || [];
     const overalPct90 = chartData.overal90PctResponseTime?.data || [];
     const overalThroughput = chartData.overalThroughput?.data || [];
     const overalUsers = chartData.overalUsers?.data || [];
     const overalErrors = chartData.overalErrors?.data || [];
+
+    const anomalyWindowsByMetric = overallAnomalyWindows || {};
 
     // Choose timestamps source from first available series
     const base = overalAvg.length ? overalAvg : (overalMedian.length ? overalMedian : (overalPct90.length ? overalPct90 : (overalThroughput.length ? overalThroughput : (overalUsers.length ? overalUsers : overalErrors))));
@@ -460,18 +463,28 @@ function createGraphs(chartData, styling, layoutConfig) {
     if (users.length) throughputUsersMetrics.push({ name: 'Users', data: users, anomalies: [], anomalyMessages: [], color: 'rgba(0, 155, 162, 0.8)', yAxisUnit: 'vu', useRightYAxis: true });
     if (throughput.length) throughputUsersMetrics.push({ name: 'Throughput', data: throughput, anomalies: throughputAnomalies, anomalyMessages: throughputAnomalyMessages, color: 'rgba(31, 119, 180, 1)', yAxisUnit: 'r/s' });
     if (throughputUsersMetrics.length) {
-        createGraph('throughputChart', 'Throughput and Users', timestamps, throughputUsersMetrics, styling, layoutConfig);
+        const thrWindows = anomalyWindowsByMetric['overalThroughput'] || [];
+        createGraph('throughputChart', 'Throughput and Users', timestamps, throughputUsersMetrics, styling, layoutConfig, thrWindows);
     }
 
     if (responseTimeMetrics.length) {
-        createGraph('responseTimeChart', 'Response Time', timestamps, responseTimeMetrics, styling, layoutConfig);
+        // Union anomaly windows across response-time overall metrics
+        const rtWindows = [];
+        ['overalAvgResponseTime', 'overalMedianResponseTime', 'overal90PctResponseTime'].forEach(key => {
+            const wins = anomalyWindowsByMetric[key];
+            if (Array.isArray(wins)) {
+                rtWindows.push(...wins);
+            }
+        });
+        createGraph('responseTimeChart', 'Response Time', timestamps, responseTimeMetrics, styling, layoutConfig, rtWindows);
     }
 
     const errors = overalErrors.map(d => d.value);
     if (errors.length) {
+        const errWindows = anomalyWindowsByMetric['overalErrors'] || [];
         createGraph('overalErrors', 'Errors', timestamps, [
             { name: 'Errors', data: errors, anomalies: [], anomalyMessages: [], color: 'rgba(255, 8, 8, 0.8)', yAxisUnit: 'er' }
-        ], styling, layoutConfig);
+        ], styling, layoutConfig, errWindows);
     }
 
     // Render scatter only if the element exists on the page
@@ -580,7 +593,7 @@ window.addEventListener('resize', equalizeOnResize);
 document.addEventListener('theme:changed', queueEqualizeChartCards);
 document.addEventListener('DOMContentLoaded', queueEqualizeChartCards);
 
-function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
+function createGraph(divId, title, labels, metrics, styling, layoutConfig, anomalyWindows) {
     if (!Array.isArray(metrics) || metrics.length === 0) {
         console.warn(`No metrics provided for graph: ${title}`);
         return;
@@ -590,23 +603,139 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
     const themeColors = (typeof getCurrentThemeColors === 'function') ? getCurrentThemeColors() : {};
     const paperBg = themeColors.paperBg || 'rgba(0,0,0,0)';
     const plotBg = themeColors.plotBg || 'rgba(0,0,0,0)';
+    const bodyEl = document.body || document.documentElement;
+    const isLightTheme = (bodyEl && bodyEl.classList && bodyEl.classList.contains('light-theme'))
+        || (typeof localStorage !== 'undefined' && localStorage.getItem('theme') === 'light');
+    const anomalyFillColor = isLightTheme
+        ? 'rgba(231, 14, 36, 0.25)'   // softer band for light theme
+        : 'rgba(231, 14, 36, 0.25)';  // slightly stronger band for dark theme
 
+    // Build standard line traces (no per-point anomaly dots)
     const traces = metrics.map(metric => {
         return {
             x: labels,
             y: metric.data,
-            mode: 'lines+markers',
+            mode: 'lines',
             name: metric.name,
-            marker: {
-                color: (metric.anomalies.length > 0 ? metric.anomalies : metric.data.map(() => false)).map(anomaly => anomaly ? styling.marker_color_anomaly : styling.marker_color_normal),
-                size: (metric.anomalies.length > 0 ? metric.anomalies : metric.data.map(() => false)).map(anomaly => anomaly ? styling.marker_size : 0)
-            },
-            text: (metric.anomalyMessages.length > 0 ? metric.anomalyMessages : metric.data.map(() => '')).map((msg, index) => metric.anomalies[index] ? msg : ''),
-            hoverinfo: 'x+y+text',
             line: { shape: styling.line_shape, width: styling.line_width, color: metric.color },
             yaxis: metric.useRightYAxis ? 'y2' : 'y'
         };
     });
+
+    const anomalyShapes = [];
+    const hasExplicitWindows = Array.isArray(anomalyWindows) && anomalyWindows.length > 0;
+
+    if (hasExplicitWindows) {
+        // Use explicit windows from backend (overall anomaly windows).
+        // Normalize to Date objects and merge overlapping/adjacent windows
+        // so that overlapping anomalies render as a single continuous band.
+        const normalized = anomalyWindows
+            .map(win => {
+                if (!win) return null;
+                const rawStart = win.start || win.x0;
+                const rawEnd = win.end || win.x1;
+                if (!rawStart || !rawEnd) return null;
+                const s = new Date(rawStart);
+                const e = new Date(rawEnd);
+                if (!isFinite(s.getTime()) || !isFinite(e.getTime())) return null;
+                return s <= e ? { start: s, end: e } : { start: e, end: s };
+            })
+            .filter(w => w !== null)
+            .sort((a, b) => a.start - b.start);
+
+        const merged = [];
+        normalized.forEach(win => {
+            if (!merged.length) {
+                merged.push({ start: win.start, end: win.end });
+                return;
+            }
+            const last = merged[merged.length - 1];
+            if (win.start <= last.end) {
+                // Overlapping or touching: extend the last window
+                if (win.end > last.end) last.end = win.end;
+            } else {
+                merged.push({ start: win.start, end: win.end });
+            }
+        });
+
+        merged.forEach(win => {
+            anomalyShapes.push({
+                type: 'rect',
+                xref: 'x',
+                yref: 'paper',
+                x0: win.start,
+                x1: win.end,
+                y0: 0,
+                y1: 1,
+                fillcolor: anomalyFillColor,
+                line: { width: 0 }
+            });
+        });
+    } else {
+        // Fall back to per-point anomaly flags (used by per-transaction charts)
+        const anomalyFlags = (labels || []).map((_, idx) =>
+            metrics.some(metric => Array.isArray(metric.anomalies) && metric.anomalies[idx])
+        );
+
+        let inRun = false;
+        let startIdx = 0;
+        anomalyFlags.forEach((flag, idx) => {
+            if (flag && !inRun) {
+                inRun = true;
+                startIdx = idx;
+            } else if (!flag && inRun) {
+                inRun = false;
+                const endIdx = idx - 1;
+                if (endIdx >= startIdx && labels[startIdx] != null && labels[endIdx] != null) {
+                    let x0 = labels[startIdx];
+                    let x1 = labels[endIdx];
+                    // If only a single anomalous point, expand band to neighbor interval
+                    if (startIdx === endIdx) {
+                        const prev = startIdx > 0 ? labels[startIdx - 1] : null;
+                        const next = endIdx < labels.length - 1 ? labels[endIdx + 1] : null;
+                        if (prev && next) {
+                            x0 = prev;
+                            x1 = next;
+                        } else if (prev) {
+                            x0 = prev;
+                        } else if (next) {
+                            x1 = next;
+                        }
+                    }
+                    anomalyShapes.push({
+                        type: 'rect',
+                        xref: 'x',
+                        yref: 'paper',
+                        x0: x0,
+                        x1: x1,
+                        y0: 0,
+                        y1: 1,
+                        fillcolor: anomalyFillColor,
+                        line: { width: 0 }
+                    });
+                }
+            }
+        });
+        if (inRun && labels.length > 0 && labels[startIdx] != null && labels[labels.length - 1] != null) {
+            let x0 = labels[startIdx];
+            let x1 = labels[labels.length - 1];
+            if (startIdx === labels.length - 1 && labels.length > 1) {
+                // Single anomalous point at the very end: extend band back to previous timestamp
+                x0 = labels[labels.length - 2];
+            }
+            anomalyShapes.push({
+                type: 'rect',
+                xref: 'x',
+                yref: 'paper',
+                x0: x0,
+                x1: x1,
+                y0: 0,
+                y1: 1,
+                fillcolor: anomalyFillColor,
+                line: { width: 0 }
+            });
+        }
+    }
 
     const firstLeft = metrics.find(metric => !metric.useRightYAxis) || metrics[0];
     const leftYAxisColor = firstLeft?.color || (styling?.axis_font_color || '#888');
@@ -683,7 +812,11 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig) {
             yanchor: 'top',
             traceorder: 'normal',
             bgcolor: paperBg
-        }
+        },
+        shapes: [
+            ...((safeLayoutConfig && Array.isArray(safeLayoutConfig.shapes)) ? safeLayoutConfig.shapes : []),
+            ...anomalyShapes
+        ]
     };
 
     Plotly.newPlot(divId, traces, layout, { responsive: true, useResizeHandler: true });

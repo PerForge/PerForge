@@ -448,7 +448,12 @@ class DataProvider:
         )
 
         # Analyze the data periods
-        metrics, is_fixed_load, analysis_output = self.anomaly_detection_engine.analyze_test_data(merged_df=merged_df, standard_metrics=standard_metrics)
+        metrics, is_fixed_load, analysis_output = self.anomaly_detection_engine.analyze_test_data(
+            merged_df=merged_df,
+            standard_metrics=standard_metrics,
+            data_provider=self,
+            test_obj=test_obj
+        )
 
         if is_fixed_load:
             test_obj.test_type = "fixed load"
@@ -485,17 +490,41 @@ class DataProvider:
 
         metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
 
+        # Collect overall anomaly windows from the anomaly detection engine for
+        # visualization (e.g. shaded bands on charts).
+        overall_anomaly_windows: Dict[str, List[Dict[str, str]]] = {}
+        engine = getattr(self, "anomaly_detection_engine", None)
+        if engine is not None:
+            overall_list = getattr(engine, "overall_anomalies", []) or []
+            for oa in overall_list:
+                metric = oa.get("metric")
+                start_time = oa.get("start_time")
+                end_time = oa.get("end_time")
+                if not metric or start_time is None or end_time is None:
+                    continue
+                try:
+                    start_iso = pd.to_datetime(start_time).isoformat()
+                except Exception:
+                    start_iso = str(start_time)
+                try:
+                    end_iso = pd.to_datetime(end_time).isoformat()
+                except Exception:
+                    end_iso = str(end_time)
+                overall_anomaly_windows.setdefault(metric, []).append(
+                    {"start": start_iso, "end": end_iso}
+                )
+
         # Fetch additional response time per request data
-        avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        avgResponseTimePerReq = self._get_per_req_series(test_obj, 'rt_avg', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
 
-        medianRespTimePerReq = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        medianRespTimePerReq = self._get_per_req_series(test_obj, 'rt_median', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["medianResponseTimePerReq"] = self.transform_to_json(medianRespTimePerReq)
 
-        pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        pctRespTimePerReq = self._get_per_req_series(test_obj, 'rt_p90', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
 
-        throughputPerReq = self.ds_obj.get_throughput_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        throughputPerReq = self._get_per_req_series(test_obj, 'rps', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["throughputPerReq"] = self.transform_to_json(throughputPerReq)
 
         # Collect the aggregated table data
@@ -503,7 +532,121 @@ class DataProvider:
         if metrics_table:
             test_obj.aggregated_table = metrics_table.format_metrics()
 
+
+
         # Collect the outputs
         statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)
         test_details = self.get_test_details(test_title=test_title, test_obj=test_obj)
-        return metrics, test_obj.ml_anomalies, statistics, test_details, test_obj.aggregated_table, test_obj.ml_html_summary, test_obj.performance_status
+        return (
+            metrics,
+            test_obj.ml_anomalies,
+            statistics,
+            test_details,
+            test_obj.aggregated_table,
+            test_obj.ml_html_summary,
+            test_obj.performance_status,
+            overall_anomaly_windows,
+        )
+
+    def _get_per_req_series(self, test_obj: BaseTestData, key: str, test_title: str, start: str, end: str):
+        cache_key = (key, start, end)
+        cache = getattr(test_obj, '_per_req_cache', None)
+        if cache is not None and cache_key in cache:
+            return cache[cache_key]
+        if key == 'rps':
+            data = self.ds_obj.get_throughput_per_req(test_title=test_title, start=start, end=end)
+        elif key == 'rt_avg':
+            data = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=start, end=end)
+        elif key == 'rt_median':
+            data = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=start, end=end)
+        elif key == 'rt_p90':
+            data = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=start, end=end)
+        else:
+            data = None
+        if cache is not None:
+            cache[cache_key] = data
+        return data
+
+    def build_per_transaction_long_frame(self, test_obj: BaseTestData, sampling_interval_sec: int = 5, per_txn_rt_metrics: list[str] | None = None) -> None:
+        test_title = test_obj.test_title
+        start = test_obj.start_time_iso
+        end = test_obj.end_time_iso
+
+        if per_txn_rt_metrics is None:
+            per_txn_rt_metrics = ['median', 'avg', 'p90']
+        rps_per_req = self._get_per_req_series(test_obj, 'rps', test_title, start, end)
+        rt_series = {}
+        if 'avg' in per_txn_rt_metrics:
+            rt_series['avg'] = self._get_per_req_series(test_obj, 'rt_avg', test_title, start, end)
+        if 'median' in per_txn_rt_metrics:
+            rt_series['median'] = self._get_per_req_series(test_obj, 'rt_median', test_title, start, end)
+        if 'p90' in per_txn_rt_metrics or 'pct90' in per_txn_rt_metrics:
+            rt_series['p90'] = self._get_per_req_series(test_obj, 'rt_p90', test_title, start, end)
+
+        # Build lookup by transaction
+        rps_map = {entry.get('transaction') or entry.get('name'): entry.get('data') for entry in (rps_per_req or [])}
+        rt_maps = {k: {e.get('transaction') or e.get('name'): e.get('data') for e in (v or [])} for k, v in rt_series.items()}
+        all_rt_txns = set().union(*[set(m.keys()) for m in rt_maps.values()]) if rt_maps else set()
+        all_txns = sorted(set(rps_map.keys()) | all_rt_txns)
+        if 'all' in all_txns:
+            all_txns.remove('all')
+        if not all_txns:
+            test_obj.per_txn_df_long = None
+            return
+
+        merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
+        engine = AnomalyDetectionEngine(params={})
+        fixed_load_period, _, _ = engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
+        fixed_index = fixed_load_period.index
+        fixed_start = fixed_index.min() if len(fixed_index) else None
+        fixed_end = fixed_index.max() if len(fixed_index) else None
+
+        frames = []
+        rule = f"{int(sampling_interval_sec)}s"
+        for txn in all_txns:
+            df_rps = rps_map.get(txn)
+            parts = []
+            if df_rps is not None and not df_rps.empty:
+                sr = df_rps['value'].resample(rule).mean().ffill().rename('rps')
+                parts.append(sr)
+            for k, m in rt_maps.items():
+                df_rt = m.get(txn)
+                if df_rt is not None and not df_rt.empty:
+                    col = 'rt_ms_median' if k == 'median' else ('rt_ms_avg' if k == 'avg' else 'rt_ms_p90')
+                    sr = df_rt['value'].resample(rule).mean().ffill().rename(col)
+                    parts.append(sr)
+            if not parts:
+                continue
+            df = pd.concat(parts, axis=1)
+            df['transaction'] = txn
+            frames.append(df.reset_index().rename(columns={'index': 'timestamp'}))
+
+        if not frames:
+            test_obj.per_txn_df_long = None
+            return
+
+        long_df = pd.concat(frames, axis=0, ignore_index=True)
+
+        # Convert timestamps to UTC
+        try:
+            long_df['timestamp'] = pd.to_datetime(long_df['timestamp']).dt.tz_convert('UTC')
+        except Exception:
+            long_df['timestamp'] = pd.to_datetime(long_df['timestamp'], utc=True)
+
+        if 'rps' in long_df.columns:
+            overall = long_df.groupby('timestamp')['rps'].sum(min_count=1).rename('overall_rps')
+            long_df = long_df.merge(overall.reset_index(), on='timestamp', how='left')
+        else:
+            long_df['overall_rps'] = pd.NA
+
+        if 'error_rate' not in long_df.columns:
+            long_df['error_rate'] = pd.NA
+
+        if fixed_start is not None and fixed_end is not None:
+            long_df = long_df[(long_df['timestamp'] >= fixed_start) & (long_df['timestamp'] <= fixed_end)]
+
+        cols = ['timestamp', 'transaction', 'rt_ms', 'rt_ms_avg', 'rt_ms_median', 'rt_ms_p90', 'error_rate', 'rps', 'overall_rps']
+        final_cols = [c for c in cols if c in long_df.columns] + [c for c in long_df.columns if c not in cols]
+        long_df = long_df[final_cols].sort_values(['timestamp', 'transaction']).reset_index(drop=True)
+
+        test_obj.per_txn_df_long = long_df

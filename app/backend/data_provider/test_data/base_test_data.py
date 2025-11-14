@@ -61,11 +61,13 @@ class BaseTestData(ABC):
         self.test_type: Optional[str] = None
         self.duration: Optional[str] = None
         self.aggregated_table: Optional[List[Dict[str, Any]]] = None
+        self.per_txn_df_long = None
         self.performance_status: Optional[bool] = None
         self.ml_summary: Optional[str] = None
         self.ml_html_summary: Optional[str] = None
         self.ml_anomalies: Optional[Dict[str, Any]] = None
         self.custom_vars: List[Dict[str, Any]] = []
+        self._per_req_cache = {}
 
         # Default aggregation type
         self.aggregation = "median"
