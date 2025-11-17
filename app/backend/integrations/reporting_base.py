@@ -205,6 +205,27 @@ class ReportingBase:
             logging.error("_ensure_ml_metrics: Failed to obtain ML metrics dict. ml_anomalies=%s",
                           bool(getattr(self.current_test_obj, "ml_anomalies", None)))
             raise RuntimeError("Internal graph rendering failed: ML metrics could not be constructed.")
+
+        # Attach overall anomaly windows (per overall metric) for backend graph shading.
+        try:
+            windows_by_metric = {}
+            engine = getattr(self.dp_obj, "anomaly_detection_engine", None)
+            if engine is not None:
+                overall_list = getattr(engine, "overall_anomalies", []) or []
+                for oa in overall_list:
+                    metric = oa.get("metric")
+                    start_time = oa.get("start_time")
+                    end_time = oa.get("end_time")
+                    if not metric or start_time is None or end_time is None:
+                        continue
+                    windows_by_metric.setdefault(metric, []).append(
+                        {"start": str(start_time), "end": str(end_time)}
+                    )
+            if windows_by_metric:
+                metrics["overall_anomaly_windows"] = windows_by_metric
+        except Exception as e:
+            logging.warning(f"_ensure_ml_metrics: failed to attach overall anomaly windows: {e}")
+
         return metrics
 
     def _render_internal_graph(self, graph_data: dict) -> bytes:
