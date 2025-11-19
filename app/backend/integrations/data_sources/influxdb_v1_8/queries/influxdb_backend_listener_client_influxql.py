@@ -80,6 +80,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s) fill(0)'
@@ -116,6 +118,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("avg") AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s) fill(0)'
@@ -135,6 +139,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("pct50.0") AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s) fill(0)'
@@ -154,6 +160,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("pct90.0") AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s) fill(0)'
@@ -211,6 +219,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEDIAN("count")/30 AS "value" FROM "{self.measurement}" '
             f'WHERE {where}'
@@ -230,6 +240,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEDIAN("pct50.0") AS "value" FROM "{self.measurement}" '
             f'WHERE {where}'
@@ -249,6 +261,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT PERCENTILE("pct90.0", 90) AS "value" FROM "{self.measurement}" '
             f'WHERE {where}'
@@ -318,6 +332,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT '
             f'MEDIAN("count")/60 AS "rpm", '
@@ -348,6 +364,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("avg") AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
@@ -368,6 +386,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT PERCENTILE("pct50.0", 50) AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
@@ -388,6 +408,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT PERCENTILE("pct90.0", 90) AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
@@ -408,6 +430,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
+        if regex:
+            where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'

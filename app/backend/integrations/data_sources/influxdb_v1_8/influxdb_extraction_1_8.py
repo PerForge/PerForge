@@ -737,19 +737,28 @@ class InfluxdbV18(DataExtractionBase):
 
     def _fetch_errors_pct_stats(self, test_title: str, start: str, end: str) -> float:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
-        query_all = self.queries.get_errors_pct_stats(
-            testTitle=test_title,
-            start=start,
-            stop=end,
-            bucket="",
-            test_title_tag_name=tag_key,
-        )
         where_all = (
             f'"{tag_key}" = \'{test_title}\' '
             f'AND "transaction" != \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{end}\''
         )
+        regex = getattr(self, "regex", "")
+        if regex:
+            where_all += f' AND "transaction" =~ /{regex}/'
         where_ko = where_all + ' AND "statut" = \'ko\''
+        if regex:
+            query_all = (
+                f'SELECT SUM("count") AS "value" FROM "jmeter" '
+                f'WHERE {where_all}'
+            )
+        else:
+            query_all = self.queries.get_errors_pct_stats(
+                testTitle=test_title,
+                start=start,
+                stop=end,
+                bucket="",
+                test_title_tag_name=tag_key,
+            )
         query_ko = (
             f'SELECT SUM("count") AS "value" FROM "jmeter" WHERE {where_ko}'
         )
@@ -774,6 +783,9 @@ class InfluxdbV18(DataExtractionBase):
             f'AND "statut" = \'all\' '
             f'AND time >= \'{start}\' AND time <= \'{end}\''
         )
+        regex = getattr(self, "regex", "")
+        if regex:
+            where_txn += f' AND "transaction" =~ /{regex}/'
 
         avg_query = (
             f'SELECT MEAN("avg") AS "value" FROM "jmeter" '
