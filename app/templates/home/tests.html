@@ -369,10 +369,11 @@
 
                             items.forEach(cfg => {
                                 const makeOption = (bucketName, labelSuffix = null) => {
+                                    const isV18Listener = cfg.listener === 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8';
                                     const valueObj = {
                                         id: cfg.id,
                                         name: cfg.name,
-                                        source_type: 'influxdb_v2',
+                                        source_type: isV18Listener ? 'influxdb_v1.8' : 'influxdb_v2',
                                         listener: cfg.listener,
                                         bucket: bucketName
                                     };

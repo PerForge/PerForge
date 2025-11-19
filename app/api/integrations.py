@@ -18,6 +18,7 @@ Integrations API endpoints.
 import logging
 import re
 import concurrent.futures
+from urllib.parse import urlparse
 from flask import Blueprint, request
 from app.backend.components.projects.projects_db import DBProjects
 from app.backend.integrations.ai_support.ai_support_db import DBAISupport
@@ -30,7 +31,9 @@ from app.backend.integrations.smtp_mail.smtp_mail_db import DBSMTPMail
 from app.backend.integrations.ai_support.providers.provider_factory import ProviderFactory
 from app.backend.components.secrets.secrets_db import DBSecrets
 from influxdb_client import InfluxDBClient
+from influxdb import InfluxDBClient as InfluxDBClient18
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
+from app.backend.integrations.data_sources.influxdb_v1_8.influxdb_extraction_1_8 import InfluxdbV18
 from app.api.base import (
     api_response, api_error_handler, get_project_id,
    HTTP_CREATED, HTTP_NO_CONTENT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND
@@ -278,16 +281,31 @@ def get_integrations_by_type(integration_type):
                 cfg['integration_type'] = integration_type
 
             # For influxdb type: if bucket_regex_bool is true on a config,
-            # fetch actual bucket names from InfluxDB and attach them to the config
+            # fetch actual bucket names from InfluxDB and attach them to the config.
+            # Choose InfluxdbV2 or InfluxdbV18 based on source_type/listener.
             if integration_type.lower() == 'influxdb':
                 for cfg in configs:
                     try:
-                        if cfg.get('bucket_regex_bool'):
-                            # Use the configured 'bucket' as a regex to filter bucket names
-                            name_regex = cfg.get('bucket') or None
+                        if not cfg.get('bucket_regex_bool'):
+                            continue
+
+                        name_regex = cfg.get('bucket') or None
+                        source_type = cfg.get('source_type') or ''
+                        listener = cfg.get('listener') or ''
+
+                        is_v18 = (
+                            source_type == 'influxdb_v1.8'
+                            or listener == 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8'
+                        )
+
+                        if is_v18:
+                            with InfluxdbV18(project=project_id, id=cfg.get('id')) as ds:
+                                buckets = ds.list_buckets(name_regex=name_regex)
+                        else:
                             with InfluxdbV2(project=project_id, id=cfg.get('id')) as ds:
                                 buckets = ds.list_buckets(name_regex=name_regex)
-                            cfg['buckets'] = buckets
+
+                        cfg['buckets'] = buckets
                     except Exception as e:
                         logging.warning(f"Failed to list buckets for influxdb config id={cfg.get('id')}: {e}")
                         cfg['buckets'] = []
@@ -605,7 +623,8 @@ def ping_influxdb():
         bucket_regex_bool = bool(data.get('bucket_regex_bool'))
         token = data.get('token')
         token_id = data.get('token_id')
-        org_id = data.get('org_id')
+        listener = data.get('listener') or ""
+        source_type = data.get('source_type') or ""
 
         if not all([url, org_id, bucket]) or (not token and not token_id):
             return api_response(
@@ -625,54 +644,104 @@ def ping_influxdb():
                 )
             token = secret['value']
 
-        # Attempt connection
+        is_v18 = (
+            source_type == 'influxdb_v1.8'
+            or listener == 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8'
+        )
+
         try:
-            client = InfluxDBClient(
-                url=url,
-                org=org_id,
-                token=token,
-                timeout=30000,
-                verify_ssl=False,
-            )
-            # Simple health check plus bucket existence validation
-            health = client.health()
-            if health.status != 'pass':
-                raise RuntimeError(f"Health check failed: {health.message}")
-
-            # Validate organization exists
-            org_api = client.organizations_api()
-            orgs_res = org_api.find_organizations()
-            org_list = orgs_res if isinstance(orgs_res, list) else getattr(orgs_res, 'orgs', [])
-            org_obj = next((o for o in org_list if getattr(o, 'name', None) == org_id), None)
-            if not org_obj:
-                raise RuntimeError(f"Organization '{org_id}' not found or not accessible with provided credentials")
-
-            buckets_api = client.buckets_api()
-            all_buckets = buckets_api.find_buckets().buckets or []
-
-            if bucket_regex_bool:
-                pattern = bucket or ''
-                # Anchor automatically if not provided
-                anchored = pattern
-                if not pattern.startswith('^'):
-                    anchored = '^' + anchored
-                if not pattern.endswith('$'):
-                    anchored = anchored + '$'
+            if is_v18:
+                parsed = urlparse(url)
+                host = parsed.hostname or url
+                port = parsed.port or 8086
+                client18 = None
                 try:
-                    rgx = re.compile(anchored)
-                except re.error as e:
-                    raise RuntimeError(f"Invalid bucket regex: {pattern} ({e})")
+                    client18 = InfluxDBClient18(
+                        host=host,
+                        port=port,
+                        username=org_id,
+                        password=token,
+                        database=bucket,
+                        timeout=30,
+                        ssl=parsed.scheme == "https",
+                        verify_ssl=False,
+                    )
+                    if not client18.ping():
+                        raise RuntimeError("Ping failed")
 
-                matched = [b for b in all_buckets if b and getattr(b, 'name', None) and rgx.search(b.name)]
-                if not matched:
-                    raise RuntimeError(f"No buckets matching regex '{pattern}' for provided credentials")
+                    databases = client18.get_list_database() or []
+                    names = [db.get("name") for db in databases if isinstance(db, dict)]
+
+                    if bucket_regex_bool:
+                        pattern = bucket or ''
+                        anchored = pattern
+                        if not pattern.startswith('^'):
+                            anchored = '^' + anchored
+                        if not pattern.endswith('$'):
+                            anchored = anchored + '$'
+                        try:
+                            rgx = re.compile(anchored)
+                        except re.error as e:
+                            raise RuntimeError(f"Invalid bucket regex: {pattern} ({e})")
+
+                        matched = [name for name in names if name and rgx.search(name)]
+                        if not matched:
+                            raise RuntimeError(f"No databases matching regex '{pattern}' for provided credentials")
+                    else:
+                        if bucket not in names:
+                            raise RuntimeError(f"Database '{bucket}' not found for provided credentials")
+                finally:
+                    if client18 is not None:
+                        try:
+                            client18.close()
+                        except Exception:
+                            pass
+
+                return api_response(message="Ping successful")
             else:
-                bucket_obj = next((b for b in all_buckets if b.name == bucket), None)
-                if not bucket_obj:
-                    raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
+                client = InfluxDBClient(
+                    url=url,
+                    org=org_id,
+                    token=token,
+                    timeout=30000,
+                    verify_ssl=False,
+                )
+                health = client.health()
+                if health.status != 'pass':
+                    raise RuntimeError(f"Health check failed: {health.message}")
 
-            client.close()
-            return api_response(message="Ping successful")
+                org_api = client.organizations_api()
+                orgs_res = org_api.find_organizations()
+                org_list = orgs_res if isinstance(orgs_res, list) else getattr(orgs_res, 'orgs', [])
+                org_obj = next((o for o in org_list if getattr(o, 'name', None) == org_id), None)
+                if not org_obj:
+                    raise RuntimeError(f"Organization '{org_id}' not found or not accessible with provided credentials")
+
+                buckets_api = client.buckets_api()
+                all_buckets = buckets_api.find_buckets().buckets or []
+
+                if bucket_regex_bool:
+                    pattern = bucket or ''
+                    anchored = pattern
+                    if not pattern.startswith('^'):
+                        anchored = '^' + anchored
+                    if not pattern.endswith('$'):
+                        anchored = anchored + '$'
+                    try:
+                        rgx = re.compile(anchored)
+                    except re.error as e:
+                        raise RuntimeError(f"Invalid bucket regex: {pattern} ({e})")
+
+                    matched = [b for b in all_buckets if b and getattr(b, 'name', None) and rgx.search(b.name)]
+                    if not matched:
+                        raise RuntimeError(f"No buckets matching regex '{pattern}' for provided credentials")
+                else:
+                    bucket_obj = next((b for b in all_buckets if b.name == bucket), None)
+                    if not bucket_obj:
+                        raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
+
+                client.close()
+                return api_response(message="Ping successful")
         except Exception as e:
             logging.error(f"InfluxDB ping failed: {str(e)}")
             return api_response(
