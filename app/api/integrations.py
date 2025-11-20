@@ -295,7 +295,7 @@ def get_integrations_by_type(integration_type):
 
                         is_v18 = (
                             source_type == 'influxdb_v1.8'
-                            or listener == 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8'
+                            or 'v1.8' in listener
                         )
 
                         if is_v18:
@@ -646,7 +646,7 @@ def ping_influxdb():
 
         is_v18 = (
             source_type == 'influxdb_v1.8'
-            or listener == 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8'
+            or 'v1.8' in listener
         )
 
         try:
@@ -718,7 +718,7 @@ def ping_influxdb():
                     raise RuntimeError(f"Organization '{org_id}' not found or not accessible with provided credentials")
 
                 buckets_api = client.buckets_api()
-                all_buckets = buckets_api.find_buckets().buckets or []
+                all_buckets = buckets_api.find_buckets_iter()
 
                 if bucket_regex_bool:
                     pattern = bucket or ''
@@ -736,7 +736,10 @@ def ping_influxdb():
                     if not matched:
                         raise RuntimeError(f"No buckets matching regex '{pattern}' for provided credentials")
                 else:
-                    bucket_obj = next((b for b in all_buckets if b.name == bucket), None)
+                    bucket_obj = None
+                    for b in all_buckets:
+                        if b.name == bucket:
+                            bucket_obj = b
                     if not bucket_obj:
                         raise RuntimeError(f"Bucket '{bucket}' not found for provided credentials")
 

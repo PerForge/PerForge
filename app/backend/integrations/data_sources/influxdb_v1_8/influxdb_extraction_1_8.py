@@ -16,7 +16,7 @@
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Type
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -26,19 +26,30 @@ from influxdb import InfluxDBClient
 from app.backend.components.secrets.secrets_db import DBSecrets
 from app.backend.errors import ErrorMessages
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
+from app.backend.integrations.data_sources.base_queries import BackEndQueriesBase, FrontEndQueriesBase
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
 from app.backend.integrations.data_sources.influxdb_v1_8.queries.influxdb_backend_listener_client_influxql import (
     InfluxDBBackendListenerClientInfluxQL,
+)
+from app.backend.integrations.data_sources.influxdb_v1_8.queries.sitespeed_influxdb_v1_8 import (
+    SitespeedInfluxQLQueries,
 )
 
 
 class InfluxdbV18(DataExtractionBase):
     """Classic InfluxDB 1.8 data extraction (InfluxQL + influxdb client).
 
-    This file currently focuses on configuration and client lifecycle.
-    Metric-specific methods are stubs and will be implemented with InfluxQL
-    queries in the next steps.
+    Mirrors the InfluxdbV2 pattern by selecting a single query
+    implementation based on the configured listener.
     """
+
+    # Maps listener types to their respective query implementations
+    queries_map: Dict[str, Type[BackEndQueriesBase | FrontEndQueriesBase]] = {
+        # Backend query implementation (JMeter backend listener)
+        "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8": InfluxDBBackendListenerClientInfluxQL,
+        # Frontend query implementation (Sitespeed-style)
+        "sitespeed_influxdb_v1.8": SitespeedInfluxQLQueries,
+    }
 
     def __init__(self, project, id: int | None = None) -> None:
         super().__init__(project)
@@ -49,10 +60,18 @@ class InfluxdbV18(DataExtractionBase):
         self.tmz_human = self.tmz_utc
         self._target_tz = self.tmz_utc
 
-        # Backend queries implementation (InfluxQL for classic 1.8)
-        self.queries = InfluxDBBackendListenerClientInfluxQL()
-
+        # Load configuration to determine listener type and other settings
         self.set_config(id)
+
+        listener = getattr(self, "listener", None)
+
+        if listener in self.queries_map:
+            # Instantiate the correct query implementation (backend or frontend)
+            self.queries = self.queries_map[listener]()
+        else:
+            self.queries = None
+            logging.warning(ErrorMessages.ER00054.value.format(listener))
+
         self._initialize_client()
 
     def __enter__(self):
@@ -163,7 +182,21 @@ class InfluxdbV18(DataExtractionBase):
             return []
         try:
             result = self.influxdb_connection.query(query)
-            points = list(result.get_points())
+            # When using GROUP BY, we need to iterate through result sets to get tag values
+            # Each result set corresponds to a unique combination of grouped tags
+            points = []
+            for series_key, series_data in result.items():
+                # series_key is a tuple like ('measurement_name', tags_dict)
+                if len(series_key) > 1 and isinstance(series_key[1], dict):
+                    tags = series_key[1]
+                    # Get points and add tag values to each point
+                    for point in series_data:
+                        point_with_tags = dict(point)
+                        point_with_tags.update(tags)
+                        points.append(point_with_tags)
+                else:
+                    # No GROUP BY, just add points as-is
+                    points.extend(list(series_data))
             return points
         except Exception as er:
             logging.error(ErrorMessages.ER00056.value.format(query))
@@ -324,13 +357,16 @@ class InfluxdbV18(DataExtractionBase):
                 test_title_tag_name=tag_key,
                 test_title=title,
             )
-            points = self._query(query)
-            max_threads = 0
+            if query:
+                points = self._query(query)
+            else:
+                points = []
+                max_threads = 1
             if points:
                 try:
                     max_threads = int(round(points[0].get("max_threads") or 0))
                 except Exception:
-                    max_threads = 0
+                    max_threads = 1
 
             start_local = self._localize_timestamp(start_dt)
             end_local = self._localize_timestamp(end_dt)
@@ -776,105 +812,379 @@ class InfluxdbV18(DataExtractionBase):
             return 0.0
 
     def _fetch_overview_data(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
+        """Fetch overview data using query class methods.
+
+        This method works for both backend (JMeter) and frontend (Sitespeed) tests
+        by delegating to the appropriate query class.
+        """
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
-        where_txn = (
-            f'"{tag_key}" = \'{test_title}\' '
-            f'AND "transaction" != \'all\' '
-            f'AND "statut" = \'all\' '
-            f'AND time >= \'{start}\' AND time <= \'{end}\''
-        )
         regex = getattr(self, "regex", "")
-        if regex:
-            where_txn += f' AND "transaction" =~ /{regex}/'
 
-        avg_query = (
-            f'SELECT MEAN("avg") AS "value" FROM "jmeter" '
-            f'WHERE {where_txn}'
+        # Get queries dict from the query class
+        queries_dict = self.queries.get_overview_data(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=regex,
         )
-        avg_points = self._query(avg_query)
-        avg_val = float(avg_points[0].get("value") or 0.0) if avg_points else 0.0
 
-        median_query = (
-            f'SELECT PERCENTILE("pct50.0", 50) AS "value" FROM "jmeter" '
-            f'WHERE {where_txn}'
-        )
-        median_points = self._query(median_query)
-        median_val = float(median_points[0].get("value") or 0.0) if median_points else 0.0
+        # Check if this is a backend test (has 'rps_query' key) or frontend test
+        is_backend = "rps_query" in queries_dict
 
-        p75_query = (
-            f'SELECT PERCENTILE("pct75.0", 75) AS "value" FROM "jmeter" '
-            f'WHERE {where_txn}'
-        )
-        p75_points = self._query(p75_query)
-        p75_val = float(p75_points[0].get("value") or 0.0) if p75_points else 0.0
+        if is_backend:
+            # Backend (JMeter) overview
+            avg_points = self._query(queries_dict["avg"])
+            avg_val = float(avg_points[0].get("value") or 0.0) if avg_points else 0.0
 
-        p90_query = (
-            f'SELECT PERCENTILE("pct90.0", 90) AS "value" FROM "jmeter" '
-            f'WHERE {where_txn}'
-        )
-        p90_points = self._query(p90_query)
-        p90_val = float(p90_points[0].get("value") or 0.0) if p90_points else 0.0
+            median_points = self._query(queries_dict["median"])
+            median_val = float(median_points[0].get("value") or 0.0) if median_points else 0.0
 
-        total_query = (
-            f'SELECT SUM("count") AS "value" FROM "jmeter" '
-            f'WHERE {where_txn}'
-        )
-        total_points = self._query(total_query)
-        total_val = float(total_points[0].get("value") or 0.0) if total_points else 0.0
+            p75_points = self._query(queries_dict["p75"])
+            p75_val = float(p75_points[0].get("value") or 0.0) if p75_points else 0.0
 
-        rps_query = (
-            f'SELECT SUM("count")/30 AS "value" FROM "jmeter" '
-            f'WHERE {where_txn} GROUP BY time(30s) fill(0)'
-        )
-        rps_df = self._query_df(rps_query, "value")
-        if not rps_df.empty:
-            try:
-                rps_val = float(rps_df["value"].quantile(0.75))
-            except Exception:
-                rps_val = float(rps_df["value"].median())
+            p90_points = self._query(queries_dict["p90"])
+            p90_val = float(p90_points[0].get("value") or 0.0) if p90_points else 0.0
+
+            total_points = self._query(queries_dict["total"])
+            total_val = float(total_points[0].get("value") or 0.0) if total_points else 0.0
+
+            rps_df = self._query_df(queries_dict["rps_query"], "value")
+            if not rps_df.empty:
+                try:
+                    rps_val = float(rps_df["value"].quantile(0.75))
+                except Exception:
+                    rps_val = float(rps_df["value"].median())
+            else:
+                rps_val = 0.0
+
+            error_pct = self.get_errors_pct_stats(test_title=test_title, start=start, end=end)
+
+            return [
+                {"Metric": "Average", "Value": round(avg_val, 2)},
+                {"Metric": "Median", "Value": round(median_val, 2)},
+                {"Metric": "75%-tile", "Value": round(p75_val, 2)},
+                {"Metric": "90%-tile", "Value": round(p90_val, 2)},
+                {"Metric": "Total requests", "Value": int(total_val)},
+                {"Metric": "RPS", "Value": round(rps_val, 2)},
+                {"Metric": "Error %", "Value": round(error_pct, 2)},
+            ]
         else:
-            rps_val = 0.0
+            # Frontend (Sitespeed) overview
+            records = []
+            for metric_name, query in queries_dict.items():
+                points = self._query(query)
+                value = float(points[0].get("value") or 0.0) if points else 0.0
+                records.append({"Metric": metric_name, "Value": round(value, 2)})
 
-        error_pct = self.get_errors_pct_stats(test_title=test_title, start=start, end=end)
-
-        records: List[Dict[str, Any]] = [
-            {"Metric": "Average", "Value": round(avg_val, 2)},
-            {"Metric": "Median", "Value": round(median_val, 2)},
-            {"Metric": "75%-tile", "Value": round(p75_val, 2)},
-            {"Metric": "90%-tile", "Value": round(p90_val, 2)},
-            {"Metric": "Total requests", "Value": int(total_val)},
-            {"Metric": "RPS", "Value": round(rps_val, 2)},
-            {"Metric": "Error %", "Value": round(error_pct, 2)},
-        ]
-
-        return records
+            return records
 
     def _fetch_google_web_vitals(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        """Fetch Google Web Vitals metrics for frontend tests from InfluxDB 1.8.
+
+        Returns a list of dicts, each representing a page-level row, similar to
+        the InfluxdbV2 frontend implementation. The MetricsTable layer will
+        normalize numeric fields and handle baselines.
+        """
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        queries = self.queries.get_google_web_vitals(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+
+        # Execute multiple queries and merge results by page
+        # queries is a list of (query, column_name) tuples
+        page_data = {}
+        for query, column_name in queries:
+            points = self._query(query)
+            for p in points:
+                page = p.get("page")
+                if not page:
+                    continue
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                # Map the 'value' field to the proper column name
+                value = p.get("value")
+                if value is not None:
+                    page_data[page][column_name] = value
+
+        return list(page_data.values())
 
     def _fetch_timings_fully_loaded(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        query = self.queries.get_timings_fully_loaded(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+        points = self._query(query)
+        for p in points:
+            p.pop("time", None)
+        return points
 
     def _fetch_timings_page_timings(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        queries = self.queries.get_timings_page_timings(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+
+        # Execute multiple queries and merge results by page
+        # queries is a list of (query, column_name) tuples
+        page_data = {}
+        for query, column_name in queries:
+            points = self._query(query)
+            for p in points:
+                page = p.get("page")
+                if not page:
+                    continue
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                # Map the 'value' field to the proper column name
+                value = p.get("value")
+                if value is not None:
+                    page_data[page][column_name] = value
+
+        return list(page_data.values())
 
     def _fetch_timings_main_document(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        queries = self.queries.get_timings_main_document(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+
+        # Execute multiple queries and merge results by page
+        # queries is a list of (query, column_name) tuples
+        page_data = {}
+        for query, column_name in queries:
+            points = self._query(query)
+            for p in points:
+                page = p.get("page")
+                if not page:
+                    continue
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                # Map the 'value' field to the proper column name
+                value = p.get("value")
+                if value is not None:
+                    page_data[page][column_name] = value
+
+        return list(page_data.values())
 
     def _fetch_cpu_long_tasks(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        queries = self.queries.get_cpu_long_tasks(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+
+        # Execute multiple queries and merge results by page
+        # queries is a list of (query, column_name) tuples
+        page_data = {}
+        for query, column_name in queries:
+            points = self._query(query)
+            for p in points:
+                page = p.get("page")
+                if not page:
+                    continue
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                # Map the 'value' field to the proper column name
+                value = p.get("value")
+                if value is not None:
+                    page_data[page][column_name] = value
+
+        return list(page_data.values())
 
     def _fetch_cdp_performance_js_heap_used_size(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        query = self.queries.get_cdp_performance_js_heap_used_size(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+        points = self._query(query)
+        for p in points:
+            p.pop("time", None)
+        return points
 
     def _fetch_cdp_performance_js_heap_total_size(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        query = self.queries.get_cdp_performance_js_heap_total_size(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+        points = self._query(query)
+        for p in points:
+            p.pop("time", None)
+        return points
 
     def _fetch_count_per_content_type(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        query = self.queries.get_count_per_content_type(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+        points = self._query(query)
+
+        # Pivot data: transform rows with (page, contentType, value) into
+        # rows with page and content types as columns, matching v2 format
+        page_data = {}
+        for p in points:
+            page = p.get("page")
+            content_type = p.get("contentType")
+            value = p.get("value")
+
+            if page and content_type:
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                page_data[page][content_type] = value
+
+        return list(page_data.values())
 
     def _fetch_first_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        query = self.queries.get_first_party_transfer_size(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+        points = self._query(query)
+
+        # Pivot data: transform rows with (page, contentType, value) into
+        # rows with page and content types as columns, matching v2 format
+        page_data = {}
+        for p in points:
+            page = p.get("page")
+            content_type = p.get("contentType")
+            value = p.get("value")
+
+            if page and content_type:
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                page_data[page][content_type] = value
+
+        return list(page_data.values())
 
     def _fetch_third_party_transfer_size(self, test_title: str, start: str, end: str, aggregation: str = "median") -> Dict[str, Any]:
-        return {}
+        tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        query = self.queries.get_third_party_transfer_size(
+            testTitle=test_title,
+            start=start,
+            stop=end,
+            bucket="",
+            test_title_tag_name=tag_key,
+            aggregation=aggregation,
+            regex=getattr(self, "regex", ""),
+        )
+        points = self._query(query)
+
+        # Pivot data: transform rows with (page, contentType, value) into
+        # rows with page and content types as columns, matching v2 format
+        page_data = {}
+        for p in points:
+            page = p.get("page")
+            content_type = p.get("contentType")
+            value = p.get("value")
+
+            if page and content_type:
+                if page not in page_data:
+                    page_data[page] = {"page": page}
+                page_data[page][content_type] = value
+
+        return list(page_data.values())
+
+    def delete_test_data(self, test_title: str, start=None, end=None) -> None:
+        """
+        Delete test data from InfluxDB 1.8 using DROP SERIES.
+
+        InfluxDB 1.8 doesn't have a DELETE API like v2, so we use DROP SERIES
+        to remove all data points for a specific test title.
+
+        Args:
+            test_title: The test title to delete data for
+            start: Optional start time (not used in InfluxDB 1.8, kept for API compatibility)
+            end: Optional end time (not used in InfluxDB 1.8, kept for API compatibility)
+        """
+        if self.influxdb_connection is None:
+            logging.warning("InfluxdbV18: no active connection for delete_test_data")
+            return
+
+        try:
+            tag_key = getattr(self, "test_title_tag_name", "testTitle")
+
+            # For InfluxDB 1.8, we use DROP SERIES to delete data
+            # We need to drop series from both the measurement tables and events table
+            measurements = ["jmeter", "events"]
+
+            # For Sitespeed (frontend) tests, we also need to delete from various measurements
+            if hasattr(self, 'listener') and 'sitespeed' in self.listener.lower():
+                measurements.extend([
+                    "largestContentfulPaint", "firstContentfulPaint",
+                    "cumulativeLayoutShift", "firstInputDelay",
+                    "totalBlockingTime", "ttfb", "fullyLoaded",
+                    "domInteractive", "domContentLoadedTime", "loadTime",
+                    "dns", "connect", "serverResponseTime", "pageDownloadTime",
+                    "tasks", "lastLongTask", "maxPotentialFid", "totalDuration",
+                    "JSHeapUsedSize", "JSHeapTotalSize", "requests", "transferSize"
+                ])
+
+            for measurement in measurements:
+                try:
+                    # DROP SERIES FROM <measurement> WHERE <tag_key>='<test_title>'
+                    query = f'DROP SERIES FROM "{measurement}" WHERE "{tag_key}"=\'{test_title}\''
+                    self.influxdb_connection.query(query)
+                    logging.info(f"Deleted data from measurement '{measurement}' for test '{test_title}'")
+                except Exception as e:
+                    # It's okay if a measurement doesn't exist
+                    logging.debug(f"Could not delete from measurement '{measurement}': {e}")
+
+            logging.info(f"Successfully deleted test data for '{test_title}'")
+        except Exception as er:
+            logging.error(f'ERROR: delete_test_data method failed for test "{test_title}"')
+            logging.error(er)

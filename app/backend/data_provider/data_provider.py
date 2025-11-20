@@ -51,6 +51,7 @@ class DataProvider:
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": "back_end",
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8": "back_end",
         "sitespeed_influxdb_v2": "front_end",
+        "sitespeed_influxdb_v1.8": "front_end",
     }
 
     def __init__(self, project: Any, source_type: Any, id: str, bucket: str) -> None:
@@ -371,7 +372,7 @@ class DataProvider:
         # If some columns are completely NaN, log a warning and drop them, continue with remaining columns
         if all_nan_columns:
             logging.warning(
-                "Dropping metrics with no data: %s",
+                "Some data was not found with current integration configuration. Please check your configuration. Dropping metrics with no data: %s",
                 ", ".join(all_nan_columns)
             )
             df = df.drop(columns=all_nan_columns)

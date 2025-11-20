@@ -309,7 +309,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         """
         return (
             f'SELECT MAX("maxAT") AS "max_threads" FROM "{self.measurement}" '
-            f'WHERE "{test_title_tag_name}" = "{test_title}"'
+            f'WHERE "{test_title_tag_name}" = \'{test_title}\''
         )
 
     def get_aggregated_data(
@@ -436,3 +436,36 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" '
             f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
         )
+
+    def get_overview_data(
+        self,
+        testTitle: str,
+        start: str,
+        stop: str,
+        bucket: str,
+        test_title_tag_name: str,
+        aggregation: str,
+        regex: str,
+    ) -> dict:  # type: ignore[override]
+        """Return a dictionary of queries for overview stats.
+
+        Returns dict with keys: 'avg', 'median', 'p75', 'p90', 'total', 'rps_query'
+        Each value is an InfluxQL query string.
+        """
+        where_txn = (
+            f'"{test_title_tag_name}" = \'{testTitle}\' '
+            f'AND "transaction" != \'all\' '
+            f'AND "statut" = \'all\' '
+            f'AND time >= \'{start}\' AND time <= \'{stop}\''
+        )
+        if regex:
+            where_txn += f' AND "transaction" =~ /{regex}/'
+
+        return {
+            "avg": f'SELECT MEAN("avg") AS "value" FROM "{self.measurement}" WHERE {where_txn}',
+            "median": f'SELECT PERCENTILE("pct50.0", 50) AS "value" FROM "{self.measurement}" WHERE {where_txn}',
+            "p75": f'SELECT PERCENTILE("pct75.0", 75) AS "value" FROM "{self.measurement}" WHERE {where_txn}',
+            "p90": f'SELECT PERCENTILE("pct90.0", 90) AS "value" FROM "{self.measurement}" WHERE {where_txn}',
+            "total": f'SELECT SUM("count") AS "value" FROM "{self.measurement}" WHERE {where_txn}',
+            "rps_query": f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" WHERE {where_txn} GROUP BY time(30s) fill(0)',
+        }

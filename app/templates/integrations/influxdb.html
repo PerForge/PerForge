@@ -546,9 +546,7 @@
         }
 
         function updateFieldLabelsByListener(listenerValue) {
-            const V2_LISTENER = 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient';
-            const V18_LISTENER = 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8';
-            const isV18 = listenerValue === V18_LISTENER;
+            const isV18 = listenerValue.includes('v1.8');
 
             const orgLabel = document.querySelector('label[for="org_id"]');
             const bucketLabel = document.querySelector('label[for="bucket"]');
