@@ -24,6 +24,7 @@ from dateutil import tz
 
 # Local application imports
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
+from app.backend.integrations.data_sources.influxdb_v1_8.influxdb_extraction_1_8 import InfluxdbV18
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
@@ -40,14 +41,17 @@ class DataProvider:
     """
 
     class_map: Dict[str, Type[DataExtractionBase]] = {
-        "influxdb_v2": InfluxdbV2
+        "influxdb_v2": InfluxdbV2,
+        "influxdb_v1.8": InfluxdbV18,
         # Add more data sources as needed
     }
 
     # Map data source types to test types
     source_to_test_type_map: Dict[str, str] = {
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": "back_end",
+        "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8": "back_end",
         "sitespeed_influxdb_v2": "front_end",
+        "sitespeed_influxdb_v1.8": "front_end",
     }
 
     def __init__(self, project: Any, source_type: Any, id: str, bucket: str) -> None:
@@ -67,11 +71,29 @@ class DataProvider:
         # Determine the test type based on the source type
         self.test_type = self.source_to_test_type_map.get(self.ds_obj.listener, "back_end")
 
-        # Apply bucket override
-        try:
-            self.ds_obj.bucket = bucket
-        except Exception as e:
-            logging.warning(f"DataProvider: failed to apply bucket override: {e}")
+        # Apply bucket override (optional) in a source-type aware manner
+        # For InfluxDB v2, bucket is used in Flux queries and does not affect the client.
+        # For InfluxDB 1.8, bucket corresponds to the database on the client.
+        if bucket:
+            try:
+                if source_type == "influxdb_v2":
+                    # Simple override of the bucket used in queries
+                    setattr(self.ds_obj, "bucket", bucket)
+                elif source_type == "influxdb_v1.8":
+                    # For classic InfluxDB 1.8, switch the active database on the existing client
+                    client = getattr(self.ds_obj, "influxdb_connection", None)
+                    if client is not None:
+                        try:
+                            client.switch_database(bucket)
+                        except Exception as er:
+                            logging.warning(f"DataProvider: failed to switch InfluxDB 1.8 database to '{bucket}': {er}")
+                    setattr(self.ds_obj, "database", bucket)
+                else:
+                    # Fallback: try to set a generic bucket attribute if present
+                    if hasattr(self.ds_obj, "bucket"):
+                        setattr(self.ds_obj, "bucket", bucket)
+            except Exception as e:
+                logging.warning(f"DataProvider: failed to apply bucket override: {e}")
 
     # Timestamp helper
     def get_current_timestamp(self, fmt: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
@@ -350,7 +372,7 @@ class DataProvider:
         # If some columns are completely NaN, log a warning and drop them, continue with remaining columns
         if all_nan_columns:
             logging.warning(
-                "Dropping metrics with no data: %s",
+                "Some data was not found with current integration configuration. Please check your configuration. Dropping metrics with no data: %s",
                 ", ".join(all_nan_columns)
             )
             df = df.drop(columns=all_nan_columns)

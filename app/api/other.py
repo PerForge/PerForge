@@ -26,6 +26,8 @@ from app.api.base import (
 )
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_insertion import InfluxdbV2Insertion
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
+from app.backend.integrations.data_sources.influxdb_v1_8.influxdb_extraction_1_8 import InfluxdbV18
+from app.backend.integrations.data_sources.influxdb_v1_8.influxdb_insertion import InfluxdbV18Insertion
 from app.backend.parsers.jmeter import parse_uploaded_results
 
 # Create a Blueprint for other API
@@ -169,6 +171,8 @@ def receive_test_upload():
         aggregation_window = (request.form.get('aggregation_window') or '5s').strip().lower()
         # optional bucket override selected on UI (for regex-enabled integrations)
         bucket_override = (request.form.get('bucket') or '').strip()
+        # source_type indicates which InfluxDB integration flavor to use (v2 vs v1.8)
+        source_type = (request.form.get('source_type') or 'influxdb_v2').strip()
         file = request.files.get('file')
 
         errors = []
@@ -221,10 +225,14 @@ def receive_test_upload():
 
         # Check uniqueness of the prefixed test_title in InfluxDB
         try:
-            with InfluxdbV2(project=project_id, id=int(influxdb_id)) as extractor:
-                # If UI provided a concrete bucket, use it for the uniqueness check
+            ExtractorCls = InfluxdbV2 if source_type != 'influxdb_v1.8' else InfluxdbV18
+            with ExtractorCls(project=project_id, id=int(influxdb_id)) as extractor:
+                # If UI provided a concrete bucket/database, use it for the uniqueness check
                 if bucket_override:
-                    extractor.bucket = bucket_override
+                    if hasattr(extractor, 'bucket'):
+                        extractor.bucket = bucket_override
+                    elif hasattr(extractor, 'database'):
+                        extractor.database = bucket_override
                 existing = extractor.get_tests_titles() or []
                 existing_titles = {rec.get("test_title") for rec in existing if isinstance(rec, dict)}
                 if test_title in existing_titles:
@@ -243,10 +251,14 @@ def receive_test_upload():
 
         written = 0
         try:
-            with InfluxdbV2Insertion(project=project_id, id=int(influxdb_id)) as inserter:
-                # If UI provided a concrete bucket, override target bucket for write
+            InserterCls = InfluxdbV2Insertion if source_type != 'influxdb_v1.8' else InfluxdbV18Insertion
+            with InserterCls(project=project_id, id=int(influxdb_id)) as inserter:
+                # If UI provided a concrete bucket/database, override target for write
                 if bucket_override:
-                    inserter.bucket = bucket_override
+                    if hasattr(inserter, 'bucket'):
+                        inserter.bucket = bucket_override
+                    elif hasattr(inserter, 'database'):
+                        inserter.database = bucket_override
                 result = inserter.write_upload(df=df, test_title=test_title, write_events=True, aggregation_window=aggregation_window)
                 written = int(result.get("points_written", 0))
         except ValueError as ve:

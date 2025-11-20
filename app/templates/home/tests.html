@@ -369,10 +369,11 @@
 
                             items.forEach(cfg => {
                                 const makeOption = (bucketName, labelSuffix = null) => {
+                                    const isV18Listener = cfg.listener.includes('v1.8');
                                     const valueObj = {
                                         id: cfg.id,
                                         name: cfg.name,
-                                        source_type: 'influxdb_v2',
+                                        source_type: isV18Listener ? 'influxdb_v1.8' : 'influxdb_v2',
                                         listener: cfg.listener,
                                         bucket: bucketName
                                     };
@@ -717,7 +718,7 @@
                         const dataSource = document.getElementById('dataSourceId').value;
                         const dataSourceJson = JSON.parse(dataSource);
                         btn.textContent = 'ML Report';
-                        if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
+                        if (dataSourceJson.listener === 'sitespeed_influxdb_v2' || dataSourceJson.listener === 'sitespeed_influxdb_v1.8') {
                             btn.classList.add('disabled');
                         } else {
                             btn.href = `/report?test_title=${encodeURIComponent(test.test_title)}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}&bucket=${encodeURIComponent(dataSourceJson.bucket)}`;
