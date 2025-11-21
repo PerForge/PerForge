@@ -20,17 +20,26 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       self,
       bucket: str,
       test_title_tag_name: str,
+      search: str = '',
   ) -> str:
-        """Return Flux query to get distinct test titles."""
+        """Return Flux query to get distinct test titles with optional search filter."""
         base_query = (
             f"from(bucket: \"{bucket}\")\n"
             f"  |> range(start: 0, stop: now())\n"
             f"  |> filter(fn: (r) => r._measurement == \"largestContentfulPaint\" and r._field == \"median\" and r.origin == \"browsertime\" )\n"
+        )
+
+        # Add search filter if provided
+        if search:
+            # Case-insensitive regex search
+            base_query += f"  |> filter(fn: (r) => r[\"{test_title_tag_name}\"] =~ /(?i){search}/)\n"
+
+        base_query += (
             f"  |> group(columns: [\"{test_title_tag_name}\"])\n"
             f"  |> min(column: \"_time\")\n"
-            f"  |> group()"
+            f"  |> group()\n"
             f"  |> sort(columns: [\"_time\"], desc: true)\n"
-            f"  |> keep(columns: [\"{test_title_tag_name}\"])"
+            f"  |> keep(columns: [\"{test_title_tag_name}\"])\n"
             f"  |> rename(columns: {{{test_title_tag_name}: \"test_title\"}})"
         )
         return base_query

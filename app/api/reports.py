@@ -60,6 +60,9 @@ def get_test_data():
     Query Parameters:
         source_type: The type of data source
         id: The ID of the data source
+        page: Page number (default: 1)
+        page_size: Items per page (default: 10)
+        search: Optional search term to filter test titles
 
     Returns:
         A JSON response with test data
@@ -75,6 +78,19 @@ def get_test_data():
 
         source_type = request.args.get('source_type')
         source_id = request.args.get('id')
+
+        # Get search parameter
+        search = request.args.get('search', '').strip()
+
+        # Validate and sanitize search input
+        if search:
+            # Limit search length
+            if len(search) > 100:
+                return api_response(
+                    message="Search term too long (max 100 characters)",
+                    status=HTTP_BAD_REQUEST,
+                    errors=[{"code": "invalid_search", "message": "Search term too long"}]
+                )
 
         # Pagination parameters
         try:
@@ -105,8 +121,8 @@ def get_test_data():
         bucket = request.args.get('bucket')
         ds_obj = DataProvider(project=project_id, source_type=source_type, id=source_id, bucket=bucket)
 
-        # Retrieve all titles once and slice in-memory for pagination
-        titles = ds_obj.get_tests_titles()
+        # Retrieve titles with search filter applied
+        titles = ds_obj.get_tests_titles(search=search)
         total = len(titles)
 
         # If no titles are found, return an empty response immediately
@@ -116,7 +132,8 @@ def get_test_data():
                 "total": 0,
                 "baseline_titles": [],
                 "page": page,
-                "page_size": page_size
+                "page_size": page_size,
+                "search": search
             })
 
         # Determine slice of titles for current page
@@ -144,7 +161,8 @@ def get_test_data():
             "total": total,
             "baseline_titles": titles,
             "page": page,
-            "page_size": page_size
+            "page_size": page_size,
+            "search": search
         })
     except Exception as e:
         logging.error(f"Error loading tests: {str(e)}")

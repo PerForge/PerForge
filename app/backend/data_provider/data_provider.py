@@ -126,9 +126,9 @@ class DataProvider:
         """
         return self.ds_obj.get_test_log(test_titles=test_titles)
 
-    def get_tests_titles(self) -> list[str]:
-        """Return list of unique test titles from data-source."""
-        raw = self.ds_obj.get_tests_titles()
+    def get_tests_titles(self, search: str = '') -> list[str]:
+        """Return list of unique test titles from data-source, optionally filtered by search."""
+        raw = self.ds_obj.get_tests_titles(search=search)
         return [str(r.get("test_title")) for r in raw if r.get("test_title")]
 
     def get_response_time_data(self) -> None:

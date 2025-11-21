@@ -196,14 +196,15 @@ class DataExtractionBase(ABC):
         return self._fetch_test_log(test_titles=test_titles)
 
     @abstractmethod
-    def _fetch_tests_titles(self) -> List[str]:
-        """Fetch list of unique test titles from the data source."""
+    def _fetch_tests_titles(self, search: str = '') -> List[str]:
+        """Fetch list of unique test titles from the data source, optionally filtered by search."""
         pass
 
     @validate_output(expected_keys={'test_title'})
-    def get_tests_titles(self) -> List[str]:
-        """Return list of unique test titles."""
-        return self._fetch_tests_titles()
+    def get_tests_titles(self, search: str = '') -> List[str]:
+        """Return list of unique test titles, optionally filtered by search."""
+        return self._fetch_tests_titles(search=search)
+        
     @abstractmethod
     def _fetch_start_time(self, test_title: str, time_format: str) -> Any:
         """
