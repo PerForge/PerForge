@@ -50,7 +50,8 @@ function handleFetchedData(data) {
         aggregated_table: aggregatedTable,
         summary,
         performance_status,
-        overall_anomaly_windows: overallAnomalyWindows
+        overall_anomaly_windows: overallAnomalyWindows,
+        per_transaction_anomaly_windows: perTransactionAnomalyWindows
     } = data;
 
     updateTestDetails(testDetails);
@@ -72,7 +73,7 @@ function handleFetchedData(data) {
     if (aggregatedTable && aggregatedTable.length > 0) {
         initializeListJs();
     }
-    addDropdownEventListeners(chartData, styling, layoutConfig);
+    addDropdownEventListeners(chartData, styling, layoutConfig, perTransactionAnomalyWindows || {});
 }
 
 // --- Render per-graph insights below charts ---
@@ -309,7 +310,7 @@ function adjustGraphPosition() {
     });
 }
 
-function addDropdownEventListeners(chartData, styling, layoutConfig) {
+function addDropdownEventListeners(chartData, styling, layoutConfig, perTransactionAnomalyWindows) {
     document.querySelectorAll('.dropdown-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const parentRow = this.closest('.stat-row');
@@ -324,7 +325,7 @@ function addDropdownEventListeners(chartData, styling, layoutConfig) {
             if (graphRow.style.display === 'none' || !graphRow.style.display) {
                 graphRow.style.display = 'table-row';
                 this.innerHTML = '^';
-                drawGraph(chartData, styling, layoutConfig, transaction, `chart-${transaction}`);
+                drawGraph(chartData, styling, layoutConfig, transaction, `chart-${transaction}`, perTransactionAnomalyWindows);
             } else {
                 graphRow.style.display = 'none';
                 this.innerHTML = '˅';
@@ -333,7 +334,7 @@ function addDropdownEventListeners(chartData, styling, layoutConfig) {
     });
 }
 
-function drawGraph(chartData, styling, layoutConfig, transactionName, chartElementId) {
+function drawGraph(chartData, styling, layoutConfig, transactionName, chartElementId, perTransactionAnomalyWindows) {
     const avgTransactionData = chartData.avgResponseTimePerReq?.find(transaction => transaction.name === transactionName);
     const medianTransactionData = chartData.medianResponseTimePerReq?.find(transaction => transaction.name === transactionName);
     const pctTransactionData = chartData.pctResponseTimePerReq?.find(transaction => transaction.name === transactionName);
@@ -343,6 +344,9 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
     const medianArr = medianTransactionData?.data || [];
     const pctArr = pctTransactionData?.data || [];
     const throughputArr = throughputTransactionData?.data || [];
+
+    // Get anomaly windows for this specific transaction
+    const transactionWindows = (perTransactionAnomalyWindows && perTransactionAnomalyWindows[transactionName]) || {};
 
     // Choose timestamps source from first available series
     const base = avgArr.length ? avgArr : (medianArr.length ? medianArr : (pctArr.length ? pctArr : (throughputArr.length ? throughputArr : [])));
@@ -390,7 +394,16 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
         return;
     }
 
-    createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, metrics, styling, layoutConfig);
+    // Merge anomaly windows for response time metrics
+    const rtWindows = [];
+    ['rt_ms_avg', 'rt_ms_median', 'rt_ms_p90'].forEach(metricKey => {
+        const wins = transactionWindows[metricKey];
+        if (Array.isArray(wins)) {
+            rtWindows.push(...wins);
+        }
+    });
+
+    createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, metrics, styling, layoutConfig, rtWindows);
 
     // Draw throughput under the response time chart if available
     if (throughputArr.length) {
@@ -403,7 +416,9 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
             color: 'rgba(31, 119, 180, 1)',
             yAxisUnit: 'r/s'
         }];
-        createGraph(`${chartElementId}-throughput`, `Throughput - ${transactionName}`, thrTimestamps, thrMetrics, styling, layoutConfig);
+        // Get throughput anomaly windows for this transaction
+        const thrWindows = transactionWindows['rps'] || [];
+        createGraph(`${chartElementId}-throughput`, `Throughput - ${transactionName}`, thrTimestamps, thrMetrics, styling, layoutConfig, thrWindows);
     }
     // Apply theme to the lazily created chart as well
     if (typeof updateAllPlotlyChartsTheme === 'function') {

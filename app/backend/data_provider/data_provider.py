@@ -496,6 +496,59 @@ class DataProvider:
 
 
 
+    def _collect_per_transaction_anomaly_windows(self, test_obj: BaseTestData) -> Dict[str, Dict[str, List[Dict[str, str]]]]:
+        """
+        Collect per-transaction anomaly windows for transaction-level charts.
+
+        Args:
+            test_obj: Test data object containing per-transaction events
+
+        Returns:
+            Dictionary structured as: {transaction_name: {metric_name: [{start: ISO, end: ISO}, ...]}}
+        """
+        per_transaction_anomaly_windows: Dict[str, Dict[str, List[Dict[str, str]]]] = {}
+        per_txn_events = getattr(test_obj, 'per_txn_events_raw', None)
+
+        if not per_txn_events:
+            return per_transaction_anomaly_windows
+
+        for event in per_txn_events:
+            transaction = event.get('transaction')
+            window = event.get('window', {})
+            metrics_list = event.get('metrics', [])
+
+            if not transaction or not window:
+                continue
+
+            start_time = window.get('start')
+            end_time = window.get('end')
+
+            if not start_time or not end_time:
+                continue
+
+            # Ensure transaction entry exists
+            if transaction not in per_transaction_anomaly_windows:
+                per_transaction_anomaly_windows[transaction] = {}
+
+            # Add window for each metric involved in this anomaly
+            for metric_info in metrics_list:
+                metric_name = metric_info.get('name') if isinstance(metric_info, dict) else str(metric_info)
+
+                if not metric_name:
+                    continue
+
+                # Ensure metric entry exists for this transaction
+                if metric_name not in per_transaction_anomaly_windows[transaction]:
+                    per_transaction_anomaly_windows[transaction][metric_name] = []
+
+                # Add the window
+                per_transaction_anomaly_windows[transaction][metric_name].append({
+                    "start": start_time,
+                    "end": end_time
+                })
+
+        return per_transaction_anomaly_windows
+
     # Main analysis method
     def collect_test_data_for_report_page(self, test_title: str) -> Tuple[Dict, List, Dict, Dict, Dict, str, bool]:
         """
@@ -538,6 +591,9 @@ class DataProvider:
                     {"start": start_iso, "end": end_iso}
                 )
 
+        # Collect per-transaction anomaly windows for transaction-level charts
+        per_transaction_anomaly_windows = self._collect_per_transaction_anomaly_windows(test_obj)
+
         # Fetch additional response time per request data
         avgResponseTimePerReq = self._get_per_req_series(test_obj, 'rt_avg', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
@@ -552,7 +608,7 @@ class DataProvider:
         metrics["throughputPerReq"] = self.transform_to_json(throughputPerReq)
 
         # Collect the aggregated table data (backend tests only)
-        is_backend = getattr(test_obj, 'test_type', None) == 'back_end'
+        is_backend = isinstance(test_obj, BackendTestData)
         if is_backend:
             metrics_table: MetricsTable = test_obj.get_table('aggregated_data')
             if metrics_table:
@@ -572,6 +628,7 @@ class DataProvider:
             test_obj.ml_html_summary,
             test_obj.performance_status,
             overall_anomaly_windows,
+            per_transaction_anomaly_windows,
         )
 
     def _get_per_req_series(self, test_obj: BaseTestData, key: str, test_title: str, start: str, end: str):
@@ -690,8 +747,8 @@ class DataProvider:
         transactions = set()
 
         # Check test type to determine where to look for transactions
-        is_backend = getattr(test_obj, 'test_type', None) == 'back_end'
-        is_frontend = getattr(test_obj, 'test_type', None) == 'front_end'
+        is_backend = isinstance(test_obj, BackendTestData)
+        is_frontend = isinstance(test_obj, FrontendTestData)
 
         if is_backend:
             # Get transactions from aggregated_data table (backend tests)

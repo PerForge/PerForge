@@ -361,7 +361,7 @@ def get_report_data():
         # Prefer bucket passed from UI; fallback to integration config
         bucket = data.get('bucket')
         dp = DataProvider(project=project_id, source_type=source_type, id=source_id, bucket=bucket)
-        metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status, overall_anomaly_windows = dp.collect_test_data_for_report_page(test_title=test_title)
+        metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status, overall_anomaly_windows, per_transaction_anomaly_windows = dp.collect_test_data_for_report_page(test_title=test_title)
 
         response_data = {
             'data': metrics,
@@ -372,6 +372,7 @@ def get_report_data():
             'summary': summary,
             'performance_status': performance_status,
             'overall_anomaly_windows': overall_anomaly_windows,
+            'per_transaction_anomaly_windows': per_transaction_anomaly_windows,
             'styling': {
                 'paper_bgcolor': 'rgba(0,0,0,0)',  # Transparent background
                 'plot_bgcolor': 'rgba(0,0,0,0)',   # Transparent background

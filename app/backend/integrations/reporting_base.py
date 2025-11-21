@@ -23,7 +23,7 @@ from app.backend.components.templates.templates_db import DBTemplates
 from app.backend.components.templates.template_groups_db import DBTemplateGroups
 from app.backend.components.prompts.prompts_db import DBPrompts
 from app.backend.data_provider.data_provider import DataProvider
-from app.backend.data_provider.test_data import BaseTestData, MetricsTable
+from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable
 from app.backend.data_provider.image_creator.plotly_image_renderer import PlotlyImageRenderer
 
 from typing import Dict, Any
@@ -148,8 +148,7 @@ class ReportingBase:
             Transaction status table or None if build fails
         """
         try:
-            test_type = getattr(self.current_test_obj, 'test_type', None)
-            is_frontend = test_type == 'front_end'
+            is_frontend = isinstance(self.current_test_obj, FrontendTestData)
 
             # Try to load aggregated_data table (backend tests)
             # This maintains backward compatibility - if test_type is not set or is backend, try aggregated_data
