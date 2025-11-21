@@ -110,9 +110,13 @@
                     <option value="">All projects</option>
                   </select>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3" id="templateVariablesSection" style="display: none;">
                   <div class="variables-section">
-                      <label>Available parameters for template prompts</label>
+                      <label><strong>Available Parameters for Template Prompts</strong></label>
+                      <div class="variable-item">
+                          <label class="var-description">You can use ALL available report parameters in template prompts.</label>
+                      </div>
+                      <label class="mt-2"><strong>Common AI-Specific Variables:</strong></label>
                       <div class="variable-item">
                           <label class="var-name" onclick="copyToClipboard('${aggregated_data_analysis}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${aggregated_data_analysis}');"></i> ${aggregated_data_analysis}</label>
                           <label class="var-description">Detailed analysis of aggregated performance metrics.</label>
@@ -227,6 +231,27 @@
             promptModalElForReset.addEventListener('hidden.bs.modal', function() {
                 resetPromptForm();
             });
+        }
+
+        // Toggle variables section visibility based on "Place" selection
+        const placeSelect = document.getElementById('place');
+        const templateVariablesSection = document.getElementById('templateVariablesSection');
+
+        if (placeSelect && templateVariablesSection) {
+            // Function to toggle visibility
+            function toggleVariablesSection() {
+                if (placeSelect.value === 'template') {
+                    templateVariablesSection.style.display = 'block';
+                } else {
+                    templateVariablesSection.style.display = 'none';
+                }
+            }
+
+            // Add event listener for place dropdown changes
+            placeSelect.addEventListener('change', toggleVariablesSection);
+
+            // Initialize visibility on page load
+            toggleVariablesSection();
         }
 
         // Handle form submission
@@ -457,6 +482,7 @@
           const typeEl = document.getElementById('prompt_type');
           const projectEl = document.getElementById('project_id');
           const titleEl = document.getElementById('addnewpromptLabel');
+          const templateVariablesSection = document.getElementById('templateVariablesSection');
 
           if (idEl) idEl.value = '';
           if (nameEl) nameEl.value = '';
@@ -465,6 +491,11 @@
           if (typeEl) typeEl.value = 'custom';
           if (projectEl) projectEl.value = '';
           if (titleEl) titleEl.textContent = 'Add Prompt';
+
+          // Hide variables section by default (since default place is 'graph')
+          if (templateVariablesSection) {
+              templateVariablesSection.style.display = 'none';
+          }
       }
 
       // Function to show the view prompt modal
@@ -485,6 +516,12 @@
 
           // Update modal title
           document.getElementById('addnewpromptLabel').textContent = 'Clone Prompt';
+
+          // Toggle variables section visibility based on place
+          const templateVariablesSection = document.getElementById('templateVariablesSection');
+          if (templateVariablesSection) {
+              templateVariablesSection.style.display = prompt.place === 'template' ? 'block' : 'none';
+          }
       }
 
       // Function to show the edit prompt modal
@@ -498,6 +535,12 @@
 
           // Update modal title
           document.getElementById('addnewpromptLabel').textContent = 'Edit Prompt';
+
+          // Toggle variables section visibility based on place
+          const templateVariablesSection = document.getElementById('templateVariablesSection');
+          if (templateVariablesSection) {
+              templateVariablesSection.style.display = prompt.place === 'template' ? 'block' : 'none';
+          }
       }
 
       // Function to show the delete confirmation modal

@@ -21,8 +21,9 @@ from app.backend.integrations.grafana.grafana_db import DBGrafana
 from app.backend.components.nfrs.nfr_validation import NFRValidation
 from app.backend.components.templates.templates_db import DBTemplates
 from app.backend.components.templates.template_groups_db import DBTemplateGroups
+from app.backend.components.prompts.prompts_db import DBPrompts
 from app.backend.data_provider.data_provider import DataProvider
-from app.backend.data_provider.test_data import BaseTestData, MetricsTable
+from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable
 from app.backend.data_provider.image_creator.plotly_image_renderer import PlotlyImageRenderer
 
 from typing import Dict, Any
@@ -36,6 +37,7 @@ class ReportingBase:
         self.validation_obj = NFRValidation(project=self.project)
         self.current_test_obj: BaseTestData = None
         self.baseline_test_obj: BaseTestData = None
+        self._needs_transaction_status_table = False  # Flag to track if status table is needed
 
     def set_template(self, template, db_config: Dict[str, str]):
         template_obj = DBTemplates.get_config_by_id(project_id=self.project, id=template)
@@ -123,7 +125,85 @@ class ReportingBase:
                 except Exception as e:
                     logging.warning(f"Error loading table '{table_name}' with aggregation '{aggregation}': {e}")
 
+            # Check for transaction status table variables
+            if var == "transaction_status_table":
+                # Set flag indicating status table is needed
+                self._needs_transaction_status_table = True
+
+            if var == "transaction_status_table_detailed":
+                # Set flag indicating status table is needed
+                self._needs_transaction_status_table = True
+
         return text
+
+    def _ensure_transaction_status_table(self):
+        """
+        Helper function to ensure tables are loaded with baseline data
+        and build the transaction status table.
+
+        For backend tests: loads aggregated_data with baseline
+        For frontend tests: loads tables with baseline applied
+
+        Returns:
+            Transaction status table or None if build fails
+        """
+        try:
+            is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+
+            # Try to load aggregated_data table (backend tests)
+            # This maintains backward compatibility - if test_type is not set or is backend, try aggregated_data
+            if not is_frontend and hasattr(self.current_test_obj, 'get_table'):
+                agg_table = self.current_test_obj.get_table('aggregated_data')
+
+                # If baseline test exists, apply baseline metrics to aggregated_data
+                if agg_table is not None and self.baseline_test_obj is not None and hasattr(self.baseline_test_obj, 'get_table'):
+                    try:
+                        baseline_agg_table = self.baseline_test_obj.get_table('aggregated_data')
+                        if baseline_agg_table is not None and baseline_agg_table.metrics:
+                            agg_table.set_baseline_metrics(baseline_agg_table.metrics)
+                    except Exception as e:
+                        logging.warning(f"Error loading baseline aggregated_data for transaction status: {e}")
+
+            # Frontend-specific handling: apply baseline to loaded tables
+            if is_frontend and self.baseline_test_obj is not None:
+                # Frontend: Apply baseline to any loaded tables
+                # If tables are already loaded from template variables, apply baseline to them
+                # If no tables loaded yet, load one lightweight table to get transaction names
+                if hasattr(self.current_test_obj, '_loaded_tables') and self.current_test_obj._loaded_tables:
+                    # Tables already loaded, apply baseline to them
+                    aggregation = getattr(self.current_test_obj, 'aggregation', 'median')
+                    for (table_name, _), current_table in self.current_test_obj._loaded_tables.items():
+                        if table_name == 'overview_data':  # Skip overview table
+                            continue
+                        try:
+                            baseline_table = self.baseline_test_obj.get_table(table_name, aggregation)
+                            if baseline_table is not None and baseline_table.metrics:
+                                current_table.set_baseline_metrics(baseline_table.metrics)
+                        except Exception as e:
+                            logging.debug(f"Could not apply baseline to frontend table '{table_name}': {e}")
+                else:
+                    # No tables loaded yet, load one lightweight table with baseline
+                    # This ensures transaction names are available with baseline data
+                    try:
+                        aggregation = getattr(self.current_test_obj, 'aggregation', 'median')
+                        # Load google_web_vitals as it's lightweight and present in most frontend tests
+                        current_table = self.current_test_obj.get_table('google_web_vitals', aggregation)
+                        if current_table:
+                            baseline_table = self.baseline_test_obj.get_table('google_web_vitals', aggregation)
+                            if baseline_table is not None and baseline_table.metrics:
+                                current_table.set_baseline_metrics(baseline_table.metrics)
+                    except Exception as e:
+                        logging.debug(f"Could not load google_web_vitals with baseline for status table: {e}")
+
+            # Now build the transaction status table with all data available
+            if hasattr(self, 'dp_obj'):
+                table = self.dp_obj.build_transaction_status_table(self.current_test_obj)
+                self.current_test_obj.transaction_status_table = table
+                return table
+        except Exception as e:
+            logging.warning(f"Failed to build transaction status table: {e}")
+
+        return None
 
     def format_table(self, metrics):
         """
@@ -144,6 +224,8 @@ class ReportingBase:
         self.parameters['nfr_summary'] = ""
         self.parameters['ml_summary'] = ""
         self.parameters['ai_summary'] = ""
+        self.parameters['transaction_status_table'] = ""
+        self.parameters['transaction_status_table_detailed'] = ""
 
         all_tables = self.current_test_obj.get_all_tables()
 
@@ -157,6 +239,27 @@ class ReportingBase:
             if self.current_test_obj.ml_summary:
                 self.parameters['ml_summary'] = self.current_test_obj.ml_summary
 
+        # 2.5. Build transaction status table (after ML and NFR, before AI)
+        # Only build if the flag indicates it's needed in the report
+        if self._needs_transaction_status_table:
+            if not hasattr(self.current_test_obj, 'transaction_status_table') or self.current_test_obj.transaction_status_table is None:
+                table = self._ensure_transaction_status_table()
+            else:
+                table = self.current_test_obj.transaction_status_table
+
+            # Format and store both versions in parameters
+            if table:
+                try:
+                    # Simple format
+                    simple_metrics = table.format_for_report()
+                    self.parameters['transaction_status_table'] = self.format_table(simple_metrics)
+
+                    # Detailed format
+                    detailed_metrics = table.format_detailed()
+                    self.parameters['transaction_status_table_detailed'] = self.format_table(detailed_metrics)
+                except Exception as e:
+                    logging.warning(f"Error formatting transaction status table for parameters: {e}")
+
         # 3. AI-generated summary
         if self.ai_switch:
             # Use JSON string of all tables for AI analysis
@@ -167,13 +270,31 @@ class ReportingBase:
                 all_tables_json = self.current_test_obj.get_all_tables_json()
                 self.ai_support_obj.analyze_aggregated_data(all_tables_json, self.aggregated_prompt_id)
 
-            # Generate template summary, including NFR and ML summaries
-            self.parameters['ai_summary'] = self.ai_support_obj.create_template_summary(
-                self.template_prompt_id,
-                self.parameters['nfr_summary'],
-                self.current_test_obj.ml_anomalies,
-                self.parameters.get('additional_context', '')
-            )
+            # Prepare AI-specific variables for prompt replacement
+            # Store them temporarily in parameters so replace_variables can access them
+            self.parameters['aggregated_data_analysis'] = self.ai_support_obj.prepare_list_of_analysis(
+                self.ai_support_obj.aggregated_data_analysis) or "N/A"
+            self.parameters['graphs_analysis'] = self.ai_support_obj.prepare_list_of_analysis(
+                self.ai_support_obj.graph_analysis) or "N/A"
+            # NFR and ML summaries are already in parameters
+            if 'nfr_summary' not in self.parameters or not self.parameters['nfr_summary']:
+                self.parameters['nfr_summary'] = "N/A"
+            if 'ml_summary' not in self.parameters or not self.parameters['ml_summary']:
+                self.parameters['ml_summary'] = self.current_test_obj.ml_anomalies or "N/A"
+            if 'additional_context' not in self.parameters:
+                self.parameters['additional_context'] = "N/A"
+
+            # Fetch the prompt template and apply centralized variable replacement
+            prompt_template = DBPrompts.get_config_by_id(
+                project_id=self.project,
+                id=self.template_prompt_id
+            )["prompt"]
+
+            # Use replace_variables for ALL replacements (parameters, tables, AI-specific values)
+            processed_prompt = self.replace_variables(prompt_template)
+
+            # Generate AI summary with the fully processed prompt
+            self.parameters['ai_summary'] = self.ai_support_obj.run_summary_chain(processed_prompt)
 
     def analyze_template_group(self):
         overall_summary = ""

@@ -51,25 +51,68 @@ class AtlassianJiraReport(ReportingBase):
             graph = f'Image failed to load, id: {graph_data["id"]}'
         return graph, (ai_support_response or "")
 
+    def colorize_status(self, value):
+        """
+        Apply color formatting to status values for Jira Wiki markup.
+
+        Args:
+            value: The cell value to potentially colorize
+
+        Returns:
+            The value wrapped in Jira color markup if it's a recognized status, otherwise unchanged
+        """
+        # Convert to string for comparison
+        value_str = str(value).strip().upper()
+
+        # Define status colors (Jira color names)
+        status_colors = {
+            'PASSED': 'green',
+            'FAILED': 'red',
+            'WARNING': 'orange',
+        }
+
+        # Check if this is a status value
+        if value_str in status_colors:
+            color = status_colors[value_str]
+            # Return with Jira color markup
+            return f"{{color:{color}}}{value}{{color}}"
+
+        return value
+
     def format_table(self, metrics):
         if not metrics:
             return "No data available\n\n"
 
-        all_keys = set()
-        for record in metrics:
-            all_keys.update(record.keys())
+        # Preserve OrderedDict order if present, otherwise sort and reorder
+        from collections import OrderedDict
+        if metrics and isinstance(metrics[0], OrderedDict):
+            # Use the order from the first OrderedDict
+            keys = list(metrics[0].keys())
+        else:
+            all_keys = set()
+            for record in metrics:
+                all_keys.update(record.keys())
 
-        keys = sorted(list(all_keys))
+            keys = sorted(list(all_keys))
 
-        if 'page' in keys:
-            keys.remove('page')
-            keys.insert(0, 'page')
-        elif 'transaction' in keys:
-            keys.remove('transaction')
-            keys.insert(0, 'transaction')
-        elif 'Metric' in keys:
-            keys.remove('Metric')
-            keys.insert(0, 'Metric')
+            # Prioritize common first columns (Transaction/transaction/page/Metric)
+            if 'Transaction' in keys:
+                keys.remove('Transaction')
+                keys.insert(0, 'Transaction')
+            elif 'transaction' in keys:
+                keys.remove('transaction')
+                keys.insert(0, 'transaction')
+            elif 'page' in keys:
+                keys.remove('page')
+                keys.insert(0, 'page')
+            elif 'Metric' in keys:
+                keys.remove('Metric')
+                keys.insert(0, 'Metric')
+
+            # Put Status column second if it exists and Transaction is first
+            if len(keys) > 1 and keys[0] in ('Transaction', 'transaction') and 'Status' in keys:
+                keys.remove('Status')
+                keys.insert(1, 'Status')
 
         # Header
         header = '||' + '||'.join(keys) + '||\n'
@@ -100,13 +143,17 @@ class AtlassianJiraReport(ReportingBase):
                             elif second_val > first_val:
                                 value_str = f'{{color:red}}{value}{{color}}'
                         else:
-                            value_str = value
+                            value_str = self.colorize_status(value)
                     except (ValueError, ZeroDivisionError, IndexError):
-                        value_str = value
+                        value_str = self.colorize_status(value)
                 elif isinstance(value, float):
                     value_str = f"{value:.2f}"
+                    # Colorize status values
+                    value_str = self.colorize_status(value_str)
                 else:
                     value_str = str(value)
+                    # Colorize status values
+                    value_str = self.colorize_status(value_str)
                 row.append(value_str)
             body.append('|' + '|'.join(row) + '|\n')
 

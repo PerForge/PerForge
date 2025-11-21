@@ -60,26 +60,68 @@ class SmtpMailReport(ReportingBase):
             graph = f'Image failed to load, id: {graph_data["id"]}'
         return graph, (ai_support_response or "")
 
+    def colorize_status(self, value):
+        """
+        Apply color formatting to status values for HTML email rendering.
+
+        Args:
+            value: The cell value to potentially colorize
+
+        Returns:
+            A tuple of (value, style_string) where style_string contains inline CSS if it's a status
+        """
+        # Convert to string for comparison
+        value_str = str(value).strip().upper()
+
+        # Define status colors
+        status_colors = {
+            'PASSED': 'green',
+            'FAILED': 'red',
+            'WARNING': 'orange',
+        }
+
+        # Check if this is a status value
+        if value_str in status_colors:
+            color = status_colors[value_str]
+            # Return with inline CSS style
+            return value, f'style="color:{color};font-weight:bold;"'
+
+        return value, ""
+
     def format_table(self, metrics):
         if not metrics:
             return "<p>No data available</p>"
 
-        all_keys = set()
-        for record in metrics:
-            all_keys.update(record.keys())
+        # Preserve OrderedDict order if present, otherwise sort and reorder
+        from collections import OrderedDict
+        if metrics and isinstance(metrics[0], OrderedDict):
+            # Use the order from the first OrderedDict
+            keys = list(metrics[0].keys())
+        else:
+            all_keys = set()
+            for record in metrics:
+                all_keys.update(record.keys())
 
-        keys = sorted(list(all_keys))
+            keys = sorted(list(all_keys))
 
-        # Prioritize 'page' or 'transaction' column
-        if 'page' in keys:
-            keys.remove('page')
-            keys.insert(0, 'page')
-        elif 'transaction' in keys:
-            keys.remove('transaction')
-            keys.insert(0, 'transaction')
-        elif 'Metric' in keys:
-            keys.remove('Metric')
-            keys.insert(0, 'Metric')
+            # Prioritize common first columns (Transaction/transaction/page/Metric)
+            if 'Transaction' in keys:
+                keys.remove('Transaction')
+                keys.insert(0, 'Transaction')
+            elif 'transaction' in keys:
+                keys.remove('transaction')
+                keys.insert(0, 'transaction')
+            elif 'page' in keys:
+                keys.remove('page')
+                keys.insert(0, 'page')
+            elif 'Metric' in keys:
+                keys.remove('Metric')
+                keys.insert(0, 'Metric')
+
+            # Put Status column second if it exists and Transaction is first
+            if len(keys) > 1 and keys[0] in ('Transaction', 'transaction') and 'Status' in keys:
+                keys.remove('Status')
+                keys.insert(1, 'Status')
 
         # Start building the HTML table
         html = ['<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">']
@@ -119,14 +161,26 @@ class SmtpMailReport(ReportingBase):
                             elif second_val > first_val:
                                 style = 'style="color:red;font-weight:bold;"'
                         else:
-                            value_str = value
+                            value_str, status_style = self.colorize_status(value)
+                            if status_style:
+                                style = status_style
                     except (ValueError, ZeroDivisionError, IndexError):
-                        value_str = value
+                        value_str, status_style = self.colorize_status(value)
+                        if status_style:
+                            style = status_style
                 # Format float to two decimal places
                 elif isinstance(value, float):
                     value_str = f"{value:.2f}"
+                    # Colorize status values
+                    _, status_style = self.colorize_status(value_str)
+                    if status_style:
+                        style = status_style
                 else:
                     value_str = str(value)
+                    # Colorize status values
+                    _, status_style = self.colorize_status(value_str)
+                    if status_style:
+                        style = status_style
 
                 html.append(f'<td {style}>{value_str}</td>')
             html.append('</tr>')

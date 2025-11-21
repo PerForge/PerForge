@@ -739,16 +739,24 @@ class AnomalyDetectionEngine:
         # Analyze data periods
         fixed_load_period, ramp_up_period, is_fixed_load = self.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
 
-        ramp_up_period = self.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
+        # Only analyze ramp-up throughput if the metric exists
+        if 'overalThroughput' in ramp_up_period.columns:
+            ramp_up_period = self.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
+        else:
+            logging.warning("Skipping ramp-up anomaly detection: 'overalThroughput' metric not available")
 
         if is_fixed_load:
             for metric in standard_metrics:
                 if standard_metrics[metric]['analysis']:
-                    fixed_load_period = self.detect_anomalies(
-                        fixed_load_period,
-                        metric=metric,
-                        period_type='fixed_load'
-                    )
+                    # Only detect anomalies if the metric exists in the DataFrame
+                    if metric in fixed_load_period.columns:
+                        fixed_load_period = self.detect_anomalies(
+                            fixed_load_period,
+                            metric=metric,
+                            period_type='fixed_load'
+                        )
+                    else:
+                        logging.warning(f"Skipping anomaly detection for '{metric}': metric not available in data")
             try:
                 self.fixed_load_period_annotated = fixed_load_period.copy()
             except Exception:
@@ -904,14 +912,23 @@ class AnomalyDetectionEngine:
             after_points = after_points.sort_values('share', ascending=False)
             coverage = float(getattr(self, 'per_txn_coverage', 0.8))
             max_k = int(getattr(self, 'per_txn_max_k', 50))
-            cum = after_points['share'].cumsum()
-            if (cum >= coverage).any():
-                upto = after_points.index.get_loc((cum >= coverage).idxmax()) + 1
-                selected_df = after_points.iloc[:upto]
-            else:
+
+            # If we have <= max_k transactions, select all of them (no 80% cutoff)
+            # The 80% coverage rule only applies when we have more than max_k transactions
+            if len(after_points) <= max_k:
                 selected_df = after_points
-            if len(selected_df) > max_k:
-                selected_df = selected_df.iloc[:max_k]
+            else:
+                # We have more than max_k transactions - apply 80% coverage rule
+                cum = after_points['share'].cumsum()
+                if (cum >= coverage).any():
+                    upto = after_points.index.get_loc((cum >= coverage).idxmax()) + 1
+                    selected_df = after_points.iloc[:upto]
+                else:
+                    selected_df = after_points
+                # Cap at max_k
+                if len(selected_df) > max_k:
+                    selected_df = selected_df.iloc[:max_k]
+
             selected = selected_df['transaction'].tolist()
             cumulative_share = float(selected_df['share'].sum()) if not selected_df.empty else 0.0
         result = {
@@ -932,7 +949,7 @@ class AnomalyDetectionEngine:
         if metric in g.columns:
             cols = ["timestamp", metric]
             for extra in (COL_TXN_RPS, COL_OVERALL_RPS, COL_ERR_RATE):
-                if extra in g.columns:
+                if extra in g.columns and extra not in cols:
                     cols.append(extra)
             df = g[cols].copy()
         else:
@@ -1045,7 +1062,7 @@ class AnomalyDetectionEngine:
             self.transaction_windows = {'by_txn': {}, 'annotated': df_long_selected}
             return self.transaction_windows
         df = df_long_selected.copy()
-        m_present = [m for m in (metrics or ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate']) if m in df.columns]
+        m_present = [m for m in (metrics or ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate', 'rps']) if m in df.columns]
         by_txn = {}
         annotated_parts = []
         for txn, g in df.groupby(txn_col, dropna=True):
@@ -1338,6 +1355,14 @@ class AnomalyDetectionEngine:
                         if d is not None:
                             direction = d
                             break
+
+                # For throughput metrics (RPS), align per-transaction direction with overall direction
+                # to avoid logical contradictions (e.g., overall "decrease" with per-txn "increase")
+                overall_direction = oa.get('direction')
+                if m in ['overalThroughput', 'rps'] and overall_direction and direction:
+                    if overall_direction != direction:
+                        # Per-transaction direction contradicts overall - align it
+                        direction = overall_direction
 
                 duration_sec = best_overlap
                 impact = float(share)

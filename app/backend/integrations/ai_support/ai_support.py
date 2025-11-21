@@ -240,14 +240,38 @@ class AISupport(Integration):
             result += "\n\n"
         return str(result)
 
+    def run_summary_chain(self, prompt_value: str) -> str:
+        """
+        Run the AI chain with a pre-processed prompt and store result in summary.
+
+        This method expects the prompt to already have all variables replaced.
+        Use this when the calling code handles variable replacement.
+
+        Args:
+            prompt_value: The fully processed prompt with all variables replaced
+
+        Returns:
+            The generated summary as a string
+        """
+        if not self.models_created:
+            return "Error: AI failed to initialize."
+
+        result = self.run_chain(prompt_value)
+        self.summary.append(result)
+        return result
+
     def create_template_summary(self, prompt_id: str, nfr_summary: str, ml_summary: Optional[str] = None, additional_context: Optional[str] = None) -> str:
         """
         Create a summary based on all analyses and NFR results using a template prompt.
+
+        DEPRECATED: This method is kept for backward compatibility but uses manual replacement.
+        Consider using run_summary_chain() with ReportingBase.replace_variables() instead.
 
         Args:
             prompt_id: ID of the prompt to use for the summary.
             nfr_summary: The NFR analysis summary string.
             ml_summary: Optional ML analysis summary string.
+            additional_context: Optional additional context string.
 
         Returns:
             The generated summary as a string.

@@ -165,9 +165,8 @@ class Pdf:
         self.elements.append(img)
 
     def add_table(self, table_data):
-        # Process data to handle long text and create paragraphs for cell content
+        # Process data to create paragraphs for cell content
         processed_data = []
-        max_chars_per_cell = 40  # Maximum characters before forcing a line break
         styles = getSampleStyleSheet()
         cell_style = styles['Normal']
         cell_style.fontName = self.regular_font
@@ -197,21 +196,60 @@ class Pdf:
                 if cell is None or cell == '' or cell == 'None' or (isinstance(cell, float) and (cell != cell)):  # None, empty string, 'None' string, and NaN
                     cell = 0
                 cell_text = str(cell)
-                # Add soft breaks for long text
-                if len(cell_text) > max_chars_per_cell:
-                    # Insert soft breaks to help with wrapping
-                    parts = [cell_text[i:i+max_chars_per_cell] for i in range(0, len(cell_text), max_chars_per_cell)]
-                    cell_text = '<br/>'.join(parts)
+                # Let Paragraph handle wrapping naturally based on column width
                 processed_row.append(Paragraph(cell_text, cell_style))
             processed_data.append(processed_row)
 
-        # Calculate table width and column widths
+        # Calculate table width and column widths based on content
         available_width = landscape(A4)[0] - self.doc.leftMargin - self.doc.rightMargin - 10  # Extra margin for safety
         num_columns = len(table_data[0])
 
-        # Use equal column widths across the full page width
-        col_width = available_width / num_columns
-        col_widths = [col_width] * num_columns
+        # Helper function to strip HTML tags for length calculation
+        def strip_html_tags(text):
+            """Remove HTML tags to get visual text length"""
+            return re.sub(r'<[^>]+>', '', str(text))
+
+        # Calculate approximate content width for each column
+        col_content_widths = []
+        for col_idx in range(num_columns):
+            max_length = 0
+            for row_idx, row in enumerate(table_data):
+                cell_text = str(row[col_idx])
+                # Strip HTML tags to get visual length
+                visual_text = strip_html_tags(cell_text)
+                # For header (first row), weight it more heavily
+                weight = 1.5 if row_idx == 0 else 1.0
+                max_length = max(max_length, len(visual_text) * weight)
+            col_content_widths.append(max_length)
+
+        # Calculate total content width
+        total_content_width = sum(col_content_widths)
+
+        # Distribute available width proportionally based on content
+        # But enforce min and max widths
+        min_col_width = 60  # Minimum column width in points
+        max_col_width = available_width * 0.5  # Max 50% of available width for any column
+
+        col_widths = []
+        remaining_width = available_width
+        remaining_columns = num_columns
+
+        # First pass: assign widths proportionally, respecting min/max
+        for content_width in col_content_widths:
+            if total_content_width > 0:
+                proportional_width = (content_width / total_content_width) * available_width
+            else:
+                proportional_width = available_width / num_columns
+
+            # Apply min/max constraints
+            final_width = max(min_col_width, min(max_col_width, proportional_width))
+            col_widths.append(final_width)
+
+        # Second pass: normalize to fit exactly within available_width
+        current_total = sum(col_widths)
+        if current_total != available_width:
+            scale_factor = available_width / current_total
+            col_widths = [w * scale_factor for w in col_widths]
 
         # Create table with the calculated column widths
         table = Table(processed_data, colWidths=col_widths, cornerRadii=[6, 6, 6, 6])
@@ -314,16 +352,20 @@ class PdfReport(ReportingBase):
 
     def check_if_table(self, text):
         try:
-            # Safely evaluate the string to a Python literal
-            text = text.replace('\\"', '"')
-            result = ast.literal_eval(text)
+            # First try to parse as JSON (handles escaped quotes properly)
+            try:
+                result = json.loads(text)
+            except json.JSONDecodeError:
+                # Fallback to ast.literal_eval for backward compatibility
+                text = text.replace('\\"', '"')
+                result = ast.literal_eval(text)
 
             # Check if the result is a list of lists
             if isinstance(result, list) and all(isinstance(item, list) for item in result):
                 return True, result
             else:
                 return False, None  # Not a valid list of lists
-        except (SyntaxError, ValueError):
+        except (SyntaxError, ValueError, json.JSONDecodeError):
             return False, None  # Parsing failed
 
     def extract_title(self, text):
@@ -346,6 +388,34 @@ class PdfReport(ReportingBase):
             title = self.replace_variables(self.title)
         return title
 
+    def colorize_status(self, value):
+        """
+        Apply color formatting to status values for PDF rendering.
+
+        Args:
+            value: The cell value to potentially colorize
+
+        Returns:
+            The value wrapped in color tags if it's a recognized status, otherwise unchanged
+        """
+        # Convert to string for comparison
+        value_str = str(value).strip().upper()
+
+        # Define status colors
+        status_colors = {
+            'PASSED': '#28a745',   # Green
+            'FAILED': '#dc3545',   # Red
+            'WARNING': '#ffc107',  # Yellow/Orange
+        }
+
+        # Check if this is a status value
+        if value_str in status_colors:
+            color = status_colors[value_str]
+            # Return with ReportLab font color tags
+            return f'<font color="{color}">{value}</font>'
+
+        return value
+
     def format_table(self, metrics):
         """
         Format a metrics table for PDF report. Converts the list of dictionaries
@@ -361,29 +431,48 @@ class PdfReport(ReportingBase):
         if not metrics:
             return json.dumps([["No data available"]])
 
-        # Create header from the keys in the first dictionary
-        all_keys = set()
-        for record in metrics:
-            all_keys.update(record.keys())
+        # Collect keys while preserving order from the first record (if it's an OrderedDict)
+        # or from all records
+        if metrics and hasattr(metrics[0], 'keys'):
+            # If first record is OrderedDict, use its order
+            from collections import OrderedDict
+            if isinstance(metrics[0], OrderedDict):
+                # Use the order from the first OrderedDict
+                keys = list(metrics[0].keys())
+                # Add any additional keys from other records (shouldn't happen, but be safe)
+                for record in metrics[1:]:
+                    for key in record.keys():
+                        if key not in keys:
+                            keys.append(key)
+            else:
+                # Regular dict - collect all keys
+                all_keys = set()
+                for record in metrics:
+                    all_keys.update(record.keys())
+                keys = sorted(all_keys)
+        else:
+            return json.dumps([["No data available"]])
 
         # Filter out metadata fields (_baseline, _diff, _diff_pct, _color)
-        keys = [k for k in sorted(all_keys) if not (k.endswith('_baseline') or
+        keys = [k for k in keys if not (k.endswith('_baseline') or
                                 k.endswith('_diff') or
                                 k.endswith('_diff_pct') or
                                 k.endswith('_color'))]
 
-        # Make sure transaction is the first column
-        if 'transaction' in keys:
-            keys.remove('transaction')
-            keys.insert(0, 'transaction')
-        # Fallback to page if no transaction column
-        elif 'page' in keys:
-            keys.remove('page')
-            keys.insert(0, 'page')
-        # Fallback to page if no transaction column
-        elif 'Metric' in keys:
-            keys.remove('Metric')
-            keys.insert(0, 'Metric')
+        # For non-OrderedDict data, ensure transaction/page/Metric is first
+        if not isinstance(metrics[0], OrderedDict):
+            # Make sure transaction is the first column
+            if 'transaction' in keys:
+                keys.remove('transaction')
+                keys.insert(0, 'transaction')
+            # Fallback to page if no transaction column
+            elif 'page' in keys:
+                keys.remove('page')
+                keys.insert(0, 'page')
+            # Fallback to Metric if no transaction or page column
+            elif 'Metric' in keys:
+                keys.remove('Metric')
+                keys.insert(0, 'Metric')
 
         # Create the table data structure with header row
         table_data = [keys]
@@ -399,11 +488,14 @@ class PdfReport(ReportingBase):
                 row.append(value)
             table_data.append(row)
 
-        # Convert any numerical values to more readable format
+        # Convert any numerical values to more readable format and apply colorization
         for i in range(1, len(table_data)):
             for j in range(len(table_data[i])):
+                # Format floats
                 if isinstance(table_data[i][j], float):
                     table_data[i][j] = f"{table_data[i][j]:.2f}"
+                # Colorize status values
+                table_data[i][j] = self.colorize_status(table_data[i][j])
 
         # Return the table data as a JSON string
         return json.dumps(table_data)

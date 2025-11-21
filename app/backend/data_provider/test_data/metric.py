@@ -29,6 +29,8 @@ class Metric:
     difference: Optional[float] = None
     difference_pct: Optional[float] = None
     nfr_status: NFRStatus = NFRStatus.NOT_EVALUATED
+    nfr_threshold: Optional[float] = None  # NFR threshold value
+    nfr_operation: Optional[str] = None  # NFR operation (e.g., '<', '>', '<=', '>=')
 
     def __post_init__(self):
         """Calculate differences if baseline is provided"""
@@ -47,6 +49,8 @@ class Metric:
             operation: Optional operation used for evaluation
         """
         self.nfr_status = status
+        self.nfr_threshold = threshold
+        self.nfr_operation = operation
 
     def get_display_color(self) -> str:
         """Get color for UI display based on NFR status"""
@@ -66,5 +70,7 @@ class Metric:
             'baseline': self.baseline,
             'difference': self.difference,
             'difference_pct': self.difference_pct,
-            'nfr_status': self.nfr_status.value
+            'nfr_status': self.nfr_status.value,
+            'nfr_threshold': self.nfr_threshold,
+            'nfr_operation': self.nfr_operation
         }
