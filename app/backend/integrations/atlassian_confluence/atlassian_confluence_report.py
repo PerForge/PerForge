@@ -99,6 +99,34 @@ class AtlassianConfluenceReport(ReportingBase):
         response = self.output_obj.put_page(title=page_title, content="")
         self.page_id = response["id"]
 
+    def colorize_status(self, value):
+        """
+        Apply color formatting to status values for Confluence HTML rendering.
+
+        Args:
+            value: The cell value to potentially colorize
+
+        Returns:
+            The value wrapped in HTML span tags if it's a recognized status, otherwise unchanged
+        """
+        # Convert to string for comparison
+        value_str = str(value).strip().upper()
+
+        # Define status colors
+        status_colors = {
+            'PASSED': 'green',
+            'FAILED': 'red',
+            'WARNING': 'orange',
+        }
+
+        # Check if this is a status value
+        if value_str in status_colors:
+            color = status_colors[value_str]
+            # Return with HTML span and inline CSS
+            return f"<span style='color: {color};'>{value}</span>"
+
+        return value
+
     def format_table(self, metrics):
         """
         Format a metrics table for Confluence report. Converts the list of dictionaries
@@ -113,22 +141,38 @@ class AtlassianConfluenceReport(ReportingBase):
         if not metrics:
             return "<table><tr><td>No data available</td></tr></table>"
 
-        # Create list of all keys from the metrics
-        all_keys = set()
-        for record in metrics:
-            all_keys.update(record.keys())
+        # Preserve OrderedDict order if present, otherwise sort and reorder
+        from collections import OrderedDict
+        if metrics and isinstance(metrics[0], OrderedDict):
+            # Use the order from the first OrderedDict
+            keys = list(metrics[0].keys())
+        else:
+            # Create list of all keys from the metrics
+            all_keys = set()
+            for record in metrics:
+                all_keys.update(record.keys())
 
-        # Sort keys for consistent display with 'page' or 'transaction' first if it exists
-        keys = sorted(all_keys)
-        if 'page' in keys:
-            keys.remove('page')
-            keys.insert(0, 'page')
-        elif 'transaction' in keys:
-            keys.remove('transaction')
-            keys.insert(0, 'transaction')
-        elif 'Metric' in keys:
-            keys.remove('Metric')
-            keys.insert(0, 'Metric')
+            # Sort keys for consistent display
+            keys = sorted(all_keys)
+
+            # Prioritize common first columns (Transaction/transaction/page/Metric)
+            if 'Transaction' in keys:
+                keys.remove('Transaction')
+                keys.insert(0, 'Transaction')
+            elif 'transaction' in keys:
+                keys.remove('transaction')
+                keys.insert(0, 'transaction')
+            elif 'page' in keys:
+                keys.remove('page')
+                keys.insert(0, 'page')
+            elif 'Metric' in keys:
+                keys.remove('Metric')
+                keys.insert(0, 'Metric')
+
+            # Put Status column second if it exists and Transaction is first
+            if len(keys) > 1 and keys[0] in ('Transaction', 'transaction') and 'Status' in keys:
+                keys.remove('Status')
+                keys.insert(1, 'Status')
 
         # Find the diff percentage columns for color coding
         diff_pct_columns = [key for key in keys if key.endswith('_diff_pct')]
@@ -185,21 +229,28 @@ class AtlassianConfluenceReport(ReportingBase):
                                 else:
                                     html.append(f"<td>{value}</td>")
                         else:
+                            value = self.colorize_status(value)
                             html.append(f"<td>{value}</td>")
                     except (ValueError, ZeroDivisionError, IndexError):
                         # If parsing fails, just display the value normally
+                        value = self.colorize_status(value)
                         html.append(f"<td>{value}</td>")
                     except Exception:
                         # Catch any other unexpected errors
+                        value = self.colorize_status(value)
                         html.append(f"<td>{value}</td>")
                 # Format numeric values to two decimal places
                 elif isinstance(value, float):
                     value = f"{value:.2f}"
+                    # Colorize status values
+                    value = self.colorize_status(value)
                     html.append(f"<td>{value}</td>")
                 else:
                     value = str(value)
                     # Handle newlines in values by converting to <br/>
                     value = value.replace('\n', '<br/>')
+                    # Colorize status values
+                    value = self.colorize_status(value)
                     html.append(f"<td>{value}</td>")
 
             html.append("</tr>")
