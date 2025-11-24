@@ -18,6 +18,7 @@ from .base_test_data import BaseTestData
 from .backend_test_data import BackendTestData
 from .frontend_test_data import FrontendTestData
 from .factory import TestDataFactory
+from .transaction_status import TransactionStatus, TransactionStatusTable, TransactionStatusConfig
 
 __all__ = [
     'Metric',
@@ -26,5 +27,8 @@ __all__ = [
     'BaseTestData',
     'BackendTestData',
     'FrontendTestData',
-    'TestDataFactory'
+    'TestDataFactory',
+    'TransactionStatus',
+    'TransactionStatusTable',
+    'TransactionStatusConfig'
 ]

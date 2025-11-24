@@ -60,7 +60,13 @@ class IsolationForestDetector(BaseDetector):
         for idx in df.index:
             if df.at[idx, anomaly_column] == -1:
                 current_value = df.at[idx, metric]
-                deviation = abs(current_value - median_value) / median_value
+
+                # Handle zero or near-zero median to avoid division by zero
+                if abs(median_value) < 1e-9:
+                    # If median is zero, use absolute difference instead
+                    deviation = abs(current_value - median_value) / (threshold + 1e-9)
+                else:
+                    deviation = abs(current_value - median_value) / median_value
 
                 # If deviation is less than threshold, mark as normal
                 if deviation < threshold:

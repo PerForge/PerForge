@@ -153,10 +153,10 @@ class InfluxdbV2(DataExtractionBase):
         except Exception:
             return timestamp
 
-    def _fetch_tests_titles(self) -> List[Dict[str, Any]]:
+    def _fetch_tests_titles(self, search: str = '') -> List[Dict[str, Any]]:
         try:
             if hasattr(self.queries, "get_tests_titles"):
-                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name)
+                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name, search=search)
                 records = self._execute_query(query)
                 df = pd.DataFrame(records)
                 return df.to_dict(orient="records")

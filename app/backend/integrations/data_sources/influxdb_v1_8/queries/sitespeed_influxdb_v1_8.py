@@ -27,13 +27,17 @@ class SitespeedInfluxQLQueries(FrontEndQueriesBase):
     # In classic InfluxDB 1.8 the database (bucket) is selected on the client,
     # so the `bucket` argument is currently unused but kept for API parity.
 
-    def get_tests_titles(self, bucket: str, test_title_tag_name: str) -> str:  # type: ignore[override]
+    def get_tests_titles(self, bucket: str, test_title_tag_name: str, search: str = '') -> str:  # type: ignore[override]
         # Use SHOW TAG VALUES to list distinct test titles from a representative
         # Sitespeed measurement. Adjust the measurement name if needed.
-        return (
-            f'SHOW TAG VALUES FROM "largestContentfulPaint" '
-            f'WITH KEY = "{test_title_tag_name}"'
-        )
+        query = f'SHOW TAG VALUES FROM "largestContentfulPaint" WITH KEY = "{test_title_tag_name}"'
+
+        # Add search filter if provided
+        if search:
+            # InfluxQL uses WHERE clause with =~ for regex (case-insensitive with (?i))
+            query += f' WHERE "{test_title_tag_name}" =~ /(?i){search}/'
+
+        return query
 
     def get_test_log(
         self,

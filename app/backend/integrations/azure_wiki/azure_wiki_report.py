@@ -32,6 +32,34 @@ class AzureWikiReport(ReportingBase):
         super().set_template(template, db_config)
         self.output_obj = AzureWiki(project=self.project, id=action_id)
 
+    def colorize_status(self, value):
+        """
+        Apply color formatting to status values for Azure Wiki HTML rendering.
+
+        Args:
+            value: The cell value to potentially colorize
+
+        Returns:
+            The value wrapped in HTML span tags if it's a recognized status, otherwise unchanged
+        """
+        # Convert to string for comparison
+        value_str = str(value).strip().upper()
+
+        # Define status colors
+        status_colors = {
+            'PASSED': 'green',
+            'FAILED': 'red',
+            'WARNING': 'orange',
+        }
+
+        # Check if this is a status value
+        if value_str in status_colors:
+            color = status_colors[value_str]
+            # Return with HTML span and inline CSS
+            return f"<span style='color: {color};'>{value}</span>"
+
+        return value
+
     def format_table(self, metrics):
         """
         Format a metrics table for Azure Wiki report. Converts the list of dictionaries
@@ -46,22 +74,38 @@ class AzureWikiReport(ReportingBase):
         if not metrics:
             return "| No data available |\n|---|"
 
-        # Create list of all keys from the metrics
-        all_keys = set()
-        for record in metrics:
-            all_keys.update(record.keys())
+        # Preserve OrderedDict order if present, otherwise sort and reorder
+        from collections import OrderedDict
+        if metrics and isinstance(metrics[0], OrderedDict):
+            # Use the order from the first OrderedDict
+            keys = list(metrics[0].keys())
+        else:
+            # Create list of all keys from the metrics
+            all_keys = set()
+            for record in metrics:
+                all_keys.update(record.keys())
 
-        # Sort keys for consistent display with 'page' or 'transaction' first if it exists
-        keys = sorted(all_keys)
-        if 'page' in keys:
-            keys.remove('page')
-            keys.insert(0, 'page')
-        elif 'transaction' in keys:
-            keys.remove('transaction')
-            keys.insert(0, 'transaction')
-        elif 'Metric' in keys:
-            keys.remove('Metric')
-            keys.insert(0, 'Metric')
+            # Sort keys for consistent display
+            keys = sorted(all_keys)
+
+            # Prioritize common first columns (Transaction/transaction/page/Metric)
+            if 'Transaction' in keys:
+                keys.remove('Transaction')
+                keys.insert(0, 'Transaction')
+            elif 'transaction' in keys:
+                keys.remove('transaction')
+                keys.insert(0, 'transaction')
+            elif 'page' in keys:
+                keys.remove('page')
+                keys.insert(0, 'page')
+            elif 'Metric' in keys:
+                keys.remove('Metric')
+                keys.insert(0, 'Metric')
+
+            # Put Status column second if it exists and Transaction is first
+            if len(keys) > 1 and keys[0] in ('Transaction', 'transaction') and 'Status' in keys:
+                keys.remove('Status')
+                keys.insert(1, 'Status')
 
         # Start building the Markdown table
         # Header
@@ -108,18 +152,22 @@ class AzureWikiReport(ReportingBase):
                                 if second_val > first_val:
                                     value_str = f'<span style="color:red;font-weight:bold">{value}</span>'
                         else:
-                            value_str = value
+                            value_str = self.colorize_status(value)
                     except (ValueError, ZeroDivisionError, IndexError):
                         # If parsing fails, just display the value normally
-                        value_str = value
+                        value_str = self.colorize_status(value)
                     except Exception:
                         # Catch any other unexpected errors
-                        value_str = value
+                        value_str = self.colorize_status(value)
                 # Format numeric values to two decimal places
                 elif isinstance(value, float):
                     value_str = f"{value:.2f}"
+                    # Colorize status values
+                    value_str = self.colorize_status(value_str)
                 else:
                     value_str = str(value)
+                    # Colorize status values
+                    value_str = self.colorize_status(value_str)
 
                 # Azure DevOps Wiki markdown tables are sensitive to pipe characters in content.
                 # Replace them to avoid breaking the table structure.

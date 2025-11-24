@@ -261,9 +261,9 @@ class InfluxdbV18(DataExtractionBase):
     # ------------------------------------------------------------------
     # Backend interface implemented with InfluxQL
     # ------------------------------------------------------------------
-    def _fetch_tests_titles(self) -> List[Dict[str, Any]]:
+    def _fetch_tests_titles(self, search: str = '') -> List[Dict[str, Any]]:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
-        query = self.queries.get_tests_titles(bucket="", test_title_tag_name=tag_key)
+        query = self.queries.get_tests_titles(bucket="", test_title_tag_name=tag_key, search=search)
         points = self._query(query)
 
         results: List[Dict[str, Any]] = []
