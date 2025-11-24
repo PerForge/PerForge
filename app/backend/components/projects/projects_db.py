@@ -29,6 +29,7 @@ from app.backend.integrations.atlassian_jira.atlassian_jira_db             impor
 from app.backend.integrations.azure_wiki.azure_wiki_db                     import DBAzureWiki
 from app.backend.integrations.grafana.grafana_db                           import DBGrafana
 from app.backend.pydantic_models                                           import ProjectModel
+from app.backend.components.settings.settings_service                      import SettingsService
 
 
 class DBProjects(db.Model):
@@ -43,6 +44,7 @@ class DBProjects(db.Model):
     secrets                        = db.relationship('DBSecrets', backref='project', cascade='all, delete-orphan', lazy=True)
     nfrs                           = db.relationship('DBNFRs', backref='project', cascade='all, delete-orphan', lazy=True)
     prompts                        = db.relationship('DBPrompts', backref='project', cascade='all, delete-orphan', lazy=True)
+    settings                       = db.relationship('DBProjectSettings', backref='project', cascade='all, delete-orphan', lazy=True)
     influxdb_configs               = db.relationship('DBInfluxdb', backref='project', cascade='all, delete-orphan', lazy=True)
     smtp_mail_configs              = db.relationship('DBSMTPMail', backref='project', cascade='all, delete-orphan', lazy=True)
     ai_support_configs             = db.relationship('DBAISupport', backref='project', cascade='all, delete-orphan', lazy=True)
@@ -61,6 +63,14 @@ class DBProjects(db.Model):
             instance = cls(**validated_data.model_dump())
             db.session.add(instance)
             db.session.commit()
+
+            # Initialize default settings for the new project
+            try:
+                SettingsService.initialize_project_settings(instance.id)
+            except Exception as e:
+                logging.error(f"Failed to initialize settings for project {instance.id}: {e}")
+                # Don't fail project creation if settings initialization fails
+
             return instance.id
         except Exception:
             db.session.rollback()

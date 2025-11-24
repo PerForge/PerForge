@@ -28,6 +28,7 @@ from app.api.nfrs import nfrs_api
 from app.api.other import other_api
 from app.api.prompts import prompts_api
 from app.api.secrets import secrets_api
+from app.api.settings import settings_api
 
 
 def _api_basic_auth_guard():
@@ -112,6 +113,7 @@ def register_blueprints(app):
         other_api,
         prompts_api,
         secrets_api,
+        settings_api,
     ):
         bp.before_request(_api_basic_auth_guard)
 
@@ -124,6 +126,7 @@ def register_blueprints(app):
     app.register_blueprint(other_api)
     app.register_blueprint(prompts_api)
     app.register_blueprint(secrets_api)
+    app.register_blueprint(settings_api)
 
     # Register the combined API blueprint
     app.register_blueprint(api)
