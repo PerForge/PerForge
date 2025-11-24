@@ -13,8 +13,7 @@ const settingsState = {
 // Category display names
 const categoryNames = {
     'ml_analysis': 'ML Analysis',
-    'transaction_status': 'Transaction Status',
-    'data_aggregation': 'Data Aggregation'
+    'transaction_status': 'Transaction Status'
 };
 
 // Subsection groupings for ML Analysis
@@ -27,7 +26,7 @@ const mlAnalysisGroups = {
     'Metric Stability': ['slope_threshold', 'p_value_threshold', 'numpy_var_threshold', 'cv_threshold'],
     'Context Filtering': ['context_median_window', 'context_median_pct', 'context_median_enabled'],
     'Merging & Grouping': ['merge_gap_samples'],
-    'Per-Transaction Analysis': ['per_txn_coverage', 'per_txn_max_k', 'per_txn_min_points']
+    'Per-Transaction Analysis': ['per_txn_analysis_enabled', 'per_txn_metrics', 'per_txn_coverage', 'per_txn_max_k', 'per_txn_min_points']
 };
 
 // Subsection groupings for Transaction Status
@@ -35,11 +34,6 @@ const transactionStatusGroups = {
     'NFR Validation': ['nfr_enabled'],
     'Baseline Comparison': ['baseline_enabled', 'baseline_warning_threshold_pct', 'baseline_failed_threshold_pct', 'baseline_metrics_to_check'],
     'ML Anomaly Detection': ['ml_enabled', 'ml_min_impact']
-};
-
-// Subsection groupings for Data Aggregation
-const dataAggregationGroups = {
-    'Default Aggregation': ['default_aggregation']
 };
 
 /**
@@ -54,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventListeners();
     } catch (error) {
         console.error('Error initializing settings:', error);
-        showToast('Failed to load settings: ' + error.message, 'danger');
+        showFlashMessage('Failed to load settings: ' + error.message, 'error');
     }
 });
 
@@ -86,7 +80,6 @@ async function loadAllSettings() {
         // Render each category
         renderCategory('ml_analysis', mlAnalysisGroups);
         renderCategory('transaction_status', transactionStatusGroups);
-        renderCategory('data_aggregation', dataAggregationGroups);
 
         // Hide all unsaved indicators initially
         document.querySelectorAll('.unsaved-indicator').forEach(indicator => {
@@ -104,8 +97,8 @@ async function loadAllSettings() {
  */
 function renderCategory(category, groups) {
     const containerId = category === 'ml_analysis' ? 'mlAnalysisSettings' :
-                       category === 'transaction_status' ? 'transactionStatusSettings' :
-                       'dataAggregationSettings';
+        category === 'transaction_status' ? 'transactionStatusSettings' :
+            'dataAggregationSettings';
 
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -165,7 +158,8 @@ function renderSetting(category, key, setting) {
     } else if (type === 'int') {
         html += renderNumberInput(category, key, value, 'number', min, max, 1);
     } else if (type === 'float') {
-        html += renderNumberInput(category, key, value, 'number', min, max, 0.001);
+        // Use 'any' step for floats to allow any decimal precision
+        html += renderNumberInput(category, key, value, 'number', min, max, 'any');
     } else if (options && options.length > 0) {
         html += renderSelectInput(category, key, value, options);
     } else if (type === 'list') {
@@ -259,7 +253,6 @@ function setupEventListeners() {
     // Form submissions
     document.getElementById('mlAnalysisForm').addEventListener('submit', handleFormSubmit);
     document.getElementById('transactionStatusForm').addEventListener('submit', handleFormSubmit);
-    document.getElementById('dataAggregationForm').addEventListener('submit', handleFormSubmit);
 
     // Reset buttons
     document.querySelectorAll('.reset-btn').forEach(btn => {
@@ -339,29 +332,28 @@ async function handleFormSubmit(e) {
     // Validate form
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
-        showToast('Please fix validation errors', 'danger');
+        showFlashMessage('Please fix validation errors', 'error');
         return;
     }
 
-    // Collect form data
-    const formData = new FormData(form);
+    // Collect form data - iterate over all settings in metadata to catch unchecked checkboxes
     const settings = {};
 
-    for (const [key, value] of formData.entries()) {
-        const setting = settingsState.metadata[category][key];
-        if (!setting) continue;
+    for (const [key, setting] of Object.entries(settingsState.metadata[category])) {
+        const element = form.elements[key];
+        if (!element) continue;
 
         // Convert value to appropriate type
         if (setting.type === 'bool') {
-            settings[key] = form.elements[key].checked;
+            settings[key] = element.checked;
         } else if (setting.type === 'int') {
-            settings[key] = parseInt(value, 10);
+            settings[key] = parseInt(element.value, 10);
         } else if (setting.type === 'float') {
-            settings[key] = parseFloat(value);
+            settings[key] = parseFloat(element.value);
         } else if (setting.type === 'list') {
-            settings[key] = value.split(',').map(v => v.trim()).filter(v => v);
+            settings[key] = element.value.split(',').map(v => v.trim()).filter(v => v);
         } else {
-            settings[key] = value;
+            settings[key] = element.value;
         }
     }
 
@@ -393,11 +385,11 @@ async function handleFormSubmit(e) {
         // Hide unsaved indicator
         updateUnsavedIndicator(category);
 
-        showToast('Settings saved successfully', 'success');
+        showFlashMessage('Settings saved successfully', 'success');
 
     } catch (error) {
         console.error('Error saving settings:', error);
-        showToast('Failed to save settings: ' + error.message, 'danger');
+        showFlashMessage('Failed to save settings: ' + error.message, 'error');
     } finally {
         submitBtn.disabled = false;
         spinner.style.display = 'none';
@@ -446,39 +438,12 @@ async function handleConfirmReset(e) {
         const modal = bootstrap.Modal.getInstance(document.getElementById('resetConfirmModal'));
         modal.hide();
 
-        showToast('Settings reset to defaults', 'success');
+        showFlashMessage('Settings reset to defaults', 'success');
 
     } catch (error) {
         console.error('Error resetting settings:', error);
-        showToast('Failed to reset settings: ' + error.message, 'danger');
+        showFlashMessage('Failed to reset settings: ' + error.message, 'error');
     }
-}
-
-/**
- * Show toast notification
- */
-function showToast(message, type = 'info') {
-    const toast = document.getElementById('settingsToast');
-    const toastMessage = document.getElementById('toastMessage');
-
-    // Set message
-    toastMessage.textContent = message;
-
-    // Set color
-    toast.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
-    if (type === 'success') {
-        toast.classList.add('bg-success', 'text-white');
-    } else if (type === 'danger' || type === 'error') {
-        toast.classList.add('bg-danger', 'text-white');
-    } else if (type === 'warning') {
-        toast.classList.add('bg-warning', 'text-white');
-    } else {
-        toast.classList.add('bg-info', 'text-white');
-    }
-
-    // Show toast
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
 }
 
 /**

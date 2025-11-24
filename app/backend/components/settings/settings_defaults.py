@@ -45,7 +45,7 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
     'isf_feature_metric': {
         'value': 'overalThroughput',
         'type': 'string',
-        'options': ['overalThroughput', 'overalUsers', 'overalResponseTime'],
+        'options': ['overalThroughput', 'overalUsers'],
         'description': 'Primary metric to use for Isolation Forest multi-dimensional analysis.'
     },
 
@@ -193,6 +193,16 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'min': 3,
         'max': 20,
         'description': 'Minimum number of data points required for a transaction to be included in analysis.'
+    },
+    'per_txn_analysis_enabled': {
+        'value': True,
+        'type': 'bool',
+        'description': 'Enable per-transaction anomaly analysis.'
+    },
+    'per_txn_metrics': {
+        'value': ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate', 'rps'],
+        'type': 'list',
+        'description': 'List of metrics to analyze for each transaction.'
     }
 }
 
@@ -226,9 +236,9 @@ TRANSACTION_STATUS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'description': 'Percentage deviation from baseline to trigger FAILED status (≥20% = FAILED).'
     },
     'baseline_metrics_to_check': {
-        'value': ['rt_ms_avg', 'rt_ms_median', 'rt_ms_p90', 'error_rate'],
+        'value': ['avg', 'pct50', 'pct90', 'errors'],
         'type': 'list',
-        'description': 'List of metrics to evaluate during baseline comparison for regression detection.'
+        'description': 'Metrics to evaluate during baseline comparison. Backend default: avg, pct50, pct90, errors. For frontend tests, customize to: FCP, LCP, TTFB, CLS.'
     },
 
     # ML Anomaly Detection
@@ -247,16 +257,6 @@ TRANSACTION_STATUS_DEFAULTS: Dict[str, Dict[str, Any]] = {
 }
 
 
-DATA_AGGREGATION_DEFAULTS: Dict[str, Dict[str, Any]] = {
-    'default_aggregation': {
-        'value': 'median',
-        'type': 'string',
-        'options': ['mean', 'median', 'p90', 'p99'],
-        'description': 'Default aggregation method for metrics collection (median is most robust to outliers).'
-    }
-}
-
-
 def get_all_defaults() -> Dict[str, Dict[str, Dict[str, Any]]]:
     """
     Get all default settings organized by category.
@@ -266,8 +266,7 @@ def get_all_defaults() -> Dict[str, Dict[str, Dict[str, Any]]]:
     """
     return {
         'ml_analysis': ML_ANALYSIS_DEFAULTS,
-        'transaction_status': TRANSACTION_STATUS_DEFAULTS,
-        'data_aggregation': DATA_AGGREGATION_DEFAULTS
+        'transaction_status': TRANSACTION_STATUS_DEFAULTS
     }
 
 
@@ -290,7 +289,7 @@ def get_defaults_for_category(category: str) -> Dict[str, Dict[str, Any]]:
     Get default settings for a specific category.
 
     Args:
-        category: Category name ('ml_analysis', 'transaction_status', 'data_aggregation')
+        category: Category name ('ml_analysis', 'transaction_status')
 
     Returns:
         Dictionary of settings for the category

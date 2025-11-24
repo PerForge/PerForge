@@ -111,7 +111,6 @@ class IsolationForestDetector(BaseDetector):
         # Separate rows: keep only rows that have no NaNs in the used features
         non_missing_rows = df.dropna(subset=available_features).copy()
         missing_rows = df[~df.index.isin(non_missing_rows.index)].copy()
-
         if not non_missing_rows.empty and (metric in non_missing_rows.columns):
             # Prepare and normalize features for Isolation Forest
             scaler = StandardScaler()

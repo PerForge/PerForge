@@ -26,6 +26,8 @@ from app.backend.data_provider.data_analysis.detectors import (
     RampUpPeriodAnalyzer
 )
 from app.backend.data_provider.data_analysis.constants import OVERALL_METRIC_KEYS, OVERALL_METRIC_DISPLAY, COL_TXN_RPS, COL_OVERALL_RPS, COL_ERR_RATE
+from app.backend.components.settings.settings_defaults import get_defaults_for_category
+from app.backend.components.settings.settings_service import SettingsService
 
 class AnomalyDetectionEngine:
     """
@@ -34,45 +36,39 @@ class AnomalyDetectionEngine:
     This engine supports multiple detection methods and can process various metrics
     to identify anomalous behavior in the data.
     """
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Dict[str, Any] = None, project_id: Optional[int] = None):
         """
         Initialize the Anomaly Detection Engine
 
         Args:
-            params: Configuration parameters for the engine
-            detectors: List of detector instances to use
+            params: Configuration parameters for the engine (optional, overrides project settings)
+            project_id: Project ID for loading project-specific settings (optional)
         """
         self.output = []
         # Internal store for overall metric anomalies (per window), to be
         # enriched with per-transaction attribution before final output is built.
         self.overall_anomalies: List[Dict[str, Any]] = []
-        # Define default parameters
-        default_params = {
-            'contamination': 0.001,
-            'isf_threshold': 0.1,
-            'isf_feature_metric': 'overalThroughput',
-            'z_score_threshold': 3,
-            'rolling_window': 5,
-            'rolling_correlation_threshold': 0.4,
-            'ramp_up_required_breaches_min': 3,
-            'ramp_up_required_breaches_max': 5,
-            'ramp_up_required_breaches_fraction': 0.15,
-            'ramp_up_base_metric': 'overalUsers',
-            'fixed_load_percentage': 60,
-            'slope_threshold': 1.000,
-            'p_value_threshold': 0.05,
-            'numpy_var_threshold': 0.003,
-            'cv_threshold': 0.07,
-            'context_median_window': 10,
-            'context_median_pct': 0.15,
-            'context_median_enabled': True,
-            'merge_gap_samples': 4,
-            'per_txn_coverage': 0.8,
-            'per_txn_max_k': 50,
-            'per_txn_min_points': 6
-        }
 
-        # Validate and update parameters
+        # Load default parameters from centralized settings_defaults.py
+        # This is the single source of truth for default values
+        ml_defaults_metadata = get_defaults_for_category('ml_analysis')
+        default_params = {key: config['value'] for key, config in ml_defaults_metadata.items()}
+
+        # If project_id is provided, load project-specific settings from database
+        if project_id is not None:
+            try:
+                project_settings = SettingsService.get_project_settings(project_id, 'ml_analysis')
+                # Merge project settings into defaults (project settings override defaults)
+                default_params = {**default_params, **project_settings}
+                logging.debug(f"Loaded ML analysis settings for project {project_id}")
+            except Exception as e:
+                logging.warning(f"Failed to load ML settings for project {project_id}, using defaults: {e}")
+
+        # Ensure params is a dict
+        if params is None:
+            params = {}
+
+        # Validate and update parameters (explicit params override everything)
         self._validate_and_set_params(params, default_params)
 
         self.detectors = [
@@ -793,6 +789,12 @@ class AnomalyDetectionEngine:
 
     def _run_per_transaction_pipeline(self, *, is_fixed_load: bool, has_any_overall_anomaly: bool, data_provider=None, test_obj=None) -> None:
         try:
+            # Respect project setting for per-transaction analysis. If disabled,
+            # skip the entire per-transaction pipeline.
+            if not getattr(self, 'per_txn_analysis_enabled', True):
+                logging.debug("Per-transaction analysis disabled by settings; skipping per-transaction pipeline.")
+                return
+
             if is_fixed_load and has_any_overall_anomaly and data_provider is not None and test_obj is not None:
                 try:
                     data_provider.build_per_transaction_long_frame(test_obj=test_obj, sampling_interval_sec=30)
@@ -1062,7 +1064,21 @@ class AnomalyDetectionEngine:
             self.transaction_windows = {'by_txn': {}, 'annotated': df_long_selected}
             return self.transaction_windows
         df = df_long_selected.copy()
-        m_present = [m for m in (metrics or ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate', 'rps']) if m in df.columns]
+
+        # If no explicit metrics list is provided, fall back to project settings
+        # (per_txn_metrics). If settings are missing or invalid, use the
+        # historical default metric set.
+        if metrics is None:
+            configured_metrics = getattr(self, 'per_txn_metrics', None)
+            if isinstance(configured_metrics, (list, tuple)):
+                try:
+                    metrics = [str(m) for m in configured_metrics]
+                except Exception:
+                    metrics = ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate', 'rps']
+            else:
+                metrics = ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate', 'rps']
+
+        m_present = [m for m in metrics if m in df.columns]
         by_txn = {}
         annotated_parts = []
         for txn, g in df.groupby(txn_col, dropna=True):

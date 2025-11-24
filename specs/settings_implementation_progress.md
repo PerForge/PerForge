@@ -192,30 +192,35 @@ GET    /api/v1/settings/metadata           - Get settings with metadata
 ## 🚧 Pending Components
 
 ### 1. Integration with AnomalyDetectionEngine
-**Status**: Not Started
+**Status**: ✅ Complete
 
-#### Files to Modify:
-- `app/backend/data_provider/data_analysis/anomaly_detection.py`
-- `app/backend/data_provider/data_provider.py`
+#### Files Modified:
+- `app/backend/data_provider/data_analysis/anomaly_detection.py` - Added `project_id` parameter
+- `app/backend/data_provider/data_provider.py` - Updated both instantiation points
 
-#### Required Changes:
-- Accept `project_id` parameter in `__init__`
-- Load settings from `SettingsService`
-- Merge with any provided params (params override settings)
-- Update all instantiation points to pass `project_id`
+#### Changes Made:
+- ✅ Accept `project_id` parameter in `__init__` (optional)
+- ✅ Load settings from `SettingsService` when project_id provided
+- ✅ Use `settings_defaults.py` as single source of truth for defaults
+- ✅ Merge with any provided params (params override settings)
+- ✅ Updated all instantiation points to pass `project_id`
+- ✅ Added error handling with fallback to defaults
+- ✅ Maintained backward compatibility
 
 ### 2. Integration with TransactionStatusConfig
-**Status**: Not Started
+**Status**: ✅ Complete
 
-#### Files to Modify:
-- `app/backend/data_provider/test_data/transaction_status.py`
-- All places where `TransactionStatusConfig` is instantiated
+#### Files Modified:
+- `app/backend/data_provider/test_data/transaction_status.py` - Added `from_project_settings` factory method
+- `app/backend/data_provider/data_provider.py` - Updated instantiation points (2 locations)
 
-#### Required Changes:
-- Add `from_project_settings(project_id)` class method
-- Load settings from database
-- Update instantiation to use factory method
-- Maintain dataclass defaults as fallback
+#### Changes Made:
+- ✅ Added `from_project_settings(project_id)` class method
+- ✅ Load settings from database when project_id provided
+- ✅ Updated instantiation in `_evaluate_transaction_status` method
+- ✅ Updated instantiation in `build_transaction_status_table` method
+- ✅ Maintained dataclass defaults as fallback
+- ✅ Added error handling with graceful degradation
 
 ### 3. Integration with BaseTestData
 **Status**: Not Started
@@ -374,11 +379,11 @@ GET    /api/v1/settings/metadata           - Get settings with metadata
 - [x] Dynamic form rendering from metadata
 - [x] Reset confirmation modal
 
-### Integration (Pending)
-- [ ] AnomalyDetectionEngine updated
-- [ ] TransactionStatusConfig updated
+### Integration (In Progress)
+- [x] AnomalyDetectionEngine updated
+- [x] TransactionStatusConfig updated
 - [ ] BaseTestData updated
-- [ ] All instantiation points updated
+- [x] All instantiation points updated
 
 ### Testing (Pending)
 - [ ] Manual API testing
@@ -398,13 +403,13 @@ The settings management system will be considered complete when:
 3. ✅ Settings are initialized for new projects automatically
 4. ✅ Existing projects can be migrated automatically
 5. ✅ UI allows users to view and modify settings
-6. ⏳ ML analysis uses project-specific settings
-7. ⏳ Transaction status uses project-specific settings
+6. ✅ ML analysis uses project-specific settings
+7. ✅ Transaction status uses project-specific settings
 8. ⏳ Data aggregation uses project-specific settings
 9. ⏳ All browser tests pass
 10. ✅ Documentation is complete
 
-**Current Progress**: 6/10 (60%)
+**Current Progress**: 8/10 (80%)
 
 ---
 

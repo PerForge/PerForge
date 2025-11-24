@@ -27,8 +27,7 @@ from app.backend.components.settings.settings_defaults import (
     get_all_defaults,
     get_defaults_for_category,
     ML_ANALYSIS_DEFAULTS,
-    TRANSACTION_STATUS_DEFAULTS,
-    DATA_AGGREGATION_DEFAULTS
+    TRANSACTION_STATUS_DEFAULTS
 )
 
 
