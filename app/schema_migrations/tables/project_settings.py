@@ -30,7 +30,6 @@ class CreateProjectSettingsTable(BaseMigration):
 
         # Check if table already exists
         if table_name in inspector.get_table_names():
-            log.info(f"Table '{table_name}' already exists, skipping creation")
             return
 
         log.info(f"Applying migration: Creating table '{table_name}'")
