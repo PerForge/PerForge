@@ -23,6 +23,7 @@ from app.backend.components.projects.projects_db import DBProjects
 from app.backend.components.prompts.prompts_db import DBPrompts
 from app.backend.components.graphs.graphs_db import DBGraphs
 from app.backend.components.nfrs.nfrs_db import DBNFRs, DBNFRRows
+from app.backend.components.settings.settings_db import DBProjectSettings
 from app.backend.components.templates.templates_db import DBTemplates, DBTemplateData
 from app.backend.components.templates.template_groups_db import DBTemplateGroups, DBTemplateGroupData
 from app.backend.integrations.ai_support.ai_support_db import DBAISupport
@@ -70,6 +71,7 @@ with app.app_context():
         DBUsers.__table__,
         DBSecrets.__table__,
         DBProjects.__table__,
+        DBProjectSettings.__table__,
         DBPrompts.__table__,
         DBAISupport.__table__,
         DBAtlassianConfluence.__table__,
@@ -103,4 +105,4 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 # # Import routing, models and Start the App
-from app.views import (auth, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, templates, report)
+from app.views import (auth, graphs, integrations, nfrs, other, projects, prompts, reporting, secrets, settings, templates, report)

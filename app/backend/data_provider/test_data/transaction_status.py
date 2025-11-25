@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Literal
+from typing import List, Dict, Any, Literal, Optional
 from collections import OrderedDict
+import logging
 
 
 @dataclass
@@ -34,6 +35,40 @@ class TransactionStatusConfig:
     # ML anomaly check
     ml_enabled: bool = True
     ml_min_impact: float = 0.0  # Disabled for now (impact = share, not severity)
+
+    @classmethod
+    def from_project_settings(cls, project_id: int) -> 'TransactionStatusConfig':
+        """
+        Create TransactionStatusConfig from project settings.
+
+        Args:
+            project_id: Project ID to load settings for
+
+        Returns:
+            TransactionStatusConfig instance with project-specific settings
+        """
+        from app.backend.components.settings.settings_service import SettingsService
+
+        try:
+            # Load transaction status settings from database
+            settings = SettingsService.get_project_settings(project_id, 'transaction_status')
+
+            # Create config from loaded settings
+            return cls(
+                nfr_enabled=settings.get('nfr_enabled', True),
+                baseline_enabled=settings.get('baseline_enabled', True),
+                baseline_warning_threshold_pct=settings.get('baseline_warning_threshold_pct', 10.0),
+                baseline_failed_threshold_pct=settings.get('baseline_failed_threshold_pct', 20.0),
+                baseline_metrics_to_check=settings.get('baseline_metrics_to_check', [
+                    'rt_ms_avg', 'rt_ms_median', 'rt_ms_p90', 'error_rate'
+                ]),
+                ml_enabled=settings.get('ml_enabled', True),
+                ml_min_impact=settings.get('ml_min_impact', 0.0)
+            )
+        except Exception as e:
+            logging.warning(f"Failed to load transaction status settings for project {project_id}, using defaults: {e}")
+            # Return instance with default values from settings_defaults.py
+            return cls()
 
 
 @dataclass

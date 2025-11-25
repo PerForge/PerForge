@@ -466,8 +466,10 @@ class DataProvider:
         merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
 
         # Initialize engine with detectors
+        # self.project is the project_id (integer)
         self.anomaly_detection_engine = AnomalyDetectionEngine(
-            params={}  # You can pass custom parameters here
+            params={},  # You can pass custom parameters here
+            project_id=self.project
         )
 
         # Analyze the data periods
@@ -677,8 +679,12 @@ class DataProvider:
             test_obj.per_txn_df_long = None
             return
 
+
+        # Get project_id from test_obj's data_provider context
+        # DataProvider.project is the project_id (integer)
         merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
-        engine = AnomalyDetectionEngine(params={})
+        project_id = test_obj.data_provider.project if hasattr(test_obj, 'data_provider') and hasattr(test_obj.data_provider, 'project') else None
+        engine = AnomalyDetectionEngine(params={}, project_id=project_id)
         fixed_load_period, _, _ = engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
         fixed_index = fixed_load_period.index
         fixed_start = fixed_index.min() if len(fixed_index) else None
@@ -881,7 +887,8 @@ class DataProvider:
         )
 
         if config is None:
-            config = TransactionStatusConfig()
+            # Load project-specific settings
+            config = TransactionStatusConfig.from_project_settings(self.project) if self.project else TransactionStatusConfig()
 
         reasons = []
         nfr_status_val = 'NOT_EVALUATED'
@@ -924,9 +931,14 @@ class DataProvider:
         if config.baseline_enabled:
             warning_threshold = config.baseline_warning_threshold_pct
             failed_threshold = config.baseline_failed_threshold_pct
+            metrics_to_check = config.baseline_metrics_to_check
 
             regressions_found = []
             for m in transaction_metrics:
+                # Only check metrics that are in the configured list
+                if m.name not in metrics_to_check:
+                    continue
+
                 if (m.baseline is not None and
                     m.difference_pct is not None and
                     m.difference_pct >= warning_threshold):
@@ -948,7 +960,7 @@ class DataProvider:
                     regression_details.append(f"{metric_display} +{m.difference_pct:.1f}% ({severity})")
                 # Combine all regressions into a single reason with commas
                 reasons.append(f"Regression: {', '.join(regression_details)}")
-            elif any(m.baseline is not None for m in transaction_metrics):
+            elif any(m.baseline is not None and m.name in metrics_to_check for m in transaction_metrics):
                 baseline_status_val = 'PASSED'
 
         # Check 3: ML Anomalies
@@ -1093,9 +1105,13 @@ class DataProvider:
         Returns:
             TransactionStatusTable with status for all transactions
         """
-        from app.backend.data_provider.test_data import TransactionStatusTable
+        from app.backend.data_provider.test_data import TransactionStatusTable, TransactionStatusConfig
 
         table = TransactionStatusTable()
+
+        # Load configuration from project settings if not provided
+        if config is None:
+            config = TransactionStatusConfig.from_project_settings(self.project) if self.project else TransactionStatusConfig()
 
         # Get all unique transactions
         transactions = self._get_all_transactions(test_obj)

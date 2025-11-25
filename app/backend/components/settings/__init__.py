@@ -12,18 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from app.backend.components.settings.settings_db import DBProjectSettings
+from app.backend.components.settings.settings_service import SettingsService
 
-from app.schema_migrations.tables import influxdb, graphs, nfr_rows, template_data, templates, project_settings
-
-log = logging.getLogger(__name__)
-
-# Ordered list of migration units assembled from per-table modules
-MIGRATIONS = [
-    *influxdb.MIGRATIONS,
-    *graphs.MIGRATIONS,
-    *nfr_rows.MIGRATIONS,
-    *template_data.MIGRATIONS,
-    *templates.MIGRATIONS,
-    *project_settings.MIGRATIONS,
-]
+__all__ = ['DBProjectSettings', 'SettingsService']
