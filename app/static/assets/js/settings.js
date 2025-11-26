@@ -144,12 +144,6 @@ function renderSetting(category, key, setting) {
     let html = `<div class="setting-item">`;
     html += `<label class="setting-label" for="${category}-${key}">`;
     html += formatLabel(key);
-
-    if (description) {
-        html += `<i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip"
-                    data-bs-placement="top" title="${escapeHtml(description)}"></i>`;
-    }
-
     html += `</label>`;
 
     // Render appropriate input based on type
@@ -171,6 +165,14 @@ function renderSetting(category, key, setting) {
     // Add range info for numeric fields
     if ((type === 'int' || type === 'float') && (min !== undefined || max !== undefined)) {
         html += `<div class="setting-range">Range: ${min !== undefined ? min : '-∞'} - ${max !== undefined ? max : '∞'}</div>`;
+    }
+
+    // Add form hint if description exists
+    if (description) {
+        html += `<div class="form-hint">
+                  <i class="fas fa-info-circle icon" aria-hidden="true"></i>
+                  <div>${escapeHtml(description)}</div>
+                </div>`;
     }
 
     html += `</div>`;
