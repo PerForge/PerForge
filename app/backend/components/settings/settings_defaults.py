@@ -33,20 +33,20 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'float',
         'min': 0.0001,
         'max': 0.5,
-        'description': 'Expected proportion of outliers in the dataset. Lower values mean stricter anomaly detection.'
+        'description': 'The expected proportion of outliers (anomalies) in the dataset. This parameter controls the sensitivity of the Isolation Forest algorithm. Lower values (e.g., 0.001) imply that anomalies are rare, resulting in stricter detection where fewer points are flagged. Higher values (e.g., 0.1) assume anomalies are more common.'
     },
     'isf_threshold': {
         'value': 0.1,
         'type': 'float',
         'min': -1.0,
         'max': 1.0,
-        'description': 'Decision function threshold for anomaly classification. Values below this are considered anomalies.'
+        'description': 'The decision function threshold for classifying a data point as an anomaly. The Isolation Forest algorithm assigns an anomaly score to each point; points with scores lower than this threshold are classified as anomalies. Adjusting this value shifts the boundary between normal and anomalous behavior.'
     },
     'isf_feature_metric': {
         'value': 'overalThroughput',
         'type': 'string',
         'options': ['overalThroughput', 'overalUsers'],
-        'description': 'Primary metric to use for Isolation Forest multi-dimensional analysis.'
+        'description': 'The primary performance metric used for Isolation Forest multi-dimensional analysis. This metric serves as the main feature for detecting anomalies. "overalThroughput" focuses on system capacity, while "overalUsers" focuses on load concurrency.'
     },
 
     # Z-Score Detection
@@ -55,7 +55,7 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'float',
         'min': 1.0,
         'max': 10.0,
-        'description': 'Number of standard deviations from the mean to classify as anomaly. Higher = less sensitive.'
+        'description': 'The number of standard deviations from the mean required to classify a data point as an anomaly. A higher threshold (e.g., 3.0) makes the detection less sensitive, flagging only extreme outliers. A lower threshold (e.g., 2.0) is more sensitive but may increase false positives.'
     },
 
     # Rolling Analysis
@@ -64,14 +64,14 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'int',
         'min': 2,
         'max': 20,
-        'description': 'Window size (number of samples) for rolling statistical calculations like mean and correlation.'
+        'description': 'The size of the moving window (in number of samples) used for calculating rolling statistics such as mean, variance, and correlation. A larger window smooths out short-term fluctuations but may delay the detection of rapid changes. A smaller window is more responsive but noisier.'
     },
     'rolling_correlation_threshold': {
         'value': 0.4,
         'type': 'float',
         'min': 0.0,
         'max': 1.0,
-        'description': 'Correlation threshold for ramp-up saturation detection. Values below this indicate potential issues.'
+        'description': 'The minimum correlation coefficient required between the load metric (e.g., Users) and the performance metric (e.g., Throughput) to consider the system stable. Values below this threshold suggest a loss of linearity, potentially indicating saturation or performance degradation.'
     },
 
     # Ramp-Up Detection
@@ -80,27 +80,27 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'int',
         'min': 1,
         'max': 10,
-        'description': 'Minimum number of consecutive threshold breaches required to confirm a tipping point.'
+        'description': 'The minimum number of consecutive data points that must breach the anomaly threshold to confirm a "tipping point" or significant performance shift. This prevents single transient spikes from triggering false alarms.'
     },
     'ramp_up_required_breaches_max': {
         'value': 5,
         'type': 'int',
         'min': 1,
         'max': 20,
-        'description': 'Maximum number of consecutive threshold breaches to evaluate (cap for dynamic calculation).'
+        'description': 'The maximum number of consecutive breaches considered when dynamically calculating the tipping point requirement. This caps the dynamic adjustment logic, ensuring the system doesn\'t wait too long to flag an issue.'
     },
     'ramp_up_required_breaches_fraction': {
         'value': 0.15,
         'type': 'float',
         'min': 0.01,
         'max': 0.5,
-        'description': 'Fraction of total data points used to dynamically calculate required breaches (between min and max).'
+        'description': 'The fraction of total data points in the dataset used to dynamically calculate the required number of breaches. The actual required breaches will be calculated based on dataset size but clamped between the min and max values.'
     },
     'ramp_up_base_metric': {
         'value': 'overalUsers',
         'type': 'string',
         'options': ['overalUsers', 'overalThroughput'],
-        'description': 'Base metric to correlate against during ramp-up analysis (typically load indicator).'
+        'description': 'The base metric used as the independent variable for correlation analysis during ramp-up. Typically "overalUsers" (load), it is correlated against performance metrics to detect when the system stops scaling linearly with load.'
     },
 
     # Load Detection
@@ -109,7 +109,7 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'int',
         'min': 50,
         'max': 100,
-        'description': 'Percentage of data points with stable user count required to classify test as fixed load.'
+        'description': 'The percentage of total data points where the user count must remain stable (within a small margin) for the test to be classified as a "Fixed Load" test. This classification affects which anomaly detection algorithms are applied.'
     },
 
     # Metric Stability Analysis
@@ -118,28 +118,28 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'float',
         'min': 0.0,
         'max': 10.0,
-        'description': 'Linear regression slope threshold for detecting significant upward/downward trends.'
+        'description': 'The threshold for the slope of the linear regression line fitted to the metric data. Absolute slope values exceeding this threshold indicate a significant upward or downward trend (instability), whereas lower values indicate a steady state.'
     },
     'p_value_threshold': {
         'value': 0.05,
         'type': 'float',
         'min': 0.01,
         'max': 0.2,
-        'description': 'P-value threshold for statistical significance testing (lower = more strict).'
+        'description': 'The significance level (alpha) for statistical hypothesis testing (e.g., Mann-Kendall trend test). A p-value below this threshold allows us to reject the null hypothesis (stability) and conclude that a statistically significant trend exists.'
     },
     'numpy_var_threshold': {
         'value': 0.003,
         'type': 'float',
         'min': 0.0,
         'max': 0.1,
-        'description': 'Variance threshold for detecting metric stability. Lower variance = more stable.'
+        'description': 'The variance threshold for determining metric stability. Variance measures how spread out the data points are. Values below this threshold indicate low variability (stable performance), while higher values suggest instability or noise.'
     },
     'cv_threshold': {
         'value': 0.07,
         'type': 'float',
         'min': 0.0,
         'max': 1.0,
-        'description': 'Coefficient of variation threshold (std/mean). Higher values indicate more variability.'
+        'description': 'The Coefficient of Variation (CV) threshold, calculated as the standard deviation divided by the mean. This normalized measure of dispersion helps compare volatility across metrics with different scales. Higher values indicate higher relative volatility.'
     },
 
     # Context Filtering
@@ -148,19 +148,19 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'int',
         'min': 3,
         'max': 50,
-        'description': 'Window size (samples before/after) for calculating contextual median around potential anomalies.'
+        'description': 'The window size (number of samples before and after a point) used to calculate the local median context. This local context helps differentiate between global anomalies and local fluctuations relative to immediate neighbors.'
     },
     'context_median_pct': {
         'value': 0.15,
         'type': 'float',
         'min': 0.0,
         'max': 1.0,
-        'description': 'Percentage deviation from contextual median to filter false positives (0.15 = 15%).'
+        'description': 'The percentage deviation from the local context median allowed before a point is flagged as a false positive. If an anomaly is within this percentage of its local neighbors, it is suppressed (considered noise rather than a true anomaly).'
     },
     'context_median_enabled': {
         'value': True,
         'type': 'bool',
-        'description': 'Enable contextual median filtering to reduce false positive anomalies.'
+        'description': 'Enables the "Contextual Median" filter, a post-processing step that removes false positive anomalies which are statistically similar to their immediate neighbors, improving detection precision.'
     },
 
     # Merging & Grouping
@@ -169,7 +169,7 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'int',
         'min': 1,
         'max': 20,
-        'description': 'Maximum gap (in samples) between anomaly periods to merge them into a continuous anomaly window.'
+        'description': 'The maximum gap (in number of samples) allowed between two distinct anomaly periods to merge them into a single continuous event. If anomalies occur close together (within this gap), they are treated as one prolonged performance issue.'
     },
 
     # Per-Transaction Analysis
@@ -178,32 +178,32 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'float',
         'min': 0.1,
         'max': 1.0,
-        'description': 'Cumulative traffic share coverage for transaction selection (0.8 = select transactions covering 80% of traffic).'
+        'description': 'The target cumulative traffic coverage for selecting transactions to analyze. For example, 0.8 means the system will select the top volume transactions that explicitly account for 80% of the total traffic, ignoring low-volume noise.'
     },
     'per_txn_max_k': {
         'value': 50,
         'type': 'int',
         'min': 1,
         'max': 200,
-        'description': 'Maximum number of transactions to analyze individually (cap for coverage-based selection).'
+        'description': 'The maximum absolute number of unique transactions to analyze, regardless of the coverage target. This prevents performance bottlenecks in cases with thousands of unique low-volume transactions.'
     },
     'per_txn_min_points': {
         'value': 6,
         'type': 'int',
         'min': 3,
         'max': 20,
-        'description': 'Minimum number of data points required for a transaction to be included in analysis.'
+        'description': 'The minimum number of data points a transaction must have to be eligible for analysis. Transactions with insufficient data are skipped to ensure statistical validity.'
     },
     'per_txn_analysis_enabled': {
         'value': True,
         'type': 'bool',
-        'description': 'Enable per-transaction anomaly analysis.'
+        'description': 'Master switch to enable or disable granular, per-transaction anomaly detection. When enabled, the system analyzes individual transaction endpoints in addition to global system metrics. This value affects the scope of anomaly detection.'
     },
     'per_txn_metrics': {
         'value': ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90', 'error_rate', 'rps'],
         'type': 'list',
-        'description': 'List of metrics to analyze for each transaction.'
-    }
+        'description': 'The list of specific performance metrics to be analyzed for each transaction. Common metrics include response times (avg, median, p90), error rates, and throughput (RPS). This value affects the type of performance issues detected in transactions.'
+    },
 }
 
 
@@ -212,47 +212,47 @@ TRANSACTION_STATUS_DEFAULTS: Dict[str, Dict[str, Any]] = {
     'nfr_enabled': {
         'value': True,
         'type': 'bool',
-        'description': 'Enable NFR (Non-Functional Requirements) checking for transaction status evaluation.'
+        'description': 'Enables the validation of Non-Functional Requirements (NFRs) as part of the transaction status evaluation. If enabled, transactions failing NFR checks (e.g., response time limits) will be marked accordingly. This value affects the inclusion of NFRs in transaction status evaluation.'
     },
 
     # Baseline Comparison
     'baseline_enabled': {
         'value': True,
         'type': 'bool',
-        'description': 'Enable baseline comparison to detect performance regressions against previous test runs.'
+        'description': 'Enables automatic comparison against a baseline (previous successful test run). This detects performance regressions by comparing current metrics with historical data. This value affects the detection of performance regressions.'
     },
     'baseline_warning_threshold_pct': {
         'value': 10.0,
         'type': 'float',
         'min': 0.0,
         'max': 100.0,
-        'description': 'Percentage deviation from baseline to trigger WARNING status (10-20% = WARNING).'
+        'description': 'The percentage deviation from the baseline metric that triggers a "WARNING" status. For example, if current response time is 15% higher than baseline and this is set to 10%, it flags a warning. This value affects the sensitivity of baseline comparison.'
     },
     'baseline_failed_threshold_pct': {
         'value': 20.0,
         'type': 'float',
         'min': 0.0,
         'max': 100.0,
-        'description': 'Percentage deviation from baseline to trigger FAILED status (≥20% = FAILED).'
+        'description': 'The percentage deviation from the baseline metric that triggers a "FAILED" status. Deviations exceeding this threshold indicate a severe regression requiring immediate attention. This value affects the severity of baseline comparison.'
     },
     'baseline_metrics_to_check': {
         'value': ['avg', 'pct50', 'pct90', 'errors'],
         'type': 'list',
-        'description': 'Metrics to evaluate during baseline comparison. Backend default: avg, pct50, pct90, errors. For frontend tests, customize to: FCP, LCP, TTFB, CLS.'
+        'description': 'The list of metrics to compare against the baseline. For backend tests, this typically includes aggregation stats like "avg", "pct50", "pct90", "errors". For frontend tests, use web vitals like "FCP", "LCP", "TTFB". This value affects the scope of baseline comparison.'
     },
 
     # ML Anomaly Detection
     'ml_enabled': {
         'value': True,
         'type': 'bool',
-        'description': 'Enable ML-based anomaly detection in transaction status evaluation.'
+        'description': 'Enables the inclusion of Machine Learning-based anomaly detection results in the final transaction status. If enabled, detected anomalies can degrade the transaction status to Warning or Failed. This value affects the inclusion of ML anomalies in transaction status evaluation.'
     },
     'ml_min_impact': {
         'value': 0.0,
         'type': 'float',
         'min': 0.0,
         'max': 1.0,
-        'description': 'Minimum impact score (traffic share) to consider ML anomalies significant (0.0 = all anomalies considered).'
+        'description': 'The minimum "impact score" (weighted by traffic share) required for an ML-detected anomaly to affect the transaction status. Anomalies in low-traffic transactions (below this impact threshold) will be logged but won\'t fail the test. This value affects the sensitivity of ML anomaly detection.'
     }
 }
 

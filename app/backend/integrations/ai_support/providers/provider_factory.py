@@ -18,6 +18,7 @@ from typing import Dict, Optional, Type
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
 from app.backend.integrations.ai_support.providers.gemini_provider import GeminiProvider
 from app.backend.integrations.ai_support.providers.open_provider import OpenAIProvider, AzureOpenAIProvider
+from app.backend.integrations.ai_support.providers.anthropic_provider import AnthropicProvider
 
 
 class ProviderFactory:
@@ -32,7 +33,8 @@ class ProviderFactory:
     _providers = {
         "gemini": GeminiProvider,
         "openai": OpenAIProvider,
-        "azure_openai": AzureOpenAIProvider
+        "azure_openai": AzureOpenAIProvider,
+        "anthropic": AnthropicProvider,
     }
 
     @classmethod
