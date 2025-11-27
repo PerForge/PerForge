@@ -279,8 +279,8 @@ class ReportingBase:
             # NFR and ML summaries are already in parameters
             if 'nfr_summary' not in self.parameters or not self.parameters['nfr_summary']:
                 self.parameters['nfr_summary'] = "N/A"
-            if 'ml_summary' not in self.parameters or not self.parameters['ml_summary']:
-                self.parameters['ml_summary'] = self.current_test_obj.ml_anomalies or "N/A"
+            if 'ml_anomalies' not in self.parameters or not self.parameters['ml_anomalies']:
+                self.parameters['ml_anomalies'] = self.current_test_obj.ml_anomalies or "N/A"
             if 'additional_context' not in self.parameters:
                 self.parameters['additional_context'] = "N/A"
 
