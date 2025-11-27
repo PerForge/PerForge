@@ -140,15 +140,11 @@
 
       # Gating logic
       Derive four decisions in this order:
-      1) Comparable vs Not comparable (server-side):
-        - If <graphs> explicitly says “comparable” → comparable.
-        - If it says “not comparable” → not comparable.
-        - Otherwise (missing/ambiguous): comparable.
-        - Comparability is derived solely from <graphs>; do not override this based on <aggregated_data> or <ml_analysis>.
+      1) Comparable vs Not comparable based on <aggregated_data>
       2) Issue tally (counts used for status decision):
         - Degraded transactions (from <aggregated_data>): count distinct transactions with degradation (deduplicate multiple metrics for the same transaction). If a line matches
           "- The (avg|pct50|pct75|pct90) for (.+?) has increased" → extract the transaction name from capture group 2 and count unique names only. If no clear pattern is present, fall back to counting bullet lines starting with “- ” as a proxy. Do not upweight severity based on the number of metrics for the same transaction.
-        - ML critical anomalies (from <ml_analysis>): count items with status = "failed" that indicate response-time increases or spikes. Use these verb cues as critical: ["increase","increased","increasing","rise","rising","spike","spiked","surge","surged","higher than","rose","peaked"]. Explicitly EXCLUDE decreases/drops: ["decrease","decreased","decreasing","drop","dropped","dropping","lower","lowered","fell","fall","fallen","decline","declined","declining"].
+        - ML critical anomalies (from <ml_analysis>): count items with status = "failed" that indicate response-time increases or spikes. Use these verb cues as critical: ["increase","increased","increasing","rise","rising","spike","spiked","surge","surged","higher than","rose","peaked"].
         - Ignore adjectives such as "significant", "severe", or "major" in <aggregated_data> and <ml_analysis> when computing status; they are descriptive only.
       3) Test status (Acceptable vs Unacceptable):
         - Acceptable if results are comparable AND degraded_transactions ≤ 2 AND ml_critical_anomalies ≤ 2. Do NOT override this with narrative severity; this rule is binding. Magnitude of degradation (e.g., +113.6%) does not change this decision when counts are within thresholds.
@@ -159,7 +155,6 @@
           - let status = "Unacceptable"
           - if comparable == true and degraded_transactions ≤ 2 and ml_critical_anomalies ≤ 2 → set status = "Acceptable"
           - emit status exactly as computed above.
-      4)
 
       # Output format (exact; DO NOT include any <report> tags; the final output must start with "<h2>Executive summary </h2>")
       <h2>Executive summary </h2>
@@ -169,7 +164,8 @@
       <h3>Detailed Observations</h3>
       - Performance Metrics:
         - [One sentence summarizing throughput/response time behavior from <graphs>. End with a period.]
-        - [If <ml_analysis> is present: One sentence beginning with "ML analysis:" summarizing trend findings (e.g., stable/constant). If any items have status = "failed", include up to two anomalies as short clauses that state exactly what happened using a past‑tense action verb (normalize "increasing/decreasing" to "increased/decreased"), for example: "{metric} increased to {value} during {window}" or "{metric} decreased to {value} during {window}". If the description includes a start and end timestamp, format the window as "from {start} to {end}" or "at {time}". If no explicit verb is present, use "changed to". End with a period.]
+        - [If <ml_analysis> is present: One sentence beginning with "ML analysis:" summarizing trend findings (e.g., stable/constant). If any items have status = "failed", include up to five anomalies as short clauses that state exactly what happened using a past‑tense action verb (normalize "increasing/decreasing" to "increased/decreased"), for example: "{metric} increased to {value} during {window}" or "{metric} decreased to {value} during {window}". If the description includes a start and end timestamp, format the window as "from {start} to {end}" or "at {time}". If no explicit verb is present, use "changed to". End with a period.]
+        - [If system metrics such as CPU or memory were analyzed, write one sentence summarizing them and note any correlation with the performance metrics (for example, "Response times increased alongside CPU usage, likely due to more frequent garbage collection"). Do not mention any system metrics that are absent from the <graphs>.]
 
       <h3>Top degraded transactions</h3>
       (INCLUDE THIS ONLY IF PROVIDED IN <aggregated_data> AND THERE IS AT LEAST ONE DEGRADED TRANSACTION; DO NOT WRITE "None.")
@@ -197,7 +193,7 @@
       - Ensure the first bullet under the Executive summary section is the Test status line.
       - Ensure the second bullet under the Executive summary section states the comparability line exactly as specified.
       - If <aggregated_data> indicates "no degraded transactions" (e.g., contains the phrase "For all transactions, the response time remained at the same level."), remove the entire "Top degraded transactions" section from the output. Do not write "None."
-      - If <ml_analysis> is present, verify there is a Performance Metrics bullet that begins with "ML analysis:" and, if applicable, lists up to two anomalies in a single sentence.
+      - If <ml_analysis> is present, verify there is a Performance Metrics bullet that begins with "ML analysis:" and, if applicable, lists up to five anomalies in a single sentence.
       - If anomalies are listed, ensure each includes a past‑tense action verb (e.g., increased/decreased/spiked), the value, and a time window formatted as "from {start} to {end}" or "at {time}".
       - Enforce status: if Comparable = comparable AND degraded_transactions ≤ 2 AND ml_critical_anomalies ≤ 2, the Test status line MUST be "Acceptable" and no other text may label the test "Unacceptable" or imply critical severity.
       - The narrative must align with the computed status. Do not write "Unacceptable" unless one of the explicit conditions in Test status is met.
@@ -221,7 +217,7 @@
 
       Observations from ML analysis:
       <ml_analysis>
-      ${ml_summary}
+      ${ml_anomalies}
       </ml_analysis>
 
   - name: "[BE][COMPARISON] Aggregated data"

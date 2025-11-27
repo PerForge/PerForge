@@ -35,7 +35,15 @@ class InfluxDBForm(FlaskForm):
     token = StringField('Token', validators=[DataRequired()])
     timeout = StringField('Timeout', validators=[DataRequired()], default="60000")
     bucket = StringField('Bucket', validators=[DataRequired()])
-    listener = SelectField('Backend listener', choices=[('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient'), ('sitespeed_influxdb_v2', 'sitespeed_influxdb_v2')], default='InfluxdbBackendListenerClient')
+    listener = SelectField(
+        'Backend listener',
+        choices=[
+            ('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v2.7'),
+            ('sitespeed_influxdb_v2', 'sitespeed_influxdb_v2.7'),
+            ('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8'),
+            ('sitespeed_influxdb_v1.8', 'sitespeed_influxdb_v1.8'),
+        ]
+    )
     tmz = StringField('Timezone', default="UTC")
     test_title_tag_name = StringField('Test Title Tag Name', default="testTitle")
     regex = StringField('Transaction regex')
@@ -125,7 +133,16 @@ class SMTPMailForm(FlaskForm):
 class AISupportForm(FlaskForm):
     id = StringField('Id')
     name = StringField('Name', validators=[DataRequired()])
-    ai_provider = SelectField('AI Provider', choices=[('openai', 'OpenAI'), ('azure_openai', 'Azure OpenAI'), ('gemini', 'Gemini')], default='openai')
+    ai_provider = SelectField(
+        'AI Provider',
+        choices=[
+            ('openai', 'OpenAI'),
+            ('azure_openai', 'Azure OpenAI'),
+            ('gemini', 'Gemini'),
+            ('anthropic', 'Anthropic'),
+        ],
+        default='openai'
+    )
     azure_url = StringField('Azure url')
     api_version = StringField('Api version')
     ai_text_model = StringField('AI Text model', validators=[DataRequired()])

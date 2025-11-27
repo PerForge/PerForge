@@ -31,7 +31,7 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_tests_titles(self, bucket: str, test_title_tag_name: str) -> str:
+    def get_tests_titles(self, bucket: str, test_title_tag_name: str, search: str = '') -> str:
         pass
 
     @abstractmethod
@@ -113,7 +113,7 @@ class BackEndQueriesBase(ABC):
 
 class FrontEndQueriesBase(ABC):
     @abstractmethod
-    def get_tests_titles(self, bucket: str, test_title_tag_name: str) -> str:
+    def get_tests_titles(self, bucket: str, test_title_tag_name: str, search: str = '') -> str:
         pass
 
     @abstractmethod
@@ -137,43 +137,43 @@ class FrontEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_google_web_vitals(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_google_web_vitals(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_timings_fully_loaded(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_timings_fully_loaded(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_timings_page_timings(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_timings_page_timings(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_timings_main_document(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_timings_main_document(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_cpu_long_tasks(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_cpu_long_tasks(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_cdp_performance_js_heap_used_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_cdp_performance_js_heap_used_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_cdp_performance_js_heap_total_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_cdp_performance_js_heap_total_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_count_per_content_type(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_count_per_content_type(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_first_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_first_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod
-    def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
+    def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
         pass
 
     @abstractmethod

@@ -24,9 +24,11 @@ from dateutil import tz
 
 # Local application imports
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_extraction import InfluxdbV2
+from app.backend.integrations.data_sources.influxdb_v1_8.influxdb_extraction_1_8 import InfluxdbV18
 from app.backend.data_provider.data_analysis.anomaly_detection import AnomalyDetectionEngine
 from app.backend.integrations.data_sources.base_extraction import DataExtractionBase
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
+from app.backend.data_provider.data_analysis.constants import METRIC_DISPLAY_NAMES
 
 class DataProvider:
     """
@@ -40,14 +42,17 @@ class DataProvider:
     """
 
     class_map: Dict[str, Type[DataExtractionBase]] = {
-        "influxdb_v2": InfluxdbV2
+        "influxdb_v2": InfluxdbV2,
+        "influxdb_v1.8": InfluxdbV18,
         # Add more data sources as needed
     }
 
     # Map data source types to test types
     source_to_test_type_map: Dict[str, str] = {
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient": "back_end",
+        "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8": "back_end",
         "sitespeed_influxdb_v2": "front_end",
+        "sitespeed_influxdb_v1.8": "front_end",
     }
 
     def __init__(self, project: Any, source_type: Any, id: str, bucket: str) -> None:
@@ -67,11 +72,29 @@ class DataProvider:
         # Determine the test type based on the source type
         self.test_type = self.source_to_test_type_map.get(self.ds_obj.listener, "back_end")
 
-        # Apply bucket override
-        try:
-            self.ds_obj.bucket = bucket
-        except Exception as e:
-            logging.warning(f"DataProvider: failed to apply bucket override: {e}")
+        # Apply bucket override (optional) in a source-type aware manner
+        # For InfluxDB v2, bucket is used in Flux queries and does not affect the client.
+        # For InfluxDB 1.8, bucket corresponds to the database on the client.
+        if bucket:
+            try:
+                if source_type == "influxdb_v2":
+                    # Simple override of the bucket used in queries
+                    setattr(self.ds_obj, "bucket", bucket)
+                elif source_type == "influxdb_v1.8":
+                    # For classic InfluxDB 1.8, switch the active database on the existing client
+                    client = getattr(self.ds_obj, "influxdb_connection", None)
+                    if client is not None:
+                        try:
+                            client.switch_database(bucket)
+                        except Exception as er:
+                            logging.warning(f"DataProvider: failed to switch InfluxDB 1.8 database to '{bucket}': {er}")
+                    setattr(self.ds_obj, "database", bucket)
+                else:
+                    # Fallback: try to set a generic bucket attribute if present
+                    if hasattr(self.ds_obj, "bucket"):
+                        setattr(self.ds_obj, "bucket", bucket)
+            except Exception as e:
+                logging.warning(f"DataProvider: failed to apply bucket override: {e}")
 
     # Timestamp helper
     def get_current_timestamp(self, fmt: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
@@ -103,9 +126,9 @@ class DataProvider:
         """
         return self.ds_obj.get_test_log(test_titles=test_titles)
 
-    def get_tests_titles(self) -> list[str]:
-        """Return list of unique test titles from data-source."""
-        raw = self.ds_obj.get_tests_titles()
+    def get_tests_titles(self, search: str = '') -> list[str]:
+        """Return list of unique test titles from data-source, optionally filtered by search."""
+        raw = self.ds_obj.get_tests_titles(search=search)
         return [str(r.get("test_title")) for r in raw if r.get("test_title")]
 
     def get_response_time_data(self) -> None:
@@ -350,7 +373,7 @@ class DataProvider:
         # If some columns are completely NaN, log a warning and drop them, continue with remaining columns
         if all_nan_columns:
             logging.warning(
-                "Dropping metrics with no data: %s",
+                "Some data was not found with current integration configuration. Please check your configuration. Dropping metrics with no data: %s",
                 ", ".join(all_nan_columns)
             )
             df = df.drop(columns=all_nan_columns)
@@ -443,12 +466,19 @@ class DataProvider:
         merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
 
         # Initialize engine with detectors
+        # self.project is the project_id (integer)
         self.anomaly_detection_engine = AnomalyDetectionEngine(
-            params={}  # You can pass custom parameters here
+            params={},  # You can pass custom parameters here
+            project_id=self.project
         )
 
         # Analyze the data periods
-        metrics, is_fixed_load, analysis_output = self.anomaly_detection_engine.analyze_test_data(merged_df=merged_df, standard_metrics=standard_metrics)
+        metrics, is_fixed_load, analysis_output = self.anomaly_detection_engine.analyze_test_data(
+            merged_df=merged_df,
+            standard_metrics=standard_metrics,
+            data_provider=self,
+            test_obj=test_obj
+        )
 
         if is_fixed_load:
             test_obj.test_type = "fixed load"
@@ -466,6 +496,60 @@ class DataProvider:
 
         return metrics
 
+
+
+    def _collect_per_transaction_anomaly_windows(self, test_obj: BaseTestData) -> Dict[str, Dict[str, List[Dict[str, str]]]]:
+        """
+        Collect per-transaction anomaly windows for transaction-level charts.
+
+        Args:
+            test_obj: Test data object containing per-transaction events
+
+        Returns:
+            Dictionary structured as: {transaction_name: {metric_name: [{start: ISO, end: ISO}, ...]}}
+        """
+        per_transaction_anomaly_windows: Dict[str, Dict[str, List[Dict[str, str]]]] = {}
+        per_txn_events = getattr(test_obj, 'per_txn_events_raw', None)
+
+        if not per_txn_events:
+            return per_transaction_anomaly_windows
+
+        for event in per_txn_events:
+            transaction = event.get('transaction')
+            window = event.get('window', {})
+            metrics_list = event.get('metrics', [])
+
+            if not transaction or not window:
+                continue
+
+            start_time = window.get('start')
+            end_time = window.get('end')
+
+            if not start_time or not end_time:
+                continue
+
+            # Ensure transaction entry exists
+            if transaction not in per_transaction_anomaly_windows:
+                per_transaction_anomaly_windows[transaction] = {}
+
+            # Add window for each metric involved in this anomaly
+            for metric_info in metrics_list:
+                metric_name = metric_info.get('name') if isinstance(metric_info, dict) else str(metric_info)
+
+                if not metric_name:
+                    continue
+
+                # Ensure metric entry exists for this transaction
+                if metric_name not in per_transaction_anomaly_windows[transaction]:
+                    per_transaction_anomaly_windows[transaction][metric_name] = []
+
+                # Add the window
+                per_transaction_anomaly_windows[transaction][metric_name].append({
+                    "start": start_time,
+                    "end": end_time
+                })
+
+        return per_transaction_anomaly_windows
 
     # Main analysis method
     def collect_test_data_for_report_page(self, test_title: str) -> Tuple[Dict, List, Dict, Dict, Dict, str, bool]:
@@ -485,25 +569,574 @@ class DataProvider:
 
         metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
 
+        # Collect overall anomaly windows from the anomaly detection engine for
+        # visualization (e.g. shaded bands on charts).
+        overall_anomaly_windows: Dict[str, List[Dict[str, str]]] = {}
+        engine = getattr(self, "anomaly_detection_engine", None)
+        if engine is not None:
+            overall_list = getattr(engine, "overall_anomalies", []) or []
+            for oa in overall_list:
+                metric = oa.get("metric")
+                start_time = oa.get("start_time")
+                end_time = oa.get("end_time")
+                if not metric or start_time is None or end_time is None:
+                    continue
+                try:
+                    start_iso = pd.to_datetime(start_time).isoformat()
+                except Exception:
+                    start_iso = str(start_time)
+                try:
+                    end_iso = pd.to_datetime(end_time).isoformat()
+                except Exception:
+                    end_iso = str(end_time)
+                overall_anomaly_windows.setdefault(metric, []).append(
+                    {"start": start_iso, "end": end_iso}
+                )
+
+        # Collect per-transaction anomaly windows for transaction-level charts
+        per_transaction_anomaly_windows = self._collect_per_transaction_anomaly_windows(test_obj)
+
         # Fetch additional response time per request data
-        avgResponseTimePerReq = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        avgResponseTimePerReq = self._get_per_req_series(test_obj, 'rt_avg', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
 
-        medianRespTimePerReq = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        medianRespTimePerReq = self._get_per_req_series(test_obj, 'rt_median', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["medianResponseTimePerReq"] = self.transform_to_json(medianRespTimePerReq)
 
-        pctRespTimePerReq = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        pctRespTimePerReq = self._get_per_req_series(test_obj, 'rt_p90', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
 
-        throughputPerReq = self.ds_obj.get_throughput_per_req(test_title=test_title, start=test_obj.start_time_iso, end=test_obj.end_time_iso)
+        throughputPerReq = self._get_per_req_series(test_obj, 'rps', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["throughputPerReq"] = self.transform_to_json(throughputPerReq)
 
-        # Collect the aggregated table data
-        metrics_table: MetricsTable = test_obj.get_table('aggregated_data')
-        if metrics_table:
-            test_obj.aggregated_table = metrics_table.format_metrics()
+        # Collect the aggregated table data (backend tests only)
+        is_backend = isinstance(test_obj, BackendTestData)
+        if is_backend:
+            metrics_table: MetricsTable = test_obj.get_table('aggregated_data')
+            if metrics_table:
+                test_obj.aggregated_table = metrics_table.format_metrics()
+
+
 
         # Collect the outputs
         statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)
         test_details = self.get_test_details(test_title=test_title, test_obj=test_obj)
-        return metrics, test_obj.ml_anomalies, statistics, test_details, test_obj.aggregated_table, test_obj.ml_html_summary, test_obj.performance_status
+        return (
+            metrics,
+            test_obj.ml_anomalies,
+            statistics,
+            test_details,
+            test_obj.aggregated_table,
+            test_obj.ml_html_summary,
+            test_obj.performance_status,
+            overall_anomaly_windows,
+            per_transaction_anomaly_windows,
+        )
+
+    def _get_per_req_series(self, test_obj: BaseTestData, key: str, test_title: str, start: str, end: str):
+        cache_key = (key, start, end)
+        cache = getattr(test_obj, '_per_req_cache', None)
+        if cache is not None and cache_key in cache:
+            return cache[cache_key]
+        if key == 'rps':
+            data = self.ds_obj.get_throughput_per_req(test_title=test_title, start=start, end=end)
+        elif key == 'rt_avg':
+            data = self.ds_obj.get_average_response_time_per_req(test_title=test_title, start=start, end=end)
+        elif key == 'rt_median':
+            data = self.ds_obj.get_median_response_time_per_req(test_title=test_title, start=start, end=end)
+        elif key == 'rt_p90':
+            data = self.ds_obj.get_pct90_response_time_per_req(test_title=test_title, start=start, end=end)
+        else:
+            data = None
+        if cache is not None:
+            cache[cache_key] = data
+        return data
+
+    def build_per_transaction_long_frame(self, test_obj: BaseTestData, sampling_interval_sec: int = 5, per_txn_rt_metrics: list[str] | None = None) -> None:
+        test_title = test_obj.test_title
+        start = test_obj.start_time_iso
+        end = test_obj.end_time_iso
+
+        if per_txn_rt_metrics is None:
+            per_txn_rt_metrics = ['median', 'avg', 'p90']
+        rps_per_req = self._get_per_req_series(test_obj, 'rps', test_title, start, end)
+        rt_series = {}
+        if 'avg' in per_txn_rt_metrics:
+            rt_series['avg'] = self._get_per_req_series(test_obj, 'rt_avg', test_title, start, end)
+        if 'median' in per_txn_rt_metrics:
+            rt_series['median'] = self._get_per_req_series(test_obj, 'rt_median', test_title, start, end)
+        if 'p90' in per_txn_rt_metrics or 'pct90' in per_txn_rt_metrics:
+            rt_series['p90'] = self._get_per_req_series(test_obj, 'rt_p90', test_title, start, end)
+
+        # Build lookup by transaction
+        rps_map = {entry.get('transaction') or entry.get('name'): entry.get('data') for entry in (rps_per_req or [])}
+        rt_maps = {k: {e.get('transaction') or e.get('name'): e.get('data') for e in (v or [])} for k, v in rt_series.items()}
+        all_rt_txns = set().union(*[set(m.keys()) for m in rt_maps.values()]) if rt_maps else set()
+        all_txns = sorted(set(rps_map.keys()) | all_rt_txns)
+        if 'all' in all_txns:
+            all_txns.remove('all')
+        if not all_txns:
+            test_obj.per_txn_df_long = None
+            return
+
+
+        # Get project_id from test_obj's data_provider context
+        # DataProvider.project is the project_id (integer)
+        merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
+        project_id = test_obj.data_provider.project if hasattr(test_obj, 'data_provider') and hasattr(test_obj.data_provider, 'project') else None
+        engine = AnomalyDetectionEngine(params={}, project_id=project_id)
+        fixed_load_period, _, _ = engine.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
+        fixed_index = fixed_load_period.index
+        fixed_start = fixed_index.min() if len(fixed_index) else None
+        fixed_end = fixed_index.max() if len(fixed_index) else None
+
+        frames = []
+        rule = f"{int(sampling_interval_sec)}s"
+        for txn in all_txns:
+            df_rps = rps_map.get(txn)
+            parts = []
+            if df_rps is not None and not df_rps.empty:
+                sr = df_rps['value'].resample(rule).mean().ffill().rename('rps')
+                parts.append(sr)
+            for k, m in rt_maps.items():
+                df_rt = m.get(txn)
+                if df_rt is not None and not df_rt.empty:
+                    col = 'rt_ms_median' if k == 'median' else ('rt_ms_avg' if k == 'avg' else 'rt_ms_p90')
+                    sr = df_rt['value'].resample(rule).mean().ffill().rename(col)
+                    parts.append(sr)
+            if not parts:
+                continue
+            df = pd.concat(parts, axis=1)
+            df['transaction'] = txn
+            frames.append(df.reset_index().rename(columns={'index': 'timestamp'}))
+
+        if not frames:
+            test_obj.per_txn_df_long = None
+            return
+
+        long_df = pd.concat(frames, axis=0, ignore_index=True)
+
+        # Convert timestamps to UTC
+        try:
+            long_df['timestamp'] = pd.to_datetime(long_df['timestamp']).dt.tz_convert('UTC')
+        except Exception:
+            long_df['timestamp'] = pd.to_datetime(long_df['timestamp'], utc=True)
+
+        if 'rps' in long_df.columns:
+            overall = long_df.groupby('timestamp')['rps'].sum(min_count=1).rename('overall_rps')
+            long_df = long_df.merge(overall.reset_index(), on='timestamp', how='left')
+        else:
+            long_df['overall_rps'] = pd.NA
+
+        if 'error_rate' not in long_df.columns:
+            long_df['error_rate'] = pd.NA
+
+        if fixed_start is not None and fixed_end is not None:
+            long_df = long_df[(long_df['timestamp'] >= fixed_start) & (long_df['timestamp'] <= fixed_end)]
+
+        cols = ['timestamp', 'transaction', 'rt_ms', 'rt_ms_avg', 'rt_ms_median', 'rt_ms_p90', 'error_rate', 'rps', 'overall_rps']
+        final_cols = [c for c in cols if c in long_df.columns] + [c for c in long_df.columns if c not in cols]
+        long_df = long_df[final_cols].sort_values(['timestamp', 'transaction']).reset_index(drop=True)
+
+        test_obj.per_txn_df_long = long_df
+
+    # Transaction Status Evaluation Methods
+    def _get_all_transactions(self, test_obj: BaseTestData) -> List[str]:
+        """Get all unique transaction names from various data sources.
+
+        Args:
+            test_obj: Test data object
+
+        Returns:
+            List of unique transaction names including 'all' if NFRs with scope='all' exist
+        """
+        transactions = set()
+
+        # Check test type to determine where to look for transactions
+        is_backend = isinstance(test_obj, BackendTestData)
+        is_frontend = isinstance(test_obj, FrontendTestData)
+
+        if is_backend:
+            # Get transactions from aggregated_data table (backend tests)
+            try:
+                agg_table = test_obj.get_table('aggregated_data')
+                if agg_table and hasattr(agg_table, 'metrics'):
+                    for metric in agg_table.metrics:
+                        if metric.scope and metric.scope != 'unknown':
+                            transactions.add(metric.scope)
+            except Exception as e:
+                logging.debug(f"Could not get transactions from aggregated_data: {e}")
+
+            # Get transactions from per-transaction ML data (backend tests with ML)
+            try:
+                per_txn_events = getattr(test_obj, 'per_txn_events_raw', None)
+                if per_txn_events:
+                    for event in per_txn_events:
+                        txn = event.get('transaction')
+                        if txn:
+                            transactions.add(txn)
+            except Exception as e:
+                logging.debug(f"Could not get transactions from ML events: {e}")
+
+        if is_frontend or not transactions:
+            # Scan all available tables (frontend tests or fallback)
+            # Frontend tests store pages in individual tables without an aggregated_data table
+            try:
+                all_tables = test_obj.get_all_tables()
+                for table_name, table in all_tables.items():
+                    # Skip overview_data as it contains test-level summaries, not per-page metrics
+                    if table_name == 'overview_data':
+                        continue
+                    if hasattr(table, 'metrics'):
+                        for metric in table.metrics:
+                            if metric.scope and metric.scope != 'unknown':
+                                transactions.add(metric.scope)
+            except Exception as e:
+                logging.debug(f"Could not get transactions from all tables: {e}")
+
+        #  Exclude 'all' scope from transaction status table
+        # The 'all' scope is used for global NFRs but is not an actual transaction
+        # and won't have per-transaction ML data, so it's not useful in the status table
+        transactions.discard('all')
+
+        return sorted(list(transactions))
+
+    def _extract_ml_anomaly_details(self, transaction: str, test_obj: BaseTestData) -> List[Dict[str, Any]]:
+        """Extract ML anomaly details with direction and magnitude for a transaction.
+
+        Args:
+            transaction: Transaction name
+            test_obj: Test data object
+
+        Returns:
+            List of anomaly detail dictionaries
+        """
+        details = []
+
+        # Get per-transaction events
+        per_txn_events = getattr(test_obj, 'per_txn_events_raw', None)
+        if not per_txn_events:
+            return details
+
+        # Filter events for this transaction
+        txn_events = [e for e in per_txn_events if e.get('transaction') == transaction]
+
+        for event in txn_events:
+            window_info = event.get('window', {})
+            metrics_list= event.get('metrics', [])
+            direction = event.get('direction', 'unknown')
+
+            # Get window details from per_txn_windows if available
+            per_txn_windows = getattr(test_obj, 'per_txn_windows', {})
+            windows_by_metric = {}
+
+            if per_txn_windows:
+                txn_data = per_txn_windows.get('by_txn', {}).get(transaction, {})
+                windows_by_metric = txn_data.get('windows_by_metric', {})
+
+            for metric_info in metrics_list:
+                metric_name = metric_info.get('name')
+                if not metric_name:
+                    continue
+
+                detail = {
+                    'metric': metric_name,
+                    'direction': direction,
+                    'window_start': window_info.get('start'),
+                    'window_end': window_info.get('end')
+                }
+
+                # Try to get quantitative data from original windows
+                metric_windows = windows_by_metric.get(metric_name, [])
+                if metric_windows and len(metric_windows) > 0:
+                    # Take the first window (most significant)
+                    window_data = metric_windows[0]
+                    detail.update({
+                        'baseline': window_data.get('baseline'),
+                        'significant_value': window_data.get('significant_value'),
+                        'delta_abs': window_data.get('delta_abs'),
+                        'min': window_data.get('min'),
+                        'max': window_data.get('max'),
+                        'mean': window_data.get('mean')
+                    })
+
+                details.append(detail)
+
+        return details
+
+    def _evaluate_transaction_status(
+        self,
+        transaction: str,
+        test_obj: BaseTestData,
+        config: 'TransactionStatusConfig' = None
+    ) -> 'TransactionStatus':
+        """Evaluate the status of a single transaction based on NFR, baseline, and ML checks.
+
+        Args:
+            transaction: Transaction name
+            test_obj: Test data object
+            config: Optional configuration for status evaluation
+
+        Returns:
+            TransactionStatus object
+        """
+        from app.backend.data_provider.test_data import (
+            TransactionStatus,
+            TransactionStatusConfig,
+            NFRStatus
+        )
+
+        if config is None:
+            # Load project-specific settings
+            config = TransactionStatusConfig.from_project_settings(self.project) if self.project else TransactionStatusConfig()
+
+        reasons = []
+        nfr_status_val = 'NOT_EVALUATED'
+        nfr_failures = []
+        baseline_status_val = 'NOT_AVAILABLE'
+        baseline_regressions = []
+        ml_status_val = 'NOT_EVALUATED'
+        ml_events = []
+
+        # Collect all metrics for this transaction
+        transaction_metrics = []
+        try:
+            all_tables = test_obj.get_all_tables()
+            for table in all_tables.values():
+                if hasattr(table, 'metrics'):
+                    txn_metrics = [m for m in table.metrics if m.scope == transaction]
+                    transaction_metrics.extend(txn_metrics)
+        except Exception as e:
+            logging.warning(f"Could not collect metrics for transaction '{transaction}': {e}")
+
+        # Check 1: NFR Validation
+        if config.nfr_enabled:
+            failed_nfrs = [m for m in transaction_metrics if m.nfr_status == NFRStatus.FAILED]
+            if failed_nfrs:
+                nfr_status_val = 'FAILED'
+                for m in failed_nfrs:
+                    nfr_failures.append(f"{m.name}")
+                    # Build detailed message with threshold info
+                    if m.nfr_threshold is not None and m.nfr_operation:
+                        reasons.append(
+                            f"NFR: {m.name} failed "
+                            f"(actual: {m.value:.2f}, expected: {m.nfr_operation} {m.nfr_threshold:.2f})"
+                        )
+                    else:
+                        reasons.append(f"NFR: {m.name} failed")
+            elif any(m.nfr_status == NFRStatus.PASSED for m in transaction_metrics):
+                nfr_status_val = 'PASSED'
+
+        # Check 2: Baseline Regression
+        if config.baseline_enabled:
+            warning_threshold = config.baseline_warning_threshold_pct
+            failed_threshold = config.baseline_failed_threshold_pct
+            metrics_to_check = config.baseline_metrics_to_check
+
+            regressions_found = []
+            for m in transaction_metrics:
+                # Only check metrics that are in the configured list
+                if m.name not in metrics_to_check:
+                    continue
+
+                if (m.baseline is not None and
+                    m.difference_pct is not None and
+                    m.difference_pct >= warning_threshold):
+                    regressions_found.append(m)
+                    baseline_regressions.append({
+                        'metric': m.name,
+                        'baseline': m.baseline,
+                        'current': m.value,
+                        'delta_pct': m.difference_pct
+                    })
+
+            if regressions_found:
+                baseline_status_val = 'FAILED'
+                # Build list of regression details
+                regression_details = []
+                for m in regressions_found:
+                    severity = "critical" if m.difference_pct >= failed_threshold else "moderate"
+                    metric_display = METRIC_DISPLAY_NAMES.get(m.name, m.name)
+                    regression_details.append(f"{metric_display} +{m.difference_pct:.1f}% ({severity})")
+                # Combine all regressions into a single reason with commas
+                reasons.append(f"Regression: {', '.join(regression_details)}")
+            elif any(m.baseline is not None and m.name in metrics_to_check for m in transaction_metrics):
+                baseline_status_val = 'PASSED'
+
+        # Check 3: ML Anomalies
+        if config.ml_enabled:
+            ml_details = self._extract_ml_anomaly_details(transaction, test_obj)
+
+            if ml_details:
+                ml_status_val = 'FAILED'
+                ml_events = ml_details
+
+                # Group anomalies by base metric
+                from collections import defaultdict
+                metric_groups = defaultdict(list)
+
+                for detail in ml_details:
+                    metric_name = detail.get('metric')
+                    # Extract base metric name (e.g., "rt_ms" from "rt_ms_median")
+                    base_metric = None
+                    if metric_name:
+                        # Check if this is a derived metric (contains underscore variations)
+                        if metric_name in ['rt_ms_median', 'rt_ms_avg', 'rt_ms_p90']:
+                            base_metric = 'rt_ms'
+                        elif metric_name == 'rps':
+                            # RPS (throughput) is a standalone metric
+                            base_metric = 'rps'
+                        elif metric_name == 'error_rate':
+                            # Error rate is a standalone metric
+                            base_metric = 'error_rate'
+                        else:
+                            base_metric = metric_name
+
+                        metric_groups[base_metric].append(detail)
+
+                # Build user-friendly messages grouped by base metric
+                for base_metric, details_list in metric_groups.items():
+                    base_display = METRIC_DISPLAY_NAMES.get(base_metric, base_metric)
+
+                    if len(details_list) == 1:
+                        # Single anomaly - show detailed info with statistic type
+                        detail = details_list[0]
+                        metric_name = detail.get('metric')
+                        direction = detail.get('direction')
+                        baseline = detail.get('baseline')
+                        sig_val = detail.get('significant_value')
+
+                        # Get the statistic type (median, avg, p90)
+                        stat_type = None
+                        if metric_name and '_' in metric_name:
+                            parts = metric_name.split('_')
+                            if parts[-1] in ['median', 'avg', 'p90']:
+                                stat_type = parts[-1]
+                                if stat_type == 'p90':
+                                    stat_type = '90th percentile'
+
+                        if baseline is not None and sig_val is not None and direction:
+                            delta = abs(sig_val - baseline)
+                            delta_pct = (delta / baseline * 100) if baseline > 0 else 0
+                            action = "increased" if direction == 'increase' else "decreased"
+                            stat_suffix = f" ({stat_type})" if stat_type else ""
+                            reasons.append(
+                                f"ML: {base_display}{stat_suffix} {action} from {baseline:.1f} to {sig_val:.1f} ({delta_pct:+.1f}%)"
+                            )
+                        else:
+                            # Show count format for consistency with multiple anomalies
+                            stat_suffix = f" ({stat_type})" if stat_type else ""
+                            anomaly_word = "anomaly" if len(details_list) == 1 else "anomalies"
+                            reasons.append(f"ML: {base_display}{stat_suffix} ({len(details_list)} {anomaly_word})")
+                    else:
+                        # Multiple anomalies for same base metric - show count and list statistics
+                        # Extract statistic types
+                        stat_types = []
+                        for detail in details_list:
+                            metric_name = detail.get('metric')
+                            if metric_name and '_' in metric_name:
+                                parts = metric_name.split('_')
+                                if parts[-1] in ['median', 'avg', 'p90']:
+                                    stat = parts[-1]
+                                    if stat == 'p90':
+                                        stat = '90th percentile'
+                                    stat_types.append(stat)
+
+                        if stat_types:
+                            stats_str = '/'.join(stat_types)
+                            reasons.append(
+                                f"ML: {base_display} ({len(details_list)} anomalies: {stats_str} were affected)"
+                            )
+                        else:
+                            reasons.append(
+                                f"ML: {base_display} ({len(details_list)} anomalies detected)"
+                            )
+            else:
+                # Check if ML analysis was performed
+                if hasattr(test_obj, 'ml_anomalies') and test_obj.ml_anomalies is not None:
+                    ml_status_val = 'PASSED'
+
+        # Determine final status based on severity
+        if reasons:
+            has_nfr_failures = nfr_status_val == 'FAILED'
+
+            # Find maximum regression percentage
+            max_regression_pct = 0
+            for reg in baseline_regressions:
+                if reg['delta_pct'] > max_regression_pct:
+                    max_regression_pct = reg['delta_pct']
+
+            # Determine status
+            if has_nfr_failures:
+                final_status = "FAILED"
+            elif max_regression_pct >= config.baseline_failed_threshold_pct:
+                final_status = "FAILED"
+            elif max_regression_pct >= config.baseline_warning_threshold_pct:
+                final_status = "WARNING"
+            else:
+                # Has ML anomalies but no critical failures or major regressions
+                final_status = "WARNING" if any('ML' in r for r in reasons) else "FAILED"
+        else:
+            final_status = "PASSED"
+
+        return TransactionStatus(
+            transaction=transaction,
+            status=final_status,
+            reasons=reasons,
+            nfr_status=nfr_status_val,
+            nfr_failures=nfr_failures,
+            baseline_status=baseline_status_val,
+            baseline_regressions=baseline_regressions,
+            ml_status=ml_status_val,
+            ml_events=ml_events
+        )
+
+    def build_transaction_status_table(
+        self,
+        test_obj: BaseTestData,
+        config: 'TransactionStatusConfig' = None
+    ) -> 'TransactionStatusTable':
+        """Build a complete transaction status table from all available data sources.
+
+        Args:
+            test_obj: Test data object
+            config: Optional configuration for status evaluation
+
+        Returns:
+            TransactionStatusTable with status for all transactions
+        """
+        from app.backend.data_provider.test_data import TransactionStatusTable, TransactionStatusConfig
+
+        table = TransactionStatusTable()
+
+        # Load configuration from project settings if not provided
+        if config is None:
+            config = TransactionStatusConfig.from_project_settings(self.project) if self.project else TransactionStatusConfig()
+
+        # Get all unique transactions
+        transactions = self._get_all_transactions(test_obj)
+
+        if not transactions:
+            logging.warning("No transactions found for status table")
+            return table
+
+        # Evaluate each transaction
+        for txn in transactions:
+            try:
+                status_obj = self._evaluate_transaction_status(
+                    transaction=txn,
+                    test_obj=test_obj,
+                    config=config
+                )
+                table.add_status(status_obj)
+            except Exception as e:
+                logging.error(f"Failed to evaluate status for transaction '{txn}': {e}")
+                # Add NOT_EVALUATED status for this transaction
+                from app.backend.data_provider.test_data import TransactionStatus
+                table.add_status(TransactionStatus(
+                    transaction=txn,
+                    status='NOT_EVALUATED',
+                    reasons=[f"Error during evaluation: {str(e)}"]
+                ))
+
+        return table

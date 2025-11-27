@@ -153,10 +153,10 @@ class InfluxdbV2(DataExtractionBase):
         except Exception:
             return timestamp
 
-    def _fetch_tests_titles(self) -> List[Dict[str, Any]]:
+    def _fetch_tests_titles(self, search: str = '') -> List[Dict[str, Any]]:
         try:
             if hasattr(self.queries, "get_tests_titles"):
-                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name)
+                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name, search=search)
                 records = self._execute_query(query)
                 df = pd.DataFrame(records)
                 return df.to_dict(orient="records")
@@ -484,7 +484,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: List of dictionaries with Google Web Vitals metrics
         """
         try:
-            query = self.queries.get_google_web_vitals(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_google_web_vitals(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -512,7 +512,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: List of dictionaries with fully loaded timing metrics
         """
         try:
-            query = self.queries.get_timings_fully_loaded(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_timings_fully_loaded(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -540,7 +540,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: List of dictionaries with page timing metrics
         """
         try:
-            query = self.queries.get_timings_page_timings(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_timings_page_timings(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -568,7 +568,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of main document timing metrics
         """
         try:
-            query = self.queries.get_timings_main_document(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_timings_main_document(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -596,7 +596,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of CPU long tasks metrics
         """
         try:
-            query = self.queries.get_cpu_long_tasks(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_cpu_long_tasks(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -624,7 +624,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of JS heap used size metrics
         """
         try:
-            query = self.queries.get_cdp_performance_js_heap_used_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_cdp_performance_js_heap_used_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -652,7 +652,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of JS heap total size metrics
         """
         try:
-            query = self.queries.get_cdp_performance_js_heap_total_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_cdp_performance_js_heap_total_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -680,7 +680,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of content type metrics
         """
         try:
-            query = self.queries.get_count_per_content_type(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_count_per_content_type(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -708,7 +708,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of first party content type metrics
         """
         try:
-            query = self.queries.get_first_party_transfer_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_first_party_transfer_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:
@@ -736,7 +736,7 @@ class InfluxdbV2(DataExtractionBase):
         :return: Dictionary of third party content type metrics
         """
         try:
-            query = self.queries.get_third_party_transfer_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation)
+            query = self.queries.get_third_party_transfer_size(test_title, start, end, self.bucket, self.test_title_tag_name, aggregation, regex=getattr(self, "regex", ""))
             records = self._execute_query(query)
 
             if not records:

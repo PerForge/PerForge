@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr, ConfigDict
-from typing import Optional, Literal
+from typing import Optional, Literal, Any
 import logging
 
 
@@ -293,3 +293,14 @@ class UsersModel(BaseModelWithStripping):
 class ProjectModel(BaseModelWithStripping):
     id  : Optional[int]
     name: str
+
+
+class SettingModel(BaseModel):
+    """Model for project settings validation."""
+    id: Optional[int] = None
+    project_id: int
+    category: str = Field(..., min_length=1, max_length=50)
+    key: str = Field(..., min_length=1, max_length=100)
+    value: Any
+    value_type: Literal['int', 'float', 'bool', 'string', 'list', 'dict']
+    description: Optional[str] = None

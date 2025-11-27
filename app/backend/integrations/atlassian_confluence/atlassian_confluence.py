@@ -45,15 +45,19 @@ class AtlassianConfluence(Integration):
             self.space_key = config["space_key"]
             self.parent_id = config["parent_id"]
             if config["token_type"] == "api_token":
+                # Confluence Cloud with API Token
                 self.confluence_auth = Confluence(
                     url      = self.org_url,
                     username = self.email,
-                    password = self.token
+                    password = self.token,
+                    cloud    = True  # Optional but explicit
                 )
             else:
+                # Confluence Data Center/Server with Personal Access Token
                 self.confluence_auth = Confluence(
                     url   = self.org_url,
-                    token = self.token
+                    token = self.token,
+                    cloud = False  # REQUIRED for PAT on Data Center/Server
                 )
         else:
             logging.warning("There's no Confluence integration configured, or you're attempting to send a request from an unsupported location.")
@@ -120,29 +124,125 @@ class AtlassianConfluence(Integration):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _convert_markdown_lists_to_html(content: str) -> str:
+        """Convert markdown-style bullet points to HTML lists.
+
+        Converts lines starting with '- ' to proper <ul> and <li> tags.
+        This ensures AI-generated bullet lists render correctly in Confluence.
+
+        Args:
+            content: Text that may contain markdown bullet points
+
+        Returns:
+            Content with markdown lists converted to HTML
+        """
+        import re
+        if not content:
+            return content
+
+        # CRITICAL FIX: Split lines where HTML tags are followed immediately by bullet points
+        # This handles cases like "</ac:image><br/>- The bullet text"
+        # The regex finds any closing tag (>) followed by optional whitespace and "- "
+        # and inserts newlines to separate them
+        content = re.sub(r'(>)(\s*)- ', r'\1\n\n- ', content)
+
+        lines = content.split('\n')
+        result = []
+        in_list = False
+
+        for line in lines:
+            stripped = line.strip()
+            # Check if this is a bullet point (starts with '- ')
+            if stripped.startswith('- '):
+                if not in_list:
+                    result.append('<ul>')
+                    in_list = True
+                # Remove the '- ' prefix and wrap in <li>
+                list_item = stripped[2:].strip()
+                result.append(f'<li>{list_item}</li>')
+            else:
+                # Not a bullet point
+                if in_list:
+                    result.append('</ul>')
+                    in_list = False
+                # Always add non-bullet lines (preserves empty lines and HTML)
+                result.append(line)
+
+        # Close list if we ended while still in one
+        if in_list:
+            result.append('</ul>')
+
+        return '\n'.join(result)
+
+    @staticmethod
     def _sanitize_xhtml(content: str) -> Optional[str]:
         """Return a well-formed XHTML fragment or *None* if it cannot be fixed.
 
         Strategy:
-        1. Attempt *strict* parsing (recover=False). If valid, return original.
-        2. Otherwise parse with *recover=True* which tells *lxml* to try to
+        1. Convert markdown-style lists to HTML lists
+        2. Smart newline handling: avoid <br/> around block elements
+        3. Attempt *strict* parsing (recover=False). If valid, return original.
+        4. Otherwise parse with *recover=True* which tells *lxml* to try to
            repair common issues (unclosed tags, illegal nesting, etc.).  The
            repaired tree is then serialised back to an XHTML string.
-        3. If recovery also fails, return *None*.
+        5. If recovery also fails, return *None*.
         """
         if not content:
             raise ValueError("No content provided for XHTML sanitization")
 
-        # Replace any newline characters with HTML <br/> tags so that multi-line
-        # template variables (e.g. $\{nfr_summary\}) render as separate lines
-        # in Confluence instead of being collapsed into a single paragraph. We
-        # handle all common newline variants (\r, \n, \r\n) before validation.
+        # First, convert markdown-style bullet points to HTML lists
+        content = AtlassianConfluence._convert_markdown_lists_to_html(content)
 
-        sanitized_content = (
-            content.replace("\r\n", "\n")  # normalise Windows newlines
-                   .replace("\r", "\n")      # macOS (older) newlines
-                   .replace("\n", "<br/>")    # convert to XHTML line breaks
-        )
+        # Normalize newlines first
+        content = content.replace("\r\n", "\n").replace("\r", "\n")
+
+        # Smart newline-to-br conversion: avoid adding <br/> around HTML block elements
+        # Block elements that should not have <br/> before or after them
+        block_elements = [
+            '<ul>', '</ul>', '<ol>', '</ol>', '<li>', '</li>',
+            '<h1>', '</h1>', '<h2>', '</h2>', '<h3>', '</h3>', '<h4>', '</h4>', '<h5>', '</h5>', '<h6>', '</h6>',
+            '<table>', '</table>', '<thead>', '</thead>', '<tbody>', '</tbody>', '<tr>', '</tr>',
+            '<td>', '</td>', '<th>', '</th>',
+            '<div>', '</div>', '<p>', '</p>',
+            '<ac:image', '</ac:image>', '<ac:structured-macro', '</ac:structured-macro>',
+            '<ac:parameter', '</ac:parameter>', '<ac:rich-text-body>', '</ac:rich-text-body>'
+        ]
+
+        # Split content by newlines and process each line
+        lines = content.split('\n')
+        processed_lines = []
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            # Skip empty lines around block elements
+            if not stripped:
+                # Check if previous or next line is a block element
+                prev_is_block = i > 0 and any(elem in lines[i-1] for elem in block_elements)
+                next_is_block = i < len(lines) - 1 and any(elem in lines[i+1] for elem in block_elements)
+
+                if prev_is_block or next_is_block:
+                    continue  # Skip this empty line entirely
+                else:
+                    processed_lines.append('<br/>')  # Keep as line break for text content
+            else:
+                # Check if this line contains a block element
+                is_block = any(elem in stripped for elem in block_elements)
+
+                if is_block:
+                    # Don't add <br/> for block elements
+                    processed_lines.append(stripped)
+                else:
+                    # Regular text content - add it and a <br/> if not the last line
+                    processed_lines.append(stripped)
+                    if i < len(lines) - 1:
+                        # Only add <br/> if the next line is not a block element
+                        next_stripped = lines[i+1].strip() if i+1 < len(lines) else ''
+                        next_is_block = any(elem in next_stripped for elem in block_elements)
+                        if not next_is_block and not stripped.lower().endswith(('<br/>', '<br>', '<br />')):
+                            processed_lines.append('<br/>')
+
+        sanitized_content = ''.join(processed_lines)
 
         wrapper = f"<div>{sanitized_content}</div>"
 

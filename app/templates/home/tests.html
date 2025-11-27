@@ -9,6 +9,19 @@
         th.sort {
             pointer-events: none;
         }
+        /* Active search indicator */
+        .search-box.active {
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        .search-clear-btn {
+            cursor: pointer;
+            background: none;
+            border: none;
+            opacity: 0.5;
+        }
+        .search-clear-btn:hover {
+            opacity: 1;
+        }
     </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -22,10 +35,10 @@
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex">
                                     <div class="search-box position-relative" data-bs-toggle="search" data-bs-display="static">
-                                        <input class="form-control search-input search" type="search" placeholder="Search" aria-label="Search" style="min-width: 100px;"/>
+                                        <input class="form-control search-input search" type="search" placeholder="Search tests..." aria-label="Search" style="min-width: 100px; padding-right: 30px;"/>
                                         <span class="fas fa-search search-box-icon"></span>
-                                    </div>
-                                    <div class="d-flex align-items-center ms-2">
+                                        <button type="button" class="btn-close search-clear-btn" aria-label="Clear search" style="position: absolute; right: 35px; top: 50%; transform: translateY(-50%); display: none; font-size: 0.7rem;"></button>
+                                    </div>                                    <div class="d-flex align-items-center ms-2">
                                         <label for="dataSourceId" class="form-label mb-0 me-2">Datasource:</label>
                                         <select class="form-select" id="dataSourceId">
                                         </select>
@@ -184,6 +197,10 @@
                 let currentPage = 1;
                 let pageSize = parseInt(localStorage.getItem('pageSize')) || 10; // UI page size
 
+                // Search state
+                let searchQuery = '';
+                let searchDebounceTimer = null;
+
                 // Initialize page size dropdown and handler
                 const pageSizeSelect = document.getElementById('pageSizeSelect');
                 if (pageSizeSelect) {
@@ -248,6 +265,49 @@
                 // Update cookie when selection changes
                 dataSource_select.addEventListener("change", function() {
                     setCookie("selectedDataSource", this.value, 7);
+                    loadData();
+                });
+
+                // Function to update clear button visibility
+                function updateClearButtonVisibility() {
+                    const hasText = $('.search-input').val().trim().length > 0;
+                    $('.search-clear-btn').toggle(hasText);
+                    $('.search-box').toggleClass('active', hasText);
+                }
+
+                // Search input handler with debouncing
+                $('.search-input').on('input', function() {
+                    const newQuery = $(this).val().trim();
+
+                    // Clear existing timer
+                    if (searchDebounceTimer) {
+                        clearTimeout(searchDebounceTimer);
+                    }
+
+                    // Update clear button visibility
+                    updateClearButtonVisibility();
+
+                    // Debounce: wait 300ms after user stops typing
+                    searchDebounceTimer = setTimeout(() => {
+                        searchQuery = newQuery;
+                        currentPage = 1; // Reset to first page on new search
+                        loadData();
+                    }, 300);
+                });
+
+                // Maintain clear button visibility on focus/blur events
+                $('.search-input').on('focus blur', function() {
+                    updateClearButtonVisibility();
+                });
+
+                // Clear search button handler
+                $('.search-clear-btn').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    $('.search-input').val('');
+                    searchQuery = '';
+                    currentPage = 1;
+                    updateClearButtonVisibility();
                     loadData();
                 });
 
@@ -369,10 +429,11 @@
 
                             items.forEach(cfg => {
                                 const makeOption = (bucketName, labelSuffix = null) => {
+                                    const isV18Listener = cfg.listener.includes('v1.8');
                                     const valueObj = {
                                         id: cfg.id,
                                         name: cfg.name,
-                                        source_type: 'influxdb_v2',
+                                        source_type: isV18Listener ? 'influxdb_v1.8' : 'influxdb_v2',
                                         listener: cfg.listener,
                                         bucket: bucketName
                                     };
@@ -509,7 +570,8 @@
                         {
                             page: currentPage,
                             page_size: pageSize,
-                            bucket: dataSourceJson.bucket
+                            bucket: dataSourceJson.bucket,
+                            search: searchQuery
                         },
                         { signal })
                         .then((response) => {
@@ -536,7 +598,11 @@
                             setTimeout(() => {
                                 const startItemCalc = ((currentPage - 1) * pageSize) + 1;
                                 const endItemCalc = Math.min(currentPage * pageSize, totalItems);
-                                $("[data-list-info]").text(`${startItemCalc} to ${endItemCalc} Items of ${totalItems}`);
+                                let infoText = `${startItemCalc} to ${endItemCalc} Items of ${totalItems}`;
+                                if (searchQuery) {
+                                    infoText = `${startItemCalc} to ${endItemCalc} of ${totalItems} results for "${searchQuery}"`;
+                                }
+                                $("[data-list-info]").text(infoText);
 
                                 // Re-enable/disable Prev/Next after List.js mutates DOM
                                 const maxPageCalc = Math.ceil(totalItems / pageSize) || 1;
@@ -604,6 +670,35 @@
 
                     var tableBody = document.getElementById("bulk-select-body");
                     tableBody.innerHTML = ''; // Clear the table body
+
+                    // Handle empty state
+                    if (tests.length === 0) {
+                        const noResultsMsg = searchQuery
+                            ? `No tests found matching "${searchQuery}"`
+                            : 'No tests available';
+
+                        const emptyRow = tableBody.insertRow();
+                        const emptyCell = emptyRow.insertCell();
+                        emptyCell.colSpan = 10;
+                        emptyCell.className = 'text-center py-4';
+                        emptyCell.innerHTML = `
+                            <i class="fas fa-search fa-3x text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-2">${noResultsMsg}</p>
+                            ${searchQuery ? '<button class="btn btn-sm btn-primary search-clear-from-table" style="display:inline-block;">Clear Search</button>' : ''}
+                        `;
+
+                        // Handler for clear button in empty state
+                        $('.search-clear-from-table').on('click', function() {
+                            $('.search-input').val('');
+                            searchQuery = '';
+                            currentPage = 1;
+                            $('.search-clear-btn').hide();
+                            $('.search-box').removeClass('active');
+                            loadData();
+                        });
+
+                        return; // Exit early
+                    }
 
                     tests.forEach(function(test) {
                         const row = tableBody.insertRow();
@@ -717,7 +812,7 @@
                         const dataSource = document.getElementById('dataSourceId').value;
                         const dataSourceJson = JSON.parse(dataSource);
                         btn.textContent = 'ML Report';
-                        if (dataSourceJson.listener === 'sitespeed_influxdb_v2') {
+                        if (dataSourceJson.listener === 'sitespeed_influxdb_v2' || dataSourceJson.listener === 'sitespeed_influxdb_v1.8') {
                             btn.classList.add('disabled');
                         } else {
                             btn.href = `/report?test_title=${encodeURIComponent(test.test_title)}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}&bucket=${encodeURIComponent(dataSourceJson.bucket)}`;

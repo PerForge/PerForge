@@ -20,17 +20,26 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       self,
       bucket: str,
       test_title_tag_name: str,
+      search: str = '',
   ) -> str:
-        """Return Flux query to get distinct test titles."""
+        """Return Flux query to get distinct test titles with optional search filter."""
         base_query = (
             f"from(bucket: \"{bucket}\")\n"
             f"  |> range(start: 0, stop: now())\n"
             f"  |> filter(fn: (r) => r._measurement == \"largestContentfulPaint\" and r._field == \"median\" and r.origin == \"browsertime\" )\n"
+        )
+
+        # Add search filter if provided
+        if search:
+            # Case-insensitive regex search
+            base_query += f"  |> filter(fn: (r) => r[\"{test_title_tag_name}\"] =~ /(?i){search}/)\n"
+
+        base_query += (
             f"  |> group(columns: [\"{test_title_tag_name}\"])\n"
             f"  |> min(column: \"_time\")\n"
-            f"  |> group()"
+            f"  |> group()\n"
             f"  |> sort(columns: [\"_time\"], desc: true)\n"
-            f"  |> keep(columns: [\"{test_title_tag_name}\"])"
+            f"  |> keep(columns: [\"{test_title_tag_name}\"])\n"
             f"  |> rename(columns: {{{test_title_tag_name}: \"test_title\"}})"
         )
         return base_query
@@ -90,110 +99,138 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
 
-  def get_google_web_vitals(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_google_web_vitals(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["statistics"] == "googleWebVitals")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["_field"] == "{aggregation}")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
-      |> rename(columns: {{cumulativeLayoutShift: "CLS"}})
-      |> rename(columns: {{firstContentfulPaint: "FCP"}})
-      |> rename(columns: {{firstInputDelay: "FID"}})
-      |> rename(columns: {{largestContentfulPaint: "LCP"}})
-      |> rename(columns: {{totalBlockingTime: "TBT"}})
-      |> rename(columns: {{ttfb: "TTFB"}})
+      |> rename(columns: {cumulativeLayoutShift: "CLS"})
+      |> rename(columns: {firstContentfulPaint: "FCP"})
+      |> rename(columns: {firstInputDelay: "FID"})
+      |> rename(columns: {largestContentfulPaint: "LCP"})
+      |> rename(columns: {totalBlockingTime: "TBT"})
+      |> rename(columns: {ttfb: "TTFB"})
       '''
+      return query
 
-  def get_timings_fully_loaded(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_timings_fully_loaded(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["statistics"] == "timings")
       |> filter(fn: (r) => r["_measurement"] == "fullyLoaded")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["_field"] == "{aggregation}")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_timings_page_timings(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_timings_page_timings(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => exists r["pageTimings"])
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["_field"] == "{aggregation}")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_timings_main_document(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_timings_main_document(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["mainDocumentTimings"] != "")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["_field"] == "{aggregation}")
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_cpu_long_tasks(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_cpu_long_tasks(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["statistics"] == "cpu")
       |> filter(fn: (r) => r["summaryType"] == "pageSummary")
       |> filter(fn: (r) => r["_measurement"] == "durations" or r["_measurement"] == "lastLongTask" or r["_measurement"] == "maxPotentialFid"  or r["_measurement"] == "tasks" or r["_measurement"] == "totalBlockingTime" or r["_measurement"] == "totalDuration")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_cdp_performance_js_heap_used_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_cdp_performance_js_heap_used_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "JSHeapUsedSize")
       |> filter(fn: (r) => r["performance"] == "JSHeapUsedSize")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_cdp_performance_js_heap_total_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_cdp_performance_js_heap_total_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "JSHeapTotalSize")
       |> filter(fn: (r) => r["performance"] == "JSHeapTotalSize")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
-      |> filter(fn: (r) => r["_field"] == "{aggregation}")
+      |> filter(fn: (r) => r["_field"] == "{aggregation}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "_measurement"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["_measurement"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_count_per_content_type(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_count_per_content_type(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "requests")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
@@ -201,40 +238,52 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => exists r["contentType"])
       |> filter(fn: (r) => not exists r["party"])
-      |> filter(fn: (r) => not exists r["thirdPartyType"])
+      |> filter(fn: (r) => not exists r["thirdPartyType"])'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "contentType"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_first_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_first_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["party"] == "firstParty")
       |> filter(fn: (r) => r["_measurement"] == "transferSize")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => exists r["contentType"])
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "contentType"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
-  def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median') -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_third_party_transfer_size(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+      query = f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["party"] == "thirdParty")
       |> filter(fn: (r) => r["_measurement"] == "transferSize")
       |> filter(fn: (r) => exists r["page"])
       |> filter(fn: (r) => exists r["contentType"])
-      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")'''
+      if regex:
+          query += f'\n      |> filter(fn: (r) => r["page"] =~ /{regex}/)'
+      query += '''
       |> group(columns: ["page", "contentType"])
       |> median()
       |> pivot(rowKey: ["page"], columnKey: ["contentType"], valueColumn: "_value")
       |> group()
       '''
+      return query
 
   def get_custom_var(self, testTitle: str, custom_var: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
       return f'''from(bucket: "{bucket}")
@@ -246,9 +295,12 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       |> first()'''
 
   def get_overview_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, aggregation: str = 'median', regex: str = '') -> str:
+       # Build the regex filter if needed
+       regex_filter = f'\n            |> filter(fn: (r) => r["page"] =~ /{regex}/)' if regex else ''
+
        return f'''base_data = from(bucket: "{bucket}")
             |> range(start: {start}, stop: {stop})
-            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+            |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}"){regex_filter}
             |> toFloat()
 
         web_vitals = base_data

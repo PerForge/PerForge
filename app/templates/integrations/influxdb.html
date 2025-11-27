@@ -41,6 +41,14 @@
                                             {{ form.name(class="form-control", placeholder="e.g. My InfluxDB") }}
                                         </div>
                                         <div class="col-12">
+                                            <label for="listener" class="form-label required">Backend listener
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Please be aware that the default listener for JMeter is the first one.</span>
+                                                </span>
+                                            </label>
+                                            {{ form.listener(class="form-select") }}
+                                        </div>
+                                        <div class="col-12">
                                             <label for="url" class="form-label required">URL
                                                 <span class="tooltip-container">
                                                     <span class="tooltip-content">InfluxDB base URL including scheme and port.</span>
@@ -135,14 +143,6 @@
                                                     <label class="form-check-label" for="bucket_regex_bool">Enable bucket regex</label>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="col-12">
-                                            <label for="listener" class="form-label required">Backend listener
-                                                <span class="tooltip-container">
-                                                    <span class="tooltip-content">Please be aware that the default listener for JMeter is the first one.</span>
-                                                </span>
-                                            </label>
-                                            {{ form.listener(class="form-select") }}
                                         </div>
                                         <div class="pf-three-col">
                                             <div>
@@ -419,6 +419,7 @@
             const urlInput = document.getElementById('url');
             const orgInput = document.getElementById('org_id');
             const bucketInput = document.getElementById('bucket');
+            const listenerInput = document.getElementById('listener');
             const tokenSelect = document.getElementById('token');
 
             if (!urlInput.value || !orgInput.value || !bucketInput.value) {
@@ -432,7 +433,8 @@
                 url: urlInput.value,
                 org_id: orgInput.value,
                 bucket: bucketInput.value,
-                bucket_regex_bool: document.getElementById('bucket_regex_bool').checked
+                bucket_regex_bool: document.getElementById('bucket_regex_bool').checked,
+                listener: listenerInput ? listenerInput.value : null
             };
 
             if (!tokenSelect.value) {
@@ -533,6 +535,48 @@
             input.addEventListener('blur', hide);
         }
 
+        function setLabelText(label, text) {
+            if (!label) return;
+            const firstNode = label.childNodes[0];
+            if (firstNode && firstNode.nodeType === Node.TEXT_NODE) {
+                firstNode.nodeValue = text + ' ';
+            } else {
+                label.insertBefore(document.createTextNode(text + ' '), label.firstChild);
+            }
+        }
+
+        function updateFieldLabelsByListener(listenerValue) {
+            const isV18 = listenerValue.includes('v1.8');
+
+            const orgLabel = document.querySelector('label[for="org_id"]');
+            const bucketLabel = document.querySelector('label[for="bucket"]');
+            const tokenLabel = document.querySelector('label[for="token"]');
+            const orgInput = document.getElementById('org_id');
+            const bucketInput = document.getElementById('bucket');
+
+            if (isV18) {
+                setLabelText(orgLabel, 'Username');
+                setLabelText(bucketLabel, 'Database');
+                setLabelText(tokenLabel, 'Password secret');
+                if (orgInput) {
+                    orgInput.placeholder = 'e.g. my-user';
+                }
+                if (bucketInput) {
+                    bucketInput.placeholder = 'e.g. my-database';
+                }
+            } else {
+                setLabelText(orgLabel, 'Org');
+                setLabelText(bucketLabel, 'Bucket name or regex');
+                setLabelText(tokenLabel, 'Token');
+                if (orgInput) {
+                    orgInput.placeholder = 'e.g. my-organization';
+                }
+                if (bucketInput) {
+                    bucketInput.placeholder = 'e.g. my-bucket';
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const labels = document.querySelectorAll('#influxdbForm label[for]');
             labels.forEach(label => {
@@ -541,6 +585,14 @@
                     attachFocusHint(id);
                 }
             });
+
+            const listenerSelect = document.getElementById('listener');
+            if (listenerSelect) {
+                updateFieldLabelsByListener(listenerSelect.value);
+                listenerSelect.addEventListener('change', function() {
+                    updateFieldLabelsByListener(this.value);
+                });
+            }
         });
     </script>
 {% endblock content %}

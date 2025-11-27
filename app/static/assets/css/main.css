@@ -335,7 +335,7 @@ body.light-theme .form-select {
 
 /* Callout hint under fields */
 /* Dark theme (default) */
-.form-hint { display: flex; gap: 8px; align-items: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-main-color); border-left: 4px solid var(--bs-blue); border-radius: 6px; padding: 10px 12px; color: var(--text-main-color); margin-top: 6px; font-size: 0.9rem; }
+.form-hint { display: flex; gap: 8px; align-items: flex-start; background: #1a1a1a; border: 1px solid var(--border-main-color); border-left: 4px solid var(--bs-blue); border-radius: 6px; padding: 10px 12px; color: var(--text-main-color); margin-top: 6px; font-size: 0.9rem; }
 .form-hint .icon { color: var(--bs-blue); margin-top: 2px; }
 .form-hint code { background: rgba(13,110,253,0.12); color: var(--bs-blue); padding: 1px 4px; border-radius: 4px; }
 /* Light theme overrides */
