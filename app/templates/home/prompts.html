@@ -134,6 +134,10 @@
                           <label class="var-description">Summary of ML-based anomaly detection.</label>
                       </div>
                       <div class="variable-item">
+                          <label class="var-name" onclick="copyToClipboard('${ml_anomalies}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${ml_anomalies}');"></i> ${ml_anomalies}</label>
+                          <label class="var-description">List of all anomalies detected by ML.</label>
+                      </div>
+                      <div class="variable-item">
                           <label class="var-name" onclick="copyToClipboard('${additional_context}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${additional_context}');"></i> ${additional_context}</label>
                           <label class="var-description">Optional extra context you provide for the report.</label>
                       </div>

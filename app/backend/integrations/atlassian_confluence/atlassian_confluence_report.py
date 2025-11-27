@@ -34,19 +34,21 @@ class AtlassianConfluenceReport(ReportingBase):
         self.output_obj = AtlassianConfluence(project=self.project, id=action_id)
 
     def add_group_text(self, text):
-        text = text.replace("\r\n", "")
-        text = text.replace("\r", "")
-        text = text.replace("\n", "")
+        # Preserve newlines for markdown list processing
         text = self.replace_variables(text)
         text = text.replace('&', '&amp;')
+        # Add trailing newline to ensure proper separation between sections
+        if not text.endswith('\n'):
+            text += '\n'
         return text
 
     def add_text(self, text):
-        text = text.replace("\r\n", "")
-        text = text.replace("\r", "")
-        text = text.replace("\n", "")
+        # Preserve newlines for markdown list processing
         text = self.replace_variables(text)
         text = text.replace('&', '&amp;')
+        # Add trailing newline to ensure proper separation between sections
+        if not text.endswith('\n'):
+            text += '\n'
         return text
 
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
@@ -54,7 +56,7 @@ class AtlassianConfluenceReport(ReportingBase):
         image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
         fileName = self.output_obj.put_image_to_confl(image, graph_data["id"], self.page_id)
         if fileName:
-            graph = f'<br/>{self._build_confluence_image(str(fileName), graph_data.get("width", 1000), graph_data.get("height", 500))}<br/>'
+            graph = f'\n{self._build_confluence_image(str(fileName), graph_data.get("width", 1000), graph_data.get("height", 500))}\n'
         else:
             graph = f'Image failed to load, id: {graph_data["id"]}'
         return graph, (ai_support_response or "")
