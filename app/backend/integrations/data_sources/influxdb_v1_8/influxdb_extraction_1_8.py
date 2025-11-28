@@ -34,6 +34,7 @@ from app.backend.integrations.data_sources.influxdb_v1_8.queries.influxdb_backen
 from app.backend.integrations.data_sources.influxdb_v1_8.queries.sitespeed_influxdb_v1_8 import (
     SitespeedInfluxQLQueries,
 )
+from app.backend.components.settings.settings_service import SettingsService
 
 
 class InfluxdbV18(DataExtractionBase):
@@ -66,8 +67,12 @@ class InfluxdbV18(DataExtractionBase):
         listener = getattr(self, "listener", None)
 
         if listener in self.queries_map:
-            # Instantiate the correct query implementation (backend or frontend)
-            self.queries = self.queries_map[listener]()
+            # Get granularity setting from project settings
+            granularity = SettingsService.get_setting(
+                project, 'data_query', 'backend_query_granularity_seconds', default=30
+            )
+            # Instantiate the correct query implementation (backend or frontend) with granularity
+            self.queries = self.queries_map[listener](granularity_seconds=granularity)
         else:
             self.queries = None
             logging.warning(ErrorMessages.ER00054.value.format(listener))

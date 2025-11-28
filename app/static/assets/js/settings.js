@@ -13,17 +13,19 @@ const settingsState = {
 // Category display names
 const categoryNames = {
     'ml_analysis': 'ML Analysis',
-    'transaction_status': 'Transaction Status'
+    'transaction_status': 'Transaction Status',
+    'data_query': 'Data Query'
 };
 
 // Subsection groupings for ML Analysis
 const mlAnalysisGroups = {
-    'Isolation Forest': ['contamination', 'isf_threshold', 'isf_feature_metric'],
-    'Z-Score Detection': ['z_score_threshold'],
-    'Rolling Analysis': ['rolling_window', 'rolling_correlation_threshold'],
+    'Isolation Forest': ['contamination', 'isf_threshold', 'isf_feature_metric', 'isf_validation_threshold'],
+    'Z-Score Detection': ['z_score_threshold', 'z_score_median_validation_threshold'],
+    'Rolling Analysis': ['rolling_window', 'rolling_correlation_threshold', 'baseline_window'],
     'Ramp-Up Detection': ['ramp_up_base_metric', 'ramp_up_required_breaches_min', 'ramp_up_required_breaches_max', 'ramp_up_required_breaches_fraction'],
     'Load Detection': ['fixed_load_percentage'],
-    'Metric Stability': ['slope_threshold', 'p_value_threshold', 'numpy_var_threshold', 'cv_threshold'],
+    'Metric Stability': ['slope_threshold', 'p_value_threshold', 'numpy_var_threshold', 'cv_threshold', 'stability_outlier_z_score', 'stability_min_points'],
+    'Severity Thresholds': ['severity_critical', 'severity_high', 'severity_medium', 'severity_low'],
     'Context Filtering': ['context_median_window', 'context_median_pct', 'context_median_enabled'],
     'Merging & Grouping': ['merge_gap_samples'],
     'Per-Transaction Analysis': ['per_txn_analysis_enabled', 'per_txn_metrics', 'per_txn_coverage', 'per_txn_max_k', 'per_txn_min_points']
@@ -34,6 +36,11 @@ const transactionStatusGroups = {
     'NFR Validation': ['nfr_enabled'],
     'Baseline Comparison': ['baseline_enabled', 'baseline_warning_threshold_pct', 'baseline_failed_threshold_pct', 'baseline_metrics_to_check'],
     'ML Anomaly Detection': ['ml_enabled', 'ml_min_impact']
+};
+
+// Subsection groupings for Data Query
+const dataQueryGroups = {
+    'Backend Listener Query Settings': ['backend_query_granularity_seconds']
 };
 
 /**
@@ -80,6 +87,7 @@ async function loadAllSettings() {
         // Render each category
         renderCategory('ml_analysis', mlAnalysisGroups);
         renderCategory('transaction_status', transactionStatusGroups);
+        renderCategory('data_query', dataQueryGroups);
 
         // Hide all unsaved indicators initially
         document.querySelectorAll('.unsaved-indicator').forEach(indicator => {
@@ -98,7 +106,8 @@ async function loadAllSettings() {
 function renderCategory(category, groups) {
     const containerId = category === 'ml_analysis' ? 'mlAnalysisSettings' :
         category === 'transaction_status' ? 'transactionStatusSettings' :
-            'dataAggregationSettings';
+            category === 'data_query' ? 'dataQuerySettings' :
+                'dataAggregationSettings';
 
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -255,6 +264,7 @@ function setupEventListeners() {
     // Form submissions
     document.getElementById('mlAnalysisForm').addEventListener('submit', handleFormSubmit);
     document.getElementById('transactionStatusForm').addEventListener('submit', handleFormSubmit);
+    document.getElementById('dataQueryForm').addEventListener('submit', handleFormSubmit);
 
     // Reset buttons
     document.querySelectorAll('.reset-btn').forEach(btn => {

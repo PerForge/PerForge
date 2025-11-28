@@ -43,18 +43,19 @@ class MetricStabilityDetector(BaseDetector):
     def name(self) -> str:
         return self._name
 
-    def _remove_outliers(self, data: np.ndarray) -> np.ndarray:
+    def _remove_outliers(self, data: np.ndarray, threshold: float = 3.0) -> np.ndarray:
         """
         Remove statistical outliers using z-score method.
 
         Args:
             data: Input numpy array of metric values
+            threshold: Z-score threshold
 
         Returns:
-            Numpy array with outliers removed (|z-score| < 3)
+            Numpy array with outliers removed (|z-score| < threshold)
         """
         z_scores = stats.zscore(data)
-        return data[np.abs(z_scores) < 3]
+        return data[np.abs(z_scores) < threshold]
 
     def _get_trend_description(self, slope: float, cv: float, p_value: float, p_threshold: float, cv_threshold: float) -> str:
         """
@@ -114,13 +115,13 @@ class MetricStabilityDetector(BaseDetector):
 
         series = df[metric].dropna()
         # Guard: insufficient data points
-        if len(series) < 3:
+        if len(series) < getattr(engine, 'stability_min_points', 3):
             return df
 
         y = series.values
 
         # Step 1: Remove statistical outliers for cleaner analysis
-        cleaned_data = self._remove_outliers(y)
+        cleaned_data = self._remove_outliers(y, getattr(engine, 'stability_outlier_z_score', 3.0))
         cleaned_data = engine.normalize_metric(cleaned_data, metric)
 
         metric_label = OVERALL_METRIC_DISPLAY.get(metric, metric)

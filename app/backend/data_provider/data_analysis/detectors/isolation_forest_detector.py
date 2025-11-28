@@ -41,7 +41,7 @@ class IsolationForestDetector(BaseDetector):
     def name(self) -> str:
         return self._name
 
-    def _validate_anomalies(self, df: pd.DataFrame, metric: str, anomaly_column: str, threshold: float = 0.1) -> pd.DataFrame:
+    def _validate_anomalies(self, df: pd.DataFrame, metric: str, anomaly_column: str, threshold: float) -> pd.DataFrame:
         """
         Validate anomalies using median-based threshold approach.
 
@@ -128,7 +128,8 @@ class IsolationForestDetector(BaseDetector):
             non_missing_rows = self._validate_anomalies(
                 df=non_missing_rows,
                 metric=metric,
-                anomaly_column=f'{metric}_anomaly_isf'
+                anomaly_column=f'{metric}_anomaly_isf',
+                threshold=engine.isf_validation_threshold
             )
 
             # Contextual validator: reclassify small local deviations as normal

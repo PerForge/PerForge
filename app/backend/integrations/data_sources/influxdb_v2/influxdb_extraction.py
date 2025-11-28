@@ -22,6 +22,7 @@ from app.backend.integrations.data_sources.influxdb_v2.queries.sitespeed_influxd
 from app.backend.integrations.data_sources.influxdb_v2.queries.meta import InfluxDBMetaQueries
 from app.backend.integrations.data_sources.influxdb_v2.influxdb_db import DBInfluxdb
 from app.backend.components.secrets.secrets_db import DBSecrets
+from app.backend.components.settings.settings_service import SettingsService
 from app.backend.errors import ErrorMessages
 from influxdb_client import InfluxDBClient
 from datetime import datetime
@@ -53,8 +54,12 @@ class InfluxdbV2(DataExtractionBase):
         self._target_tz = self.tmz_human or self.tmz_utc
 
         if self.listener in self.queries_map:
-            # Instantiate the correct client class
-            self.queries = self.queries_map[self.listener]()
+            # Get granularity setting from project settings
+            granularity = SettingsService.get_setting(
+                self.project, 'data_query', 'backend_query_granularity_seconds', default=30
+            )
+            # Instantiate the correct client class with granularity
+            self.queries = self.queries_map[self.listener](granularity_seconds=granularity)
         else:
             self.queries = None
             logging.warning(ErrorMessages.ER00054.value.format(self.listener))

@@ -324,142 +324,6 @@ class AnomalyDetectionEngine:
                 # Recording windows must not break overall processing.
                 continue
 
-    # def collect_anomalies_old(self, df, metric, anomaly_cl):
-    #     """
-    #     Collect and analyze anomalies in the time series data.
-
-    #     Args:
-    #         df (DataFrame): Input dataframe containing time series data
-    #         metric (str): Name of the metric column to analyze
-    #         anomaly_cl (str): Name of the column containing anomaly flags
-
-    #     The method tracks consecutive anomalies and combines them into single events
-    #     when they occur close to each other (within the buffer_size window).
-    #     """
-    #     def format_time_range(start, end):
-    #         """Format the time range for anomaly description.
-
-    #         Returns only time if start and end dates are the same,
-    #         otherwise returns full datetime.
-    #         """
-    #         start_date = start.strftime('%Y-%m-%d')
-    #         end_date = end.strftime('%Y-%m-%d')
-
-    #         if start_date == end_date:
-    #             return (f"{start.strftime('%H:%M:%S')} to "
-    #                    f"{end.strftime('%H:%M:%S')}")
-    #         else:
-    #             return (f"{start.strftime('%Y-%m-%d %H:%M:%S')} to "
-    #                    f"{end.strftime('%Y-%m-%d %H:%M:%S')}")
-
-    #     # Initialize tracking variables
-    #     anomaly_started = False  # Flag to track if we're currently in an anomaly period
-    #     start_time = None        # Start time of current anomaly
-    #     end_time = None         # End time of current anomaly
-    #     baseline_value = None    # Reference value for comparison
-    #     anomalies_detected = False  # Flag to track if any anomalies were found
-    #     anomaly_values = []      # Values during anomaly period
-    #     buffer_size = 3         # Number of normal points needed to confirm anomaly end
-    #     normal_points_buffer = []  # Buffer for tracking return to normal
-    #     current_methods = set()   # Set of detection methods that identified the anomaly
-
-    #     def calculate_baseline(series, window=3):
-    #         """Calculate baseline value using rolling mean."""
-    #         return series.rolling(window=window, min_periods=1).mean().iloc[0]
-
-    #     # Process each data point
-    #     for index, row in df.iterrows():
-    #         current_value = row[metric]
-    #         is_anomaly = 'Anomaly' in str(row[anomaly_cl]) and 'potential saturation point' not in str(row[anomaly_cl])
-
-    #         if is_anomaly:
-    #             # Extract detection methods from anomaly flag
-    #             methods = set(row[anomaly_cl].replace('Anomaly: ', '').split(', '))
-    #             current_methods.update(methods)
-
-    #             if not anomaly_started:
-    #                 # Start of new anomaly period
-    #                 anomaly_started = True
-    #                 start_time = index
-    #                 # Calculate baseline from previous normal points
-    #                 prev_idx = df.index.get_loc(index)
-    #                 if prev_idx > 0:
-    #                     prev_values = df[metric].iloc[max(0, prev_idx-3):prev_idx]
-    #                     baseline_value = calculate_baseline(prev_values)
-    #                 else:
-    #                     baseline_value = current_value
-
-    #             anomaly_values.append(current_value)
-    #             end_time = index
-    #             normal_points_buffer = []  # Reset buffer
-    #             anomalies_detected = True
-    #         else:
-    #             if anomaly_started:
-    #                 # Track potential end of anomaly period
-    #                 normal_points_buffer.append(current_value)
-    #                 if len(normal_points_buffer) >= buffer_size:
-    #                     # Confirm end of anomaly period
-    #                     if anomaly_values:
-    #                         summary = self._summarize_anomaly_window(baseline_value, anomaly_values)
-    #                         direction = summary.get('direction', 'increase')
-    #                         significant_value = summary.get('significant_value', baseline_value)
-
-    #                         # Record internal representation of this overall anomaly window
-    #                         self._record_overall_anomaly_window(metric, start_time, end_time, baseline_value, summary)
-
-    #                         # Generate description
-    #                         description = (
-    #                             f"An anomaly was detected in {metric} from "
-    #                             f"{format_time_range(start_time, end_time)}, "
-    #                             f"with the metric {'increasing' if direction == 'increase' else 'dropping'} "
-    #                             f"to {significant_value:.2f}."
-    #                         )
-
-    #                         # self.output.append({
-    #                         #     'status': 'failed',
-    #                         #     'method': ', '.join(current_methods),
-    #                         #     'description': description,
-    #                         #     'value': significant_value
-    #                         # })
-
-    #                     # Reset tracking variables
-    #                     anomaly_started = False
-    #                     anomaly_values = []
-    #                     current_methods.clear()
-    #                     normal_points_buffer = []
-
-    #     # Handle case where anomaly continues until end of data
-    #     if anomaly_started and anomaly_values:
-    #         summary = self._summarize_anomaly_window(baseline_value, anomaly_values)
-    #         direction = summary.get('direction', 'increase')
-    #         significant_value = summary.get('significant_value', baseline_value)
-
-    #         # Record internal representation of this overall anomaly window
-    #         self._record_overall_anomaly_window(metric, start_time, end_time, baseline_value, summary)
-
-    #         description = (
-    #             f"An anomaly was detected in {metric} from "
-    #             f"{format_time_range(start_time, end_time)}, "
-    #             f"with the metric {'increasing' if direction == 'increase' else 'dropping'} "
-    #             f"to {significant_value:.2f}."
-    #         )
-
-    #         self.output.append({
-    #             'status': 'failed',
-    #             'method': ', '.join(current_methods),
-    #             'description': description,
-    #             'value': significant_value
-    #         })
-
-    #     # Record if no anomalies were detected
-    #     if not anomalies_detected:
-    #         self.output.append({
-    #             'status': 'passed',
-    #             'method': 'N/A',
-    #             'description': f'No anomalies detected in {metric}',
-    #             'value': None
-    #         })
-
     def update_anomaly_status(self, df, metric, anomaly_metric, method):
         anomaly_col = f'{metric}_anomaly'
         anomaly_method_col = anomaly_metric
@@ -1156,13 +1020,13 @@ class AnomalyDetectionEngine:
 
     def _severity_label(self, score: float) -> str:
         s = float(max(0.0, min(1.0, score)))
-        if s >= 0.60:
+        if s >= getattr(self, 'severity_critical', 0.60):
             return 'critical'
-        if s >= 0.40:
+        if s >= getattr(self, 'severity_high', 0.40):
             return 'high'
-        if s >= 0.25:
+        if s >= getattr(self, 'severity_medium', 0.25):
             return 'medium'
-        if s >= 0.10:
+        if s >= getattr(self, 'severity_low', 0.10):
             return 'low'
         return 'none'
 
@@ -1433,11 +1297,16 @@ class AnomalyDetectionEngine:
                 end_ts = pd.to_datetime(end)
             except Exception:
                 return f"{start}–{end}"
+
+            # Check if start and end are the same
+            if start_ts == end_ts:
+                return f"at {start_ts.strftime('%I:%M:%S %p')}"
+
             start_date = start_ts.strftime('%Y-%m-%d')
             end_date = end_ts.strftime('%Y-%m-%d')
             if start_date == end_date:
-                return f"{start_ts.strftime('%H:%M:%S')}–{end_ts.strftime('%H:%M:%S')}"
-            return f"{start_ts.strftime('%Y-%m-%d %H:%M:%S')}–{end_ts.strftime('%Y-%m-%d %H:%M:%S')}"
+                return f"{start_ts.strftime('%I:%M:%S %p')}–{end_ts.strftime('%I:%M:%S %p')}"
+            return f"{start_ts.strftime('%Y-%m-%d %I:%M:%S %p')}–{end_ts.strftime('%Y-%m-%d %I:%M:%S %p')}"
 
         overall_list = getattr(self, 'overall_anomalies', [])
         if not overall_list:
@@ -1460,11 +1329,22 @@ class AnomalyDetectionEngine:
 
             time_range_str = _format_time_range(start_time, end_time)
             metric_label = OVERALL_METRIC_DISPLAY.get(metric, metric)
-            base_desc = (
-                f"{metric_label} {time_range_str}: "
-                f"{'increased' if direction == 'increase' else 'decreased'} "
-                f"to {value_str}."
-            )
+
+            # Adjust description format based on whether time_range_str starts with "at"
+            if time_range_str.startswith("at "):
+                # Single timestamp: "Median response time at 23:32:30 decreased to 20.00."
+                base_desc = (
+                    f"{metric_label} {time_range_str} "
+                    f"{'increased' if direction == 'increase' else 'decreased'} "
+                    f"to {value_str}."
+                )
+            else:
+                # Time range: "Median response time 23:32:30–23:32:35: decreased to 20.00."
+                base_desc = (
+                    f"{metric_label} {time_range_str}: "
+                    f"{'increased' if direction == 'increase' else 'decreased'} "
+                    f"to {value_str}."
+                )
 
             desc = base_desc
             txns = oa.get('transactions') or []

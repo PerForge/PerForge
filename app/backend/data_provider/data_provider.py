@@ -716,9 +716,16 @@ class DataProvider:
 
         long_df = pd.concat(frames, axis=0, ignore_index=True)
 
-        # Convert timestamps to UTC
+        # Normalize timestamps while preserving the data source timezone.
+        # If the incoming timestamps are already timezone-aware (as provided
+        # by InfluxDB integrations via _localize_timestamp), keep that
+        # timezone. Only localize to UTC when timestamps are naive.
         try:
-            long_df['timestamp'] = pd.to_datetime(long_df['timestamp']).dt.tz_convert('UTC')
+            ts = pd.to_datetime(long_df['timestamp'])
+            if getattr(ts.dt, 'tz', None) is None:
+                long_df['timestamp'] = ts.dt.tz_localize('UTC')
+            else:
+                long_df['timestamp'] = ts
         except Exception:
             long_df['timestamp'] = pd.to_datetime(long_df['timestamp'], utc=True)
 

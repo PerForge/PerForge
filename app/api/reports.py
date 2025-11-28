@@ -373,6 +373,7 @@ def get_report_data():
             'performance_status': performance_status,
             'overall_anomaly_windows': overall_anomaly_windows,
             'per_transaction_anomaly_windows': per_transaction_anomaly_windows,
+            'timezone': getattr(dp.ds_obj, 'tmz', 'UTC'),
             'styling': {
                 'paper_bgcolor': 'rgba(0,0,0,0)',  # Transparent background
                 'plot_bgcolor': 'rgba(0,0,0,0)',   # Transparent background

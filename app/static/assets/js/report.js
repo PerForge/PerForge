@@ -51,7 +51,8 @@ function handleFetchedData(data) {
         summary,
         performance_status,
         overall_anomaly_windows: overallAnomalyWindows,
-        per_transaction_anomaly_windows: perTransactionAnomalyWindows
+        per_transaction_anomaly_windows: perTransactionAnomalyWindows,
+        timezone
     } = data;
 
     updateTestDetails(testDetails);
@@ -59,7 +60,7 @@ function handleFetchedData(data) {
     updateCards(statistics);
     updateTable(aggregatedTable);
     updateAnalysisTable(analysisData);
-    createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows || {});
+    createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows || {}, timezone);
     renderAnalysisInsights(analysisData);
     // Ensure newly created charts match the current theme
     if (typeof updateAllPlotlyChartsTheme === 'function') {
@@ -73,7 +74,7 @@ function handleFetchedData(data) {
     if (aggregatedTable && aggregatedTable.length > 0) {
         initializeListJs();
     }
-    addDropdownEventListeners(chartData, styling, layoutConfig, perTransactionAnomalyWindows || {});
+    addDropdownEventListeners(chartData, styling, layoutConfig, perTransactionAnomalyWindows || {}, timezone);
 }
 
 // --- Render per-graph insights below charts ---
@@ -310,7 +311,7 @@ function adjustGraphPosition() {
     });
 }
 
-function addDropdownEventListeners(chartData, styling, layoutConfig, perTransactionAnomalyWindows) {
+function addDropdownEventListeners(chartData, styling, layoutConfig, perTransactionAnomalyWindows, timezone) {
     document.querySelectorAll('.dropdown-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const parentRow = this.closest('.stat-row');
@@ -325,7 +326,7 @@ function addDropdownEventListeners(chartData, styling, layoutConfig, perTransact
             if (graphRow.style.display === 'none' || !graphRow.style.display) {
                 graphRow.style.display = 'table-row';
                 this.innerHTML = '^';
-                drawGraph(chartData, styling, layoutConfig, transaction, `chart-${transaction}`, perTransactionAnomalyWindows);
+                drawGraph(chartData, styling, layoutConfig, transaction, `chart-${transaction}`, perTransactionAnomalyWindows, timezone);
             } else {
                 graphRow.style.display = 'none';
                 this.innerHTML = '˅';
@@ -334,7 +335,7 @@ function addDropdownEventListeners(chartData, styling, layoutConfig, perTransact
     });
 }
 
-function drawGraph(chartData, styling, layoutConfig, transactionName, chartElementId, perTransactionAnomalyWindows) {
+function drawGraph(chartData, styling, layoutConfig, transactionName, chartElementId, perTransactionAnomalyWindows, timezone) {
     const avgTransactionData = chartData.avgResponseTimePerReq?.find(transaction => transaction.name === transactionName);
     const medianTransactionData = chartData.medianResponseTimePerReq?.find(transaction => transaction.name === transactionName);
     const pctTransactionData = chartData.pctResponseTimePerReq?.find(transaction => transaction.name === transactionName);
@@ -355,7 +356,7 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
         return;
     }
 
-    const timestamps = base.map(d => new Date(d.timestamp));
+    const timestamps = base.map(d => parseTimestamp(d.timestamp, timezone));
 
     const metrics = [];
     if (avgArr.length) {
@@ -403,11 +404,11 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
         }
     });
 
-    createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, metrics, styling, layoutConfig, rtWindows);
+    createGraph(chartElementId, `Response Time - ${transactionName}`, timestamps, metrics, styling, layoutConfig, rtWindows, timezone);
 
     // Draw throughput under the response time chart if available
     if (throughputArr.length) {
-        const thrTimestamps = throughputArr.map(d => new Date(d.timestamp));
+        const thrTimestamps = throughputArr.map(d => parseTimestamp(d.timestamp, timezone));
         const thrMetrics = [{
             name: 'Throughput',
             data: throughputArr.map(d => d.value),
@@ -418,7 +419,7 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
         }];
         // Get throughput anomaly windows for this transaction
         const thrWindows = transactionWindows['rps'] || [];
-        createGraph(`${chartElementId}-throughput`, `Throughput - ${transactionName}`, thrTimestamps, thrMetrics, styling, layoutConfig, thrWindows);
+        createGraph(`${chartElementId}-throughput`, `Throughput - ${transactionName}`, thrTimestamps, thrMetrics, styling, layoutConfig, thrWindows, timezone);
     }
     // Apply theme to the lazily created chart as well
     if (typeof updateAllPlotlyChartsTheme === 'function') {
@@ -431,14 +432,14 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
             const respEl = document.getElementById(chartElementId);
             const thrEl = document.getElementById(`${chartElementId}-throughput`);
             requestAnimationFrame(() => {
-                if (thrEl) { try { Plotly.Plots.resize(thrEl); } catch (e) {} }
-                if (respEl) { try { Plotly.Plots.resize(respEl); } catch (e) {} }
+                if (thrEl) { try { Plotly.Plots.resize(thrEl); } catch (e) { } }
+                if (respEl) { try { Plotly.Plots.resize(respEl); } catch (e) { } }
             });
         }
     } catch (e) { /* no-op */ }
 }
 
-function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows) {
+function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows, timezone) {
     const overalAvg = chartData.overalAvgResponseTime?.data || [];
     const overalMedian = chartData.overalMedianResponseTime?.data || [];
     const overalPct90 = chartData.overal90PctResponseTime?.data || [];
@@ -454,7 +455,7 @@ function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows) {
         console.warn('No overall time series available to plot');
         return;
     }
-    const timestamps = base.map(d => new Date(d.timestamp));
+    const timestamps = base.map(d => parseTimestamp(d.timestamp, timezone));
 
     const throughput = overalThroughput.map(d => d.value);
     const throughputAnomalies = overalThroughput.map(d => d.anomaly !== 'Normal');
@@ -479,7 +480,7 @@ function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows) {
     if (throughput.length) throughputUsersMetrics.push({ name: 'Throughput', data: throughput, anomalies: throughputAnomalies, anomalyMessages: throughputAnomalyMessages, color: 'rgba(31, 119, 180, 1)', yAxisUnit: 'r/s' });
     if (throughputUsersMetrics.length) {
         const thrWindows = anomalyWindowsByMetric['overalThroughput'] || [];
-        createGraph('throughputChart', 'Throughput and Users', timestamps, throughputUsersMetrics, styling, layoutConfig, thrWindows);
+        createGraph('throughputChart', 'Throughput and Users', timestamps, throughputUsersMetrics, styling, layoutConfig, thrWindows, timezone);
     }
 
     if (responseTimeMetrics.length) {
@@ -491,7 +492,7 @@ function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows) {
                 rtWindows.push(...wins);
             }
         });
-        createGraph('responseTimeChart', 'Response Time', timestamps, responseTimeMetrics, styling, layoutConfig, rtWindows);
+        createGraph('responseTimeChart', 'Response Time', timestamps, responseTimeMetrics, styling, layoutConfig, rtWindows, timezone);
     }
 
     const errors = overalErrors.map(d => d.value);
@@ -499,13 +500,13 @@ function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows) {
         const errWindows = anomalyWindowsByMetric['overalErrors'] || [];
         createGraph('overalErrors', 'Errors', timestamps, [
             { name: 'Errors', data: errors, anomalies: [], anomalyMessages: [], color: 'rgba(255, 8, 8, 0.8)', yAxisUnit: 'er' }
-        ], styling, layoutConfig, errWindows);
+        ], styling, layoutConfig, errWindows, timezone);
     }
 
     // Render scatter only if the element exists on the page
     const scatterEl = document.getElementById('responseTimeScatterChart');
     if (scatterEl && Array.isArray(chartData.avgResponseTimePerReq) && chartData.avgResponseTimePerReq.length) {
-        createScatterChartForResponseTimes(chartData.avgResponseTimePerReq, 'responseTimeScatterChart', styling, layoutConfig);
+        createScatterChartForResponseTimes(chartData.avgResponseTimePerReq, 'responseTimeScatterChart', styling, layoutConfig, timezone);
     }
 }
 
@@ -608,7 +609,7 @@ window.addEventListener('resize', equalizeOnResize);
 document.addEventListener('theme:changed', queueEqualizeChartCards);
 document.addEventListener('DOMContentLoaded', queueEqualizeChartCards);
 
-function createGraph(divId, title, labels, metrics, styling, layoutConfig, anomalyWindows) {
+function createGraph(divId, title, labels, metrics, styling, layoutConfig, anomalyWindows, timezone) {
     if (!Array.isArray(metrics) || metrics.length === 0) {
         console.warn(`No metrics provided for graph: ${title}`);
         return;
@@ -633,7 +634,8 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig, anoma
             mode: 'lines',
             name: metric.name,
             line: { shape: styling.line_shape, width: styling.line_width, color: metric.color },
-            yaxis: metric.useRightYAxis ? 'y2' : 'y'
+            yaxis: metric.useRightYAxis ? 'y2' : 'y',
+            cliponaxis: false
         };
     });
 
@@ -650,8 +652,8 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig, anoma
                 const rawStart = win.start || win.x0;
                 const rawEnd = win.end || win.x1;
                 if (!rawStart || !rawEnd) return null;
-                const s = new Date(rawStart);
-                const e = new Date(rawEnd);
+                const s = parseTimestamp(rawStart, timezone);
+                const e = parseTimestamp(rawEnd, timezone);
                 if (!isFinite(s.getTime()) || !isFinite(e.getTime())) return null;
                 return s <= e ? { start: s, end: e } : { start: e, end: s };
             })
@@ -673,7 +675,61 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig, anoma
             }
         });
 
+        // First expand point anomalies, keeping track of vertical line markers,
+        // then merge the expanded rectangles so that they do not visually overlap.
+        const expandedWindows = [];
         merged.forEach(win => {
+            let x0 = win.start;
+            let x1 = win.end;
+
+            // Check if this is a point-in-time anomaly (where start === end)
+            const isPointAnomaly = x0.getTime() === x1.getTime();
+
+            if (isPointAnomaly) {
+                // Expand the window by 2 minutes on each side for visibility
+                const minWidthMs = 2 * 60 * 1000; // 2 minutes in milliseconds
+                x0 = new Date(x0.getTime() - minWidthMs);
+                x1 = new Date(x1.getTime() + minWidthMs);
+
+                // Add a vertical line marker at the exact anomaly point for emphasis
+                anomalyShapes.push({
+                    type: 'line',
+                    xref: 'x',
+                    yref: 'paper',
+                    x0: win.start,
+                    x1: win.start,
+                    y0: 0,
+                    y1: 1,
+                    line: {
+                        color: 'rgba(231, 14, 36, 0.8)',
+                        width: 2,
+                        dash: 'dot'
+                    }
+                });
+            }
+
+            expandedWindows.push({ start: x0, end: x1 });
+        });
+
+        // Merge expanded rectangles to avoid overlapping shaded bands
+        expandedWindows.sort((a, b) => a.start - b.start);
+        const rectWindows = [];
+        expandedWindows.forEach(win => {
+            if (!rectWindows.length) {
+                rectWindows.push({ start: win.start, end: win.end });
+                return;
+            }
+            const last = rectWindows[rectWindows.length - 1];
+            if (win.start <= last.end) {
+                if (win.end > last.end) {
+                    last.end = win.end;
+                }
+            } else {
+                rectWindows.push({ start: win.start, end: win.end });
+            }
+        });
+
+        rectWindows.forEach(win => {
             anomalyShapes.push({
                 type: 'rect',
                 xref: 'x',
@@ -757,6 +813,23 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig, anoma
     const rightYAxisCandidate = metrics.find(metric => metric.useRightYAxis) || firstLeft;
     const rightYAxisColor = rightYAxisCandidate?.color || leftYAxisColor;
 
+    // Calculate x-axis range with padding to prevent clipping
+    let xaxisRange = null;
+    if (labels && labels.length > 0) {
+        // Convert labels to timestamps if they are Date objects
+        const times = labels.map(l => l instanceof Date ? l.getTime() : new Date(l).getTime()).filter(t => !isNaN(t));
+        if (times.length > 0) {
+            const minTime = Math.min(...times);
+            const maxTime = Math.max(...times);
+            const duration = maxTime - minTime;
+
+            // Add 5% padding on each side, or default to 1 minute if single point
+            const padding = duration > 0 ? duration * 0.03 : 60000;
+
+            xaxisRange = [new Date(minTime - padding), new Date(maxTime + padding)];
+        }
+    }
+
     const layout = {
         // Allow external layoutConfig but ensure our critical props (title/axes) are preserved
         ...safeLayoutConfig,
@@ -781,7 +854,10 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig, anoma
             },
             color: styling.axis_font_color,
             gridcolor: styling.gridcolor,
-            automargin: true
+            automargin: true,
+            tickformat: '%I:%M %p',  // 12-hour format without seconds
+            range: xaxisRange, // Apply calculated range with padding
+            autorange: false   // Explicitly disable autorange
         },
         yaxis: {
             tickfont: {
@@ -838,13 +914,13 @@ function createGraph(divId, title, labels, metrics, styling, layoutConfig, anoma
 }
 
 // Updated createScatterChartForResponseTimes function to include styling and layoutConfig as parameters
-function createScatterChartForResponseTimes(avgResponseTimePerReq, elementId, styling, layoutConfig) {
+function createScatterChartForResponseTimes(avgResponseTimePerReq, elementId, styling, layoutConfig, timezone) {
     const timestamps = [];
     const values = [];
 
     avgResponseTimePerReq.forEach(transaction => {
         transaction.data.forEach(record => {
-            timestamps.push(new Date(record.timestamp));
+            timestamps.push(parseTimestamp(record.timestamp, timezone));
             values.push(record.value);
         });
     });
@@ -878,7 +954,8 @@ function createScatterChartForResponseTimes(avgResponseTimePerReq, elementId, st
                 size: styling.xaxis_tickfont_size
             },
             color: styling.axis_font_color,
-            gridcolor: styling.gridcolor
+            gridcolor: styling.gridcolor,
+            tickformat: '%I:%M %p'  // 12-hour format without seconds
         },
         yaxis: {
             tickfont: {
@@ -909,4 +986,17 @@ function createScatterChartForResponseTimes(avgResponseTimePerReq, elementId, st
     };
 
     Plotly.newPlot(elementId, [trace1], layout, { responsive: true, useResizeHandler: true });
+}
+
+function parseTimestamp(timestamp, timezone) {
+    if (!timestamp) return null;
+    // If a timezone is provided, treat the timestamp as local time
+    // by stripping the timezone offset (including 'Z') from the ISO string.
+    if (timezone) {
+        // Remove the timezone offset (e.g., +03:00, -03:00, or Z) from the end of the string
+        // This regex matches +HH:MM, -HH:MM, or Z at the end of the string
+        const localIso = timestamp.replace(/([+-]\d{2}:\d{2}|Z)$/, '');
+        return new Date(localIso);
+    }
+    return new Date(timestamp);
 }
