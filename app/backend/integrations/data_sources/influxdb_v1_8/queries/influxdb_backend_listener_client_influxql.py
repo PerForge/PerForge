@@ -25,6 +25,14 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
 
     measurement = "jmeter"
 
+    def __init__(self, granularity_seconds: int = 30):
+        """Initialize the InfluxDB v1.8 Backend Listener query client.
+
+        Args:
+            granularity_seconds: Time granularity in seconds for aggregation windows (default: 30)
+        """
+        self.granularity_seconds = granularity_seconds
+
     # ------------------------------------------------------------------
     # Test list / meta
     # ------------------------------------------------------------------
@@ -90,8 +98,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         if regex:
             where += f' AND "transaction" =~ /{regex}/'
         return (
-            f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s) fill(0)'
+            f'SELECT SUM("count")/{self.granularity_seconds} AS "value" FROM "{self.measurement}" '
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s) fill(0)'
         )
 
     def get_active_threads(
@@ -108,7 +116,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         )
         return (
             f'SELECT MAX("maxAT") AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s) fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s) fill(0)'
         )
 
     def get_average_response_time(
@@ -129,7 +137,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("avg") AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s) fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s) fill(0)'
         )
 
     def get_median_response_time(
@@ -150,7 +158,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("pct50.0") AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s) fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s) fill(0)'
         )
 
     def get_pct90_response_time(
@@ -171,7 +179,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("pct90.0") AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s) fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s) fill(0)'
         )
 
     def get_error_count(
@@ -187,8 +195,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
         return (
-            f'SELECT SUM("countError")/30 AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s) fill(0)'
+            f'SELECT SUM("countError")/{self.granularity_seconds} AS "value" FROM "{self.measurement}" '
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s) fill(0)'
         )
 
     # ------------------------------------------------------------------
@@ -229,7 +237,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         if regex:
             where += f' AND "transaction" =~ /{regex}/'
         return (
-            f'SELECT MEDIAN("count")/30 AS "value" FROM "{self.measurement}" '
+            f'SELECT MEDIAN("count")/{self.granularity_seconds} AS "value" FROM "{self.measurement}" '
             f'WHERE {where}'
         )
 
@@ -375,7 +383,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT MEAN("avg") AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "transaction" fill(0)'
         )
 
     def get_median_response_time_per_req(
@@ -397,7 +405,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT PERCENTILE("pct50.0", 50) AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "transaction" fill(0)'
         )
 
     def get_pct90_response_time_per_req(
@@ -419,7 +427,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             where += f' AND "transaction" =~ /{regex}/'
         return (
             f'SELECT PERCENTILE("pct90.0", 90) AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "transaction" fill(0)'
         )
 
     def get_throughput_per_req(
@@ -440,8 +448,8 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         if regex:
             where += f' AND "transaction" =~ /{regex}/'
         return (
-            f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" '
-            f'WHERE {where} GROUP BY time(30s), "transaction" fill(0)'
+            f'SELECT SUM("count")/{self.granularity_seconds} AS "value" FROM "{self.measurement}" '
+            f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "transaction" fill(0)'
         )
 
     def get_overview_data(
@@ -474,5 +482,5 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             "p75": f'SELECT PERCENTILE("pct75.0", 75) AS "value" FROM "{self.measurement}" WHERE {where_txn}',
             "p90": f'SELECT PERCENTILE("pct90.0", 90) AS "value" FROM "{self.measurement}" WHERE {where_txn}',
             "total": f'SELECT SUM("count") AS "value" FROM "{self.measurement}" WHERE {where_txn}',
-            "rps_query": f'SELECT SUM("count")/30 AS "value" FROM "{self.measurement}" WHERE {where_txn} GROUP BY time(30s) fill(0)',
+            "rps_query": f'SELECT SUM("count")/{self.granularity_seconds} AS "value" FROM "{self.measurement}" WHERE {where_txn} GROUP BY time({self.granularity_seconds}s) fill(0)',
         }

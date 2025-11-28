@@ -32,10 +32,12 @@ from typing import Any, Dict, List, Optional
 import re
 import os
 import logging
+import tempfile
 
 # Third-party
 import plotly.graph_objects as go
-from datetime import datetime
+import kaleido
+from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 
 # --------------------------------------------------------------------------------------
@@ -262,10 +264,11 @@ class PlotlyImageRenderer:
                 hoverinfo="x+y+text",
                 text=[msg if anomalies[i] else "" for i, msg in enumerate(anomaly_msgs)],
                 yaxis="y2" if m.get("useRightYAxis") else "y",
+                cliponaxis=False,
             )
             traces.append(trace)
 
-        layout = self._base_layout(title, left_y_color=left_y_color, right_y_color=right_y_color, metrics=metrics)
+        layout = self._base_layout(title, left_y_color=left_y_color, right_y_color=right_y_color, metrics=metrics, labels=labels)
 
         # Add shaded anomaly bands if explicit windows were provided
         try:
@@ -304,13 +307,41 @@ class PlotlyImageRenderer:
                         merged.append({"start": win["start"], "end": win["end"]})
 
                 for win in merged:
+                    x0 = win["start"]
+                    x1 = win["end"]
+                    is_point_anomaly = x0 == x1
+
+                    if is_point_anomaly:
+                        # Expand by 2 minutes on each side
+                        expansion = timedelta(minutes=2)
+                        x0 = x0 - expansion
+                        x1 = x1 + expansion
+
+                        # Add vertical dotted line
+                        shapes.append(
+                            dict(
+                                type="line",
+                                xref="x",
+                                yref="paper",
+                                x0=win["start"],
+                                x1=win["start"],
+                                y0=0,
+                                y1=1,
+                                line=dict(
+                                    color="rgba(231, 14, 36, 0.8)",
+                                    width=2,
+                                    dash="dot",
+                                ),
+                            )
+                        )
+
                     shapes.append(
                         dict(
                             type="rect",
                             xref="x",
                             yref="paper",
-                            x0=win["start"],
-                            x1=win["end"],
+                            x0=x0,
+                            x1=x1,
                             y0=0,
                             y1=1,
                             fillcolor="rgba(220, 53, 69, 0.25)",
@@ -328,7 +359,7 @@ class PlotlyImageRenderer:
         fig = go.Figure(data=traces, layout=layout)
         return fig
 
-    def _base_layout(self, title: str, *, left_y_color: Optional[str] = None, right_y_color: Optional[str] = None, metrics: Optional[List[Dict[str, Any]]] = None) -> go.Layout:
+    def _base_layout(self, title: str, *, left_y_color: Optional[str] = None, right_y_color: Optional[str] = None, metrics: Optional[List[Dict[str, Any]]] = None, labels: Optional[List[datetime]] = None) -> go.Layout:
         layout_cfg = self.layout_config or {}
         styling = self.styling
 
@@ -340,6 +371,24 @@ class PlotlyImageRenderer:
             left_unit = f" {left.get('yAxisUnit', '')}"
             right = next((m for m in metrics if m.get("useRightYAxis")), None)
             right_unit = f" {right.get('yAxisUnit', '')}" if right else ""
+
+        # Calculate x-axis range with padding
+        xaxis_range = None
+        if labels:
+            try:
+                # Filter out None values just in case
+                valid_labels = [l for l in labels if l]
+                if valid_labels:
+                    min_time = min(valid_labels)
+                    max_time = max(valid_labels)
+                    duration = max_time - min_time
+
+                    # Add 5% padding on each side, or default to 1 minute
+                    padding = duration * 0.03 if duration.total_seconds() > 0 else timedelta(minutes=1)
+
+                    xaxis_range = [min_time - padding, max_time + padding]
+            except Exception as e:
+                logging.warning(f"Failed to calculate xaxis range: {e}")
 
         layout = go.Layout(
             title=dict(
@@ -353,6 +402,8 @@ class PlotlyImageRenderer:
                 tickfont=dict(color=styling["axis_font_color"], family=styling["font_family"], size=styling["xaxis_tickfont_size"]),
                 color=styling["axis_font_color"],
                 gridcolor=styling["gridcolor"],
+                tickformat='%I:%M %p',  # 12-hour format without seconds
+                range=xaxis_range,
             ),
             yaxis=dict(
                 tickfont=dict(color=left_y_color or styling["axis_font_color"], family=styling["font_family"], size=styling["yaxis_tickfont_size"]),
@@ -396,7 +447,11 @@ class PlotlyImageRenderer:
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         try:
             # Use higher pixel density by default for crisper images (no external config)
-            fig.write_image(output_path, format=image_format, width=width, height=height, scale=3)
+            kaleido.write_fig_sync(
+                fig,
+                path=output_path,
+                opts={"format": image_format, "width": width, "height": height, "scale": 3},
+            )
         except Exception as e:
             # Common cause: kaleido is not installed. Re-raise with guidance.
             raise RuntimeError(
@@ -408,13 +463,33 @@ class PlotlyImageRenderer:
     def _to_image_bytes(self, fig: go.Figure, *, width: int, height: int, image_format: str = "png") -> bytes:
         try:
             # Use higher pixel density by default for crisper images (no external config)
-            return fig.to_image(format=image_format, width=width, height=height, scale=3)
+            suffix = f".{image_format}"
+            tmp_path = None
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                tmp_path = tmp.name
+
+            kaleido.write_fig_sync(
+                fig,
+                path=tmp_path,
+                opts={"format": image_format, "width": width, "height": height, "scale": 3},
+            )
+
+            with open(tmp_path, "rb") as f:
+                data = f.read()
         except Exception as e:
             # Common cause: kaleido is not installed. Re-raise with guidance.
             raise RuntimeError(
                 "Failed to render image to bytes. Ensure 'kaleido' is installed (pip install -U plotly kaleido).\n"
                 f"Original error: {e}"
             ) from e
+        finally:
+            if 'tmp_path' in locals() and tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+
+        return data
 
     # ----------------------------------------------------------------------------------
     # Public API - In-memory rendering methods

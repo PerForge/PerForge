@@ -25,9 +25,7 @@ from typing import Dict, Any, Optional, List
 from app.backend.components.settings.settings_db import DBProjectSettings
 from app.backend.components.settings.settings_defaults import (
     get_all_defaults,
-    get_defaults_for_category,
-    ML_ANALYSIS_DEFAULTS,
-    TRANSACTION_STATUS_DEFAULTS
+    get_defaults_for_category
 )
 
 

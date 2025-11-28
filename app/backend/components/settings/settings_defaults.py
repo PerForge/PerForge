@@ -48,6 +48,13 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'options': ['overalThroughput', 'overalUsers'],
         'description': 'The primary performance metric used for Isolation Forest multi-dimensional analysis. This metric serves as the main feature for detecting anomalies. "overalThroughput" focuses on system capacity, while "overalUsers" focuses on load concurrency.'
     },
+    'isf_validation_threshold': {
+        'value': 0.1,
+        'type': 'float',
+        'min': 0.0,
+        'max': 1.0,
+        'description': 'The threshold for relative deviation from the median used to validate Isolation Forest anomalies. If the deviation of a flagged point is less than this threshold, it is reclassified as normal. This helps reduce false positives for minor fluctuations.'
+    },
 
     # Z-Score Detection
     'z_score_threshold': {
@@ -56,6 +63,13 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'min': 1.0,
         'max': 10.0,
         'description': 'The number of standard deviations from the mean required to classify a data point as an anomaly. A higher threshold (e.g., 3.0) makes the detection less sensitive, flagging only extreme outliers. A lower threshold (e.g., 2.0) is more sensitive but may increase false positives.'
+    },
+    'z_score_median_validation_threshold': {
+        'value': 0.1,
+        'type': 'float',
+        'min': 0.0,
+        'max': 1.0,
+        'description': 'The threshold for relative deviation from the median used to validate Z-Score anomalies. A point is considered anomalous only if it fails both the Z-Score test AND deviates from the median by more than this percentage.'
     },
 
     # Rolling Analysis
@@ -163,6 +177,59 @@ ML_ANALYSIS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'description': 'Enables the "Contextual Median" filter, a post-processing step that removes false positive anomalies which are statistically similar to their immediate neighbors, improving detection precision.'
     },
 
+    # Severity Thresholds
+    'severity_critical': {
+        'value': 0.60,
+        'type': 'float',
+        'min': 0.0,
+        'max': 1.0,
+        'description': 'The minimum impact score required to classify an anomaly as "Critical".'
+    },
+    'severity_high': {
+        'value': 0.40,
+        'type': 'float',
+        'min': 0.0,
+        'max': 1.0,
+        'description': 'The minimum impact score required to classify an anomaly as "High".'
+    },
+    'severity_medium': {
+        'value': 0.25,
+        'type': 'float',
+        'min': 0.0,
+        'max': 1.0,
+        'description': 'The minimum impact score required to classify an anomaly as "Medium".'
+    },
+    'severity_low': {
+        'value': 0.10,
+        'type': 'float',
+        'min': 0.0,
+        'max': 1.0,
+        'description': 'The minimum impact score required to classify an anomaly as "Low".'
+    },
+
+    # Stability Analysis
+    'stability_outlier_z_score': {
+        'value': 3.0,
+        'type': 'float',
+        'min': 1.0,
+        'max': 10.0,
+        'description': 'The Z-score threshold used to identify and remove outliers before performing stability analysis.'
+    },
+    'stability_min_points': {
+        'value': 3,
+        'type': 'int',
+        'min': 2,
+        'max': 20,
+        'description': 'The minimum number of data points required to perform stability analysis on a metric.'
+    },
+    'baseline_window': {
+        'value': 5,
+        'type': 'int',
+        'min': 1,
+        'max': 20,
+        'description': 'The number of data points preceding an anomaly window used to calculate the baseline value for comparison.'
+    },
+
     # Merging & Grouping
     'merge_gap_samples': {
         'value': 4,
@@ -257,6 +324,18 @@ TRANSACTION_STATUS_DEFAULTS: Dict[str, Dict[str, Any]] = {
 }
 
 
+DATA_QUERY_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    # Backend Listener Query Settings
+    'backend_query_granularity_seconds': {
+        'value': 30,
+        'type': 'int',
+        'min': 1,
+        'max': 300,
+        'description': 'Time granularity (in seconds) for aggregating backend listener metrics in time-series queries. This controls the resolution of data points in charts and statistics. Lower values provide finer detail but may increase query time and data volume. Default is 30 seconds.'
+    }
+}
+
+
 def get_all_defaults() -> Dict[str, Dict[str, Dict[str, Any]]]:
     """
     Get all default settings organized by category.
@@ -266,7 +345,8 @@ def get_all_defaults() -> Dict[str, Dict[str, Dict[str, Any]]]:
     """
     return {
         'ml_analysis': ML_ANALYSIS_DEFAULTS,
-        'transaction_status': TRANSACTION_STATUS_DEFAULTS
+        'transaction_status': TRANSACTION_STATUS_DEFAULTS,
+        'data_query': DATA_QUERY_DEFAULTS
     }
 
 

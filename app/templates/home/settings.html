@@ -124,7 +124,7 @@
           <div class="mb-4">
             <h3 class="mb-2">Advanced Settings</h3>
             <p class="text-muted mb-1">Current Project: <strong>{{ project_name }}</strong></p>
-            <p class="text-muted small mb-0">Configure ML analysis, transaction evaluation, and data aggregation
+            <p class="text-muted small mb-0">Configure ML analysis, transaction evaluation, and data query
               parameters for this project.</p>
           </div>
 
@@ -199,7 +199,39 @@
               </div>
             </div>
 
-            <!-- Data Aggregation Settings Removed -->
+            <!-- Data Query Settings -->
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#dataQuery" aria-expanded="false" aria-controls="dataQuery">
+                  <i class="fas fa-database me-2"></i>Data Query Settings
+                  <span class="unsaved-indicator d-none" id="data-query-unsaved"></span>
+                </button>
+              </h2>
+              <div id="dataQuery" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                  <form id="dataQueryForm" data-category="data_query">
+                    <div id="dataQuerySettings">
+                      <!-- Settings will be loaded dynamically -->
+                      <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="category-buttons">
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>Save changes
+                        <span class="loading-spinner spinner-border spinner-border-sm" role="status"></span>
+                      </button>
+                      <button type="button" class="btn btn-secondary reset-btn" data-category="data_query">
+                        <i class="fas fa-undo"></i>Reset to defaults
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>

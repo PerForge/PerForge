@@ -15,6 +15,14 @@
 from app.backend.integrations.data_sources.base_queries import BackEndQueriesBase
 
 class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
+  def __init__(self, granularity_seconds: int = 30):
+      """Initialize the InfluxDB v2 Backend Listener query client.
+
+      Args:
+          granularity_seconds: Time granularity in seconds for aggregation windows (default: 30)
+      """
+      self.granularity_seconds = granularity_seconds
+
   def get_tests_titles(
       self,
       bucket: str,
@@ -241,8 +249,8 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["transaction"] != "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_field", "_value", "_time"])
-      |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
-      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: sum, createEmpty: false)
+      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: {self.granularity_seconds}))}}))
       |> set(key: "_field", value: "Requests per second")'''
 
   def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
@@ -252,7 +260,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r._field == "maxAT")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> keep(columns: ["_field", "_value", "_time"])
-      |> aggregateWindow(every: 30s, fn: max, createEmpty: false)
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: max, createEmpty: false)
       |> set(key: "_field", value: "Active threads")'''
 
   def get_average_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
@@ -264,7 +272,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
-      |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: mean, createEmpty: false)
       |> set(key: "_field", value: "Average response time")'''
 
   def get_median_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
@@ -276,7 +284,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
-      |> aggregateWindow(every: 30s, fn: median, createEmpty: false)
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: median, createEmpty: false)
       |> set(key: "_field", value: "Median response time")'''
 
   def get_pct90_response_time(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
@@ -289,7 +297,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> group(columns: ["_field"])
       |> aggregateWindow(
-      every: 30s,
+      every: {self.granularity_seconds}s,
       fn: (tables=<-, column) =>
       tables
           |> quantile(q: 0.90, method: "exact_selector"),
@@ -303,7 +311,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["_field"] == "countError")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> group(columns: ["_field"])
-      |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: sum, createEmpty: true)
       |> set(key: "_field", value: "Errors Per Second")'''
 
   def get_average_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
@@ -315,7 +323,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
-      |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)'''
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: mean, createEmpty: false)'''
 
   def get_median_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
@@ -326,7 +334,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
-      |> aggregateWindow(every: 30s, fn: median, createEmpty: false)'''
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: median, createEmpty: false)'''
 
   def get_pct90_response_time_per_req(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
       return f'''from(bucket: "{bucket}")
@@ -338,7 +346,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_value", "_time", "transaction"])
       |> aggregateWindow(
-          every: 30s,
+          every: {self.granularity_seconds}s,
           fn: (tables=<-, column) =>
               tables
               |> quantile(q: 0.90, method: "exact_selector"),
@@ -353,8 +361,8 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["statut"] == "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["transaction", "_value", "_time"])
-      |> aggregateWindow(every: 30s, fn: sum, createEmpty: false)
-      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: sum, createEmpty: false)
+      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: {self.granularity_seconds}))}}))
       |> set(key: "_field", value: "Requests per second")'''
 
   def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
@@ -376,8 +384,8 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["transaction"] != "all")
       {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
       |> keep(columns: ["_field", "_value", "_time"])
-      |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
-      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 30))}}))
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: sum, createEmpty: true)
+      |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: {self.granularity_seconds}))}}))
       |> keep(columns: ["_value"])
       |> median(column: "_value")'''
 
@@ -468,8 +476,8 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
 
       rps_stat = count_data
       |> filter(fn: (r) => r["statut"] == "all")
-      |> aggregateWindow(every: 30s, fn: sum, createEmpty: true)
-      |> map(fn: (r) => ({{ r with _value: float(v: r._value) / float(v: 30) }}))
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: sum, createEmpty: true)
+      |> map(fn: (r) => ({{ r with _value: float(v: r._value) / float(v: {self.granularity_seconds}) }}))
       |> quantile(q: 0.75)
       |> map(fn: (r) => ({{Metric: "RPS", Value: r._value}}))
 

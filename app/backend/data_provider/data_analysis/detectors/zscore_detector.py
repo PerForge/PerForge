@@ -34,19 +34,19 @@ class ZScoreDetector(BaseDetector):
     def name(self) -> str:
         return self._name
 
-    def validate_with_median(self, df: pd.DataFrame, metric: str) -> pd.DataFrame:
+    def _validate_anomalies(self, df: pd.DataFrame, metric: str, threshold: float) -> pd.DataFrame:
         """
         Validates data points against the median value.
 
         Args:
             df: Input DataFrame containing the metric
             metric: Name of the metric column to validate
+            threshold: Threshold for relative deviation from median
 
         Returns:
             DataFrame with added median validation column
         """
         median = df[metric].median()
-        threshold = 0.10  # 10% threshold for median deviation
 
         def is_anomaly(value):
             # Calculate percentage difference from median
@@ -98,7 +98,7 @@ class ZScoreDetector(BaseDetector):
         )
 
         # Step 2: Apply median-based validation
-        df = self.validate_with_median(df, metric)
+        df = self._validate_anomalies(df, metric, engine.z_score_median_validation_threshold)
 
         # Step 3: Combine both detection methods
         # Point is anomalous only if both methods agree

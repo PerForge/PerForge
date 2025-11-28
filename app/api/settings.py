@@ -62,7 +62,7 @@ def get_category_settings(category):
     Get settings for a specific category.
 
     Args:
-        category: Category name (ml_analysis, transaction_status, data_aggregation)
+        category: Category name (ml_analysis, transaction_status, data_query)
 
     Returns:
         JSON response with category settings
@@ -75,7 +75,7 @@ def get_category_settings(category):
         )
 
     # Validate category
-    valid_categories = ['ml_analysis', 'transaction_status', 'data_aggregation']
+    valid_categories = ['ml_analysis', 'transaction_status', 'data_query']
     if category not in valid_categories:
         return api_response(
             message=f'Invalid category. Must be one of: {", ".join(valid_categories)}',
@@ -113,7 +113,7 @@ def update_category_settings(category):
         )
 
     # Validate category
-    valid_categories = ['ml_analysis', 'transaction_status', 'data_aggregation']
+    valid_categories = ['ml_analysis', 'transaction_status', 'data_query']
     if category not in valid_categories:
         return api_response(
             message=f'Invalid category. Must be one of: {", ".join(valid_categories)}',
@@ -167,7 +167,7 @@ def update_single_setting(category, key):
         )
 
     # Validate category
-    valid_categories = ['ml_analysis', 'transaction_status', 'data_aggregation']
+    valid_categories = ['ml_analysis', 'transaction_status', 'data_query']
     if category not in valid_categories:
         return api_response(
             message=f'Invalid category. Must be one of: {", ".join(valid_categories)}',
@@ -225,7 +225,7 @@ def reset_settings():
 
     # Validate category if provided
     if category:
-        valid_categories = ['ml_analysis', 'transaction_status', 'data_aggregation']
+        valid_categories = ['ml_analysis', 'transaction_status', 'data_query']
         if category not in valid_categories:
             return api_response(
                 message=f'Invalid category. Must be one of: {", ".join(valid_categories)}',
@@ -286,7 +286,7 @@ def get_settings_with_metadata():
 
     # Validate category if provided
     if category:
-        valid_categories = ['ml_analysis', 'transaction_status', 'data_aggregation']
+        valid_categories = ['ml_analysis', 'transaction_status', 'data_query']
         if category not in valid_categories:
             return api_response(
                 message=f'Invalid category. Must be one of: {", ".join(valid_categories)}',
