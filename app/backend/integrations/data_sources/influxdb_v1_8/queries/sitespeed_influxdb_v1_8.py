@@ -24,6 +24,15 @@ class SitespeedInfluxQLQueries(FrontEndQueriesBase):
     to be adjusted to match the concrete Sitespeed 1.8 schema in your setup.
     """
 
+    def __init__(self, granularity_seconds: int = 30) -> None:
+        """Initializer kept for parity with other query clients.
+
+        Args:
+            granularity_seconds: Currently unused, but accepted so the class can be
+                instantiated via the generic queries map that passes this parameter.
+        """
+        self.granularity_seconds = granularity_seconds
+
     # In classic InfluxDB 1.8 the database (bucket) is selected on the client,
     # so the `bucket` argument is currently unused but kept for API parity.
 
