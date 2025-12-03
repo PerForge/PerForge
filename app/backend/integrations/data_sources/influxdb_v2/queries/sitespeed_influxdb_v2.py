@@ -15,7 +15,17 @@
 from typing import override
 from app.backend.integrations.data_sources.base_queries import FrontEndQueriesBase
 
+
 class SitespeedFluxQueries(FrontEndQueriesBase):
+  def __init__(self, granularity_seconds: int = 30):
+      """Frontend Sitespeed query client.
+
+      Args:
+          granularity_seconds: Included for parity with backend clients. Currently unused but
+              retained for future aggregation options and to allow uniform instantiation.
+      """
+      self.granularity_seconds = granularity_seconds
+
   def get_tests_titles(
       self,
       bucket: str,
