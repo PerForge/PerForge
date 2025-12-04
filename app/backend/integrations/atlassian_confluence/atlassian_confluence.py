@@ -175,17 +175,31 @@ class AtlassianConfluence(Integration):
         return '\n'.join(result)
 
     @staticmethod
-    def _sanitize_xhtml(content: str) -> Optional[str]:
-        """Return a well-formed XHTML fragment or *None* if it cannot be fixed.
+    def _sanitize_xhtml(content: str) -> str:
+        """Return a well-formed XHTML fragment suitable for Confluence storage.
+
+        Confluence uses XHTML (XML-based) storage format, which requires:
+        - Well-formed XML (properly closed tags, no tag overlap)
+        - Self-closing tags like <br/> (not <br>)
+        - Confluence-specific namespaces (ac:, ri:) preserved
 
         Strategy:
         1. Convert markdown-style lists to HTML lists
         2. Smart newline handling: avoid <br/> around block elements
-        3. Attempt *strict* parsing (recover=False). If valid, return original.
-        4. Otherwise parse with *recover=True* which tells *lxml* to try to
-           repair common issues (unclosed tags, illegal nesting, etc.).  The
-           repaired tree is then serialised back to an XHTML string.
-        5. If recovery also fails, return *None*.
+        3. Attempt *strict* XML parsing (recover=False). If valid, return original.
+        4. Otherwise parse with *recover=True* which tells lxml to auto-repair
+           common issues (unclosed tags, illegal nesting, mismatched quotes).
+        5. Re-validate the repaired content with strict parsing.
+        6. Raise ValueError if content cannot be made XHTML-compliant.
+
+        Args:
+            content: Raw HTML/XHTML content to sanitize
+
+        Returns:
+            Valid XHTML fragment ready for Confluence API
+
+        Raises:
+            ValueError: If content is empty or cannot be made XHTML-compliant
         """
         if not content:
             raise ValueError("No content provided for XHTML sanitization")
@@ -257,11 +271,25 @@ class AtlassianConfluence(Integration):
         # Attempt to recover/fix the markup.
         try:
             tree = etree.fromstring(wrapper, etree.XMLParser(recover=True, resolve_entities=False, no_network=True))
-            # Serialise children of the wrapper div back to string
-            fixed_parts = [etree.tostring(child, encoding='unicode', method='xml') for child in tree]
+            # Serialize the wrapper div's content back to XHTML string
+            # IMPORTANT: Confluence requires valid XHTML (XML), not HTML5
+            # We must preserve all text nodes (tree.text and child.tail) when extracting content
+            fixed_parts = []
+
+            # Capture initial text before first child element
+            if tree.text:
+                fixed_parts.append(tree.text)
+
+            # Capture each child element and its tail text
+            for child in tree:
+                # Use method='xml' for XHTML compliance (proper self-closing tags, case-sensitivity)
+                fixed_parts.append(etree.tostring(child, encoding='unicode', method='xml'))
+                if child.tail:
+                    fixed_parts.append(child.tail)
+
             fixed_content = ''.join(fixed_parts)
 
-            # Double-check the repaired output is now valid.
+            # Double-check the repaired output is valid XHTML by re-parsing strictly
             etree.fromstring(f"<div>{fixed_content}</div>", etree.XMLParser(recover=False, resolve_entities=False, no_network=True))
             logging.info("XHTML content was auto-corrected before update.")
             return fixed_content

@@ -19,13 +19,20 @@ This module provides a `PlotlyImageRenderer` class that mirrors the frontend
 Plotly styling defined in `app/static/assets/js/report.js` and
 `app/api/reports.py:get_report_data()`.
 
-Usage example (do not wire yet):
+Usage example:
 
     renderer = PlotlyImageRenderer()
     renderer.create_throughput_users(chart_data, "./out/throughput_users.png")
 
-Note: Saving images requires the 'kaleido' engine to be installed.
-    pip install -U plotly kaleido
+Requirements:
+    - Kaleido 1.0+ requires Chrome/Chromium to be installed separately
+    - Install kaleido: pip install -U plotly kaleido
+    - Install Chrome (if not present): python -c 'import kaleido; kaleido.get_chrome_sync()'
+    - Docker: Chrome is auto-installed via Dockerfile
+    - Windows: Download Chrome from https://www.google.com/chrome/
+    - Linux: sudo apt-get install chromium-browser
+
+Note: This implementation includes retry logic for Windows subprocess cleanup issues.
 """
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
@@ -33,6 +40,7 @@ import re
 import os
 import logging
 import tempfile
+import time
 
 # Third-party
 import plotly.graph_objects as go
@@ -445,49 +453,116 @@ class PlotlyImageRenderer:
 
     def _save(self, fig: go.Figure, output_path: str, width: int, height: int, image_format: str) -> str:
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        try:
-            # Use higher pixel density by default for crisper images (no external config)
-            kaleido.write_fig_sync(
-                fig,
-                path=output_path,
-                opts={"format": image_format, "width": width, "height": height, "scale": 3},
-            )
-        except Exception as e:
-            # Common cause: kaleido is not installed. Re-raise with guidance.
+
+        # Retry logic for transient failures (especially Windows subprocess cleanup issues)
+        max_retries = 3
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                # Use higher pixel density by default for crisper images (no external config)
+                kaleido.write_fig_sync(
+                    fig,
+                    path=output_path,
+                    opts={"format": image_format, "width": width, "height": height, "scale": 3},
+                )
+                break  # Success
+            except RuntimeError as e:
+                last_error = e
+                error_msg = str(e)
+
+                # Handle subprocess cleanup errors (known issue on Windows)
+                if "browser subprocess" in error_msg.lower():
+                    # Check if file was actually created despite the error
+                    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                        logging.warning(
+                            f"Kaleido subprocess cleanup error (attempt {attempt + 1}), "
+                            "but image was saved successfully"
+                        )
+                        break  # Image created successfully despite cleanup error
+                    elif attempt < max_retries - 1:
+                        logging.warning(f"Kaleido subprocess error on attempt {attempt + 1}, retrying...")
+                        time.sleep(0.5)  # Brief delay before retry
+                        continue
+                raise  # Re-raise if not a known issue or last attempt
+            except Exception as e:
+                last_error = e
+                # Re-raise non-RuntimeError exceptions immediately
+                raise RuntimeError(
+                    "Failed to write image. Ensure 'kaleido' is installed and Chrome is available.\n"
+                    "Install Chrome: python -c 'import kaleido; kaleido.get_chrome_sync()'\n"
+                    f"Original error: {e}"
+                ) from e
+
+        # Verify file exists and has content
+        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
             raise RuntimeError(
-                "Failed to write image. Ensure 'kaleido' is installed (pip install -U plotly kaleido).\n"
-                f"Original error: {e}"
-            ) from e
+                f"Image file was not created successfully at {output_path}. Last error: {last_error}"
+            )
+
         return output_path
 
     def _to_image_bytes(self, fig: go.Figure, *, width: int, height: int, image_format: str = "png") -> bytes:
+        tmp_path = None
         try:
             # Use higher pixel density by default for crisper images (no external config)
             suffix = f".{image_format}"
-            tmp_path = None
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                 tmp_path = tmp.name
 
-            kaleido.write_fig_sync(
-                fig,
-                path=tmp_path,
-                opts={"format": image_format, "width": width, "height": height, "scale": 3},
-            )
+            # Retry logic for transient failures (especially Windows subprocess cleanup issues)
+            max_retries = 3
+            last_error = None
+
+            for attempt in range(max_retries):
+                try:
+                    kaleido.write_fig_sync(
+                        fig,
+                        path=tmp_path,
+                        opts={"format": image_format, "width": width, "height": height, "scale": 3},
+                    )
+                    break  # Success
+                except RuntimeError as e:
+                    last_error = e
+                    error_msg = str(e)
+
+                    # Handle subprocess cleanup errors (known issue on Windows)
+                    if "browser subprocess" in error_msg.lower():
+                        # Check if file was actually created despite the error
+                        if os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0:
+                            logging.warning(
+                                f"Kaleido subprocess cleanup error (attempt {attempt + 1}), "
+                                "but image was generated successfully"
+                            )
+                            break  # Image created successfully despite cleanup error
+                        elif attempt < max_retries - 1:
+                            logging.warning(f"Kaleido subprocess error on attempt {attempt + 1}, retrying...")
+                            time.sleep(0.5)  # Brief delay before retry
+                            continue
+                    raise  # Re-raise if not a known issue or last attempt
+
+            # Verify file exists and has content
+            if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
+                raise RuntimeError(
+                    f"Image file was not created successfully. Last error: {last_error}"
+                )
 
             with open(tmp_path, "rb") as f:
                 data = f.read()
+
         except Exception as e:
-            # Common cause: kaleido is not installed. Re-raise with guidance.
+            # Provide helpful guidance for common issues
             raise RuntimeError(
-                "Failed to render image to bytes. Ensure 'kaleido' is installed (pip install -U plotly kaleido).\n"
+                "Failed to render image to bytes. Ensure 'kaleido' is installed and Chrome is available.\n"
+                "Install Chrome: python -c 'import kaleido; kaleido.get_chrome_sync()'\n"
                 f"Original error: {e}"
             ) from e
         finally:
-            if 'tmp_path' in locals() and tmp_path and os.path.exists(tmp_path):
+            if tmp_path and os.path.exists(tmp_path):
                 try:
                     os.remove(tmp_path)
                 except OSError:
-                    pass
+                    pass  # Ignore cleanup errors
 
         return data
 
