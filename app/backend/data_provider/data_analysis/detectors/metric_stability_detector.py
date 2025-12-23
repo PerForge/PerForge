@@ -123,11 +123,14 @@ class MetricStabilityDetector(BaseDetector):
         # Step 1: Remove statistical outliers for cleaner analysis
         cleaned_data = self._remove_outliers(y, getattr(engine, 'stability_outlier_z_score', 3.0))
         cleaned_data = engine.normalize_metric(cleaned_data, metric)
+        if cleaned_data.size == 0:
+            logging.debug("Skipping stability detection: no data left after cleaning/normalization")
+            return df
 
         metric_label = OVERALL_METRIC_DISPLAY.get(metric, metric)
 
         # Step 2: Check for constant behavior
-        if np.var(cleaned_data, ddof=1) < engine.numpy_var_threshold:
+        if cleaned_data.size < 2 or np.var(cleaned_data, ddof=1) < engine.numpy_var_threshold:
             engine.add_output(
                 status='passed',
                 method='TrendAnalysis',
@@ -138,6 +141,10 @@ class MetricStabilityDetector(BaseDetector):
 
         # Step 3: Calculate variation metrics
         cv = np.std(cleaned_data) / np.mean(cleaned_data)
+
+        # Guard: need at least two points with variance for regression
+        if cleaned_data.size < 2:
+            return df
 
         # Step 4: Perform linear regression for trend analysis
         X = np.arange(len(cleaned_data)).reshape(-1, 1)
