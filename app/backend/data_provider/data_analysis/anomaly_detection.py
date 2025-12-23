@@ -450,7 +450,11 @@ class AnomalyDetectionEngine:
         """
         metrics = {}
 
-        for col in merged_df.columns:
+        # Ensure chronological ordering before iterating; chart libraries expect
+        # x-values to be sorted or they will draw backtracking lines.
+        sorted_df = merged_df.sort_index()
+
+        for col in sorted_df.columns:
             if '_anomaly' not in col:
                 anomaly_col = col + '_anomaly'
 
@@ -459,7 +463,7 @@ class AnomalyDetectionEngine:
                     'data': []
                 }
 
-                for timestamp, row in merged_df.iterrows():
+                for timestamp, row in sorted_df.iterrows():
                     anomaly_value = row[anomaly_col] if anomaly_col in row and pd.notna(row[anomaly_col]) else 'Normal'
                     value = row[col] if pd.notna(row[col]) else 0.0
                     metrics[col]['data'].append({
