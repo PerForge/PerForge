@@ -27,7 +27,7 @@ from app.backend.errors import ErrorMessages
 from influxdb_client import InfluxDBClient
 from datetime import datetime
 from dateutil import tz
-from typing import List, Dict, Any, Type
+from typing import List, Dict, Any, Type, Optional
 from collections import defaultdict
 from datetime import timedelta
 
@@ -421,15 +421,29 @@ class InfluxdbV2(DataExtractionBase):
             return 0.0
 
     def delete_test_data(self, test_title, start = None, end = None):
-        if start == None: start = "2000-01-01T00:00:00Z"
+        if start is None:
+            start_dt = datetime(2000, 1, 1, tzinfo=self.tmz_utc)
         else:
-            start = datetime.strftime(datetime.fromtimestamp(int(start)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
-        if end == None: end = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            start_dt = datetime.fromtimestamp(int(start) / 1000, tz=self.tmz_utc)
+        if end is None:
+            end_dt = datetime.now(tz=self.tmz_utc)
         else:
-            end = datetime.strftime(datetime.fromtimestamp(int(end)/1000).astimezone(self.tmz_utc),"%Y-%m-%dT%H:%M:%SZ")
+            end_dt = datetime.fromtimestamp(int(end) / 1000, tz=self.tmz_utc)
+        start = start_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         try:
-            predicate = f'testTitle="{test_title}"'
+            logging.info(
+                "InfluxdbV2 delete_test_data start: test_title=%s, bucket=%s, start=%s, end=%s",
+                test_title,
+                getattr(self, "bucket", None),
+                start,
+                end,
+            )
+            tag_key = getattr(self, "test_title_tag_name", "testTitle") or "testTitle"
+            predicate = f'{tag_key}="{test_title}"'
+            logging.debug("InfluxdbV2 delete_test_data predicate=%s org=%s", predicate, getattr(self, "org_id", None))
             self.influxdb_connection.delete_api().delete(start, end, predicate, bucket=self.bucket, org=self.org_id)
+            logging.info("InfluxdbV2 delete_test_data completed for test_title=%s", test_title)
         except Exception as er:
             logging.warning('ERROR: delete_test_data method failed')
             logging.warning(er)

@@ -449,6 +449,42 @@ class DataProvider:
         merged_df = self.df_delete_nan_rows(merged_df)
         return merged_df, standard_metrics
 
+    def _build_chart_metrics_from_df(
+        self,
+        merged_df: pd.DataFrame,
+        standard_metrics: Dict[str, Dict[str, Any]]
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Convert the merged dataframe into the chart-friendly structure expected by internal graphs.
+
+        This uses the same raw time-series data that powers ML analysis, but without running any
+        detectors or generating synthetic values.
+        """
+        metrics: Dict[str, Dict[str, Any]] = {}
+        if merged_df is None or merged_df.empty:
+            return metrics
+
+        for metric_key, config in standard_metrics.items():
+            if metric_key not in merged_df.columns:
+                continue
+
+            series = merged_df[metric_key]
+            data_points: List[Dict[str, Any]] = []
+            for ts, value in series.items():
+                timestamp = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+                data_points.append({
+                    "timestamp": timestamp,
+                    "value": float(value) if pd.notna(value) else 0.0,
+                    "anomaly": "Normal"
+                })
+
+            metrics[metric_key] = {
+                "name": config.get("name", metric_key),
+                "data": data_points,
+            }
+
+        return metrics
+
     def get_ml_analysis_to_test_obj(self, test_obj: BaseTestData):
         """
         Perform machine learning analysis on test data to detect anomalies and patterns.
@@ -464,6 +500,23 @@ class DataProvider:
             return test_obj.ml_metrics
 
         merged_df, standard_metrics = self._get_test_results(test_obj=test_obj)
+
+        ML_MIN_POINTS = 10
+        usable_points = len(merged_df) if merged_df is not None else 0
+        if usable_points < ML_MIN_POINTS:
+            logging.info(
+                "Skipping ML analysis for %s: only %s samples available (need >= %s)",
+                getattr(test_obj, 'test_title', 'unknown test'),
+                usable_points,
+                ML_MIN_POINTS
+            )
+            test_obj.ml_anomalies = []
+            test_obj.ml_html_summary = "<p>ML analysis skipped: insufficient data points.</p>"
+            test_obj.ml_summary = "ML analysis skipped: insufficient data points."
+            test_obj.performance_status = "insufficient_data"
+            test_obj.ml_metrics = self._build_chart_metrics_from_df(merged_df, standard_metrics)
+            self.anomaly_detection_engine = None
+            return test_obj.ml_metrics
 
         # Initialize engine with detectors
         # self.project is the project_id (integer)
