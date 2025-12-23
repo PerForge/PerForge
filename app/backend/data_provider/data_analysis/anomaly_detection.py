@@ -129,12 +129,19 @@ class AnomalyDetectionEngine:
                 logging.error(f"Column {metric} not found in DataFrame")
                 return df
 
+            if df.empty or df[metric].dropna().empty:
+                logging.debug(f"No data available to normalize for metric {metric}")
+                return df
+
             df = df.copy()
             max_val = df[metric].max()
             df[metric] = df[metric] / max_val if max_val != 0 else df[metric]
             return df
 
         elif isinstance(df, np.ndarray):
+            if df.size == 0:
+                logging.debug("No data available to normalize for numpy array metric input")
+                return df
             max_val = np.max(df)
             return df / max_val if max_val != 0 else df
         else:
