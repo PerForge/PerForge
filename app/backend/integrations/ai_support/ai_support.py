@@ -24,7 +24,7 @@ from app.backend.components.secrets.secrets_db import DBSecrets
 from app.backend.integrations.ai_support.providers.provider_factory import ProviderFactory
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
 
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import ChatMessageHistory

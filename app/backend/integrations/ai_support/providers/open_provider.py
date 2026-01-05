@@ -19,7 +19,7 @@ from typing import Dict, Any, Union, List
 import httpx
 
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider

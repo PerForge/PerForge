@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Union
 
 from anthropic import Anthropic
 from langchain_anthropic import ChatAnthropic
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider
