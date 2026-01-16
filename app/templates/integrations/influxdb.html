@@ -186,6 +186,19 @@
 
                                         <div class="d-flex flex-wrap gap-2 mt-4">
                                             <button class="btn btn-outline-primary" type="button" id="addVarButton" onclick="addCustomVar()"><i class="fa-solid fa-plus me-1"></i>Add Variable</button>
+                                            <button class="btn btn-outline-primary ms-2" type="button" id="addMultiNodeTagButton" onclick="addMultiNodeTag()" {% if form.multi_node_tag.data and form.multi_node_tag.data|trim %}style="display: none;"{% endif %}><i class="fa-solid fa-plus me-1"></i>Multi Node Tag</button>
+                                        </div>
+
+                                        <div id="multi-node-tag-container" class="{% if not form.multi_node_tag.data or not form.multi_node_tag.data|trim %}hidden{% endif %} mt-3" style="overflow: visible;">
+                                            <label for="multi_node_tag" class="form-label">Multi Node Tag
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">Tag name for multi-node setups (e.g., nodeName). Active threads will be summed across nodes.</span>
+                                                </span>
+                                            </label>
+                                            <div class="d-flex">
+                                                <input type="text" class="form-control" name="multi_node_tag" id="multi_node_tag" value="{{ form.multi_node_tag.data or '' }}" placeholder="e.g. nodeName">
+                                                <button type="button" class="btn btn-outline-secondary ms-2" onclick="removeMultiNodeTag()"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -298,6 +311,33 @@
             if (document.getElementById('custom-vars-container') && document.querySelectorAll('.customVarInput').length === 0) {
                 addCustomVar();
             }
+
+            // Multi Node Tag functions
+            window.addMultiNodeTag = function() {
+                var container = document.getElementById('multi-node-tag-container');
+                var btn = document.getElementById('addMultiNodeTagButton');
+                if (container) {
+                    container.classList.remove('hidden');
+                }
+                if (btn) {
+                    btn.style.display = 'none';
+                }
+            };
+
+            window.removeMultiNodeTag = function() {
+                var container = document.getElementById('multi-node-tag-container');
+                var btn = document.getElementById('addMultiNodeTagButton');
+                var input = document.getElementById('multi_node_tag');
+                if (input) {
+                    input.value = '';
+                }
+                if (container) {
+                    container.classList.add('hidden');
+                }
+                if (btn) {
+                    btn.style.display = 'inline-block';
+                }
+            };
         });
 
         function togglePasswordVisibility(inputId, btn) {
@@ -341,6 +381,11 @@
 
             const varInputs = document.querySelectorAll('.customVarInput');
             data.custom_vars = Array.from(varInputs).map(i => i.value.trim()).filter(Boolean);
+
+            const multiNodeTagInput = document.getElementById('multi_node_tag');
+            if (multiNodeTagInput && multiNodeTagInput.value.trim()) {
+                data.multi_node_tag = multiNodeTagInput.value.trim();
+            }
 
             const integrationId = document.getElementById('config_id')?.value;
             const tokenSelect = document.getElementById('token');

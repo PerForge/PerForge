@@ -49,6 +49,7 @@ class InfluxDBForm(FlaskForm):
     regex = StringField('Transaction regex')
     bucket_regex_bool = BooleanField('Bucket regex')
     custom_vars= FieldList(StringField('Custom vars'), min_entries=0)
+    multi_node_tag = StringField('Multi Node Tag')
     is_default = BooleanField("Is default")
 
 

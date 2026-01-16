@@ -62,8 +62,26 @@ class InfluxdbAddBucketRegexBool(BaseMigration):
             log.info("Migration for 'bucket_regex_bool' applied successfully.")
 
 
+class InfluxdbAddMultiNodeTag(BaseMigration):
+    name = "influxdb: add multi_node_tag"
+
+    def apply(self, connection, inspector):
+        table_name = 'influxdb'
+        try:
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+        except Exception:
+            # Table may not exist yet; let create_all handle schema creation
+            return
+
+        if 'multi_node_tag' not in columns:
+            log.info(f"Applying migration: Adding column 'multi_node_tag' to table '{table_name}'")
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN multi_node_tag VARCHAR(120)"))
+            log.info("Migration for 'multi_node_tag' applied successfully.")
+
+
 # Export list of migrations for this table (supports multiple in the future)
 MIGRATIONS = [
     InfluxdbAddCustomVarsRegex(),
     InfluxdbAddBucketRegexBool(),
+    InfluxdbAddMultiNodeTag(),
 ]
