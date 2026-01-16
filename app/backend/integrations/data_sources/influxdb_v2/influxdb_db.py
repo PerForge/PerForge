@@ -35,6 +35,7 @@ class DBInfluxdb(db.Model):
     regex = db.Column(db.String(500))
     bucket_regex_bool = db.Column(db.Boolean, default=False)
     custom_vars = db.Column(db.String(500))
+    multi_node_tag = db.Column(db.String(120))
     is_default = db.Column(db.Boolean, default=False)
 
     def to_dict(self):

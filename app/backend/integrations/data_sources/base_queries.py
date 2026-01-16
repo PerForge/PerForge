@@ -27,6 +27,7 @@ class BackEndQueriesBase(ABC):
         sort_dir: str = "desc",
         limit: int | None = None,
         offset: int = 0,
+        multi_node_tag: str = None,
     ) -> str:
         pass
 
@@ -55,7 +56,7 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, multi_node_tag: str = None) -> str:
         pass
 
     @abstractmethod

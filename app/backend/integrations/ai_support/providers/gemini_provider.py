@@ -18,7 +18,7 @@ import base64
 from typing import Dict, Any, List, Union
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.backend.integrations.ai_support.providers.provider_base import AIProvider

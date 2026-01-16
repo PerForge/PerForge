@@ -93,6 +93,9 @@ class InfluxdbV2(DataExtractionBase):
             self.test_title_tag_name = config["test_title_tag_name"]
             self.tmz = config["tmz"]
             self.custom_vars = config["custom_vars"]
+            # Treat empty strings as None to avoid triggering slow multi-node queries
+            multi_node_tag = config.get("multi_node_tag")
+            self.multi_node_tag = multi_node_tag if multi_node_tag and multi_node_tag.strip() else None
         else:
             logging.warning("There's no InfluxDB integration configured, or you're attempting to send a request from an unsupported location.")
 
@@ -123,13 +126,24 @@ class InfluxdbV2(DataExtractionBase):
             start_time = self._fetch_start_time(test_titles[-1], "iso")
             end_time = self._fetch_end_time(test_titles[0], "iso")
 
-            query = self.queries.get_test_log(
-                self.bucket,
-                self.test_title_tag_name,
-                test_titles=test_titles,
-                start_time=start_time,
-                end_time=end_time
-            )
+            # Only pass multi_node_tag for BackEndQueriesBase (JMeter listener)
+            if isinstance(self.queries, BackEndQueriesBase):
+                query = self.queries.get_test_log(
+                    self.bucket,
+                    self.test_title_tag_name,
+                    test_titles=test_titles,
+                    start_time=start_time,
+                    end_time=end_time,
+                    multi_node_tag=self.multi_node_tag
+                )
+            else:
+                query = self.queries.get_test_log(
+                    self.bucket,
+                    self.test_title_tag_name,
+                    test_titles=test_titles,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
 
             records = self._execute_query(query)
             df = pd.DataFrame(records)
@@ -258,7 +272,11 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_active_threads(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         try:
-            query = self.queries.get_active_threads(test_title, start, end, self.bucket, self.test_title_tag_name)
+            # Only pass multi_node_tag for BackEndQueriesBase (JMeter listener)
+            if isinstance(self.queries, BackEndQueriesBase):
+                query = self.queries.get_active_threads(test_title, start, end, self.bucket, self.test_title_tag_name, self.multi_node_tag)
+            else:
+                return pd.DataFrame()
             flux_tables = self.influxdb_connection.query_api().query(query)
             df = self.process_data(flux_tables)
             return df
