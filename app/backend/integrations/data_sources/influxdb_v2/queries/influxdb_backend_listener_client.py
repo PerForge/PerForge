@@ -59,10 +59,53 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
     test_titles: list[str],
     start_time: str,
     end_time: str,
+    multi_node_tag: str = None,
 ) -> str:
     formatted = ", ".join([f'"{t}"' for t in test_titles])
 
-    base_query = f'''
+    if multi_node_tag:
+        # When multi-node tag is set, sum max_threads across all nodes
+        base_query = f'''
+    data = from(bucket: "{bucket}")
+      |> range(start: {start_time}, stop: {end_time})
+      |> filter(fn: (r) => r["_measurement"] == "jmeter")
+      |> filter(fn: (r) => r["_field"] == "maxAT")
+      |> filter(fn: (r) => contains(value: r["{test_title_tag_name}"], set: [{formatted}]))
+      |> filter(fn: (r) => exists r["{multi_node_tag}"])
+
+    max_threads = data
+      |> keep(columns: ["_value", "{test_title_tag_name}", "{multi_node_tag}"])
+      |> group(columns: ["{test_title_tag_name}", "{multi_node_tag}"])
+      |> max()
+      |> group(columns: ["{test_title_tag_name}"])
+      |> sum()
+      |> rename(columns: {{_value: "max_threads"}})
+
+    end_time = data
+      |> max(column: "_time")
+      |> keep(columns: ["_time", "{test_title_tag_name}"])
+      |> group(columns: ["_time", "{test_title_tag_name}"])
+      |> rename(columns: {{_time: "end_time"}})
+
+    start_time = data
+      |> min(column: "_time")
+      |> keep(columns: ["_time", "{test_title_tag_name}"])
+      |> group(columns: ["_time", "{test_title_tag_name}"])
+      |> rename(columns: {{_time: "start_time"}})
+
+    join1 = join(tables: {{d1: max_threads, d2: start_time}}, on: ["{test_title_tag_name}"])
+      |> keep(columns: ["start_time","{test_title_tag_name}",  "max_threads"])
+      |> group(columns: ["{test_title_tag_name}"])
+
+    join(tables: {{d1: join1, d2: end_time}}, on: ["{test_title_tag_name}"])
+      |> map(fn: (r) => ({{ r with duration: (int(v: r.end_time) - int(v: r.start_time))/1000000000}}))
+      |> keep(columns: ["start_time","end_time","{test_title_tag_name}", "max_threads", "duration"])
+      |> group()
+      |> sort(columns: ["start_time"], desc: true)
+      |> rename(columns: {{{test_title_tag_name}: "test_title"}})'''
+    else:
+        # Default behavior: max threads from single node
+        base_query = f'''
     data = from(bucket: "{bucket}")
       |> range(start: {start_time}, stop: {end_time})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
@@ -253,8 +296,23 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: {self.granularity_seconds}))}}))
       |> set(key: "_field", value: "Requests per second")'''
 
-  def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_active_threads(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, multi_node_tag: str = None) -> str:
+      if multi_node_tag:
+          # When multi-node tag is set, sum threads across all nodes
+          # First get max per node per time window, then sum across nodes
+          return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r._measurement == "jmeter")
+      |> filter(fn: (r) => r._field == "maxAT")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => exists r["{multi_node_tag}"])
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: max, createEmpty: false)
+      |> group(columns: ["_time", "_field"])
+      |> sum()
+      |> set(key: "_field", value: "Active threads")'''
+      else:
+          # Default behavior: max threads from single node
+          return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r._measurement == "jmeter")
       |> filter(fn: (r) => r._field == "maxAT")

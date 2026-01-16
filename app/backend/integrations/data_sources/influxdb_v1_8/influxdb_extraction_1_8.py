@@ -130,6 +130,9 @@ class InfluxdbV18(DataExtractionBase):
         self.test_title_tag_name = config["test_title_tag_name"]
         self.regex = config.get("regex")
         self.custom_vars = config.get("custom_vars", [])
+        # Treat empty strings as None to avoid triggering slow multi-node queries
+        multi_node_tag = config.get("multi_node_tag")
+        self.multi_node_tag = multi_node_tag if multi_node_tag and multi_node_tag.strip() else None
 
         self.tmz_utc = tz.tzutc()
         self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
@@ -208,7 +211,15 @@ class InfluxdbV18(DataExtractionBase):
             logging.error(er)
             return []
 
-    def _query_df(self, query: str, value_field: str) -> pd.DataFrame:
+    def _query_df(self, query: str, value_field: str, agg_func: str = "mean") -> pd.DataFrame:
+        """Query InfluxDB and return a DataFrame with timestamp index.
+
+        Args:
+            query: InfluxQL query string
+            value_field: Field name to extract as 'value' column
+            agg_func: Aggregation function for duplicate timestamps ('mean', 'sum', 'max')
+                      Default is 'mean' for response times; use 'sum' for counts/throughput
+        """
         points = self._query(query)
         if not points:
             return self._empty_time_series()
@@ -227,6 +238,16 @@ class InfluxdbV18(DataExtractionBase):
 
         df = pd.DataFrame(data)
         df.set_index("timestamp", inplace=True)
+
+        # Aggregate duplicate timestamps (multi-node support)
+        if df.index.has_duplicates:
+            if agg_func == "sum":
+                df = df.groupby(level=0).sum()
+            elif agg_func == "max":
+                df = df.groupby(level=0).max()
+            else:
+                df = df.groupby(level=0).mean()
+
         return df
 
     def list_buckets(self, name_regex: str | None = None) -> List[str]:
@@ -357,11 +378,20 @@ class InfluxdbV18(DataExtractionBase):
             duration = int((end_dt - start_dt).total_seconds())
 
             # Use queries helper to get max_threads for this test
-            query = self.queries.get_test_log(
-                bucket="",
-                test_title_tag_name=tag_key,
-                test_title=title,
-            )
+            # Only pass multi_node_tag for BackEndQueriesBase (JMeter listener)
+            if isinstance(self.queries, BackEndQueriesBase):
+                query = self.queries.get_test_log(
+                    bucket="",
+                    test_title_tag_name=tag_key,
+                    test_title=title,
+                    multi_node_tag=self.multi_node_tag,
+                )
+            else:
+                query = self.queries.get_test_log(
+                    bucket="",
+                    test_title_tag_name=tag_key,
+                    test_title=title,
+                )
             if query:
                 points = self._query(query)
             else:
@@ -465,14 +495,18 @@ class InfluxdbV18(DataExtractionBase):
 
     def _fetch_active_threads(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
-        query = self.queries.get_active_threads(
-            testTitle=test_title,
-            start=start,
-            stop=end,
-            bucket="",
-            test_title_tag_name=tag_key,
-        )
-        return self._query_df(query, "value")
+        # Only pass multi_node_tag for BackEndQueriesBase (JMeter listener)
+        if isinstance(self.queries, BackEndQueriesBase):
+            query = self.queries.get_active_threads(
+                testTitle=test_title,
+                start=start,
+                stop=end,
+                bucket="",
+                test_title_tag_name=tag_key,
+                multi_node_tag=self.multi_node_tag,
+            )
+            return self._query_df(query, "value", agg_func="sum")
+        return pd.DataFrame()
 
     def _fetch_average_response_time(self, test_title: str, start: str, end: str) -> pd.DataFrame:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
@@ -519,7 +553,7 @@ class InfluxdbV18(DataExtractionBase):
             bucket="",
             test_title_tag_name=tag_key,
         )
-        return self._query_df(query, "value")
+        return self._query_df(query, "value", agg_func="sum")
 
     def _fetch_average_response_time_per_req(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
@@ -542,7 +576,7 @@ class InfluxdbV18(DataExtractionBase):
             logging.error(er)
             return []
 
-        results: List[Dict[str, Any]] = []
+        txn_data: Dict[str, List[pd.DataFrame]] = {}
         for (_measurement, tags), points in result.items():
             txn = (tags or {}).get("transaction")
             if not txn:
@@ -563,7 +597,16 @@ class InfluxdbV18(DataExtractionBase):
             df = pd.DataFrame(rows)
             df.set_index("timestamp", inplace=True)
             df.index.name = "timestamp"
-            results.append({"transaction": txn, "data": df})
+            txn_data.setdefault(txn, []).append(df)
+
+        # Merge DataFrames for same transaction (multi-node support)
+        results: List[Dict[str, Any]] = []
+        for txn, dfs in txn_data.items():
+            if len(dfs) == 1:
+                merged = dfs[0]
+            else:
+                merged = pd.concat(dfs).groupby(level=0).mean()
+            results.append({"transaction": txn, "data": merged})
 
         return results
 
@@ -588,7 +631,7 @@ class InfluxdbV18(DataExtractionBase):
             logging.error(er)
             return []
 
-        results: List[Dict[str, Any]] = []
+        txn_data: Dict[str, List[pd.DataFrame]] = {}
         for (_measurement, tags), points in result.items():
             txn = (tags or {}).get("transaction")
             if not txn:
@@ -609,7 +652,16 @@ class InfluxdbV18(DataExtractionBase):
             df = pd.DataFrame(rows)
             df.set_index("timestamp", inplace=True)
             df.index.name = "timestamp"
-            results.append({"transaction": txn, "data": df})
+            txn_data.setdefault(txn, []).append(df)
+
+        # Merge DataFrames for same transaction (multi-node support)
+        results: List[Dict[str, Any]] = []
+        for txn, dfs in txn_data.items():
+            if len(dfs) == 1:
+                merged = dfs[0]
+            else:
+                merged = pd.concat(dfs).groupby(level=0).mean()
+            results.append({"transaction": txn, "data": merged})
 
         return results
 
@@ -634,7 +686,7 @@ class InfluxdbV18(DataExtractionBase):
             logging.error(er)
             return []
 
-        results: List[Dict[str, Any]] = []
+        txn_data: Dict[str, List[pd.DataFrame]] = {}
         for (_measurement, tags), points in result.items():
             txn = (tags or {}).get("transaction")
             if not txn:
@@ -655,7 +707,16 @@ class InfluxdbV18(DataExtractionBase):
             df = pd.DataFrame(rows)
             df.set_index("timestamp", inplace=True)
             df.index.name = "timestamp"
-            results.append({"transaction": txn, "data": df})
+            txn_data.setdefault(txn, []).append(df)
+
+        # Merge DataFrames for same transaction (multi-node support)
+        results: List[Dict[str, Any]] = []
+        for txn, dfs in txn_data.items():
+            if len(dfs) == 1:
+                merged = dfs[0]
+            else:
+                merged = pd.concat(dfs).groupby(level=0).mean()
+            results.append({"transaction": txn, "data": merged})
 
         return results
 
@@ -680,7 +741,7 @@ class InfluxdbV18(DataExtractionBase):
             logging.error(er)
             return []
 
-        results: List[Dict[str, Any]] = []
+        txn_data: Dict[str, List[pd.DataFrame]] = {}
         for (_measurement, tags), points in result.items():
             txn = (tags or {}).get("transaction")
             if not txn:
@@ -701,7 +762,16 @@ class InfluxdbV18(DataExtractionBase):
             df = pd.DataFrame(rows)
             df.set_index("timestamp", inplace=True)
             df.index.name = "timestamp"
-            results.append({"transaction": txn, "data": df})
+            txn_data.setdefault(txn, []).append(df)
+
+        # Merge DataFrames for same transaction (multi-node support, sum for throughput)
+        results: List[Dict[str, Any]] = []
+        for txn, dfs in txn_data.items():
+            if len(dfs) == 1:
+                merged = dfs[0]
+            else:
+                merged = pd.concat(dfs).groupby(level=0).sum()
+            results.append({"transaction": txn, "data": merged})
 
         return results
 

@@ -48,6 +48,7 @@ class InfluxdbModel(BaseModelWithStripping):
     regex: Optional[str] = Field(default=None)
     bucket_regex_bool: bool = Field(default=False)
     custom_vars: list[str] = Field(default_factory=list)
+    multi_node_tag: Optional[str] = Field(default=None)
     is_default: bool
 
     @model_validator(mode='before')

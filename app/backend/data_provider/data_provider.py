@@ -619,9 +619,7 @@ class DataProvider:
             test_title: Name/identifier of the test to analyze
         """
         test_obj: BaseTestData = self.collect_test_obj(test_title=test_title)
-
         metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
-
         # Collect overall anomaly windows from the anomaly detection engine for
         # visualization (e.g. shaded bands on charts).
         overall_anomaly_windows: Dict[str, List[Dict[str, str]]] = {}
