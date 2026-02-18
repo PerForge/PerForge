@@ -19,6 +19,7 @@ from app.backend.integrations.ai_support.providers.provider_base import AIProvid
 from app.backend.integrations.ai_support.providers.gemini_provider import GeminiProvider
 from app.backend.integrations.ai_support.providers.open_provider import OpenAIProvider, AzureOpenAIProvider
 from app.backend.integrations.ai_support.providers.anthropic_provider import AnthropicProvider
+from app.backend.integrations.ai_support.providers.litellm_provider import LiteLLMProvider
 
 
 class ProviderFactory:
@@ -35,6 +36,7 @@ class ProviderFactory:
         "openai": OpenAIProvider,
         "azure_openai": AzureOpenAIProvider,
         "anthropic": AnthropicProvider,
+        "litellm": LiteLLMProvider,
     }
 
     @classmethod
