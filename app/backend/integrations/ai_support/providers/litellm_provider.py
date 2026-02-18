@@ -16,7 +16,7 @@ import logging
 import base64
 from typing import Dict, Any, Union, List
 
-from langchain_community.chat_models import ChatLiteLLM
+from langchain_litellm import ChatLiteLLM
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 
