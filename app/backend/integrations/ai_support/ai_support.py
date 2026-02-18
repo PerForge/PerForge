@@ -107,6 +107,10 @@ class AISupport(Integration):
                 provider_args["azure_url"] = config["azure_url"]
                 provider_args["api_version"] = config["api_version"]
 
+            # Add base_url for LiteLLM if present
+            if self.ai_provider == "litellm" and config.get("base_url"):
+                provider_args["base_url"] = config["base_url"]
+
             # Create the provider using the factory
             self.ai_obj = ProviderFactory.create_provider(
                 provider_type=self.ai_provider,

@@ -57,12 +57,14 @@ class LiteLLMProvider(AIProvider):
                 model=ai_text_model,
                 temperature=temperature,
                 api_key=token,
+                **({'api_base': kwargs.get('base_url')} if kwargs.get('base_url') else {})
             )
 
             self.image_llm = ChatLiteLLM(
                 model=ai_image_model,
                 temperature=temperature,
                 api_key=token,
+                **({'api_base': kwargs.get('base_url')} if kwargs.get('base_url') else {})
             )
 
             self.models_created = True

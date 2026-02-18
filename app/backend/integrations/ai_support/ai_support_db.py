@@ -26,6 +26,7 @@ class DBAISupport(db.Model):
     name           = db.Column(db.String(120), nullable=False)
     ai_provider    = db.Column(db.String(120), nullable=False)
     azure_url      = db.Column(db.String(120))
+    base_url       = db.Column(db.String(120))
     api_version    = db.Column(db.String(120))
     ai_text_model  = db.Column(db.String(120), nullable=False)
     ai_image_model = db.Column(db.String(120), nullable=False)
