@@ -375,7 +375,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
         try:
-            query = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket, self.test_title_tag_name)
+            query = self.queries.get_max_active_users_stats(test_title, start, end, self.bucket, self.test_title_tag_name, self.multi_node_tag)
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table:

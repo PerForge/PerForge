@@ -783,6 +783,7 @@ class InfluxdbV18(DataExtractionBase):
             stop=end,
             bucket="",
             test_title_tag_name=tag_key,
+            multi_node_tag=self.multi_node_tag,
         )
         points = self._query(query)
         if points:

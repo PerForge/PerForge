@@ -141,6 +141,7 @@ class AISupportForm(FlaskForm):
             ('azure_openai', 'Azure OpenAI'),
             ('gemini', 'Gemini'),
             ('anthropic', 'Anthropic'),
+            ('litellm', 'LiteLLM'),
         ],
         default='openai'
     )
