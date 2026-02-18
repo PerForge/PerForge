@@ -38,3 +38,4 @@ lxml==6.0.0
 plotly==6.2.0
 kaleido==1.2.0
 waitress==3.0.2
+litellm>=1.0.0

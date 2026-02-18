@@ -221,15 +221,25 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         stop: str,
         bucket: str,
         test_title_tag_name: str,
+        multi_node_tag: str = None,
     ) -> str:  # type: ignore[override]
         where = (
             f'"{test_title_tag_name}" = \'{testTitle}\' '
             f'AND time >= \'{start}\' AND time <= \'{stop}\''
         )
-        return (
-            f'SELECT MAX("maxAT") AS "value" FROM "{self.measurement}" '
-            f'WHERE {where}'
-        )
+        if multi_node_tag:
+            return (
+                f'SELECT MAX("total_threads") AS "value" FROM '
+                f'(SELECT SUM("max_per_node") AS "total_threads" FROM '
+                f'(SELECT MAX("maxAT") AS "max_per_node" FROM "{self.measurement}" '
+                f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "{multi_node_tag}" fill(0)) '
+                f'GROUP BY time({self.granularity_seconds}s) fill(0))'
+            )
+        else:
+            return (
+                f'SELECT MAX("maxAT") AS "value" FROM "{self.measurement}" '
+                f'WHERE {where}'
+            )
 
     def get_median_throughput_stats(
         self,

@@ -92,7 +92,7 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
+    def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, multi_node_tag: str = None) -> str:
         pass
 
     @abstractmethod

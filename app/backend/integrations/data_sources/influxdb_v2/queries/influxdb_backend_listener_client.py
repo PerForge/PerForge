@@ -423,8 +423,21 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: {self.granularity_seconds}))}}))
       |> set(key: "_field", value: "Requests per second")'''
 
-  def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str) -> str:
-      return f'''from(bucket: "{bucket}")
+  def get_max_active_users_stats(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, multi_node_tag: str = None) -> str:
+      if multi_node_tag:
+          return f'''from(bucket: "{bucket}")
+      |> range(start: {start}, stop: {stop})
+      |> filter(fn: (r) => r["_measurement"] == "jmeter")
+      |> filter(fn: (r) => r["_field"] == "maxAT")
+      |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
+      |> filter(fn: (r) => exists r["{multi_node_tag}"])
+      |> aggregateWindow(every: {self.granularity_seconds}s, fn: max, createEmpty: false)
+      |> group(columns: ["_time", "_field"])
+      |> sum()
+      |> group()
+      |> max(column: "_value")'''
+      else:
+          return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
       |> filter(fn: (r) => r["_measurement"] == "jmeter")
       |> filter(fn: (r) => r["_field"] == "maxAT")
