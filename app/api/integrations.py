@@ -928,6 +928,11 @@ def ping_ai_support():
             provider_args['azure_url'] = azure_url
             provider_args['api_version'] = api_version
 
+        if ai_provider == 'litellm':
+            base_url = (data.get('base_url') or '').strip()
+            if base_url:
+                provider_args['base_url'] = base_url
+
         try:
             provider = ProviderFactory.create_provider(provider_type=ai_provider, **provider_args)
             if provider is None:
