@@ -158,6 +158,7 @@ class AISupportModel(BaseModelWithStripping):
     name          : str
     ai_provider   : str
     azure_url     : Optional[str]
+    base_url      : Optional[str] = None
     api_version   : Optional[str]
     ai_text_model : str
     ai_image_model: str

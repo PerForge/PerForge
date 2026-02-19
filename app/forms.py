@@ -146,6 +146,7 @@ class AISupportForm(FlaskForm):
         default='openai'
     )
     azure_url = StringField('Azure url')
+    base_url = StringField('Base url')
     api_version = StringField('Api version')
     ai_text_model = StringField('AI Text model', validators=[DataRequired()])
     ai_image_model = StringField('AI Image model', validators=[DataRequired()])

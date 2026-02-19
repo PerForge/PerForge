@@ -14,7 +14,7 @@
 
 import logging
 
-from app.schema_migrations.tables import influxdb, graphs, nfr_rows, template_data, templates, project_settings
+from app.schema_migrations.tables import influxdb, graphs, nfr_rows, template_data, templates, project_settings, ai_support
 
 log = logging.getLogger(__name__)
 
@@ -26,4 +26,5 @@ MIGRATIONS = [
     *template_data.MIGRATIONS,
     *templates.MIGRATIONS,
     *project_settings.MIGRATIONS,
+    *ai_support.MIGRATIONS,
 ]
