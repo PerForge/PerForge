@@ -160,7 +160,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> keep(columns: ["_time"])
       |> max(column: "_time")'''
 
-  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
+  def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str, multi_node_tag: str = None) -> str:
       return f'''import "join"
             rpm_set = from(bucket: "{bucket}")
             |> range(start: {start}, stop: {stop})
@@ -169,6 +169,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r._field == "count")
             |> filter(fn: (r) => r["statut"] == "all")
             {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
+            {f'|> group(columns: ["transaction"])' if multi_node_tag else ''}
             |> keep(columns: ["_value", "_time", "transaction"])
             |> aggregateWindow(every: 60s, fn: sum, createEmpty: true)
             |> map(fn: (r) => ({{ r with _value: float(v: r._value / float(v: 60))}}))
@@ -209,6 +210,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r._field == "avg" or r._field == "pct50.0" or r._field == "pct75.0" or r._field == "pct90.0")
             |> filter(fn: (r) => r["statut"] == "all")
             {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
+            {f'|> group(columns: ["transaction", "_field"])' if multi_node_tag else ''}
             |> keep(columns: ["_value", "transaction", "_field"])
 
             avg_stat = base_stats2
@@ -266,6 +268,7 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
             |> filter(fn: (r) => r._field == "avg")
             |> filter(fn: (r) => r["statut"] == "all")
             {f'|> filter(fn: (r) => r.transaction =~ /{regex}/)' if regex else ''}
+            {f'|> group(columns: ["transaction"])' if multi_node_tag else ''}
             |> keep(columns: ["_value", "transaction"])
             |> group(columns: ["transaction"])
             |> stddev()

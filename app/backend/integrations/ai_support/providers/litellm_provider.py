@@ -43,6 +43,15 @@ class LiteLLMProvider(AIProvider):
         """
         super().__init__(system_prompt)
 
+        # Prefixes that construct their own cloud endpoints — base_url must not be passed
+        _CLOUD_PROVIDER_PREFIXES = ('vertex_ai/', 'bedrock/', 'sagemaker/', 'azure/', 'anthropic/')
+
+        def _base_url_kwargs(model: str) -> dict:
+            base_url = kwargs.get('base_url')
+            if base_url and not model.startswith(_CLOUD_PROVIDER_PREFIXES):
+                return {'api_base': base_url}
+            return {}
+
         try:
             # Initialize LiteLLM models
             # Note: LiteLLM often expects keys in environment variables, but passing api_key helps specific providers.
@@ -57,14 +66,14 @@ class LiteLLMProvider(AIProvider):
                 model=ai_text_model,
                 temperature=temperature,
                 api_key=token,
-                **({'api_base': kwargs.get('base_url')} if kwargs.get('base_url') else {})
+                **_base_url_kwargs(ai_text_model)
             )
 
             self.image_llm = ChatLiteLLM(
                 model=ai_image_model,
                 temperature=temperature,
                 api_key=token,
-                **({'api_base': kwargs.get('base_url')} if kwargs.get('base_url') else {})
+                **_base_url_kwargs(ai_image_model)
             )
 
             self.models_created = True
