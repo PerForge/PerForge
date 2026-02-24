@@ -369,6 +369,7 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         bucket: str,
         test_title_tag_name: str,
         regex: str,
+        multi_node_tag: str = None,
     ) -> str:  # type: ignore[override]
         """Return query for aggregated per-transaction statistics.
 
@@ -383,6 +384,30 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         )
         if regex:
             where += f' AND "transaction" =~ /{regex}/'
+        if multi_node_tag:
+            # Pre-aggregate per minute across all nodes, then compute final stats.
+            # This fixes RPM (which would otherwise be per-node median instead of
+            # total) and reduces the data volume processed by the outer query.
+            return (
+                f'SELECT '
+                f'MEDIAN("sum_count") / 60 AS "rpm", '
+                f'SUM("sum_count_error") AS "errors", '
+                f'SUM("sum_count") AS "count", '
+                f'MEAN("mean_avg") AS "avg", '
+                f'PERCENTILE("mean_avg", 50) AS "pct50", '
+                f'PERCENTILE("mean_avg", 75) AS "pct75", '
+                f'PERCENTILE("mean_avg", 90) AS "pct90", '
+                f'STDDEV("mean_avg") AS "stddev" '
+                f'FROM ('
+                f'SELECT '
+                f'SUM("count") AS "sum_count", '
+                f'SUM("countError") AS "sum_count_error", '
+                f'MEAN("avg") AS "mean_avg" '
+                f'FROM "{self.measurement}" '
+                f'WHERE {where} '
+                f'GROUP BY time(60s), "transaction"'
+                f') GROUP BY "transaction"'
+            )
         return (
             f'SELECT '
             f'MEDIAN("count")/60 AS "rpm", '
