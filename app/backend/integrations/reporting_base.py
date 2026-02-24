@@ -15,6 +15,7 @@
 import re
 import logging
 
+from app.backend.components.settings.settings_service import SettingsService
 from app.backend.integrations.ai_support.ai_support import AISupport
 from app.backend.integrations.grafana.grafana import Grafana
 from app.backend.integrations.grafana.grafana_db import DBGrafana
@@ -111,13 +112,49 @@ class ReportingBase:
                             logging.warning(f"Error loading baseline table '{table_name}' with aggregation '{aggregation}': {e}")
 
                     if table is not None:
-                        # Format the table based on the report type
-                        # When baseline is available, use comparison metrics (baseline -> current format)
-                        if self.baseline_test_obj is not None and table.has_baseline():
-                            metrics = table.format_comparison_metrics()
+                        # Format the table based on the report type.
+                        # For the aggregated_data table, apply per-project reporting settings
+                        # (column selection, labels, split-baseline mode).
+                        if table_name == 'aggregated_data':
+                            rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                            columns_config = self._parse_columns_config(
+                                rt.get('aggregated_table_columns', [])
+                            )
+                            split_baseline = rt.get('aggregated_table_split_baseline', False)
+                            current_label = rt.get('aggregated_table_current_label', 'Current')
+                            baseline_label = rt.get('aggregated_table_baseline_label', 'Baseline')
+                            show_diff = rt.get('aggregated_table_show_diff', False)
+                            diff_label = rt.get('aggregated_table_diff_label', 'Diff')
+                            show_diff_pct = rt.get('aggregated_table_show_diff_pct', False)
+                            diff_pct_label = rt.get('aggregated_table_diff_pct_label', 'Diff %')
+
+                            has_baseline = self.baseline_test_obj is not None and table.has_baseline()
+
+                            if split_baseline and has_baseline:
+                                metrics = table.format_split_columns_metrics(
+                                    columns_config, current_label, baseline_label,
+                                    show_diff, diff_label, show_diff_pct, diff_pct_label
+                                )
+                            elif has_baseline and (show_diff or show_diff_pct):
+                                metrics = table.format_comparison_metrics_with_diff(
+                                    columns_config, show_diff, diff_label, show_diff_pct, diff_pct_label
+                                )
+                            elif has_baseline:
+                                metrics = table.format_comparison_metrics()
+                                metrics = self._apply_columns_config(
+                                    metrics, columns_config, table.scope_column_name
+                                )
+                            else:
+                                metrics = table.format_metrics()
+                                metrics = self._apply_columns_config(
+                                    metrics, columns_config, table.scope_column_name
+                                )
                         else:
-                            # No baseline, just format current metrics
-                            metrics = table.format_metrics()
+                            # All other tables: original behaviour, no settings applied
+                            if self.baseline_test_obj is not None and table.has_baseline():
+                                metrics = table.format_comparison_metrics()
+                            else:
+                                metrics = table.format_metrics()
                         value = self.format_table(metrics)
                         if value:
                             text = text.replace("${" + var + "}", value)
@@ -204,6 +241,45 @@ class ReportingBase:
             logging.warning(f"Failed to build transaction status table: {e}")
 
         return None
+
+    @staticmethod
+    def _parse_columns_config(raw_columns: list) -> list:
+        """Parse a list of 'metric_key:Display Label' strings into (key, label) tuples.
+
+        Items without a colon are used as both key and label.
+        Empty items are ignored.
+        """
+        result = []
+        for item in raw_columns:
+            item = item.strip()
+            if not item:
+                continue
+            if ':' in item:
+                key, _, label = item.partition(':')
+                result.append((key.strip(), label.strip()))
+            else:
+                result.append((item, item))
+        return result
+
+    @staticmethod
+    def _apply_columns_config(metrics: list, columns_config: list, scope_column_name: str) -> list:
+        """Filter and rename columns in a list of formatted metric row dicts.
+
+        When columns_config is empty the original rows are returned unchanged.
+        The scope column is always preserved.
+        """
+        if not columns_config:
+            return metrics
+        result = []
+        for row in metrics:
+            new_row = {}
+            if scope_column_name and scope_column_name in row:
+                new_row[scope_column_name] = row[scope_column_name]
+            for metric_key, display_label in columns_config:
+                if metric_key in row:
+                    new_row[display_label] = row[metric_key]
+            result.append(new_row)
+        return result
 
     def format_table(self, metrics):
         """

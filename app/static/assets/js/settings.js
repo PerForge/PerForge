@@ -14,7 +14,8 @@ const settingsState = {
 const categoryNames = {
     'ml_analysis': 'ML Analysis',
     'transaction_status': 'Transaction Status',
-    'data_query': 'Data Query'
+    'data_query': 'Data Query',
+    'reporting_table': 'Reporting Table'
 };
 
 // Subsection groupings for ML Analysis
@@ -41,6 +42,13 @@ const transactionStatusGroups = {
 // Subsection groupings for Data Query
 const dataQueryGroups = {
     'Backend Listener Query Settings': ['backend_query_granularity_seconds']
+};
+
+// Subsection groupings for Reporting Table
+const reportingTableGroups = {
+    'Aggregated Data Table': ['aggregated_table_columns', 'aggregated_table_split_baseline'],
+    'Baseline / Current Column Labels': ['aggregated_table_baseline_label', 'aggregated_table_current_label'],
+    'Diff Columns': ['aggregated_table_show_diff', 'aggregated_table_diff_label', 'aggregated_table_show_diff_pct', 'aggregated_table_diff_pct_label']
 };
 
 /**
@@ -88,6 +96,7 @@ async function loadAllSettings() {
         renderCategory('ml_analysis', mlAnalysisGroups);
         renderCategory('transaction_status', transactionStatusGroups);
         renderCategory('data_query', dataQueryGroups);
+        renderCategory('reporting_table', reportingTableGroups);
 
         // Hide all unsaved indicators initially
         document.querySelectorAll('.unsaved-indicator').forEach(indicator => {
@@ -107,7 +116,8 @@ function renderCategory(category, groups) {
     const containerId = category === 'ml_analysis' ? 'mlAnalysisSettings' :
         category === 'transaction_status' ? 'transactionStatusSettings' :
             category === 'data_query' ? 'dataQuerySettings' :
-                'dataAggregationSettings';
+                category === 'reporting_table' ? 'reportingTableSettings' :
+                    'dataAggregationSettings';
 
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -265,6 +275,7 @@ function setupEventListeners() {
     document.getElementById('mlAnalysisForm').addEventListener('submit', handleFormSubmit);
     document.getElementById('transactionStatusForm').addEventListener('submit', handleFormSubmit);
     document.getElementById('dataQueryForm').addEventListener('submit', handleFormSubmit);
+    document.getElementById('reportingTableForm').addEventListener('submit', handleFormSubmit);
 
     // Reset buttons
     document.querySelectorAll('.reset-btn').forEach(btn => {

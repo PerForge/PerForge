@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from typing import Dict, Any, Optional, List
 from .metric import Metric, NFRStatus
 
@@ -267,6 +268,180 @@ class MetricsTable:
                         row[metric_name] = metric.value
             result.append(row)
 
+        return result
+
+    def format_split_columns_metrics(
+        self,
+        columns_config: List[tuple],
+        current_label: str = 'Current',
+        baseline_label: str = 'Baseline',
+        show_diff: bool = False,
+        diff_label: str = 'Diff',
+        show_diff_pct: bool = False,
+        diff_pct_label: str = 'Diff %'
+    ) -> List[Dict[str, Any]]:
+        """Format metrics with baseline and current as separate columns.
+
+        Each metric produces up to four columns in this order:
+          "{display_label} ({baseline_label})", "{display_label} ({current_label})",
+          optionally "{display_label} ({diff_label})", "{display_label} ({diff_pct_label})".
+
+        Rows are built as OrderedDict to guarantee column order across all integrations.
+        When no baseline is available, falls back to _format_metrics_with_config().
+
+        Args:
+            columns_config: List of (metric_key, display_label) tuples. If empty, all metrics
+                            are included using their original key as the label.
+            current_label: Suffix for current test columns.
+            baseline_label: Suffix for baseline test columns.
+            show_diff: Whether to add an absolute difference column per metric.
+            diff_label: Suffix for diff columns.
+            show_diff_pct: Whether to add a percentage difference column per metric.
+            diff_pct_label: Suffix for diff % columns.
+
+        Returns:
+            List of OrderedDict rows with split columns.
+        """
+        if not self.has_baseline():
+            return self._format_metrics_with_config(columns_config)
+
+        # Group by scope
+        scope_groups: Dict[str, Dict[str, Any]] = {}
+        for metric in self.metrics:
+            scope = metric.scope or 'unknown'
+            if scope not in scope_groups:
+                scope_groups[scope] = {}
+            scope_groups[scope][metric.name] = metric
+
+        # Determine which metrics to include
+        if columns_config:
+            selected = columns_config
+        else:
+            seen: Dict[str, str] = {}
+            for metrics_dict in scope_groups.values():
+                for name in metrics_dict:
+                    if name not in seen:
+                        seen[name] = name
+            selected = [(k, k) for k in seen]
+
+        result = []
+        for scope, metrics_dict in scope_groups.items():
+            row: OrderedDict = OrderedDict()
+            row[self.scope_column_name] = scope
+            for metric_key, display_label in selected:
+                metric = metrics_dict.get(metric_key)
+                current_val = round(float(metric.value), 2) if metric and metric.value is not None else 0.00
+                baseline_val = round(float(metric.baseline), 2) if metric and metric.baseline is not None else 0.00
+                row[f"{display_label} ({baseline_label})"] = baseline_val
+                row[f"{display_label} ({current_label})"] = current_val
+                if show_diff:
+                    diff_val = round(metric.difference, 2) if metric and metric.difference is not None else 0.00
+                    row[f"{display_label} ({diff_label})"] = diff_val
+                if show_diff_pct:
+                    diff_pct_val = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else 0.00
+                    row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+            result.append(row)
+        return result
+
+    def format_comparison_metrics_with_diff(
+        self,
+        columns_config: List[tuple],
+        show_diff: bool = False,
+        diff_label: str = 'Diff',
+        show_diff_pct: bool = False,
+        diff_pct_label: str = 'Diff %'
+    ) -> List[Dict[str, Any]]:
+        """Format metrics in baseline->current format with optional diff columns.
+
+        Each metric gets a "baseline -> current" string column, followed immediately by
+        optional Diff and Diff % columns. Rows are OrderedDict to guarantee Option A ordering
+        (all columns for one metric grouped together).
+
+        Falls back to _format_metrics_with_config() when no baseline is present.
+
+        Args:
+            columns_config: List of (metric_key, display_label) tuples. If empty, all metrics
+                            are included using their original key as the label.
+            show_diff: Whether to add an absolute difference column per metric.
+            diff_label: Suffix for diff columns.
+            show_diff_pct: Whether to add a percentage difference column per metric.
+            diff_pct_label: Suffix for diff % columns.
+
+        Returns:
+            List of OrderedDict rows.
+        """
+        if not self.has_baseline():
+            return self._format_metrics_with_config(columns_config)
+
+        # Group by scope
+        scope_groups: Dict[str, Dict[str, Any]] = {}
+        for metric in self.metrics:
+            scope = metric.scope or 'unknown'
+            if scope not in scope_groups:
+                scope_groups[scope] = {}
+            scope_groups[scope][metric.name] = metric
+
+        # Determine which metrics to include
+        if columns_config:
+            selected = columns_config
+        else:
+            seen: Dict[str, str] = {}
+            for metrics_dict in scope_groups.values():
+                for name in metrics_dict:
+                    if name not in seen:
+                        seen[name] = name
+            selected = [(k, k) for k in seen]
+
+        result = []
+        for scope, metrics_dict in scope_groups.items():
+            row: OrderedDict = OrderedDict()
+            row[self.scope_column_name] = scope
+            for metric_key, display_label in selected:
+                metric = metrics_dict.get(metric_key)
+                if metric is not None:
+                    if metric.baseline is not None:
+                        row[display_label] = f"{float(metric.baseline):.2f} -> {float(metric.value):.2f}"
+                    else:
+                        row[display_label] = f"{float(metric.value):.2f}" if isinstance(metric.value, float) else metric.value
+                    if show_diff:
+                        diff_val = round(metric.difference, 2) if metric.difference is not None else 0.00
+                        row[f"{display_label} ({diff_label})"] = diff_val
+                    if show_diff_pct:
+                        diff_pct_val = round(metric.difference_pct, 2) if metric.difference_pct is not None else 0.00
+                        row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+            result.append(row)
+        return result
+
+    def _format_metrics_with_config(self, columns_config: List[tuple]) -> List[Dict[str, Any]]:
+        """Format current metrics with optional column filtering and label renaming (no baseline).
+
+        Args:
+            columns_config: List of (metric_key, display_label) tuples. If empty, all metrics
+                            are included using their original key as the label.
+
+        Returns:
+            List of row dicts.
+        """
+        scope_groups: Dict[str, Dict[str, Any]] = {}
+        for metric in self.metrics:
+            scope = metric.scope or 'unknown'
+            if scope not in scope_groups:
+                scope_groups[scope] = {}
+            scope_groups[scope][metric.name] = metric
+
+        result = []
+        for scope, metrics_dict in scope_groups.items():
+            row: OrderedDict = OrderedDict()
+            row[self.scope_column_name] = scope
+            if columns_config:
+                for metric_key, display_label in columns_config:
+                    metric = metrics_dict.get(metric_key)
+                    if metric is not None:
+                        row[display_label] = round(float(metric.value), 2) if isinstance(metric.value, float) else metric.value
+            else:
+                for metric_name, metric in metrics_dict.items():
+                    row[metric_name] = round(metric.value, 2) if isinstance(metric.value, float) else metric.value
+            result.append(row)
         return result
 
     def set_baseline_metrics(self, baseline_metrics: List[Metric]) -> None:
