@@ -443,6 +443,7 @@ class InfluxdbV18(DataExtractionBase):
             bucket="",
             test_title_tag_name=tag_key,
             regex=getattr(self, "regex", ""),
+            multi_node_tag=getattr(self, "multi_node_tag", None),
         )
         if self.influxdb_connection is None:
             logging.warning("InfluxdbV18: no active connection for aggregated data query: %s", query)

@@ -186,7 +186,7 @@ class InfluxdbV2(DataExtractionBase):
 
     def _fetch_aggregated_data(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         try:
-            query = self.queries.get_aggregated_data(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex)
+            query = self.queries.get_aggregated_data(test_title, start, end, self.bucket, self.test_title_tag_name, self.regex, self.multi_node_tag)
             return self._execute_query(query)
         except Exception as er:
             logging.error(ErrorMessages.ER00058.value.format(self.name))

@@ -48,7 +48,7 @@ class BackEndQueriesBase(ABC):
         pass
 
     @abstractmethod
-    def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str) -> str:
+    def get_aggregated_data(self, testTitle: str, start: int, stop: int, bucket: str, test_title_tag_name: str, regex: str, multi_node_tag: str = None) -> str:
         pass
 
     @abstractmethod
