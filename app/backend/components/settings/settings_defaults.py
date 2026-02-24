@@ -336,6 +336,50 @@ DATA_QUERY_DEFAULTS: Dict[str, Dict[str, Any]] = {
 }
 
 
+REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    'aggregated_table_columns': {
+        'value': ['avg:Avg RT', 'errors:Errors', 'pct50:P50', 'pct75:P75', 'pct90:P90', 'count:Count', 'rpm:RPM', 'stddev:Std Dev'],
+        'type': 'list',
+        'description': 'Columns to include in the aggregated data table. Format: metric_key:Display Name (e.g. avg:Avg RT, pct90:P90). Controls which columns appear and their header labels. Available metrics: avg, errors, pct50, pct75, pct90, count, rpm, stddev.'
+    },
+    'aggregated_table_split_baseline': {
+        'value': False,
+        'type': 'bool',
+        'description': 'When enabled and a baseline test is present, each metric is split into two separate columns (baseline and current) instead of the combined "baseline → current" format.'
+    },
+    'aggregated_table_current_label': {
+        'value': 'Current',
+        'type': 'string',
+        'description': 'Label suffix for current test columns when split baseline mode is enabled. Result: "Avg RT (Current)".'
+    },
+    'aggregated_table_baseline_label': {
+        'value': 'Baseline',
+        'type': 'string',
+        'description': 'Label suffix for baseline test columns when split baseline mode is enabled. Result: "Avg RT (Baseline)".'
+    },
+    'aggregated_table_show_diff': {
+        'value': False,
+        'type': 'bool',
+        'description': 'When enabled and a baseline test is present, adds an absolute difference column after each metric: current minus baseline. Result column name: "Avg RT (Diff)".'
+    },
+    'aggregated_table_diff_label': {
+        'value': 'Diff',
+        'type': 'string',
+        'description': 'Suffix label for absolute difference columns. Example result: "Avg RT (Diff)".'
+    },
+    'aggregated_table_show_diff_pct': {
+        'value': False,
+        'type': 'bool',
+        'description': 'When enabled and a baseline test is present, adds a percentage difference column after each metric. Result column name: "Avg RT (Diff %)".'
+    },
+    'aggregated_table_diff_pct_label': {
+        'value': 'Diff %',
+        'type': 'string',
+        'description': 'Suffix label for percentage difference columns. Example result: "Avg RT (Diff %)".'
+    }
+}
+
+
 def get_all_defaults() -> Dict[str, Dict[str, Dict[str, Any]]]:
     """
     Get all default settings organized by category.
@@ -346,7 +390,8 @@ def get_all_defaults() -> Dict[str, Dict[str, Dict[str, Any]]]:
     return {
         'ml_analysis': ML_ANALYSIS_DEFAULTS,
         'transaction_status': TRANSACTION_STATUS_DEFAULTS,
-        'data_query': DATA_QUERY_DEFAULTS
+        'data_query': DATA_QUERY_DEFAULTS,
+        'reporting_table': REPORTING_TABLE_DEFAULTS
     }
 
 
