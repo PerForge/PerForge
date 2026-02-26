@@ -229,11 +229,9 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         )
         if multi_node_tag:
             return (
-                f'SELECT MAX("total_threads") AS "value" FROM '
-                f'(SELECT SUM("max_per_node") AS "total_threads" FROM '
+                f'SELECT SUM("max_per_node") AS "value" FROM '
                 f'(SELECT MAX("maxAT") AS "max_per_node" FROM "{self.measurement}" '
-                f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "{multi_node_tag}" fill(0)) '
-                f'GROUP BY time({self.granularity_seconds}s) fill(0))'
+                f'WHERE {where} GROUP BY "{multi_node_tag}")'
             )
         else:
             return (
