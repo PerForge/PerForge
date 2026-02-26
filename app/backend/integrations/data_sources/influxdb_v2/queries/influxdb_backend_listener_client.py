@@ -434,11 +434,10 @@ class InfluxDBBackendListenerClientImpl(BackEndQueriesBase):
       |> filter(fn: (r) => r["_field"] == "maxAT")
       |> filter(fn: (r) => r["{test_title_tag_name}"] == "{testTitle}")
       |> filter(fn: (r) => exists r["{multi_node_tag}"])
-      |> aggregateWindow(every: {self.granularity_seconds}s, fn: max, createEmpty: false)
-      |> group(columns: ["_time", "_field"])
-      |> sum()
+      |> group(columns: ["{multi_node_tag}"])
+      |> max()
       |> group()
-      |> max(column: "_value")'''
+      |> sum()'''
       else:
           return f'''from(bucket: "{bucket}")
       |> range(start: {start}, stop: {stop})
