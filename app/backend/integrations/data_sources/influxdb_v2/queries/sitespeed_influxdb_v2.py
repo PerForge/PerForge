@@ -31,6 +31,7 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
       bucket: str,
       test_title_tag_name: str,
       search: str = '',
+      custom_filter_tags: list = None,
   ) -> str:
         """Return Flux query to get distinct test titles with optional search filter."""
         base_query = (
@@ -43,6 +44,17 @@ class SitespeedFluxQueries(FrontEndQueriesBase):
         if search:
             # Case-insensitive regex search
             base_query += f"  |> filter(fn: (r) => r[\"{test_title_tag_name}\"] =~ /(?i){search}/)\n"
+
+        # Add custom tag filters
+        for f in (custom_filter_tags or []):
+            tag = f.get("tag", "")
+            value = f.get("value", "")
+            is_regex = f.get("regex", False)
+            if tag and value:
+                if is_regex:
+                    base_query += f"  |> filter(fn: (r) => r[\"{tag}\"] =~ /{value}/)\n"
+                else:
+                    base_query += f"  |> filter(fn: (r) => r[\"{tag}\"] == \"{value}\")\n"
 
         base_query += (
             f"  |> group(columns: [\"{test_title_tag_name}\"])\n"

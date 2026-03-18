@@ -15,6 +15,7 @@
 from pydantic import BaseModel, Field, model_validator, field_validator, EmailStr, ConfigDict
 from typing import Optional, Literal, Any
 import logging
+import json
 
 
 # Cleaning functions
@@ -49,23 +50,37 @@ class InfluxdbModel(BaseModelWithStripping):
     bucket_regex_bool: bool = Field(default=False)
     custom_vars: list[str] = Field(default_factory=list)
     multi_node_tag: Optional[str] = Field(default=None)
+    custom_filter_tags: list[dict] = Field(default_factory=list)
+    start_time_offset_minutes: int = Field(default=0)
     is_default: bool
 
     @model_validator(mode='before')
     def normalize_custom_vars(cls, values):
-        if 'custom_vars' not in values:
-            return values
         cv = values.get('custom_vars')
         if cv is None:
             values['custom_vars'] = []
-            return values
-        if isinstance(cv, str):
-            parts = [p.strip() for p in cv.split(',') if p and p.strip()]
-            values['custom_vars'] = parts
+        elif isinstance(cv, str):
+            values['custom_vars'] = [p.strip() for p in cv.split(',') if p and p.strip()]
         elif isinstance(cv, list):
             values['custom_vars'] = [str(p).strip() for p in cv if str(p).strip()]
         else:
             values['custom_vars'] = []
+
+        cft = values.get('custom_filter_tags')
+        if cft is None or cft == '':
+            values['custom_filter_tags'] = []
+        elif isinstance(cft, str):
+            try:
+                parsed = json.loads(cft)
+                values['custom_filter_tags'] = parsed if isinstance(parsed, list) else []
+            except (json.JSONDecodeError, ValueError):
+                values['custom_filter_tags'] = []
+        elif not isinstance(cft, list):
+            values['custom_filter_tags'] = []
+
+        if 'start_time_offset_minutes' not in values or values.get('start_time_offset_minutes') is None:
+            values['start_time_offset_minutes'] = 0
+
         return values
 
 

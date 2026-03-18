@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, FloatField, PasswordField, FieldList, SelectField, TextAreaField, FormField, BooleanField
+from wtforms import Form, StringField, IntegerField, FloatField, PasswordField, FieldList, SelectField, TextAreaField, FormField, BooleanField
 from wtforms.validators import Email, DataRequired, NumberRange
 
 
@@ -25,6 +25,12 @@ class LoginForm(FlaskForm):
 class RegisterForm(FlaskForm):
     user = StringField('User', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
+
+
+class CustomFilterTagForm(Form):
+    tag = StringField('Tag')
+    value = StringField('Value')
+    regex = BooleanField('Regex')
 
 
 class InfluxDBForm(FlaskForm):
@@ -48,8 +54,10 @@ class InfluxDBForm(FlaskForm):
     test_title_tag_name = StringField('Test Title Tag Name', default="testTitle")
     regex = StringField('Transaction regex')
     bucket_regex_bool = BooleanField('Bucket regex')
-    custom_vars= FieldList(StringField('Custom vars'), min_entries=0)
+    custom_vars = FieldList(StringField('Custom vars'), min_entries=0)
     multi_node_tag = StringField('Multi Node Tag')
+    custom_filter_tags = FieldList(FormField(CustomFilterTagForm), min_entries=0)
+    start_time_offset_minutes = IntegerField('Start time offset (minutes)', default=0)
     is_default = BooleanField("Is default")
 
 
