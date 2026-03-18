@@ -79,9 +79,43 @@ class InfluxdbAddMultiNodeTag(BaseMigration):
             log.info("Migration for 'multi_node_tag' applied successfully.")
 
 
+class InfluxdbAddCustomFilterTags(BaseMigration):
+    name = "influxdb: add custom_filter_tags"
+
+    def apply(self, connection, inspector):
+        table_name = 'influxdb'
+        try:
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+        except Exception:
+            return
+
+        if 'custom_filter_tags' not in columns:
+            log.info(f"Applying migration: Adding column 'custom_filter_tags' to table '{table_name}'")
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN custom_filter_tags VARCHAR(1000)"))
+            log.info("Migration for 'custom_filter_tags' applied successfully.")
+
+
+class InfluxdbAddStartTimeOffset(BaseMigration):
+    name = "influxdb: add start_time_offset_minutes"
+
+    def apply(self, connection, inspector):
+        table_name = 'influxdb'
+        try:
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+        except Exception:
+            return
+
+        if 'start_time_offset_minutes' not in columns:
+            log.info(f"Applying migration: Adding column 'start_time_offset_minutes' to table '{table_name}'")
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN start_time_offset_minutes INTEGER DEFAULT 0"))
+            log.info("Migration for 'start_time_offset_minutes' applied successfully.")
+
+
 # Export list of migrations for this table (supports multiple in the future)
 MIGRATIONS = [
     InfluxdbAddCustomVarsRegex(),
     InfluxdbAddBucketRegexBool(),
     InfluxdbAddMultiNodeTag(),
+    InfluxdbAddCustomFilterTags(),
+    InfluxdbAddStartTimeOffset(),
 ]
