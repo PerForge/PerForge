@@ -31,7 +31,7 @@ class DBGraphs(db.Model):
     type = db.Column(db.String(20), nullable=False, default='custom', index=True)
     grafana_id = db.Column(db.Integer, db.ForeignKey('grafana.id', ondelete='CASCADE'), nullable=True)
     dash_id = db.Column(db.Integer, db.ForeignKey('grafana_dashboards.id', ondelete='CASCADE'), nullable=True)
-    view_panel = db.Column(db.Integer, nullable=True)
+    view_panel = db.Column(db.String(50), nullable=True)
     width = db.Column(db.Integer, nullable=False)
     height = db.Column(db.Integer, nullable=False)
     custom_vars = db.Column(db.String(500))

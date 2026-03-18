@@ -97,7 +97,7 @@ class Grafana(Integration):
             if response.status_code == 200:
                 image = response.content
             else:
-                logging.info('ERROR: ' + response.content)
+                logging.warning(f'ERROR rendering graph: status={response.status_code}, body={response.text}')
         except Exception as er:
             logging.warning("An error occurred: " + str(er))
             err_info = traceback.format_exc()

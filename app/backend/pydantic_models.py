@@ -190,7 +190,7 @@ class GraphModel(BaseModelWithStripping):
     type       : Literal['default', 'custom'] = Field(default='custom')
     grafana_id : Optional[int]
     dash_id    : Optional[int]
-    view_panel : Optional[int]
+    view_panel : Optional[str]
     width      : int
     height     : int
     custom_vars: Optional[str]
