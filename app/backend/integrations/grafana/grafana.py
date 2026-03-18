@@ -81,6 +81,7 @@ class Grafana(Integration):
             + "&width=" + str(graph_data["width"])
             + "&height=" + str(graph_data["height"])
             + "&scale=3"
+            + "&__feature.dashboardScene=true"
         )
         url = self.dash_id_to_render(url)
         if baseline_test_title:
@@ -97,9 +98,9 @@ class Grafana(Integration):
             if response.status_code == 200:
                 image = response.content
             else:
-                logging.warning(f'ERROR rendering graph: status={response.status_code}, body={response.text}')
+                logging.warning(f'ERROR rendering graph: status={response.status_code}, url={url}, body={response.text}')
         except Exception as er:
-            logging.warning("An error occurred: " + str(er))
+            logging.warning(f'An error occurred rendering graph url={url}: {er}')
             err_info = traceback.format_exc()
             logging.warning("Detailed error info: " + err_info)
         return image
