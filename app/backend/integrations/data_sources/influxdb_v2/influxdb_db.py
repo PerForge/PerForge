@@ -14,6 +14,7 @@
 
 import traceback
 import logging
+import json
 
 from app.config import db
 from app.backend.pydantic_models import InfluxdbModel
@@ -36,6 +37,8 @@ class DBInfluxdb(db.Model):
     bucket_regex_bool = db.Column(db.Boolean, default=False)
     custom_vars = db.Column(db.String(500))
     multi_node_tag = db.Column(db.String(120))
+    custom_filter_tags = db.Column(db.String(1000))
+    start_time_offset_minutes = db.Column(db.Integer, default=0)
     is_default = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
@@ -49,6 +52,8 @@ class DBInfluxdb(db.Model):
             payload = validated_data.model_dump()
             if isinstance(payload.get('custom_vars'), list):
                 payload['custom_vars'] = ','.join(payload['custom_vars'])
+            if isinstance(payload.get('custom_filter_tags'), list):
+                payload['custom_filter_tags'] = json.dumps(payload['custom_filter_tags'])
             instance = cls(**payload)
 
             if instance.is_default:
@@ -116,6 +121,8 @@ class DBInfluxdb(db.Model):
             for key, value in validated_data.model_dump(exclude={'id', 'project_id'}).items():
                 if key == 'custom_vars' and isinstance(value, list):
                     value = ','.join([v for v in value if v])
+                elif key == 'custom_filter_tags' and isinstance(value, list):
+                    value = json.dumps(value)
                 setattr(config, key, value)
 
             db.session.commit()

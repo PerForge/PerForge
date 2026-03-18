@@ -133,6 +133,8 @@ class InfluxdbV18(DataExtractionBase):
         # Treat empty strings as None to avoid triggering slow multi-node queries
         multi_node_tag = config.get("multi_node_tag")
         self.multi_node_tag = multi_node_tag if multi_node_tag and multi_node_tag.strip() else None
+        self.custom_filter_tags = config.get("custom_filter_tags") or []
+        self.start_time_offset_minutes = config.get("start_time_offset_minutes") or 0
 
         self.tmz_utc = tz.tzutc()
         self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
@@ -289,7 +291,7 @@ class InfluxdbV18(DataExtractionBase):
     # ------------------------------------------------------------------
     def _fetch_tests_titles(self, search: str = '') -> List[Dict[str, Any]]:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
-        query = self.queries.get_tests_titles(bucket="", test_title_tag_name=tag_key, search=search)
+        query = self.queries.get_tests_titles(bucket="", test_title_tag_name=tag_key, search=search, custom_filter_tags=self.custom_filter_tags)
         points = self._query(query)
 
         results: List[Dict[str, Any]] = []
@@ -318,16 +320,17 @@ class InfluxdbV18(DataExtractionBase):
             return None
 
         ts_utc = pd.to_datetime(t_str, utc=True).to_pydatetime()
+        raw_time = ts_utc + timedelta(minutes=self.start_time_offset_minutes)
 
         if time_format == "human":
             return datetime.strftime(
-                ts_utc.astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p"
+                raw_time.astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p"
             )
         if time_format == "iso":
-            start_dt = ts_utc - timedelta(seconds=30)
+            start_dt = raw_time - timedelta(seconds=30)
             return datetime.strftime(start_dt, "%Y-%m-%dT%H:%M:%SZ")
         if time_format == "timestamp":
-            return int(ts_utc.astimezone(self.tmz_utc).timestamp() * 1000)
+            return int(raw_time.astimezone(self.tmz_utc).timestamp() * 1000)
 
         return None
 

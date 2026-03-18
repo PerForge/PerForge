@@ -96,6 +96,8 @@ class InfluxdbV2(DataExtractionBase):
             # Treat empty strings as None to avoid triggering slow multi-node queries
             multi_node_tag = config.get("multi_node_tag")
             self.multi_node_tag = multi_node_tag if multi_node_tag and multi_node_tag.strip() else None
+            self.custom_filter_tags = config.get("custom_filter_tags") or []
+            self.start_time_offset_minutes = config.get("start_time_offset_minutes") or 0
         else:
             logging.warning("There's no InfluxDB integration configured, or you're attempting to send a request from an unsupported location.")
 
@@ -175,7 +177,7 @@ class InfluxdbV2(DataExtractionBase):
     def _fetch_tests_titles(self, search: str = '') -> List[Dict[str, Any]]:
         try:
             if hasattr(self.queries, "get_tests_titles"):
-                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name, search=search)
+                query = self.queries.get_tests_titles(self.bucket, self.test_title_tag_name, search=search, custom_filter_tags=self.custom_filter_tags)
                 records = self._execute_query(query)
                 df = pd.DataFrame(records)
                 return df.to_dict(orient="records")
@@ -199,13 +201,14 @@ class InfluxdbV2(DataExtractionBase):
             flux_tables = self.influxdb_connection.query_api().query(query)
             for flux_table in flux_tables:
                 for flux_record in flux_table.records:
+                    raw_time = flux_record["_time"] + timedelta(minutes=self.start_time_offset_minutes)
                     if time_format == "human":
-                        return datetime.strftime(flux_record["_time"].astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
+                        return datetime.strftime(raw_time.astimezone(self.tmz_human), "%Y-%m-%d %I:%M:%S %p")
                     elif time_format == "iso":
-                        start_time_dt = flux_record["_time"] - timedelta(seconds=30)
+                        start_time_dt = raw_time - timedelta(seconds=30)
                         return datetime.strftime(start_time_dt, "%Y-%m-%dT%H:%M:%SZ")
                     elif time_format == "timestamp":
-                        return int(flux_record["_time"].astimezone(self.tmz_utc).timestamp() * 1000)
+                        return int(raw_time.astimezone(self.tmz_utc).timestamp() * 1000)
 
             logging.warning(
                 "InfluxdbV2: no start time found for test '%s' (bucket=%s, listener=%s)",

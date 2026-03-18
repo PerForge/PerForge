@@ -170,6 +170,16 @@
                                                 {{ form.tmz(class="form-control", placeholder="e.g. UTC") }}
                                             </div>
                                         </div>
+                                        <div class="pf-two-col mt-2">
+                                            <div>
+                                                <label for="start_time_offset_minutes" class="form-label">Start time offset (minutes)
+                                                    <span class="tooltip-container">
+                                                        <span class="tooltip-content">[Optional] Skip the first N minutes of each test (useful for excluding ramp-up instability). Set to 0 to use the full test duration.</span>
+                                                    </span>
+                                                </label>
+                                                {{ form.start_time_offset_minutes(class="form-control", placeholder="e.g. 10", min="0") }}
+                                            </div>
+                                        </div>
                                         <label for="custom_vars-0-content" class="form-label">Custom variables name
                                             <span class="tooltip-container">
                                                 <span class="tooltip-content">[Optional] Define custom InfluxDB tags to extract and expose as template parameters. Example: if you add <code>build</code>, you can use <code>${current_build}</code> or <code>${baseline_build}</code> in templates.</span>
@@ -187,6 +197,7 @@
                                         <div class="d-flex flex-wrap gap-2 mt-4">
                                             <button class="btn btn-outline-primary" type="button" id="addVarButton" onclick="addCustomVar()"><i class="fa-solid fa-plus me-1"></i>Add Variable</button>
                                             <button class="btn btn-outline-primary ms-2" type="button" id="addMultiNodeTagButton" onclick="addMultiNodeTag()" {% if form.multi_node_tag.data and form.multi_node_tag.data|trim %}style="display: none;"{% endif %}><i class="fa-solid fa-plus me-1"></i>Multi Node Tag</button>
+                                            <button class="btn btn-outline-primary ms-2" type="button" onclick="addCustomFilterTag()"><i class="fa-solid fa-plus me-1"></i>Add Filter</button>
                                         </div>
 
                                         <div id="multi-node-tag-container" class="{% if not form.multi_node_tag.data or not form.multi_node_tag.data|trim %}hidden{% endif %} mt-3" style="overflow: visible;">
@@ -199,6 +210,26 @@
                                                 <input type="text" class="form-control" name="multi_node_tag" id="multi_node_tag" value="{{ form.multi_node_tag.data or '' }}" placeholder="e.g. nodeName">
                                                 <button type="button" class="btn btn-outline-secondary ms-2" onclick="removeMultiNodeTag()"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
                                             </div>
+                                        </div>
+
+                                        <div id="custom-filter-tags-container" class="mt-3" style="overflow: visible;">
+                                            <label class="form-label {% if not form.custom_filter_tags %}hidden{% endif %}" id="custom-filter-tags-label">Custom filters
+                                                <span class="tooltip-container">
+                                                    <span class="tooltip-content">[Optional] Filter the test list by tag values. Useful when multiple teams share the same InfluxDB bucket. Each filter narrows the test list to entries where the tag matches the given value or regex pattern. Note: this filter applies to the test list only, not to metric queries.</span>
+                                                </span>
+                                            </label>
+                                            <div class="text-muted mb-1 {% if not form.custom_filter_tags %}hidden{% endif %}" id="custom-filter-tags-comment" style="font-size: 0.75rem;">Applies to the test list only, not to metric queries.</div>
+                                            {% for ft in form.custom_filter_tags %}
+                                            <div class="d-flex align-items-center mt-2 customFilterTagRow">
+                                                <input type="text" class="form-control customFilterTagInput me-2" name="filter_tag_{{ loop.index0 }}" id="filter_tag_{{ loop.index0 }}" placeholder="tag name (e.g. environment)" value="{{ ft.tag.data or '' }}">
+                                                <input type="text" class="form-control customFilterValueInput me-2" name="filter_value_{{ loop.index0 }}" id="filter_value_{{ loop.index0 }}" placeholder="value or pattern (e.g. production)" value="{{ ft.value.data or '' }}">
+                                                <div class="form-check form-switch flex-shrink-0 me-2">
+                                                    <input class="form-check-input customFilterRegexInput" type="checkbox" {% if ft.regex.data %}checked{% endif %}>
+                                                    <label class="form-check-label text-nowrap">Regex</label>
+                                                </div>
+                                                <button type="button" class="btn btn-outline-secondary flex-shrink-0" onclick="removeCustomFilterTag(this)"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
+                                            </div>
+                                            {% endfor %}
                                         </div>
                                     </div>
 
@@ -338,6 +369,39 @@
                     btn.style.display = 'inline-block';
                 }
             };
+
+            // Custom Filter Tags functions
+            window.addCustomFilterTag = function(tag, value, isRegex) {
+                var label = document.getElementById('custom-filter-tags-label');
+                if (label) label.classList.remove('hidden');
+                var comment = document.getElementById('custom-filter-tags-comment');
+                if (comment) comment.classList.remove('hidden');
+                var row = document.createElement('div');
+                var idx = document.querySelectorAll('.customFilterTagRow').length;
+                row.className = 'd-flex align-items-center mt-2 customFilterTagRow';
+                row.innerHTML = `
+                    <input type="text" class="form-control customFilterTagInput me-2" name="filter_tag_${idx}" id="filter_tag_${idx}" placeholder="tag name (e.g. environment)" value="${tag || ''}">
+                    <input type="text" class="form-control customFilterValueInput me-2" name="filter_value_${idx}" id="filter_value_${idx}" placeholder="value or pattern (e.g. production)" value="${value || ''}">
+                    <div class="form-check form-switch flex-shrink-0 me-2">
+                        <input class="form-check-input customFilterRegexInput" type="checkbox" ${isRegex ? 'checked' : ''}>
+                        <label class="form-check-label text-nowrap">Regex</label>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary flex-shrink-0" onclick="removeCustomFilterTag(this)"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
+                `;
+                document.getElementById('custom-filter-tags-container').appendChild(row);
+            };
+
+            window.removeCustomFilterTag = function(btn) {
+                var row = btn.closest('.customFilterTagRow');
+                if (row) row.remove();
+                var rows = document.querySelectorAll('.customFilterTagRow');
+                if (rows.length === 0) {
+                    var label = document.getElementById('custom-filter-tags-label');
+                    if (label) label.classList.add('hidden');
+                    var comment = document.getElementById('custom-filter-tags-comment');
+                    if (comment) comment.classList.add('hidden');
+                }
+            };
         });
 
         function togglePasswordVisibility(inputId, btn) {
@@ -376,7 +440,8 @@
                 tmz: document.getElementById('tmz').value,
                 test_title_tag_name: document.getElementById('test_title_tag_name').value,
                 is_default: document.getElementById('is_default').checked,
-                bucket_regex_bool: document.getElementById('bucket_regex_bool').checked
+                bucket_regex_bool: document.getElementById('bucket_regex_bool').checked,
+                start_time_offset_minutes: parseInt(document.getElementById('start_time_offset_minutes').value || '0', 10) || 0
             };
 
             const varInputs = document.querySelectorAll('.customVarInput');
@@ -386,6 +451,15 @@
             if (multiNodeTagInput && multiNodeTagInput.value.trim()) {
                 data.multi_node_tag = multiNodeTagInput.value.trim();
             }
+
+            const filterRows = document.querySelectorAll('.customFilterTagRow');
+            data.custom_filter_tags = Array.from(filterRows).reduce((acc, row) => {
+                const tag = row.querySelector('.customFilterTagInput')?.value.trim();
+                const value = row.querySelector('.customFilterValueInput')?.value.trim();
+                const regex = row.querySelector('.customFilterRegexInput')?.checked || false;
+                if (tag && value) acc.push({ tag, value, regex });
+                return acc;
+            }, []);
 
             const integrationId = document.getElementById('config_id')?.value;
             const tokenSelect = document.getElementById('token');
