@@ -48,6 +48,7 @@ class InfluxDBForm(FlaskForm):
             ('sitespeed_influxdb_v2', 'sitespeed_influxdb_v2.7'),
             ('org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8', 'org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8'),
             ('sitespeed_influxdb_v1.8', 'sitespeed_influxdb_v1.8'),
+            ('gatling_influxdb_v2', 'gatling_influxdb_v2 (BETA)'),
         ]
     )
     tmz = StringField('Timezone', default="UTC")

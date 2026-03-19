@@ -53,6 +53,7 @@ class DataProvider:
         "org.apache.jmeter.visualizers.backend.influxdb.InfluxdbBackendListenerClient_v1.8": "back_end",
         "sitespeed_influxdb_v2": "front_end",
         "sitespeed_influxdb_v1.8": "front_end",
+        "gatling_influxdb_v2": "back_end",
     }
 
     def __init__(self, project: Any, source_type: Any, id: str, bucket: str) -> None:
