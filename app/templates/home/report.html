@@ -170,6 +170,11 @@
             const id = "{{ id }}";
             const bucket = "{{ bucket }}";
             fetchAndDisplayTestData(testTitle, source_type, id, bucket);
+
+            if (_isGatling) {
+                document.querySelector('th[data-sort="pct90"]').textContent = 'Pct95 [ms]';
+                document.querySelector('#pct90Card + span').textContent = '95% Response time';
+            }
         });
     </script>
 </main>

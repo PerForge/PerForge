@@ -815,7 +815,7 @@
                         if (dataSourceJson.listener === 'sitespeed_influxdb_v2' || dataSourceJson.listener === 'sitespeed_influxdb_v1.8') {
                             btn.classList.add('disabled');
                         } else {
-                            btn.href = `/report?test_title=${encodeURIComponent(test.test_title)}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}&bucket=${encodeURIComponent(dataSourceJson.bucket)}`;
+                            btn.href = `/report?test_title=${encodeURIComponent(test.test_title)}&source_type=${encodeURIComponent(dataSourceJson.source_type)}&id=${encodeURIComponent(dataSourceJson.id)}&bucket=${encodeURIComponent(dataSourceJson.bucket)}&listener=${encodeURIComponent(dataSourceJson.listener)}`;
                         }
                         reportCell.appendChild(btn);
                     });
