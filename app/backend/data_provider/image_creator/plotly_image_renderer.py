@@ -144,7 +144,7 @@ class PlotlyImageRenderer:
         metrics = [
             {"name": "Avg Response Time", "data": avg_vals, "anomalies": avg_ano, "anomalyMessages": avg_msgs, "color": "rgba(2, 208, 81, 0.8)", "yAxisUnit": "ms"},
             {"name": "Median Response Time", "data": med_vals, "anomalies": med_ano, "anomalyMessages": med_msgs, "color": "rgba(23, 100, 254, 0.8)", "yAxisUnit": "ms"},
-            {"name": "90Pct Response Time", "data": p90_vals, "anomalies": p90_ano, "anomalyMessages": p90_msgs, "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
+            {"name": f"{chart_data.get('pct90_label', '90Pct')} Response Time", "data": p90_vals, "anomalies": p90_ano, "anomalyMessages": p90_msgs, "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
         ]
         # Union anomaly windows across RT overall metrics
         overall_windows_rt = []
@@ -198,7 +198,7 @@ class PlotlyImageRenderer:
         metrics = [
             {"name": "Avg Response Time", "data": avg_vals, "anomalies": [], "anomalyMessages": [], "color": "rgba(2, 208, 81, 0.8)", "yAxisUnit": "ms"},
             {"name": "Median Response Time", "data": med_vals, "anomalies": [], "anomalyMessages": [], "color": "rgba(23, 100, 254, 0.8)", "yAxisUnit": "ms"},
-            {"name": "Pct90 Response Time", "data": p90_vals, "anomalies": [], "anomalyMessages": [], "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
+            {"name": f"{chart_data.get('pct90_label', '90Pct')} Response Time", "data": p90_vals, "anomalies": [], "anomalyMessages": [], "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
         ]
         return self._build_line_chart(
             title=transaction_name,
@@ -598,7 +598,7 @@ class PlotlyImageRenderer:
         metrics = [
             {"name": "Avg Response Time", "data": avg_vals, "anomalies": avg_ano, "anomalyMessages": avg_msgs, "color": "rgba(2, 208, 81, 0.8)", "yAxisUnit": "ms"},
             {"name": "Median Response Time", "data": med_vals, "anomalies": med_ano, "anomalyMessages": med_msgs, "color": "rgba(23, 100, 254, 0.8)", "yAxisUnit": "ms"},
-            {"name": "90Pct Response Time", "data": p90_vals, "anomalies": p90_ano, "anomalyMessages": p90_msgs, "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
+            {"name": f"{chart_data.get('pct90_label', '90Pct')} Response Time", "data": p90_vals, "anomalies": p90_ano, "anomalyMessages": p90_msgs, "color": "rgba(245, 165, 100, 1)", "yAxisUnit": "ms"},
         ]
         overall_windows_rt: List[Dict[str, Any]] = []
         overall_map = chart_data.get("overall_anomaly_windows") or {}

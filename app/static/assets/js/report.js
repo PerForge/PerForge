@@ -1,5 +1,8 @@
 // page-scripts.js
 
+const _isGatling = new URLSearchParams(window.location.search).get('listener') === 'gatling_influxdb_v2';
+const _pct90Label = _isGatling ? '95Pct' : '90Pct';
+
 async function fetchAndDisplayTestData(testTitle, sourceType, id, bucket) {
     const loadingScreen = document.getElementById('loading-screen');
     const loadingMessage = document.getElementById('loading-message');
@@ -381,7 +384,7 @@ function drawGraph(chartData, styling, layoutConfig, transactionName, chartEleme
     }
     if (pctArr.length) {
         metrics.push({
-            name: 'Pct90 Response Time',
+            name: `${_pct90Label} Response Time`,
             data: pctArr.map(d => d.value),
             anomalies: pctArr.map(d => d.anomaly !== 'Normal'),
             anomalyMessages: pctArr.map(d => d.anomaly),
@@ -470,7 +473,7 @@ function createGraphs(chartData, styling, layoutConfig, overallAnomalyWindows, t
         responseTimeMetrics.push({ name: 'Median Response Time', data: overalMedian.map(d => d.value), anomalies: overalMedian.map(d => d.anomaly !== 'Normal'), anomalyMessages: overalMedian.map(d => d.anomaly), color: 'rgba(23, 100, 254, 0.8)', yAxisUnit: 'ms' });
     }
     if (overalPct90.length) {
-        responseTimeMetrics.push({ name: '90Pct Response Time', data: overalPct90.map(d => d.value), anomalies: overalPct90.map(d => d.anomaly !== 'Normal'), anomalyMessages: overalPct90.map(d => d.anomaly), color: 'rgba(245, 165, 100, 1)', yAxisUnit: 'ms' });
+        responseTimeMetrics.push({ name: `${_pct90Label} Response Time`, data: overalPct90.map(d => d.value), anomalies: overalPct90.map(d => d.anomaly !== 'Normal'), anomalyMessages: overalPct90.map(d => d.anomaly), color: 'rgba(245, 165, 100, 1)', yAxisUnit: 'ms' });
     }
 
     // Plot throughput/users only if we have at least one of them
