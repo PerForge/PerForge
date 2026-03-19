@@ -73,6 +73,9 @@ class DataProvider:
         # Determine the test type based on the source type
         self.test_type = self.source_to_test_type_map.get(self.ds_obj.listener, "back_end")
 
+        # Gatling reports percentiles95 in place of pct90; label it correctly everywhere
+        self.pct90_label = "95Pct" if self.ds_obj.listener == "gatling_influxdb_v2" else "90Pct"
+
         # Apply bucket override (optional) in a source-type aware manner
         # For InfluxDB v2, bucket is used in Flux queries and does not affect the client.
         # For InfluxDB 1.8, bucket corresponds to the database on the client.
@@ -274,7 +277,7 @@ class DataProvider:
             "overalUsers": {"func": self.ds_obj.get_active_threads, "name": "Users", "analysis": False},
             "overalAvgResponseTime": {"func": self.ds_obj.get_average_response_time, "name": "Avg Response Time", "analysis": True},
             "overalMedianResponseTime": {"func": self.ds_obj.get_median_response_time, "name": "Median Response Time", "analysis": True},
-            "overal90PctResponseTime": {"func": self.ds_obj.get_pct90_response_time, "name": "90th Percentile Response Time", "analysis": True},
+            "overal90PctResponseTime": {"func": self.ds_obj.get_pct90_response_time, "name": f"{self.pct90_label} Response Time", "analysis": True},
             "overalErrors": {"func": self.ds_obj.get_error_count, "name": "Errors", "analysis": False}
         }
 
@@ -516,6 +519,7 @@ class DataProvider:
             test_obj.ml_summary = "ML analysis skipped: insufficient data points."
             test_obj.performance_status = "insufficient_data"
             test_obj.ml_metrics = self._build_chart_metrics_from_df(merged_df, standard_metrics)
+            test_obj.ml_metrics['pct90_label'] = self.pct90_label
             self.anomaly_detection_engine = None
             return test_obj.ml_metrics
 
@@ -546,6 +550,7 @@ class DataProvider:
         test_obj.ml_html_summary = ml_html_summary
         test_obj.ml_summary = ml_summary
         test_obj.performance_status = performance_status
+        metrics['pct90_label'] = self.pct90_label
         test_obj.ml_metrics = metrics
 
         return metrics
