@@ -44,6 +44,9 @@ class AtlassianJiraReport(ReportingBase):
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Use centralized renderer (internal Plotly or external Grafana)
         image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
+        if not image:
+            graph = f'Image failed to load, id: {graph_data["id"]}'
+            return graph, (ai_support_response or "")
         filename = self.output_obj.put_image_to_jira(issue=self.issue_id, image_bytes=image)
         if filename:
             graph = f'!{str(filename)}|width=900!\n\n'

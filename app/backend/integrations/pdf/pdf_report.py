@@ -586,8 +586,10 @@ class PdfReport(ReportingBase):
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 image, ai_response = processed_graphs[obj["graph_id"]]
-                # Always add the image
-                self.pdf_creator.add_image(image)
+                if image:
+                    self.pdf_creator.add_image(image)
+                else:
+                    self.add_text(f'Image failed to load, id: {obj["graph_id"]}')
                 # Per-graph decision to append AI text
                 per_graph_ai_to_graphs = bool(obj.get("ai_to_graphs_switch"))
                 if per_graph_ai_to_graphs and ai_response:

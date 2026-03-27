@@ -54,6 +54,9 @@ class AtlassianConfluenceReport(ReportingBase):
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Delegate rendering to centralized base (supports internal Plotly and external Grafana)
         image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
+        if not image:
+            graph = f'Image failed to load, id: {graph_data["id"]}'
+            return graph, (ai_support_response or "")
         fileName = self.output_obj.put_image_to_confl(image, graph_data["id"], self.page_id)
         if fileName:
             graph = f'\n{self._build_confluence_image(str(fileName), graph_data.get("width", 1000), graph_data.get("height", 500))}\n'

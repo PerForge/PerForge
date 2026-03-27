@@ -194,6 +194,9 @@ class AzureWikiReport(ReportingBase):
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Use centralized renderer (supports internal Plotly and external Grafana)
         image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
+        if not image:
+            graph = f'Image failed to load, id: {graph_data["id"]}'
+            return graph, (ai_support_response or "")
         # Azure expects base64 per existing flow
         encoded_image = base64.b64encode(image)
         fileName = self.output_obj.put_image_to_azure(encoded_image, graph_data["name"])
