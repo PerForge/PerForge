@@ -481,6 +481,8 @@ class ReportingBase:
         url = grafana.generate_url_to_render_graph(graph_data, start_timestamp, end_timestamp, current_test_title, baseline_test_title)
         url = self.replace_variables(url)
         image = grafana.render_image(url)
+        if image is None:
+            logging.warning(f'Graph rendering failed for graph "{graph_data.get("name")}" (id={graph_data.get("id")})')
 
         ai_graph_enabled = bool(graph_data.get("ai_graph_switch"))
         if self.ai_switch and ai_graph_enabled and graph_data.get("prompt_id"):
