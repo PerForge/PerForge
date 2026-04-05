@@ -18,6 +18,7 @@ Reports API endpoints.
 import json
 import logging
 import importlib
+import time
 import traceback
 from flask import Blueprint, request, send_file
 from app.backend.data_provider.data_provider import DataProvider
@@ -159,7 +160,7 @@ def get_test_data():
         return api_response(data={
             "tests": tests,
             "total": total,
-            "baseline_titles": titles,
+            "baseline_titles": sorted(titles, reverse=True),
             "page": page,
             "page_size": page_size,
             "search": search
@@ -360,8 +361,15 @@ def get_report_data():
 
         # Prefer bucket passed from UI; fallback to integration config
         bucket = data.get('bucket')
+        logging.info("[report] Received report request: test='%s', source_type='%s', source_id='%s'", test_title, source_type, source_id)
+
+        t_start = time.time()
+        logging.info("[report] Creating DataProvider for test='%s'", test_title)
         dp = DataProvider(project=project_id, source_type=source_type, id=source_id, bucket=bucket)
+        logging.info("[report] DataProvider created in %.2fs, starting data collection for test='%s'", time.time() - t_start, test_title)
+
         metrics, analysis, statistics, test_details, aggregated_table, summary, performance_status, overall_anomaly_windows, per_transaction_anomaly_windows = dp.collect_test_data_for_report_page(test_title=test_title)
+        logging.info("[report] Data collection complete for test='%s' — total elapsed: %.2fs", test_title, time.time() - t_start)
 
         response_data = {
             'data': metrics,
@@ -409,7 +417,7 @@ def get_report_data():
 
         return api_response(data=response_data)
     except Exception as e:
-        logging.error(f"Error getting report data: {str(e)}")
+        logging.error("[report] Error getting report data for test='%s': %s", data.get('test_title', 'unknown') if 'data' in dir() else 'unknown', str(e), exc_info=True)
         return api_response(
             message="Error retrieving report data",
             status=HTTP_BAD_REQUEST,
