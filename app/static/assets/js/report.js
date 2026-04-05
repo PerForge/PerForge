@@ -3,6 +3,11 @@
 const _isGatling = new URLSearchParams(window.location.search).get('listener') === 'gatling_influxdb_v2';
 const _pct90Label = _isGatling ? '95Pct' : '90Pct';
 
+// Tracks which percentile columns were hidden by updateTable() so that
+// initializeListJs() can build the correct List.js valueNames without
+// re-reading DOM state (avoids temporal coupling between the two functions).
+let _hiddenPctCols = new Set();
+
 async function fetchAndDisplayTestData(testTitle, sourceType, id, bucket) {
     const loadingScreen = document.getElementById('loading-screen');
     const loadingMessage = document.getElementById('loading-message');
@@ -200,6 +205,7 @@ function updateTable(aggregatedTable) {
     if (!tableContainer) return; // Exit if the table container doesn't exist
 
     const tbody = tableContainer.querySelector('.list');
+    const thead = tableContainer.querySelector('thead');
     const dataComponentCard = tableContainer.closest('.card'); // Find the closest parent with class 'card'
 
     // Clear previous content
@@ -211,6 +217,12 @@ function updateTable(aggregatedTable) {
         if (dataComponentCard) {
             dataComponentCard.style.display = 'none';
         }
+        // Reset all percentile header visibility so stale state doesn't carry over
+        _hiddenPctCols = new Set();
+        ['pct50', 'pct75', 'pct90'].forEach(col => {
+            const th = thead ? thead.querySelector(`th[data-sort="${col}"]`) : null;
+            if (th) th.style.display = '';
+        });
         return; // Exit the function
     }
 
@@ -219,7 +231,27 @@ function updateTable(aggregatedTable) {
         dataComponentCard.style.display = 'block';
     }
 
+    // Determine which percentile columns have no real data (all falsy: 0, null, undefined).
+    // Store in module-level variable so initializeListJs() can read it without re-querying the DOM.
+    const pctCols = ['pct50', 'pct75', 'pct90'];
+    _hiddenPctCols = new Set(
+        pctCols.filter(col => aggregatedTable.every(row => !row[col]))
+    );
+
+    // Show/hide header cells for percentile columns based on data availability
+    pctCols.forEach(col => {
+        const th = thead ? thead.querySelector(`th[data-sort="${col}"]`) : null;
+        if (th) th.style.display = _hiddenPctCols.has(col) ? 'none' : '';
+    });
+
+    // Adjust colspan for graph-container rows based on visible column count
+    const totalColumns = 9 - _hiddenPctCols.size;
+
     aggregatedTable.forEach(stat => {
+        const pct50Cell = _hiddenPctCols.has('pct50') ? '' : `<th class="pct50">${stat.pct50 ?? 'N/A'}</th>`;
+        const pct75Cell = _hiddenPctCols.has('pct75') ? '' : `<th class="pct75">${stat.pct75 ?? 'N/A'}</th>`;
+        const pct90Cell = _hiddenPctCols.has('pct90') ? '' : `<th class="pct90">${stat.pct90 ?? 'N/A'}</th>`;
+
         const row = `
         <tr class="stat-row" data-transaction="${stat.transaction}">
             <th class="label">
@@ -228,15 +260,15 @@ function updateTable(aggregatedTable) {
             </th>
             <th class="count">${stat.count ?? 'N/A'}</th>
             <th class="avg">${stat.avg ?? 'N/A'}</th>
-            <th class="pct50">${stat.pct50 ?? 'N/A'}</th>
-            <th class="pct75">${stat.pct75 ?? 'N/A'}</th>
-            <th class="pct90">${stat.pct90 ?? 'N/A'}</th>
+            ${pct50Cell}
+            ${pct75Cell}
+            ${pct90Cell}
             <th class="rpm">${typeof stat.rpm === 'number' ? stat.rpm.toFixed(2) : 'N/A'}</th>
             <th class="errors">${typeof stat.errors === 'number' ? stat.errors.toFixed(2) : 'N/A'}</th>
             <th class="stddev">${stat.stddev ?? 'N/A'}</th>
         </tr>
         <tr class="graph-container" id="graph-${stat.transaction}" style="display: none;" data-transaction="${stat.transaction}">
-            <td colspan="9">
+            <td colspan="${totalColumns}">
                 <div class="transaction-charts-row">
                     <div class="chart" id="chart-${stat.transaction}-throughput" style="height: 300px;"></div>
                     <div class="chart" id="chart-${stat.transaction}" style="height: 300px;"></div>
@@ -292,9 +324,17 @@ function getBadgeClass(status) {
 }
 
 function initializeListJs() {
-    const options = {
-        valueNames: ['label', 'count', 'avg', 'pct50', 'pct75', 'pct90', 'rpm', 'errors', 'stddev']
-    };
+    // Build valueNames including only visible percentile columns.
+    // Uses _hiddenPctCols (set by updateTable) instead of re-reading DOM state
+    // to avoid temporal coupling between the two functions.
+    const allValueNames = ['label', 'count', 'avg', 'pct50', 'pct75', 'pct90', 'rpm', 'errors', 'stddev'];
+    const pctNames = new Set(['pct50', 'pct75', 'pct90']);
+
+    const valueNames = allValueNames.filter(name =>
+        !pctNames.has(name) || !_hiddenPctCols.has(name)
+    );
+
+    const options = { valueNames };
 
     const tableList = new List('aggregated-table', options);
     tableList.on('updated', adjustGraphPosition);
