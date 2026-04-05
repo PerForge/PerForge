@@ -283,7 +283,9 @@ class AtlassianConfluence(Integration):
             # Capture each child element and its tail text
             for child in tree:
                 # Use method='xml' for XHTML compliance (proper self-closing tags, case-sensitivity)
-                fixed_parts.append(etree.tostring(child, encoding='unicode', method='xml'))
+                # with_tail=False prevents etree.tostring from including child.tail, which we
+                # append manually below — without this, tail text would be serialised twice.
+                fixed_parts.append(etree.tostring(child, encoding='unicode', method='xml', with_tail=False))
                 if child.tail:
                     fixed_parts.append(child.tail)
 
