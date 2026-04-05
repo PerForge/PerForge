@@ -135,6 +135,8 @@ class InfluxdbV18(DataExtractionBase):
         self.multi_node_tag = multi_node_tag if multi_node_tag and multi_node_tag.strip() else None
         self.custom_filter_tags = config.get("custom_filter_tags") or []
         self.start_time_offset_minutes = config.get("start_time_offset_minutes") or 0
+        # Reset the tag-validation cache whenever config is reloaded
+        self._multi_node_tag_valid: bool | None = None
 
         self.tmz_utc = tz.tzutc()
         self.tmz_human = tz.tzutc() if self.tmz == "UTC" else tz.gettz(self.tmz)
@@ -185,6 +187,47 @@ class InfluxdbV18(DataExtractionBase):
 
     def _empty_time_series(self) -> pd.DataFrame:
         return pd.DataFrame(columns=["value"]).set_index(pd.Index([], name="timestamp"))
+
+    def _validate_multi_node_tag(self, multi_node_tag: str) -> bool:
+        """Check whether *multi_node_tag* exists as a tag key in the measurement.
+
+        Uses a lightweight ``SHOW TAG VALUES`` query that relies on the tag index
+        and completes in milliseconds even on large datasets.  The result is
+        cached on the instance so the round-trip is only paid once per
+        ``InfluxdbV18`` lifetime.
+
+        Returns ``True`` when the tag has at least one value in the measurement,
+        ``False`` otherwise (tag absent, query error, or no connection).
+        """
+        if self._multi_node_tag_valid is not None:
+            return self._multi_node_tag_valid
+
+        if self.influxdb_connection is None:
+            self._multi_node_tag_valid = False
+            return False
+
+        measurement = getattr(self.queries, "measurement", "jmeter") if self.queries else "jmeter"
+        query = f'SHOW TAG VALUES FROM "{measurement}" WITH KEY = "{multi_node_tag}"'
+        try:
+            result = self.influxdb_connection.query(query)
+            has_values = any(True for _ in result.get_points())
+            if not has_values:
+                logging.warning(
+                    "InfluxdbV18: multi_node_tag '%s' was not found in measurement '%s'. "
+                    "Multi-node queries will fall back to single-node mode. "
+                    "Please verify the tag name in the InfluxDB 1.8 integration settings.",
+                    multi_node_tag, measurement
+                )
+            self._multi_node_tag_valid = has_values
+        except Exception as er:
+            logging.warning(
+                "InfluxdbV18: could not validate multi_node_tag '%s': %s. "
+                "Falling back to single-node query.",
+                multi_node_tag, er
+            )
+            self._multi_node_tag_valid = False
+
+        return bool(self._multi_node_tag_valid)
 
     def _query(self, query: str) -> List[Dict[str, Any]]:
         if self.influxdb_connection is None:
@@ -383,11 +426,16 @@ class InfluxdbV18(DataExtractionBase):
             # Use queries helper to get max_threads for this test
             # Only pass multi_node_tag for BackEndQueriesBase (JMeter listener)
             if isinstance(self.queries, BackEndQueriesBase):
+                effective_tag = (
+                    self.multi_node_tag
+                    if self.multi_node_tag and self._validate_multi_node_tag(self.multi_node_tag)
+                    else None
+                )
                 query = self.queries.get_test_log(
                     bucket="",
                     test_title_tag_name=tag_key,
                     test_title=title,
-                    multi_node_tag=self.multi_node_tag,
+                    multi_node_tag=effective_tag,
                 )
             else:
                 query = self.queries.get_test_log(
@@ -439,6 +487,12 @@ class InfluxdbV18(DataExtractionBase):
 
     def _fetch_aggregated_data(self, test_title: str, start: str, end: str) -> List[Dict[str, Any]]:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        raw_tag = getattr(self, "multi_node_tag", None)
+        effective_tag = (
+            raw_tag
+            if raw_tag and self._validate_multi_node_tag(raw_tag)
+            else None
+        )
         query = self.queries.get_aggregated_data(
             testTitle=test_title,
             start=start,
@@ -446,7 +500,7 @@ class InfluxdbV18(DataExtractionBase):
             bucket="",
             test_title_tag_name=tag_key,
             regex=getattr(self, "regex", ""),
-            multi_node_tag=getattr(self, "multi_node_tag", None),
+            multi_node_tag=effective_tag,
         )
         if self.influxdb_connection is None:
             logging.warning("InfluxdbV18: no active connection for aggregated data query: %s", query)
@@ -476,9 +530,11 @@ class InfluxdbV18(DataExtractionBase):
                     "errors": p.get("errors", 0),
                     "count": p.get("count", 0),
                     "avg": p.get("avg", 0),
-                    "pct50": p.get("pct50", 0),
-                    "pct75": p.get("pct75", 0),
-                    "pct90": p.get("pct90", 0),
+                    # Use None (not 0) for absent percentile fields so callers can
+                    # distinguish "not configured" from a genuine 0 ms value.
+                    "pct50": p.get("pct50"),
+                    "pct75": p.get("pct75"),
+                    "pct90": p.get("pct90"),
                     "stddev": p.get("stddev", 0),
                 }
             )
@@ -501,13 +557,22 @@ class InfluxdbV18(DataExtractionBase):
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
         # Only pass multi_node_tag for BackEndQueriesBase (JMeter listener)
         if isinstance(self.queries, BackEndQueriesBase):
+            # Guard: validate the tag before using the slow nested subquery.
+            # A wrong/absent tag forces InfluxDB into a full-measurement scan
+            # that can take 30+ minutes.  Fall back to single-node mode when
+            # the tag is not found.
+            effective_tag = (
+                self.multi_node_tag
+                if self.multi_node_tag and self._validate_multi_node_tag(self.multi_node_tag)
+                else None
+            )
             query = self.queries.get_active_threads(
                 testTitle=test_title,
                 start=start,
                 stop=end,
                 bucket="",
                 test_title_tag_name=tag_key,
-                multi_node_tag=self.multi_node_tag,
+                multi_node_tag=effective_tag,
             )
             return self._query_df(query, "value", agg_func="sum")
         return pd.DataFrame()
@@ -781,13 +846,18 @@ class InfluxdbV18(DataExtractionBase):
 
     def _fetch_max_active_users_stats(self, test_title: str, start: str, end: str) -> int:
         tag_key = getattr(self, "test_title_tag_name", "testTitle")
+        effective_tag = (
+            self.multi_node_tag
+            if self.multi_node_tag and self._validate_multi_node_tag(self.multi_node_tag)
+            else None
+        )
         query = self.queries.get_max_active_users_stats(
             testTitle=test_title,
             start=start,
             stop=end,
             bucket="",
             test_title_tag_name=tag_key,
-            multi_node_tag=self.multi_node_tag,
+            multi_node_tag=effective_tag,
         )
         points = self._query(query)
         if points:
@@ -923,10 +993,12 @@ class InfluxdbV18(DataExtractionBase):
             median_val = float(median_points[0].get("value") or 0.0) if median_points else 0.0
 
             p75_points = self._query(queries_dict["p75"])
-            p75_val = float(p75_points[0].get("value") or 0.0) if p75_points else 0.0
+            _p75 = p75_points[0].get("value") if p75_points else None
+            p75_val = float(_p75) if _p75 is not None else None
 
             p90_points = self._query(queries_dict["p90"])
-            p90_val = float(p90_points[0].get("value") or 0.0) if p90_points else 0.0
+            _p90 = p90_points[0].get("value") if p90_points else None
+            p90_val = float(_p90) if _p90 is not None else None
 
             total_points = self._query(queries_dict["total"])
             total_val = float(total_points[0].get("value") or 0.0) if total_points else 0.0
@@ -942,15 +1014,20 @@ class InfluxdbV18(DataExtractionBase):
 
             error_pct = self.get_errors_pct_stats(test_title=test_title, start=start, end=end)
 
-            return [
+            rows = [
                 {"Metric": "Average", "Value": round(avg_val, 2)},
                 {"Metric": "Median", "Value": round(median_val, 2)},
-                {"Metric": "75%-tile", "Value": round(p75_val, 2)},
-                {"Metric": "90%-tile", "Value": round(p90_val, 2)},
+            ]
+            if p75_val is not None:
+                rows.append({"Metric": "75%-tile", "Value": round(p75_val, 2)})
+            if p90_val is not None:
+                rows.append({"Metric": "90%-tile", "Value": round(p90_val, 2)})
+            rows += [
                 {"Metric": "Total requests", "Value": int(total_val)},
                 {"Metric": "RPS", "Value": round(rps_val, 2)},
                 {"Metric": "Error %", "Value": round(error_pct, 2)},
             ]
+            return rows
         else:
             # Frontend (Sitespeed) overview
             records = []
