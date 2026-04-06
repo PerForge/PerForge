@@ -30,6 +30,9 @@ from app.backend.integrations.data_sources.base_extraction import DataExtraction
 from app.backend.data_provider.test_data import BaseTestData, BackendTestData, FrontendTestData, MetricsTable, TestDataFactory
 from app.backend.data_provider.data_analysis.constants import METRIC_DISPLAY_NAMES
 
+import time
+
+
 class DataProvider:
     """
     DataProvider class manages data extraction, transformation, and analysis for performance tests.
@@ -443,7 +446,11 @@ class DataProvider:
         standard_metrics = self.initialize_metrics()
 
         # Fetch and merge the data for all standard metrics
-        dataframes = {metric: self.fetch_metric(metric, details["func"], test_obj.test_title, test_obj.start_time_iso, test_obj.end_time_iso) for metric, details in standard_metrics.items()}
+        dataframes = {}
+        for metric, details in standard_metrics.items():
+            t_q = time.time()
+            dataframes[metric] = self.fetch_metric(metric, details["func"], test_obj.test_title, test_obj.start_time_iso, test_obj.end_time_iso)
+            logging.debug("[ml] fetched '%s' in %.2fs (%d rows)", metric, time.time() - t_q, len(dataframes[metric]))
 
         # NaN values to 0
         dataframes = {metric: self.df_nan_to_zero(df) for metric, df in dataframes.items()}
@@ -624,8 +631,18 @@ class DataProvider:
         Args:
             test_title: Name/identifier of the test to analyze
         """
+        t0 = time.time()
+        logging.info("[report] [1/5] Fetching InfluxDB test data started — test='%s'", test_title)
         test_obj: BaseTestData = self.collect_test_obj(test_title=test_title)
+        logging.info("[report] [1/5] Fetching InfluxDB test data finished in %.2fs — test='%s' (start=%s, end=%s)",
+                     time.time() - t0, test_title,
+                     getattr(test_obj, 'start_time_iso', 'N/A'),
+                     getattr(test_obj, 'end_time_iso', 'N/A'))
+
+        t1 = time.time()
+        logging.info("[report] [2/5] ML analysis started — test='%s'", test_title)
         metrics = self.get_ml_analysis_to_test_obj(test_obj=test_obj)
+        logging.info("[report] [2/5] ML analysis finished in %.2fs — test='%s'", time.time() - t1, test_title)
         # Collect overall anomaly windows from the anomaly detection engine for
         # visualization (e.g. shaded bands on charts).
         overall_anomaly_windows: Dict[str, List[Dict[str, str]]] = {}
@@ -654,30 +671,45 @@ class DataProvider:
         per_transaction_anomaly_windows = self._collect_per_transaction_anomaly_windows(test_obj)
 
         # Fetch additional response time per request data
+        t2 = time.time()
+        logging.info("[report] [3/5] Fetching per-request time series started — test='%s'", test_title)
         avgResponseTimePerReq = self._get_per_req_series(test_obj, 'rt_avg', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["avgResponseTimePerReq"] = self.transform_to_json(avgResponseTimePerReq)
+        logging.info("[report]        avg response time per req fetched (%.2fs)", time.time() - t2)
 
+        t2b = time.time()
         medianRespTimePerReq = self._get_per_req_series(test_obj, 'rt_median', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["medianResponseTimePerReq"] = self.transform_to_json(medianRespTimePerReq)
+        logging.info("[report]        median response time per req fetched (%.2fs)", time.time() - t2b)
 
+        t2c = time.time()
         pctRespTimePerReq = self._get_per_req_series(test_obj, 'rt_p90', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["pctResponseTimePerReq"] = self.transform_to_json(pctRespTimePerReq)
+        logging.info("[report]        pct90 response time per req fetched (%.2fs)", time.time() - t2c)
 
+        t2d = time.time()
         throughputPerReq = self._get_per_req_series(test_obj, 'rps', test_title, test_obj.start_time_iso, test_obj.end_time_iso)
         metrics["throughputPerReq"] = self.transform_to_json(throughputPerReq)
+        logging.info("[report]        throughput per req fetched (%.2fs)", time.time() - t2d)
+        logging.info("[report] [3/5] Per-request time series finished in %.2fs — test='%s'", time.time() - t2, test_title)
 
         # Collect the aggregated table data (backend tests only)
         is_backend = isinstance(test_obj, BackendTestData)
         if is_backend:
+            t3 = time.time()
+            logging.info("[report] [4/5] Fetching aggregated table started — test='%s'", test_title)
             metrics_table: MetricsTable = test_obj.get_table('aggregated_data')
             if metrics_table:
                 test_obj.aggregated_table = metrics_table.format_metrics()
-
-
+            logging.info("[report] [4/5] Fetching aggregated table finished in %.2fs — test='%s'", time.time() - t3, test_title)
 
         # Collect the outputs
+        t4 = time.time()
+        logging.info("[report] [5/5] Collecting statistics and test details — test='%s'", test_title)
         statistics = self.get_statistics(test_title=test_title, test_obj=test_obj)
         test_details = self.get_test_details(test_title=test_title, test_obj=test_obj)
+        logging.info("[report] [5/5] Statistics and details collected in %.2fs — test='%s'", time.time() - t4, test_title)
+        logging.info("[report] All phases complete — test='%s', total: %.2fs", test_title, time.time() - t0)
         return (
             metrics,
             test_obj.ml_anomalies,

@@ -207,7 +207,6 @@ class SmtpMailReport(ReportingBase):
 
                 test_title = test.get('test_title')
                 baseline_test_title = test.get('baseline_test_title')
-                self.collect_data(test_title, baseline_test_title)
                 additional_context = test.get('additional_context')
                 self.collect_data(test_title, baseline_test_title, additional_context)
 

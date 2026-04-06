@@ -128,11 +128,15 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         )
         if multi_node_tag:
             # When multi-node tag is set, sum max threads across all nodes
-            # First get max per node per time window, then sum across nodes
+            # First get max per node per time window, then sum across nodes.
+            # NOTE: the outer GROUP BY must repeat the time bounds to prevent
+            # fill(0) from expanding to the full measurement time range
+            # (which can generate hundreds of thousands of spurious zero rows).
             return (
                 f'SELECT SUM("max_per_node") AS "value" FROM '
                 f'(SELECT MAX("maxAT") AS "max_per_node" FROM "{self.measurement}" '
                 f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "{multi_node_tag}" fill(0)) '
+                f'WHERE time >= \'{start}\' AND time <= \'{stop}\' '
                 f'GROUP BY time({self.granularity_seconds}s) fill(0)'
             )
         else:
@@ -403,15 +407,18 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
                 f'SUM("sum_count_error") AS "errors", '
                 f'SUM("sum_count") AS "count", '
                 f'MEAN("mean_avg") AS "avg", '
-                f'PERCENTILE("mean_avg", 50) AS "pct50", '
-                f'PERCENTILE("mean_avg", 75) AS "pct75", '
-                f'PERCENTILE("mean_avg", 90) AS "pct90", '
+                f'MEAN("mean_pct50") AS "pct50", '
+                f'MEAN("mean_pct75") AS "pct75", '
+                f'MEAN("mean_pct90") AS "pct90", '
                 f'STDDEV("mean_avg") AS "stddev" '
                 f'FROM ('
                 f'SELECT '
                 f'SUM("count") AS "sum_count", '
                 f'SUM("countError") AS "sum_count_error", '
-                f'MEAN("avg") AS "mean_avg" '
+                f'MEAN("avg") AS "mean_avg", '
+                f'MEAN("pct50.0") AS "mean_pct50", '
+                f'MEAN("pct75.0") AS "mean_pct75", '
+                f'MEAN("pct90.0") AS "mean_pct90" '
                 f'FROM "{self.measurement}" '
                 f'WHERE {where} '
                 f'GROUP BY time(60s), "transaction"'
@@ -423,9 +430,9 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
             f'SUM("countError") AS "errors", '
             f'SUM("count") AS "count", '
             f'MEAN("avg") AS "avg", '
-            f'PERCENTILE("avg", 50) AS "pct50", '
-            f'PERCENTILE("avg", 75) AS "pct75", '
-            f'PERCENTILE("avg", 90) AS "pct90", '
+            f'MEAN("pct50.0") AS "pct50", '
+            f'MEAN("pct75.0") AS "pct75", '
+            f'MEAN("pct90.0") AS "pct90", '
             f'STDDEV("avg") AS "stddev" '
             f'FROM "{self.measurement}" '
             f'WHERE {where} '

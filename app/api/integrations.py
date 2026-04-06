@@ -625,6 +625,7 @@ def ping_influxdb():
         token_id = data.get('token_id')
         listener = data.get('listener') or ""
         source_type = data.get('source_type') or ""
+        multi_node_tag = (data.get('multi_node_tag') or "").strip() or None
 
         if not all([url, org_id, bucket]) or (not token and not token_id):
             return api_response(
@@ -690,6 +691,23 @@ def ping_influxdb():
                     else:
                         if bucket not in names:
                             raise RuntimeError(f"Database '{bucket}' not found for provided credentials")
+
+                    # Validate multi_node_tag when provided: warn the user immediately
+                    # if the tag is absent so they don't discover the issue at report time.
+                    ping_warnings = []
+                    if multi_node_tag:
+                        try:
+                            tag_query = f'SHOW TAG VALUES FROM "jmeter" WITH KEY = "{multi_node_tag}"'
+                            tag_result = client18.query(tag_query)
+                            has_tag = any(True for _ in tag_result.get_points())
+                            if not has_tag:
+                                ping_warnings.append(
+                                    f"Multi Node Tag '{multi_node_tag}' was not found in the "
+                                    f"'jmeter' measurement. Queries will fall back to single-node "
+                                    f"mode. Please verify the tag name."
+                                )
+                        except Exception as te:
+                            logging.warning("Could not validate multi_node_tag during ping: %s", te)
                 finally:
                     if client18 is not None:
                         try:
@@ -697,7 +715,8 @@ def ping_influxdb():
                         except Exception:
                             pass
 
-                return api_response(message="Ping successful")
+                resp_data = {"warnings": ping_warnings} if ping_warnings else None
+                return api_response(message="Ping successful", data=resp_data)
             else:
                 client = InfluxDBClient(
                     url=url,

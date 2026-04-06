@@ -553,7 +553,9 @@
                 org_id: orgInput.value,
                 bucket: bucketInput.value,
                 bucket_regex_bool: document.getElementById('bucket_regex_bool').checked,
-                listener: listenerInput ? listenerInput.value : null
+                listener: listenerInput ? listenerInput.value : null,
+                source_type: document.getElementById('source_type') ? document.getElementById('source_type').value : null,
+                multi_node_tag: (document.getElementById('multi_node_tag')?.value || '').trim() || null
             };
 
             if (!tokenSelect.value) {
@@ -586,7 +588,12 @@
                 .then(response => response.json().then(body => ({ status: response.status, body })))
                 .then(({ status, body }) => {
                     if (status >= 200 && status < 300) {
-                        showFlashMessage('Connection successful.', 'success');
+                        const warnings = body?.data?.warnings;
+                        if (warnings && warnings.length > 0) {
+                            showFlashMessage('Connection successful. Warning: ' + warnings.join(' '), 'warning');
+                        } else {
+                            showFlashMessage('Connection successful.', 'success');
+                        }
                     } else {
                         const errorMessage = body?.errors?.[0]?.message || body.message || 'Ping failed.';
                         showFlashMessage(errorMessage, 'error');
