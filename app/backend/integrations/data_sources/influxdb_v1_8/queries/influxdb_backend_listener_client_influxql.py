@@ -128,11 +128,15 @@ class InfluxDBBackendListenerClientInfluxQL(BackEndQueriesBase):
         )
         if multi_node_tag:
             # When multi-node tag is set, sum max threads across all nodes
-            # First get max per node per time window, then sum across nodes
+            # First get max per node per time window, then sum across nodes.
+            # NOTE: the outer GROUP BY must repeat the time bounds to prevent
+            # fill(0) from expanding to the full measurement time range
+            # (which can generate hundreds of thousands of spurious zero rows).
             return (
                 f'SELECT SUM("max_per_node") AS "value" FROM '
                 f'(SELECT MAX("maxAT") AS "max_per_node" FROM "{self.measurement}" '
                 f'WHERE {where} GROUP BY time({self.granularity_seconds}s), "{multi_node_tag}" fill(0)) '
+                f'WHERE time >= \'{start}\' AND time <= \'{stop}\' '
                 f'GROUP BY time({self.granularity_seconds}s) fill(0)'
             )
         else:

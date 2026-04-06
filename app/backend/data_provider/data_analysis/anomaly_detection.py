@@ -609,7 +609,6 @@ class AnomalyDetectionEngine:
         """
         # Analyze data periods
         fixed_load_period, ramp_up_period, is_fixed_load = self.filter_ramp_up_and_down_periods(df=merged_df.copy(), metric="overalUsers")
-
         # Only analyze ramp-up throughput if the metric exists
         if 'overalThroughput' in ramp_up_period.columns:
             ramp_up_period = self.detect_anomalies(ramp_up_period, metric="overalThroughput", period_type='ramp_up')
