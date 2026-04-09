@@ -557,6 +557,10 @@ class ReportingBase:
             'duration': 'duration',
             'start_time': 'start_time_human',
             'end_time': 'end_time_human',
+            'start_time_timestamp': 'start_time_timestamp',
+            'end_time_timestamp': 'end_time_timestamp',
+            'start_time_iso': 'start_time_iso',
+            'end_time_iso': 'end_time_iso',
             'test_type': 'test_type',
             'custom_vars': 'custom_vars'
         }
