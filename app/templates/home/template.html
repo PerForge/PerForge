@@ -467,6 +467,8 @@
                                 { name: '${aggregated_data_table_}', description: 'Aggregated metrics table for backend tests. No aggregation type needed.' },
                                 { name: '${top_slowest_requests}', description: 'Top N slowest transactions/pages from aggregated data, sorted by the configured metric. Backend: sorts aggregated_data by pct90 (default). Frontend: sorts the configured table by fullyLoaded (default). Count, metric, and table are configurable in Reporting Table Settings.' },
                                 { name: '${top_slowest_requests_N_metric}', description: 'Parameterized form, e.g. ${top_slowest_requests_10_avg} — overrides count and metric inline without changing settings. Works for both backend and frontend tests.' },
+                                { name: '${top_degraded_requests}', description: 'Top N most degraded transactions vs baseline, sorted by degradation percentage (default). Output table shows: Transaction, Current <metric>, Baseline <metric>, Diff, Diff %. Requires a comparison (baseline) test — silently skipped if none is selected. Count, metric, sort order, and min threshold are configurable in Reporting Table Settings.' },
+                                { name: '${top_degraded_requests_N_metric}', description: 'Parameterized form, e.g. ${top_degraded_requests_10_pct90} — overrides count and metric inline without changing settings. Requires a comparison (baseline) test.' },
                                 { name: '${current_max_active_users}', description: 'Max active users for the current test.' },
                                 { name: '${current_errors_pct_stats}', description: 'Error percentage for the current test.' },
                                 { name: '${current_median_response_time_stats}', description: 'Median response time for the current test.' },
@@ -484,6 +486,8 @@
                             frontendTables: [
                                 { name: '${top_slowest_requests}', description: 'Top N slowest pages sorted by the configured frontend metric (default: fullyLoaded from timings_fully_loaded). Count, metric, and source table are configurable in Reporting Table Settings.' },
                                 { name: '${top_slowest_requests_N_metric}', description: 'Parameterized form, e.g. ${top_slowest_requests_10_LCP} — overrides count and metric inline without changing settings.' },
+                                { name: '${top_degraded_requests}', description: 'Top N most degraded pages vs baseline sorted by degradation percentage (default). Output shows: Page, Current <metric>, Baseline <metric>, Diff, Diff %. Requires a comparison (baseline) test. Configurable in Reporting Table Settings.' },
+                                { name: '${top_degraded_requests_N_metric}', description: 'Parameterized form, e.g. ${top_degraded_requests_10_LCP} — overrides count and metric inline. Requires a comparison (baseline) test.' },
                                 { name: '${google_web_vitals_table_median}', description: 'Web Vitals metrics (LCP, CLS, FID) with median aggregation.' },
                                 { name: '${timings_fully_loaded_table_median}', description: 'Page fully loaded timings with median aggregation.' },
                                 { name: '${timings_page_timings_table_median}', description: 'Page timings metrics with median aggregation.' },
@@ -918,3 +922,4 @@
         </script>
     </main>
 {% endblock content %}
+

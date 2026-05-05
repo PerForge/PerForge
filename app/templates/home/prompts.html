@@ -374,6 +374,14 @@
                         <code>${top_slowest_requests_N_metric}</code>
                         <span class="tpl-var-chip-desc">Parameterized form, e.g. ${top_slowest_requests_10_avg}</span>
                       </div>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${top_degraded_requests}')">
+                        <code>${top_degraded_requests}</code>
+                        <span class="tpl-var-chip-desc">Top N most degraded transactions vs baseline (requires comparison). Shows: Transaction, Current, Baseline, Diff, Diff %</span>
+                      </div>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${top_degraded_requests_N_metric}')">
+                        <code>${top_degraded_requests_N_metric}</code>
+                        <span class="tpl-var-chip-desc">Parameterized form, e.g. ${top_degraded_requests_10_pct90}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -891,3 +899,4 @@
     </script>
 </main>
 {% endblock content %}
+

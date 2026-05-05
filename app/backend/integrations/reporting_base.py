@@ -212,6 +212,60 @@ class ReportingBase:
                 except Exception as e:
                     logging.warning(f"Error computing top_slowest_requests for variable '{var}': {e}")
 
+            # Check for top_degraded_requests variable.
+            # Supports both plain ${top_degraded_requests} and parameterized
+            # ${top_degraded_requests_N_metric} (e.g. ${top_degraded_requests_10_pct90}).
+            # Requires a baseline (comparison) test — silently skipped if none is set.
+            top_degraded_match = re.match(
+                r"^top_degraded_requests(?:_(\d+))?(?:_([a-zA-Z0-9]+))?$", var
+            )
+            if top_degraded_match and self.baseline_test_obj is not None and hasattr(self.current_test_obj, "get_table"):
+                try:
+                    rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                    # Count: inline param overrides setting
+                    if top_degraded_match.group(1) is not None:
+                        count = int(top_degraded_match.group(1))
+                    else:
+                        count = int(rt.get('top_degraded_count', 5))
+                    exclude_all = bool(rt.get('top_degraded_exclude_all', True))
+                    min_pct = float(rt.get('top_degraded_min_pct', 0.0))
+                    sort_by = rt.get('top_degraded_sort_by', 'diff_pct')
+
+                    is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+                    if is_frontend:
+                        table_name = rt.get('top_degraded_frontend_table', 'timings_fully_loaded')
+                        default_metric = rt.get('top_degraded_frontend_metric', 'fullyLoaded')
+                    else:
+                        table_name = 'aggregated_data'
+                        default_metric = rt.get('top_degraded_metric', 'pct90')
+
+                    # Metric: inline param overrides setting
+                    metric = top_degraded_match.group(2) if top_degraded_match.group(2) is not None else default_metric
+
+                    source_table: MetricsTable = self.current_test_obj.get_table(table_name)
+                    if source_table is not None:
+                        # Ensure baseline is applied to the table
+                        if not source_table.has_baseline():
+                            try:
+                                baseline_table: MetricsTable = self.baseline_test_obj.get_table(table_name)
+                                if baseline_table is not None and baseline_table.metrics:
+                                    source_table.set_baseline_metrics(baseline_table.metrics)
+                            except Exception:
+                                pass
+
+                        degraded_rows = source_table.get_top_n_degraded(
+                            metric_name=metric,
+                            n=count,
+                            exclude_all=exclude_all,
+                            min_pct=min_pct,
+                            sort_by=sort_by
+                        )
+                        value = self.format_table(degraded_rows)
+                        if value:
+                            text = text.replace("${" + var + "}", value)
+                except Exception as e:
+                    logging.warning(f"Error computing top_degraded_requests for variable '{var}': {e}")
+
         return text
 
     def _ensure_transaction_status_table(self):
@@ -732,3 +786,4 @@ class ReportingBase:
 
         # Baseline application for tables is deferred to analyze_template() and only
         # executed when aggregated data analysis is enabled, to avoid unnecessary loading.
+

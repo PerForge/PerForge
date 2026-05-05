@@ -420,6 +420,62 @@ REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
             'timings_main_document → dns, connect, serverResponseTime, pageDownloadTime. '
             'cpu_long_tasks → durations, lastLongTask, totalBlockingTime, totalDuration.'
         )
+    },
+    'top_degraded_count': {
+        'value': 5,
+        'type': 'int',
+        'min': 1,
+        'max': 50,
+        'description': 'Number of top degraded transactions to include in the ${top_degraded_requests} template variable. Only available when a comparison (baseline) test is selected.'
+    },
+    'top_degraded_metric': {
+        'value': 'pct90',
+        'type': 'string',
+        'options': ['avg', 'pct50', 'pct75', 'pct90', 'pct95', 'pct99', 'max'],
+        'description': 'Metric used to rank and display degradation for the ${top_degraded_requests} variable. The output table shows Current <metric>, Baseline <metric>, Diff, and Diff % columns for this metric only.'
+    },
+    'top_degraded_exclude_all': {
+        'value': True,
+        'type': 'bool',
+        'description': 'When enabled, aggregate-total rows (e.g. "all", "Total") are excluded from the ${top_degraded_requests} variable so only individual transactions are ranked.'
+    },
+    'top_degraded_min_pct': {
+        'value': 0.0,
+        'type': 'float',
+        'min': 0.0,
+        'description': 'Minimum degradation percentage required for a transaction to appear in ${top_degraded_requests}. Set to 0 to include any positive degradation; set to e.g. 10 to show only transactions that regressed by at least 10%.'
+    },
+    'top_degraded_sort_by': {
+        'value': 'diff_pct',
+        'type': 'string',
+        'options': ['diff_pct', 'diff'],
+        'description': 'Column to sort degraded transactions by. "diff_pct" sorts by relative percentage change (recommended — normalises across transactions with different baseline values). "diff" sorts by absolute difference.'
+    },
+    'top_degraded_frontend_table': {
+        'value': 'timings_fully_loaded',
+        'type': 'string',
+        'options': ['timings_fully_loaded', 'timings_page_timings', 'timings_main_document', 'google_web_vitals', 'cpu_long_tasks'],
+        'description': 'Table to source data from for the ${top_degraded_requests} variable when running a frontend (SiteSpeed) test.'
+    },
+    'top_degraded_frontend_metric': {
+        'value': 'fullyLoaded',
+        'type': 'string',
+        'options': [
+            'fullyLoaded',
+            'LCP', 'FCP', 'CLS', 'FID', 'TBT', 'TTFB',
+            'domInteractive', 'domContentLoadedTime', 'loadTime',
+            'dns', 'connect', 'serverResponseTime', 'pageDownloadTime',
+            'durations', 'lastLongTask', 'totalBlockingTime', 'totalDuration'
+        ],
+        'description': (
+            'Metric to rank and display for ${top_degraded_requests} in frontend tests. '
+            'Must match a column in the chosen table. '
+            'timings_fully_loaded → fullyLoaded. '
+            'google_web_vitals → LCP, FCP, CLS, FID, TBT, TTFB. '
+            'timings_page_timings → domInteractive, domContentLoadedTime, loadTime. '
+            'timings_main_document → dns, connect, serverResponseTime, pageDownloadTime. '
+            'cpu_long_tasks → durations, lastLongTask, totalBlockingTime, totalDuration.'
+        )
     }
 }
 
@@ -465,3 +521,4 @@ def get_defaults_for_category(category: str) -> Dict[str, Dict[str, Any]]:
     """
     all_defaults = get_all_defaults()
     return all_defaults.get(category, {})
+
