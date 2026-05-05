@@ -171,6 +171,47 @@ class ReportingBase:
                 # Set flag indicating status table is needed
                 self._needs_transaction_status_table = True
 
+            # Check for top_slowest_requests variable.
+            # Supports both plain ${top_slowest_requests} and parameterized
+            # ${top_slowest_requests_N_metric} (e.g. ${top_slowest_requests_10_avg}).
+            # Works for both backend (aggregated_data) and frontend (configurable table).
+            top_slowest_match = re.match(
+                r"^top_slowest_requests(?:_(\d+))?(?:_([a-zA-Z0-9]+))?$", var
+            )
+            if top_slowest_match and hasattr(self.current_test_obj, "get_table"):
+                try:
+                    rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                    # Count: inline param overrides setting
+                    if top_slowest_match.group(1) is not None:
+                        count = int(top_slowest_match.group(1))
+                    else:
+                        count = int(rt.get('top_slowest_count', 5))
+                    exclude_all = bool(rt.get('top_slowest_exclude_all', True))
+
+                    is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+                    if is_frontend:
+                        table_name = rt.get('top_slowest_frontend_table', 'timings_fully_loaded')
+                        default_metric = rt.get('top_slowest_frontend_metric', 'fullyLoaded')
+                    else:
+                        table_name = 'aggregated_data'
+                        default_metric = rt.get('top_slowest_metric', 'pct90')
+
+                    # Metric: inline param overrides setting
+                    metric = top_slowest_match.group(2) if top_slowest_match.group(2) is not None else default_metric
+
+                    source_table: MetricsTable = self.current_test_obj.get_table(table_name)
+                    if source_table is not None:
+                        top_rows = source_table.get_top_n_slowest(
+                            metric_name=metric,
+                            n=count,
+                            exclude_all=exclude_all
+                        )
+                        value = self.format_table(top_rows)
+                        if value:
+                            text = text.replace("${" + var + "}", value)
+                except Exception as e:
+                    logging.warning(f"Error computing top_slowest_requests for variable '{var}': {e}")
+
         return text
 
     def _ensure_transaction_status_table(self):

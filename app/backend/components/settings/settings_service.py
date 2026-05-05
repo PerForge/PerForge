@@ -53,7 +53,7 @@ class SettingsService:
 
         Args:
             project_id: ID of the project
-            category: Optional category filter ('ml_analysis', 'transaction_status', 'data_aggregation')
+            category: Optional category filter ('ml_analysis', 'transaction_status', 'data_query', 'reporting_table')
 
         Returns:
             Dictionary of settings {key: value} or {category: {key: value}} if no category specified

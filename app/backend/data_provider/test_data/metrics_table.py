@@ -444,6 +444,59 @@ class MetricsTable:
             result.append(row)
         return result
 
+    # Patterns that identify aggregate "all transactions" rows to be excluded
+    _ALL_TRANSACTIONS_PATTERNS = {'all', 'total', 'all transactions', 'all requests', 'overall'}
+
+    def get_top_n_slowest(
+        self,
+        metric_name: str = 'pct90',
+        n: int = 5,
+        exclude_all: bool = True
+    ) -> List[Dict[str, Any]]:
+        """Return the top-N transaction rows sorted descending by *metric_name*.
+
+        Args:
+            metric_name: The metric column to rank by (e.g. 'pct90', 'avg').
+            n: Number of rows to return.
+            exclude_all: When True, rows whose scope matches a known
+                aggregate-total pattern (e.g. "all", "Total") are skipped.
+
+        Returns:
+            List of row dicts in the same format as :meth:`format_metrics`,
+            ordered from slowest to fastest (descending by *metric_name*).
+            If the requested metric is not present in any row, the full
+            unordered result is returned as a fallback.
+        """
+        # Group all metrics by scope
+        scope_groups: Dict[str, Dict[str, Any]] = {}
+        for metric in self.metrics:
+            scope = metric.scope or 'unknown'
+            if scope not in scope_groups:
+                scope_groups[scope] = {}
+            scope_groups[scope][metric.name] = metric
+
+        rows: List[Dict[str, Any]] = []
+        for scope, metrics_dict in scope_groups.items():
+            if exclude_all and scope.strip().lower() in self._ALL_TRANSACTIONS_PATTERNS:
+                continue
+            row: Dict[str, Any] = {self.scope_column_name: scope}
+            for mname, metric in metrics_dict.items():
+                row[mname] = round(metric.value, 2) if isinstance(metric.value, float) else metric.value
+            rows.append(row)
+
+        # Sort descending by the chosen metric; rows missing the metric sort last
+        def _sort_key(row: Dict[str, Any]) -> float:
+            val = row.get(metric_name)
+            if val is None:
+                return float('-inf')
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return float('-inf')
+
+        rows.sort(key=_sort_key, reverse=True)
+        return rows[:n]
+
     def set_baseline_metrics(self, baseline_metrics: List[Metric]) -> None:
         """Set baseline values from a list of Metric objects
 

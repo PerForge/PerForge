@@ -111,7 +111,8 @@ class CreateProjectSettingsTable(BaseMigration):
                         'description': description
                     })
 
-            log.info(f"  Prepared {len(all_defaults['ml_analysis']) + len(all_defaults['transaction_status']) + len(all_defaults['data_aggregation'])} settings for project '{project_name}' (ID: {project_id})")
+            setting_count = sum(len(v) for v in all_defaults.values())
+            log.info(f"  Prepared {setting_count} settings for project '{project_name}' (ID: {project_id})")
 
         # Batch insert all settings
         if settings_to_insert:

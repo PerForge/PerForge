@@ -376,6 +376,50 @@ REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'value': 'Diff %',
         'type': 'string',
         'description': 'Suffix label for percentage difference columns. Example result: "Avg RT (Diff %)".'
+    },
+    'top_slowest_count': {
+        'value': 5,
+        'type': 'int',
+        'min': 1,
+        'max': 50,
+        'description': 'Number of top slowest transactions to include in the ${top_slowest_requests} template variable. The variable inserts a pre-sorted table of the N transactions with the highest value for the chosen metric.'
+    },
+    'top_slowest_metric': {
+        'value': 'pct90',
+        'type': 'string',
+        'options': ['avg', 'pct50', 'pct75', 'pct90', 'pct95', 'pct99', 'max'],
+        'description': 'Metric used to rank transactions for the ${top_slowest_requests} variable. Transactions are sorted descending by this metric and the top N are returned.'
+    },
+    'top_slowest_exclude_all': {
+        'value': True,
+        'type': 'bool',
+        'description': 'When enabled, rows whose transaction name is an aggregate total (e.g. "all", "Total", "ALL") are excluded from the ${top_slowest_requests} variable so that only individual transactions are ranked.'
+    },
+    'top_slowest_frontend_table': {
+        'value': 'timings_fully_loaded',
+        'type': 'string',
+        'options': ['timings_fully_loaded', 'timings_page_timings', 'timings_main_document', 'google_web_vitals', 'cpu_long_tasks'],
+        'description': 'Table to source data from for the ${top_slowest_requests} variable when running a frontend (SiteSpeed) test.'
+    },
+    'top_slowest_frontend_metric': {
+        'value': 'fullyLoaded',
+        'type': 'string',
+        'options': [
+            'fullyLoaded',
+            'LCP', 'FCP', 'CLS', 'FID', 'TBT', 'TTFB',
+            'domInteractive', 'domContentLoadedTime', 'loadTime',
+            'dns', 'connect', 'serverResponseTime', 'pageDownloadTime',
+            'durations', 'lastLongTask', 'totalBlockingTime', 'totalDuration'
+        ],
+        'description': (
+            'Metric to sort by for ${top_slowest_requests} in frontend tests. '
+            'Must match a column in the chosen table. '
+            'timings_fully_loaded → fullyLoaded. '
+            'google_web_vitals → LCP, FCP, CLS, FID, TBT, TTFB. '
+            'timings_page_timings → domInteractive, domContentLoadedTime, loadTime. '
+            'timings_main_document → dns, connect, serverResponseTime, pageDownloadTime. '
+            'cpu_long_tasks → durations, lastLongTask, totalBlockingTime, totalDuration.'
+        )
     }
 }
 

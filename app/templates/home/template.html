@@ -465,6 +465,8 @@
                             ],
                             backendVariables: [
                                 { name: '${aggregated_data_table_}', description: 'Aggregated metrics table for backend tests. No aggregation type needed.' },
+                                { name: '${top_slowest_requests}', description: 'Top N slowest transactions/pages from aggregated data, sorted by the configured metric. Backend: sorts aggregated_data by pct90 (default). Frontend: sorts the configured table by fullyLoaded (default). Count, metric, and table are configurable in Reporting Table Settings.' },
+                                { name: '${top_slowest_requests_N_metric}', description: 'Parameterized form, e.g. ${top_slowest_requests_10_avg} — overrides count and metric inline without changing settings. Works for both backend and frontend tests.' },
                                 { name: '${current_max_active_users}', description: 'Max active users for the current test.' },
                                 { name: '${current_errors_pct_stats}', description: 'Error percentage for the current test.' },
                                 { name: '${current_median_response_time_stats}', description: 'Median response time for the current test.' },
