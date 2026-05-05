@@ -4,6 +4,14 @@
 {% block stylesheets %}
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
+<style>
+    /* Dashboard default toggle button — star icon hides/shows with checked state */
+    .dashboard-default-btn .icon-on { display: none; }
+    .dashboard-default-btn .icon-off { display: inline-block; }
+    .btn-check:checked + .dashboard-default-btn .icon-on  { display: inline-block; }
+    .btn-check:checked + .dashboard-default-btn .icon-off { display: none; }
+    .btn-check:checked + .dashboard-default-btn { background-color: var(--bs-success); border-color: var(--bs-success); color: #fff; }
+</style>
 {% endblock stylesheets %}
 {% block content %}
     <main>
@@ -124,14 +132,20 @@
                                         <div class="col-12">
                                             <label for="dashboards" class="form-label required">Dashboards
                                                 <span class="tooltip-container">
-                                                    <span class="tooltip-content">Add Grafana dashboards to link with this integration. Use dashboard path like <code>/d/&lt;uid&gt;/&lt;slug&gt;</code> (e.g., <code>/d/jmeter-test-results/jmeter-test-results</code>). You can add multiple dashboards; use the Add Dashboard button. Deleting a row only unlinks it here.</span>
+                                                    <span class="tooltip-content">Add Grafana dashboards to link with this integration. Use dashboard path like <code>/d/&lt;uid&gt;/&lt;slug&gt;</code> (e.g., <code>/d/jmeter-test-results/jmeter-test-results</code>). You can add multiple dashboards; use the Add Dashboard button. Deleting a row only unlinks it here. The <strong>Default</strong> radio marks which dashboard is used for <code>${current_grafana_link}</code> and <code>${baseline_grafana_link}</code>.</span>
                                                 </span>
                                             </label>
                                             <div id="dashboards-container" style="width: 100%;">
                                         {% for dashboard in form.dashboards %}
-                                        <div class="flex m10-top">
+                                        <div class="flex m10-top align-items-center dashboard-row">
                                             <input type="hidden" name="dashboards-{{ loop.index0 }}-id" value="{{ dashboard.form.id.data or '' }}">
                                             <input type="text" class="form-control dashboardInput" required="" name="dashboards-{{ loop.index0 }}-content" id="dashboards-{{ loop.index0 }}-content" value="{{ dashboard.form.content.data or '' }}" placeholder="e.g. /d/jmeter-test-results/jmeter-test-results">
+                                            <input type="radio" class="btn-check defaultDashboardRadio" name="default_dashboard_radio" id="default_dashboard_radio_{{ loop.index0 }}" autocomplete="off"
+                                                {% if grafana_config_data and grafana_config_data.default_dashboard_id and dashboard.form.id.data and dashboard.form.id.data|int == grafana_config_data.default_dashboard_id %}checked
+                                                {% elif loop.first and (not grafana_config_data or not grafana_config_data.default_dashboard_id) %}checked{% endif %}>
+                                            <label class="btn btn-outline-secondary ms-2 dashboard-default-btn" for="default_dashboard_radio_{{ loop.index0 }}" title="Use this dashboard for ${current_grafana_link} / ${baseline_grafana_link}">
+                                                <i class="fa-solid fa-star me-1 icon-on"></i><i class="fa-regular fa-star me-1 icon-off"></i>Default
+                                            </label>
                                             <button type="button" class="btn btn-outline-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
                                         </div>
                                         {% endfor %}
@@ -205,10 +219,14 @@
         document.addEventListener("DOMContentLoaded", function() {
             window.addDashboard = function() {
               var count = document.querySelectorAll('.dashboardInput').length;
-              var html = `<div class="flex m10-top">
+              var html = `<div class="flex m10-top align-items-center dashboard-row">
                               <input type="hidden" name="dashboards-${count}-id" id="dashboards-${count}-id" value="">
                               <input type="text" class="form-control dashboardInput" required="" name="dashboards-${count}-content" id="dashboards-${count}-content" value="">
-                              <button type="button" class="btn btn-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)">Delete</button>
+                              <input type="radio" class="btn-check defaultDashboardRadio" name="default_dashboard_radio" id="default_dashboard_radio_${count}" autocomplete="off">
+                              <label class="btn btn-outline-secondary ms-2 dashboard-default-btn" for="default_dashboard_radio_${count}" title="Use this dashboard for \${current_grafana_link} / \${baseline_grafana_link}">
+                                  <i class="fa-solid fa-star me-1 icon-on"></i><i class="fa-regular fa-star me-1 icon-off"></i>Default
+                              </label>
+                              <button type="button" class="btn btn-outline-secondary ms-2 deleteDashboard" onclick="removeDashboard(this)"><i class="fa-regular fa-trash-can me-1"></i>Delete</button>
                           </div>`;
               var container = document.createElement('div');
               container.innerHTML = html;
@@ -223,7 +241,8 @@
             };
 
             window.removeDashboard = function(e) {
-              var dashboardId = e.parentNode.querySelector('[name$="-id"]').value;
+              var row = e.closest('.dashboard-row');
+              var dashboardId = row ? row.querySelector('[name$="-id"]').value : e.parentNode.querySelector('[name$="-id"]').value;
               if (dashboardId) {
                 $('#confirmDeleteModal').modal('show');
                 $('#confirmDeleteButton').off('click').on('click', function() {
@@ -236,19 +255,33 @@
             };
 
             function removeDashboardElement(e) {
+              var row = e.closest('.dashboard-row');
+              var wasDefaultSelected = row?.querySelector('.defaultDashboardRadio')?.checked;
               var dashboardsContainer = document.getElementById('dashboards-container');
-              dashboardsContainer.removeChild(e.parentNode);
+              dashboardsContainer.removeChild(row || e.parentNode);
               updateDashboardInputs();
+              if (wasDefaultSelected) {
+                var firstRadio = document.querySelector('.defaultDashboardRadio');
+                if (firstRadio) firstRadio.checked = true;
+              }
             }
 
             function updateDashboardInputs() {
               var dashboardInputs = document.querySelectorAll('.dashboardInput');
               var dashboardIds = document.querySelectorAll('[name^="dashboards-"][name$="-id"]');
+              var radios = document.querySelectorAll('.defaultDashboardRadio');
+              var labels = document.querySelectorAll('.dashboard-default-btn');
               for (var i = 0, len = dashboardInputs.length; i < len; i++) {
                 dashboardInputs[i].name = "dashboards-" + i + "-content";
                 dashboardInputs[i].id = "dashboards-" + i + "-content";
                 dashboardIds[i].name = "dashboards-" + i + "-id";
                 dashboardIds[i].id = "dashboards-" + i + "-id";
+                if (radios[i]) {
+                  radios[i].id = "default_dashboard_radio_" + i;
+                }
+                if (labels[i]) {
+                  labels[i].setAttribute('for', "default_dashboard_radio_" + i);
+                }
               }
             }
         });
@@ -295,11 +328,15 @@
             dashboardInputs.forEach((input, index) => {
                 const dashboardIdInput = document.querySelector(`input[name='dashboards-${index}-id']`);
                 const dashboardId = dashboardIdInput ? dashboardIdInput.value : null;
+                const isDefault = document.querySelector(`#default_dashboard_radio_${index}`)?.checked || false;
                 data.dashboards.push({
                     id: dashboardId,
                     grafana_id: integrationId || null,
                     content: document.querySelector(`input[name='dashboards-${index}-content']`).value
                 });
+                if (isDefault) {
+                    data.default_dashboard_index = index;
+                }
             });
 
             const tokenSelect = document.getElementById('token');

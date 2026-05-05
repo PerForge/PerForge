@@ -30,8 +30,9 @@ class DBGrafana(db.Model):
     token               = db.Column(db.Integer, db.ForeignKey('secrets.id', ondelete='SET NULL'))
     test_title          = db.Column(db.String(120), nullable=False)
     baseline_test_title = db.Column(db.String(120), nullable=False)
-    is_default          = db.Column(db.Boolean, default=False)
-    dashboards          = db.relationship('DBGrafanaDashboards', backref='grafana', cascade='all, delete-orphan', lazy=True)
+    is_default            = db.Column(db.Boolean, default=False)
+    default_dashboard_id  = db.Column(db.Integer, db.ForeignKey('grafana_dashboards.id', ondelete='SET NULL'), nullable=True)
+    dashboards            = db.relationship('DBGrafanaDashboards', backref='grafana', cascade='all, delete-orphan', lazy=True, foreign_keys='DBGrafanaDashboards.grafana_id')
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
@@ -40,6 +41,7 @@ class DBGrafana(db.Model):
     def save(cls, project_id, data):
         try:
             data['project_id'] = project_id
+            default_dashboard_index = data.pop('default_dashboard_index', None)
             grafana_model_instance = GrafanaModel(**data)
             instance_data = grafana_model_instance.model_dump(exclude={'dashboards'})
             instance = cls(**instance_data)
@@ -57,6 +59,13 @@ class DBGrafana(db.Model):
                 instance.is_default = True
 
             db.session.add(instance)
+            db.session.flush()  # assign IDs to dashboards before resolving default
+
+            if default_dashboard_index is not None and instance.dashboards:
+                idx = int(default_dashboard_index)
+                if 0 <= idx < len(instance.dashboards):
+                    instance.default_dashboard_id = instance.dashboards[idx].id
+
             db.session.commit()
             return instance.id
         except Exception:
@@ -111,6 +120,7 @@ class DBGrafana(db.Model):
     def update(cls, project_id, data):
         try:
             data['project_id'] = project_id
+            default_dashboard_index = data.pop('default_dashboard_index', None)
             validated_data = GrafanaModel(**data)
             config = db.session.query(cls).filter_by(project_id=project_id, id=validated_data.id).one_or_none()
             if not config:
@@ -130,6 +140,18 @@ class DBGrafana(db.Model):
                 dashboard_dict = dashboard_data.model_dump()
                 dashboard = DBGrafanaDashboards(**dashboard_dict)
                 config.dashboards.append(dashboard)
+
+            db.session.flush()  # assign IDs to new dashboards before resolving default
+
+            if default_dashboard_index is not None and config.dashboards:
+                idx = int(default_dashboard_index)
+                if 0 <= idx < len(config.dashboards):
+                    config.default_dashboard_id = config.dashboards[idx].id
+                else:
+                    config.default_dashboard_id = None
+            else:
+                config.default_dashboard_id = None
+
             db.session.commit()
         except Exception:
             db.session.rollback()

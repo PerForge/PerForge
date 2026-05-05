@@ -96,16 +96,17 @@ class GrafanaObjectModel(BaseModelWithStripping):
         return values
 
 class GrafanaModel(BaseModelWithStripping):
-    id                 : Optional[int]
-    project_id         : Optional[int]
-    name               : str
-    server             : str
-    org_id             : str
-    token              : Optional[int]
-    test_title         : str
-    baseline_test_title: str
-    is_default         : bool
-    dashboards         : list[GrafanaObjectModel]
+    id                   : Optional[int]
+    project_id           : Optional[int]
+    name                 : str
+    server               : str
+    org_id               : str
+    token                : Optional[int]
+    test_title           : str
+    baseline_test_title  : str
+    is_default           : bool
+    default_dashboard_id : Optional[int] = None
+    dashboards           : list[GrafanaObjectModel]
 
 
 class AzureWikiModel(BaseModelWithStripping):
