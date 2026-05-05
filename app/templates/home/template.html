@@ -482,6 +482,8 @@
                             ],
                             backendTables: [],
                             frontendTables: [
+                                { name: '${top_slowest_requests}', description: 'Top N slowest pages sorted by the configured frontend metric (default: fullyLoaded from timings_fully_loaded). Count, metric, and source table are configurable in Reporting Table Settings.' },
+                                { name: '${top_slowest_requests_N_metric}', description: 'Parameterized form, e.g. ${top_slowest_requests_10_LCP} — overrides count and metric inline without changing settings.' },
                                 { name: '${google_web_vitals_table_median}', description: 'Web Vitals metrics (LCP, CLS, FID) with median aggregation.' },
                                 { name: '${timings_fully_loaded_table_median}', description: 'Page fully loaded timings with median aggregation.' },
                                 { name: '${timings_page_timings_table_median}', description: 'Page timings metrics with median aggregation.' },
