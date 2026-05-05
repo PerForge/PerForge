@@ -377,6 +377,30 @@ REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'type': 'string',
         'description': 'Suffix label for percentage difference columns. Example result: "Avg RT (Diff %)".'
     },
+    'aggregated_table_highlight_enabled': {
+        'value': False,
+        'type': 'bool',
+        'description': 'When enabled, cells in the aggregated data table are highlighted green for improved metrics and red for degraded metrics relative to the baseline. Requires a baseline test to be selected. Uses the improved/degraded threshold settings below.'
+    },
+    'aggregated_table_highlight_improved_threshold_pct': {
+        'value': 5.0,
+        'type': 'float',
+        'min': 0.0,
+        'max': 100.0,
+        'description': 'Percentage improvement relative to baseline required for a cell to be highlighted green. For example, 5.0 means the metric must have improved by at least 5% compared to baseline. Applies to "lower is better" metrics (e.g. response time) when the value decreases, and to "higher is better" metrics (e.g. RPM) when the value increases.'
+    },
+    'aggregated_table_highlight_degraded_threshold_pct': {
+        'value': 5.0,
+        'type': 'float',
+        'min': 0.0,
+        'max': 100.0,
+        'description': 'Percentage degradation relative to baseline required for a cell to be highlighted red. For example, 5.0 means the metric must have degraded by at least 5% compared to baseline. Applies to "lower is better" metrics (e.g. response time) when the value increases, and to "higher is better" metrics (e.g. RPM) when the value decreases.'
+    },
+    'aggregated_table_highlight_higher_is_better_metrics': {
+        'value': ['rpm', 'count'],
+        'type': 'list',
+        'description': 'List of metric keys where a higher value is considered an improvement (e.g. rpm, count). For these metrics the green/red highlighting direction is inverted: green when the value increases, red when it decreases. All other metrics are treated as "lower is better" (e.g. response time, errors).'
+    },
     'top_slowest_count': {
         'value': 5,
         'type': 'int',

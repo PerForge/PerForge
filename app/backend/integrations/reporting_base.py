@@ -39,6 +39,7 @@ class ReportingBase:
         self.current_test_obj: BaseTestData = None
         self.baseline_test_obj: BaseTestData = None
         self._needs_transaction_status_table = False  # Flag to track if status table is needed
+        self._current_highlight_config = None  # Highlight config passed to format_table
 
     def set_template(self, template, db_config: Dict[str, str]):
         template_obj = DBTemplates.get_config_by_id(project_id=self.project, id=template)
@@ -130,6 +131,17 @@ class ReportingBase:
 
                             has_baseline = self.baseline_test_obj is not None and table.has_baseline()
 
+                            # Build highlight config and store on self so format_table can use it
+                            if has_baseline and rt.get('aggregated_table_highlight_enabled', False):
+                                self._current_highlight_config = {
+                                    'enabled': True,
+                                    'improved_threshold': float(rt.get('aggregated_table_highlight_improved_threshold_pct', 5.0)),
+                                    'degraded_threshold': float(rt.get('aggregated_table_highlight_degraded_threshold_pct', 5.0)),
+                                    'higher_is_better': list(rt.get('aggregated_table_highlight_higher_is_better_metrics', ['rpm', 'count'])),
+                                }
+                            else:
+                                self._current_highlight_config = None
+
                             if split_baseline and has_baseline:
                                 metrics = table.format_split_columns_metrics(
                                     columns_config, current_label, baseline_label,
@@ -159,6 +171,7 @@ class ReportingBase:
                                 []
                             )
                             overview_config = self._parse_overview_filter(raw_metrics)
+                            self._current_highlight_config = None
 
                             if self.baseline_test_obj is not None and table.has_baseline():
                                 metrics = table.format_comparison_metrics()
@@ -167,11 +180,13 @@ class ReportingBase:
                             metrics = self._apply_overview_filter(metrics, overview_config, table.scope_column_name)
                         else:
                             # All other tables: original behaviour, no settings applied
+                            self._current_highlight_config = None
                             if self.baseline_test_obj is not None and table.has_baseline():
                                 metrics = table.format_comparison_metrics()
                             else:
                                 metrics = table.format_metrics()
                         value = self.format_table(metrics)
+                        self._current_highlight_config = None  # Clear after use
                         if value:
                             text = text.replace("${" + var + "}", value)
                         continue

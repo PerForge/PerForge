@@ -60,6 +60,44 @@ class AzureWikiReport(ReportingBase):
 
         return value
 
+    @staticmethod
+    def _get_highlight_color(diff_pct: float, metric_key: str, highlight_config: dict) -> str:
+        """Return a CSS background color string for the cell, or empty string if no highlight applies.
+
+        Args:
+            diff_pct: Percentage difference (positive = current higher than baseline).
+            metric_key: The display column name; used to check higher-is-better metrics.
+            highlight_config: Dict with keys enabled, improved_threshold, degraded_threshold,
+                              higher_is_better (list of metric keys/substrings).
+
+        Returns:
+            CSS color string (e.g. '#d4edda') or '' for no highlight.
+        """
+        if not highlight_config or not highlight_config.get('enabled'):
+            return ''
+
+        improved_thr = highlight_config.get('improved_threshold', 5.0)
+        degraded_thr = highlight_config.get('degraded_threshold', 5.0)
+        higher_is_better = [m.lower() for m in highlight_config.get('higher_is_better', [])]
+
+        # Check if this column corresponds to a higher-is-better metric
+        col_lower = metric_key.lower()
+        is_higher_better = any(m in col_lower for m in higher_is_better)
+
+        if is_higher_better:
+            # Higher value = improvement (green), lower value = degradation (red)
+            if diff_pct >= improved_thr:
+                return '#d4edda'   # light green
+            elif diff_pct <= -degraded_thr:
+                return '#f8d7da'   # light red
+        else:
+            # Lower value = improvement (green), higher value = degradation (red)
+            if diff_pct <= -improved_thr:
+                return '#d4edda'   # light green
+            elif diff_pct >= degraded_thr:
+                return '#f8d7da'   # light red
+        return ''
+
     def format_table(self, metrics):
         """
         Format a metrics table for Azure Wiki report. Converts the list of dictionaries
@@ -74,38 +112,53 @@ class AzureWikiReport(ReportingBase):
         if not metrics:
             return "| No data available |\n|---|"
 
+        # Read highlight config (set by reporting_base for aggregated_data tables)
+        highlight_config = getattr(self, '_current_highlight_config', None)
+
         # Preserve OrderedDict order if present, otherwise sort and reorder
         from collections import OrderedDict
         if metrics and isinstance(metrics[0], OrderedDict):
             # Use the order from the first OrderedDict
-            keys = list(metrics[0].keys())
+            all_keys = list(metrics[0].keys())
         else:
             # Create list of all keys from the metrics
-            all_keys = set()
+            all_keys_set = set()
             for record in metrics:
-                all_keys.update(record.keys())
+                all_keys_set.update(record.keys())
 
             # Sort keys for consistent display
-            keys = sorted(all_keys)
+            all_keys = sorted(all_keys_set)
 
             # Prioritize common first columns (Transaction/transaction/page/Metric)
-            if 'Transaction' in keys:
-                keys.remove('Transaction')
-                keys.insert(0, 'Transaction')
-            elif 'transaction' in keys:
-                keys.remove('transaction')
-                keys.insert(0, 'transaction')
-            elif 'page' in keys:
-                keys.remove('page')
-                keys.insert(0, 'page')
-            elif 'Metric' in keys:
-                keys.remove('Metric')
-                keys.insert(0, 'Metric')
+            if 'Transaction' in all_keys:
+                all_keys.remove('Transaction')
+                all_keys.insert(0, 'Transaction')
+            elif 'transaction' in all_keys:
+                all_keys.remove('transaction')
+                all_keys.insert(0, 'transaction')
+            elif 'page' in all_keys:
+                all_keys.remove('page')
+                all_keys.insert(0, 'page')
+            elif 'Metric' in all_keys:
+                all_keys.remove('Metric')
+                all_keys.insert(0, 'Metric')
 
             # Put Status column second if it exists and Transaction is first
-            if len(keys) > 1 and keys[0] in ('Transaction', 'transaction') and 'Status' in keys:
-                keys.remove('Status')
-                keys.insert(1, 'Status')
+            if len(all_keys) > 1 and all_keys[0] in ('Transaction', 'transaction') and 'Status' in all_keys:
+                all_keys.remove('Status')
+                all_keys.insert(1, 'Status')
+
+        # Separate display keys from hidden diff_pct metadata keys
+        hidden_prefix = '__'
+        hidden_suffix = '__diff_pct'
+        keys = [k for k in all_keys if not (k.startswith(hidden_prefix) and k.endswith(hidden_suffix))]
+
+        # Build a lookup: display_key -> metadata_key for diff_pct
+        diff_pct_meta = {
+            k[len(hidden_prefix):-len(hidden_suffix)]: k
+            for k in all_keys
+            if k.startswith(hidden_prefix) and k.endswith(hidden_suffix)
+        }
 
         # Start building the Markdown table
         # Header
@@ -127,46 +180,45 @@ class AzureWikiReport(ReportingBase):
                     value_str = ""
                 # Check for baseline comparison pattern (e.g., "15.00 -> 12.00")
                 elif isinstance(value, str) and " -> " in value:
-                    try:
-                        # Parse the baseline and current values
-                        parts = value.split(" -> ")
-                        if len(parts) == 2:
-                            first_val = float(parts[0])  # baseline
-                            second_val = float(parts[1]) # current
-
-                            # Default value string is the original value
-                            value_str = value
-
-                            # Calculate percentage difference and color the value if threshold is met
-                            if first_val != 0:
-                                diff_pct = ((second_val - first_val) / first_val) * 100
-
-                                # Color for improvement (10% or more faster)
-                                if diff_pct <= -10:
-                                    value_str = f'<span style="color:green;font-weight:bold">{value}</span>'
-                                # Color for degradation (10% or more slower)
-                                elif diff_pct >= 10:
-                                    value_str = f'<span style="color:red;font-weight:bold">{value}</span>'
-                            else:
-                                # Handle baseline is zero case: color for degradation if current value is higher
-                                if second_val > first_val:
-                                    value_str = f'<span style="color:red;font-weight:bold">{value}</span>'
-                        else:
-                            value_str = self.colorize_status(value)
-                    except (ValueError, ZeroDivisionError, IndexError):
-                        # If parsing fails, just display the value normally
-                        value_str = self.colorize_status(value)
-                    except Exception:
-                        # Catch any other unexpected errors
+                    value_str = value
+                    # Apply highlight if config present (uses hidden metadata diff_pct)
+                    if highlight_config and highlight_config.get('enabled'):
+                        meta_key = diff_pct_meta.get(key)
+                        diff_pct = record.get(meta_key) if meta_key else None
+                        if diff_pct is None:
+                            # Fallback: compute from value string
+                            try:
+                                parts = value.split(" -> ")
+                                if len(parts) == 2:
+                                    first_val = float(parts[0])
+                                    second_val = float(parts[1])
+                                    diff_pct = ((second_val - first_val) / first_val * 100) if first_val != 0 else (100.0 if second_val > 0 else 0.0)
+                            except (ValueError, ZeroDivisionError):
+                                diff_pct = None
+                        if diff_pct is not None:
+                            color = self._get_highlight_color(diff_pct, key, highlight_config)
+                            if color:
+                                value_str = f'<span style="background-color:{color};font-weight:bold">{value}</span>'
+                    else:
                         value_str = self.colorize_status(value)
                 # Format numeric values to two decimal places
                 elif isinstance(value, float):
                     value_str = f"{value:.2f}"
-                    # Colorize status values
-                    value_str = self.colorize_status(value_str)
+                    if highlight_config and highlight_config.get('enabled'):
+                        meta_key = diff_pct_meta.get(key)
+                        diff_pct = record.get(meta_key) if meta_key else None
+                        if diff_pct is not None:
+                            color = self._get_highlight_color(diff_pct, key, highlight_config)
+                            if color:
+                                value_str = f'<span style="background-color:{color}">{value_str}</span>'
+                            else:
+                                value_str = self.colorize_status(value_str)
+                        else:
+                            value_str = self.colorize_status(value_str)
+                    else:
+                        value_str = self.colorize_status(value_str)
                 else:
                     value_str = str(value)
-                    # Colorize status values
                     value_str = self.colorize_status(value_str)
 
                 # Azure DevOps Wiki markdown tables are sensitive to pipe characters in content.

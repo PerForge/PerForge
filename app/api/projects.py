@@ -385,6 +385,38 @@ def _create_example_data(project_id: str) -> None:
             ]
         })
 
+        # Default performance NFRs that serve as baseline comparison thresholds.
+        # These cover typical backend latency/error targets and can be assigned
+        # to any template to validate results against well-known baselines.
+        DBNFRs.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] Default Performance Thresholds",
+            "metric_type": "backend",
+            "rows": [
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "avg",
+                    "operation": "<",
+                    "threshold": 1000
+                },
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "pct90",
+                    "operation": "<",
+                    "threshold": 2000
+                },
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "errors",
+                    "operation": "<",
+                    "threshold": 1
+                }
+            ]
+        })
+
         grafana_dashboard_id = DBGrafana.get_config_by_id(project_id, id=grafana_integration_example)['dashboards'][0]['id']
         # Graph example
         graph_example_id = DBGraphs.save(project_id, {

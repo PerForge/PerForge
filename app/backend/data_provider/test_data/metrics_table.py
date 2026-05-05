@@ -260,6 +260,9 @@ class MetricsTable:
                     current_str = f"{float(metric.value):.2f}" if metric.value else "0.00"
                     # Use baseline->current format
                     row[metric_name] = f"{baseline_str} -> {current_str}"
+                    # Attach hidden diff_pct metadata for highlight processing in format_table
+                    diff_pct = metric.difference_pct if metric.difference_pct is not None else 0.0
+                    row[f"__{metric_name}__diff_pct"] = round(diff_pct, 2)
                 else:
                     # No baseline for this metric
                     if isinstance(metric.value, float):
@@ -340,6 +343,10 @@ class MetricsTable:
                 if show_diff_pct:
                     diff_pct_val = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else 0.00
                     row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+                # Attach hidden diff_pct metadata for highlight processing in format_table
+                diff_pct = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else None
+                if diff_pct is not None:
+                    row[f"__{display_label} ({current_label})__diff_pct"] = diff_pct
             result.append(row)
         return result
 
@@ -401,6 +408,9 @@ class MetricsTable:
                 if metric is not None:
                     if metric.baseline is not None:
                         row[display_label] = f"{float(metric.baseline):.2f} -> {float(metric.value):.2f}"
+                        # Attach hidden diff_pct metadata for highlight processing in format_table
+                        diff_pct = metric.difference_pct if metric.difference_pct is not None else 0.0
+                        row[f"__{display_label}__diff_pct"] = round(diff_pct, 2)
                     else:
                         row[display_label] = f"{float(metric.value):.2f}" if isinstance(metric.value, float) else metric.value
                     if show_diff:

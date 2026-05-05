@@ -49,6 +49,7 @@ const reportingTableGroups = {
     'Aggregated Data Table': ['aggregated_table_columns', 'aggregated_table_split_baseline'],
     'Baseline / Current Column Labels': ['aggregated_table_baseline_label', 'aggregated_table_current_label'],
     'Diff Columns': ['aggregated_table_show_diff', 'aggregated_table_diff_label', 'aggregated_table_show_diff_pct', 'aggregated_table_diff_pct_label'],
+    'Metric Highlight': ['aggregated_table_highlight_enabled', 'aggregated_table_highlight_improved_threshold_pct', 'aggregated_table_highlight_degraded_threshold_pct', 'aggregated_table_highlight_higher_is_better_metrics'],
     'Top Slowest Requests': ['top_slowest_count', 'top_slowest_exclude_all'],
     'Top Slowest Requests — Backend': ['top_slowest_metric'],
     'Top Slowest Requests — Frontend': ['top_slowest_frontend_table', 'top_slowest_frontend_metric'],
