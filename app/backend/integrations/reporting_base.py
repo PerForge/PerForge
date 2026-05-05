@@ -149,6 +149,22 @@ class ReportingBase:
                                 metrics = self._apply_columns_config(
                                     metrics, columns_config, table.scope_column_name
                                 )
+                        elif table_name == 'overview_data':
+                            # For the overview_data table, apply per-project row filtering settings.
+                            # Backend and frontend tests have different metric sets.
+                            rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                            is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+                            raw_metrics = rt.get(
+                                'overview_table_frontend_metrics' if is_frontend else 'overview_table_backend_metrics',
+                                []
+                            )
+                            overview_config = self._parse_overview_filter(raw_metrics)
+
+                            if self.baseline_test_obj is not None and table.has_baseline():
+                                metrics = table.format_comparison_metrics()
+                            else:
+                                metrics = table.format_metrics()
+                            metrics = self._apply_overview_filter(metrics, overview_config, table.scope_column_name)
                         else:
                             # All other tables: original behaviour, no settings applied
                             if self.baseline_test_obj is not None and table.has_baseline():
@@ -374,6 +390,47 @@ class ReportingBase:
                 if metric_key in row:
                     new_row[display_label] = row[metric_key]
             result.append(new_row)
+        return result
+
+    @staticmethod
+    def _parse_overview_filter(raw_metrics: list) -> list:
+        """Parse a list of 'Metric Name:Display Label' strings into (original_name, display_label) tuples.
+
+        Used for filtering and renaming rows in the overview_data table.
+        Items without a colon are used as both original name and display label.
+        Empty items are ignored.
+        """
+        result = []
+        for item in raw_metrics:
+            item = item.strip()
+            if not item:
+                continue
+            if ':' in item:
+                original, _, label = item.partition(':')
+                result.append((original.strip(), label.strip()))
+            else:
+                result.append((item, item))
+        return result
+
+    @staticmethod
+    def _apply_overview_filter(metrics: list, overview_config: list, scope_column_name: str) -> list:
+        """Filter and rename rows in a formatted overview_data metric list.
+
+        Keeps only rows whose scope value matches one of the configured original metric names,
+        and renames the scope value to the corresponding display label.
+        When overview_config is empty the original rows are returned unchanged.
+        """
+        if not overview_config:
+            return metrics
+        name_to_label = {original: label for original, label in overview_config}
+        result = []
+        for row in metrics:
+            scope_value = row.get(scope_column_name) if scope_column_name else None
+            if scope_value in name_to_label:
+                new_row = dict(row)
+                if scope_column_name:
+                    new_row[scope_column_name] = name_to_label[scope_value]
+                result.append(new_row)
         return result
 
     def format_table(self, metrics):

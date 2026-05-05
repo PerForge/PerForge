@@ -54,7 +54,9 @@ const reportingTableGroups = {
     'Top Slowest Requests — Frontend': ['top_slowest_frontend_table', 'top_slowest_frontend_metric'],
     'Top Degraded Requests': ['top_degraded_count', 'top_degraded_exclude_all', 'top_degraded_min_pct', 'top_degraded_sort_by'],
     'Top Degraded Requests — Backend': ['top_degraded_metric'],
-    'Top Degraded Requests — Frontend': ['top_degraded_frontend_table', 'top_degraded_frontend_metric']
+    'Top Degraded Requests — Frontend': ['top_degraded_frontend_table', 'top_degraded_frontend_metric'],
+    'Overview Data Table — Backend': ['overview_table_backend_metrics'],
+    'Overview Data Table — Frontend': ['overview_table_frontend_metrics']
 };
 
 /**

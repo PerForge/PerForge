@@ -476,6 +476,48 @@ REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
             'timings_main_document → dns, connect, serverResponseTime, pageDownloadTime. '
             'cpu_long_tasks → durations, lastLongTask, totalBlockingTime, totalDuration.'
         )
+    },
+    'overview_table_backend_metrics': {
+        'value': [
+            'Average:Average RT',
+            'Median:Median RT',
+            '75%-tile:P75',
+            '90%-tile:P90',
+            'Total requests:Requests',
+            'RPS:RPS',
+            'Error %:Error %'
+        ],
+        'type': 'list',
+        'description': (
+            'Rows to include in the ${overview_data_table_} for backend tests. '
+            'Format: Metric Name:Display Label (e.g. "Average:Avg RT", "Error %:Errors"). '
+            'Controls which summary rows appear and their display labels. '
+            'Available metrics: Average, Median, 75%-tile, 90%-tile, Total requests, RPS, Error %. '
+            'Leave empty to show all rows with their original names.'
+        )
+    },
+    'overview_table_frontend_metrics': {
+        'value': [
+            'FCP:FCP',
+            'LCP:LCP',
+            'Fully Loaded:Fully Loaded',
+            'TTFB:TTFB',
+            'Total Transfer Size (KB):Transfer Size (KB)',
+            'Total Requests:Requests',
+            'Third-Party Requests:3rd Party Requests',
+            'Transfer Size for JavaScript (KB):JS Size (KB)',
+            'Transfer Size for CSS (KB):CSS Size (KB)',
+            'Transfer Size for Image (KB):Image Size (KB)'
+        ],
+        'type': 'list',
+        'description': (
+            'Rows to include in the ${overview_data_table_} for frontend (SiteSpeed) tests. '
+            'Format: Metric Name:Display Label (e.g. "FCP:FCP", "Fully Loaded:Fully Loaded"). '
+            'Controls which summary rows appear and their display labels. '
+            'Available metrics: FCP, LCP, Fully Loaded, TTFB, Total Transfer Size (KB), Total Requests, '
+            'Third-Party Requests, Transfer Size for JavaScript (KB), Transfer Size for CSS (KB), Transfer Size for Image (KB). '
+            'Leave empty to show all rows with their original names.'
+        )
     }
 }
 
