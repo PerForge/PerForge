@@ -278,30 +278,35 @@ body.light-theme .horizontal-sidebar .nav-link.active {
 /* Dropdown menu styles */
 .horizontal-sidebar .dropdown-menu {
     background-color: var(--bs-background-dark);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    border-radius: 5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    border-radius: 12px;
     border: 1px solid var(--border-main-color);
-    padding: 8px 0;
+    padding: 6px 0 8px;
     z-index: 1000;
     margin-top: 5px;
+    min-width: 210px;
 }
 
 .horizontal-sidebar .dropdown-item {
     color: var(--text-main-color);
-    padding: 8px 16px;
+    padding: 9px 16px;
     font-size: 14px;
     display: flex;
     align-items: center;
+    border-radius: 6px;
+    margin: 1px 6px;
+    width: calc(100% - 12px);
+    transition: background 0.15s, color 0.15s;
 }
 
 .horizontal-sidebar .dropdown-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.07);
     color: var(--bs-blue);
 }
 
 .horizontal-sidebar .dropdown-divider {
     border-top: 1px solid var(--border-main-color);
-    margin: 4px 0;
+    margin: 6px 0;
 }
 
 .horizontal-sidebar .dropdown-toggle::after {
@@ -309,16 +314,62 @@ body.light-theme .horizontal-sidebar .nav-link.active {
     vertical-align: middle;
 }
 
+/* Project block inside dropdown */
+.sd-project-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 16px 12px;
+    gap: 2px;
+}
+.sd-project-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--bs-gray-500);
+}
+.sd-project-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main-color);
+    word-break: break-all;
+}
+.sd-change-project {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--bs-blue);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+    transition: opacity 0.15s;
+}
+.sd-change-project:hover { opacity: 1; color: var(--bs-blue); }
+
+/* Sign out — danger tint */
+.horizontal-sidebar .sd-signout { color: var(--bs-danger); }
+.horizontal-sidebar .sd-signout:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--bs-danger);
+}
+
 /* Light theme dropdown adjustments */
 body.light-theme .horizontal-sidebar .dropdown-menu {
     background-color: var(--bs-white);
-    border: 1px solid var(--border-main-color);
+    border: 1px solid #dee2e6;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 body.light-theme .horizontal-sidebar .dropdown-item:hover {
     background-color: rgba(0, 0, 0, 0.05);
     color: var(--bs-blue);
 }
+
+body.light-theme .sd-project-name { color: #212529; }
+body.light-theme .sd-signout:hover { background-color: rgba(220,53,69,0.07); }
 
 /* Form select styling */
 .form-select {
