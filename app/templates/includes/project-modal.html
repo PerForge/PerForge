@@ -24,8 +24,71 @@
         </div>
     </div>
 </div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Import project configuration</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Step 1: file + target project selection -->
+                <div id="importStep1">
+                    <div class="mt-3">
+                        <label class="form-label">Export file (JSON)</label>
+                        <input class="form-control" id="import_file" name="import_file" type="file" accept=".json">
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Target project</label>
+                        <select class="form-select" id="import_project_id">
+                            <option value="">— Select a project —</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-danger mt-3" id="import_error_step1" style="display: none;"></div>
+                </div>
+
+                <!-- Step 2: conflict review + confirmation -->
+                <div id="importStep2" style="display: none;">
+                    <div class="alert alert-warning" id="import_no_conflicts" style="display: none;">
+                        No conflicts found. Click <strong>Import</strong> to proceed.
+                    </div>
+                    <div id="import_conflicts_section" style="display: none;">
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> The following items already exist and will be <strong>overridden</strong>:
+                        </div>
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Type</th><th>Name</th></tr></thead>
+                                <tbody id="import_conflicts_table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger mt-3" id="import_error_step2" style="display: none;"></div>
+                </div>
+
+                <!-- Step 3: success -->
+                <div id="importStep3" style="display: none;">
+                    <div class="alert alert-success">
+                        Import completed successfully!
+                    </div>
+                    <ul id="import_summary_list" class="list-group"></ul>
+                </div>
+            </div>
+            <div class="modal-footer" id="importModalFooter">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
+                <button class="btn btn-primary" id="importCheckBtn" type="button">Check conflicts</button>
+                <button class="btn btn-danger" id="importConfirmBtn" type="button" style="display: none;">Import (override)</button>
+                <button class="btn btn-primary" id="importNoConflictsBtn" type="button" style="display: none;">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function() {
+        // ---- New Project modal ----
         // Check if event listener is already attached to avoid duplicates
         if (!window.projectModalInitialized) {
             window.projectModalInitialized = true;
@@ -129,6 +192,183 @@
                     projectError.textContent = "Project name cannot be empty.";
                 }
             });
+        }
+
+        // ---- Import modal ----
+        if (!window.importModalInitialized) {
+            window.importModalInitialized = true;
+
+            const importModal = $('#importModal');
+            let importData = null;   // parsed JSON payload
+            let importConflicts = [];
+
+            // Populate project selector when modal opens
+            importModal.on('show.bs.modal', function () {
+                _resetImportModal();
+                apiClient.projects.getAll().then(resp => {
+                    const projects = (resp && resp.data && resp.data.projects) || [];
+                    const sel = document.getElementById('import_project_id');
+                    // Keep the placeholder, rebuild options
+                    sel.innerHTML = '<option value="">— Select a project —</option>';
+                    projects.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = p.name;
+                        sel.appendChild(opt);
+                    });
+                }).catch(() => {});
+            });
+
+            // "Check conflicts" button
+            document.getElementById('importCheckBtn').addEventListener('click', function () {
+                const fileInput = document.getElementById('import_file');
+                const projectId = document.getElementById('import_project_id').value;
+                const errEl = document.getElementById('import_error_step1');
+
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    errEl.style.display = 'block';
+                    errEl.textContent = 'Please select a JSON export file.';
+                    return;
+                }
+                if (!projectId) {
+                    errEl.style.display = 'block';
+                    errEl.textContent = 'Please select a target project.';
+                    return;
+                }
+                errEl.style.display = 'none';
+
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Checking…';
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('project_id', projectId);
+
+                apiClient.projects.importCheck(formData)
+                    .then(resp => {
+                        importConflicts = (resp && resp.data && resp.data.conflicts) || [];
+                        _showImportStep2(importConflicts);
+                    })
+                    .catch(err => {
+                        errEl.style.display = 'block';
+                        errEl.textContent = (err && err.message) || 'Failed to check conflicts.';
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Check conflicts';
+                    });
+            });
+
+            // "Import (override)" button (conflicts present, user confirms)
+            document.getElementById('importConfirmBtn').addEventListener('click', function () {
+                _executeImport(true);
+            });
+
+            // "Import" button (no conflicts)
+            document.getElementById('importNoConflictsBtn').addEventListener('click', function () {
+                _executeImport(true);
+            });
+
+            function _executeImport(confirmed) {
+                const fileInput = document.getElementById('import_file');
+                const projectId = document.getElementById('import_project_id').value;
+                const errEl = document.getElementById('import_error_step2');
+                errEl.style.display = 'none';
+
+                const activeBtn = importConflicts.length > 0
+                    ? document.getElementById('importConfirmBtn')
+                    : document.getElementById('importNoConflictsBtn');
+                activeBtn.disabled = true;
+                activeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing…';
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('project_id', projectId);
+                formData.append('confirmed', confirmed ? 'true' : 'false');
+
+                apiClient.projects.importExecute(formData)
+                    .then(resp => {
+                        const summary = (resp && resp.data && resp.data.summary) || {};
+                        _showImportStep3(summary);
+                    })
+                    .catch(err => {
+                        errEl.style.display = 'block';
+                        errEl.textContent = (err && err.message) || 'Import failed.';
+                        activeBtn.disabled = false;
+                        activeBtn.innerHTML = importConflicts.length > 0 ? 'Import (override)' : 'Import';
+                    });
+            }
+
+            function _showImportStep2(conflicts) {
+                document.getElementById('importStep1').style.display = 'none';
+                document.getElementById('importStep2').style.display = 'block';
+                document.getElementById('importCheckBtn').style.display = 'none';
+
+                if (conflicts.length === 0) {
+                    document.getElementById('import_no_conflicts').style.display = 'block';
+                    document.getElementById('import_conflicts_section').style.display = 'none';
+                    document.getElementById('importNoConflictsBtn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('import_no_conflicts').style.display = 'none';
+                    document.getElementById('import_conflicts_section').style.display = 'block';
+                    document.getElementById('importConfirmBtn').style.display = 'inline-block';
+
+                    const tbody = document.getElementById('import_conflicts_table');
+                    tbody.innerHTML = '';
+                    conflicts.forEach(c => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${_escHtml(c.type)}</td><td>${_escHtml(c.name)}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+
+            function _showImportStep3(summary) {
+                document.getElementById('importStep2').style.display = 'none';
+                document.getElementById('importStep3').style.display = 'block';
+                document.getElementById('importConfirmBtn').style.display = 'none';
+                document.getElementById('importNoConflictsBtn').style.display = 'none';
+
+                const ul = document.getElementById('import_summary_list');
+                ul.innerHTML = '';
+                const labels = {
+                    secrets: 'Secrets', prompts: 'Prompts', nfrs: 'NFRs',
+                    grafana: 'Grafana integrations', influxdb: 'InfluxDB integrations',
+                    graphs: 'Graphs', templates: 'Templates',
+                    template_groups: 'Template Groups', settings: 'Settings'
+                };
+                Object.entries(summary).forEach(([key, count]) => {
+                    if (count > 0) {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex justify-content-between';
+                        li.innerHTML = `<span>${labels[key] || key}</span><span class="badge bg-success">${count}</span>`;
+                        ul.appendChild(li);
+                    }
+                });
+            }
+
+            function _resetImportModal() {
+                importData = null;
+                importConflicts = [];
+                document.getElementById('importStep1').style.display = 'block';
+                document.getElementById('importStep2').style.display = 'none';
+                document.getElementById('importStep3').style.display = 'none';
+                document.getElementById('import_file').value = '';
+                document.getElementById('import_project_id').value = '';
+                document.getElementById('import_error_step1').style.display = 'none';
+                document.getElementById('import_error_step2').style.display = 'none';
+                document.getElementById('import_conflicts_table').innerHTML = '';
+                document.getElementById('importCheckBtn').style.display = 'inline-block';
+                document.getElementById('importConfirmBtn').style.display = 'none';
+                document.getElementById('importNoConflictsBtn').style.display = 'none';
+            }
+
+            function _escHtml(str) {
+                const d = document.createElement('div');
+                d.appendChild(document.createTextNode(str || ''));
+                return d.innerHTML;
+            }
         }
     });
 </script>

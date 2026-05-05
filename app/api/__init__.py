@@ -29,6 +29,7 @@ from app.api.other import other_api
 from app.api.prompts import prompts_api
 from app.api.secrets import secrets_api
 from app.api.settings import settings_api
+from app.api.import_export import import_export_api
 
 
 def _api_basic_auth_guard():
@@ -114,6 +115,7 @@ def register_blueprints(app):
         prompts_api,
         secrets_api,
         settings_api,
+        import_export_api,
     ):
         bp.before_request(_api_basic_auth_guard)
 
@@ -127,6 +129,7 @@ def register_blueprints(app):
     app.register_blueprint(prompts_api)
     app.register_blueprint(secrets_api)
     app.register_blueprint(settings_api)
+    app.register_blueprint(import_export_api)
 
     # Register the combined API blueprint
     app.register_blueprint(api)

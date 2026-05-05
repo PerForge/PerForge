@@ -16,12 +16,27 @@
             </div>
             <div class="center-section">
                {% for project in projects %}
-                  <div class="card card-project center-section">
-                     <a href="#" onclick="setProject('{{ project.id }}'); return false;">{{ project.name }}</a>
+                  <div class="card card-project center-section d-flex flex-row align-items-center justify-content-between px-3">
+                     <a href="#" class="flex-grow-1" onclick="setProject('{{ project.id }}'); return false;">{{ project.name }}</a>
+                     <button
+                        class="btn btn-sm btn-outline-secondary ms-2 export-btn"
+                        title="Export project configuration"
+                        data-project-id="{{ project.id }}"
+                        data-project-name="{{ project.name }}"
+                        onclick="exportProject({{ project.id }}, '{{ project.name }}'); return false;">
+                        <i class="fas fa-file-export"></i>
+                     </button>
                   </div>
                {% endfor %}
-               <div class="card card-project center-section">
-                  <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+               <div class="card card-project center-section d-flex flex-row align-items-center justify-content-between px-3">
+                  <button class="dropdown-item flex-grow-1" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+                  <button
+                     class="btn btn-sm btn-outline-primary ms-2"
+                     title="Import project configuration"
+                     data-bs-toggle="modal"
+                     data-bs-target="#importModal">
+                     <i class="fas fa-file-import"></i> import
+                  </button>
                </div>
             </div>
          </div>
@@ -40,6 +55,38 @@
             apiClient.projects.setActive(projectId)
                 .catch(error => {
                     console.error('Error setting project:', error);
+                });
+        }
+
+        function exportProject(projectId, projectName) {
+            const btn = document.querySelector(`.export-btn[data-project-id="${projectId}"]`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            }
+            apiClient.projects.exportConfig(projectId)
+                .then(result => {
+                    // result.data.blob contains the file
+                    const blob = result.data.blob;
+                    const filename = result.data.filename || `${projectName}_export.json`;
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    console.error('Export failed:', error);
+                    showFlashMessage('Export failed: ' + (error.message || 'Unknown error'), 'error');
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-file-export"></i>';
+                    }
                 });
         }
     </script>

@@ -75,6 +75,7 @@
                           <a class="mt-3-5 d-block" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
                           <div class="project-actions mt-2 d-flex align-items-center">
                               <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#renameProjectModal-{{ project.id }}" onclick="prefillRename('{{ project.id }}')" aria-label="Rename project" title="Rename project"><i class="fas fa-pen"></i></button>
+                              <button class="btn btn-secondary ms-2 export-btn" data-project-id="{{ project.id }}" aria-label="Export project" title="Export project configuration" onclick="exportProject({{ project.id }}, '{{ project.name }}'); return false;"><i class="fas fa-file-export"></i></button>
                               <button class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}" aria-label="Delete project" title="Delete project"><i class="fas fa-trash"></i></button>
                           </div>
                       </div>
@@ -116,6 +117,7 @@
                   {% endfor %}
                   <div class="card card-project center-section">
                      <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
+                     <button class="btn btn-outline-primary mt-2" type="button" data-bs-toggle="modal" data-bs-target="#importModal" title="Import project configuration"><i class="fas fa-file-import"></i> import</button>
                   </div>
                </div>
                <div class="start-section ms-4 mt-3">
@@ -160,6 +162,37 @@
                     .catch(error => {
                         console.error('Error setting active project:', error);
                         showFlashMessage("Error setting active project: " + (error.message || 'Unknown error'), "error");
+                    });
+            }
+
+            function exportProject(projectId, projectName) {
+                const btn = document.querySelector(`.export-btn[data-project-id="${projectId}"]`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                }
+                apiClient.projects.exportConfig(projectId)
+                    .then(result => {
+                        const blob = result.data.blob;
+                        const filename = result.data.filename || `${projectName}_export.json`;
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(error => {
+                        console.error('Export failed:', error);
+                        showFlashMessage('Export failed: ' + (error.message || 'Unknown error'), 'error');
+                    })
+                    .finally(() => {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-file-export"></i>';
+                        }
                     });
             }
 
