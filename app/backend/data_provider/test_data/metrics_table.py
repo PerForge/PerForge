@@ -342,7 +342,7 @@ class MetricsTable:
                     row[f"{display_label} ({diff_label})"] = diff_val
                 if show_diff_pct:
                     diff_pct_val = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else 0.00
-                    row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+                    row[f"{display_label} ({diff_pct_label})"] = f"{diff_pct_val:.2f}%"
                 # Attach hidden diff_pct metadata for highlight processing in format_table
                 diff_pct = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else None
                 if diff_pct is not None:
@@ -418,7 +418,7 @@ class MetricsTable:
                         row[f"{display_label} ({diff_label})"] = diff_val
                     if show_diff_pct:
                         diff_pct_val = round(metric.difference_pct, 2) if metric.difference_pct is not None else 0.00
-                        row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+                        row[f"{display_label} ({diff_pct_label})"] = f"{diff_pct_val:.2f}%"
             result.append(row)
         return result
 
