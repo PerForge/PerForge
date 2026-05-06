@@ -144,29 +144,34 @@ img {
 .horizontal-sidebar {
     width: 100%;
     height: 6vh;
+    min-height: 48px;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 100;
-    --scrollbar-thumb: rgba(255,255,255,0.25);
-    --scrollbar-thumb-hover: rgba(255,255,255,0.45);
+    --scrollbar-thumb: rgba(255,255,255,0.2);
+    --scrollbar-thumb-hover: rgba(255,255,255,0.4);
     background-color: var(--bs-background-dark);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border-main-color);
 }
 
 .horizontal-sidebar .sidebar-container {
     display: flex;
     align-items: center;
     height: 100%;
+    padding: 0 4px;
 }
 
 .horizontal-sidebar .sidebar-header {
     display: flex;
     align-items: center;
     height: 100%;
+    padding: 0 20px 0 14px;
     background-color: transparent;
     border-right: 1px solid var(--border-main-color);
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .horizontal-sidebar .nav-links-container {
@@ -205,44 +210,43 @@ body.light-theme .horizontal-sidebar {
 }
 
 .horizontal-sidebar .nav-link {
-    padding: 0 12px;
-    height: 100%;
+    padding: 0 10px;
+    height: calc(100% - 14px);
+    margin: 7px 2px;
     display: flex;
     align-items: center;
+    gap: 6px;
     white-space: nowrap;
     flex-direction: row;
     text-decoration: none;
     position: relative;
     border-radius: 8px;
-    transition: all 0.2s ease;
+    color: var(--bs-gray-500);
+    transition: background 0.18s ease, color 0.18s ease;
 }
 
 .horizontal-sidebar .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: var(--bs-blue);
+    background-color: rgba(255, 255, 255, 0.07);
+    color: var(--text-main-color);
 }
 
 .horizontal-sidebar .nav-link.active {
     color: var(--bs-blue);
+    background: rgba(13, 110, 253, 0.12);
     position: relative;
 }
 
 .horizontal-sidebar .nav-link.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 15px;
-    right: 15px;
-    height: 3px;
-    background-color: var(--bs-blue);
+    content: none;
 }
 
 body.light-theme .horizontal-sidebar .nav-link:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(0, 0, 0, 0.06);
+    color: var(--bs-gray-700);
 }
 
 body.light-theme .horizontal-sidebar .nav-link.active {
-    background-color: rgba(0, 0, 0, 0.07);
+    background-color: rgba(13, 110, 253, 0.1);
     color: var(--bs-blue);
 }
 
@@ -250,11 +254,14 @@ body.light-theme .horizontal-sidebar .nav-link.active {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9em;
+    font-size: 0.88rem;
+    flex-shrink: 0;
 }
 
 .horizontal-sidebar .nav-link-text {
-    font-size: 0.95em;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
 .horizontal-sidebar .right-links {
@@ -262,6 +269,10 @@ body.light-theme .horizontal-sidebar .nav-link.active {
     display: flex;
     align-items: center;
     gap: 4px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border-main-color);
+    height: 100%;
+    flex-shrink: 0;
 }
 
 .horizontal-sidebar .right-links .settings-dropdown {
@@ -274,6 +285,17 @@ body.light-theme .horizontal-sidebar .nav-link.active {
     display: flex;
     align-items: center;
 }
+
+/* Brand name in sidebar header */
+.sidebar-brand-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-main-color);
+    text-decoration: none;
+    transition: color 0.18s;
+}
+.sidebar-brand-name:hover { color: var(--bs-blue); }
 
 /* Dropdown menu styles */
 .horizontal-sidebar .dropdown-menu {
@@ -288,9 +310,10 @@ body.light-theme .horizontal-sidebar .nav-link.active {
 }
 
 .horizontal-sidebar .dropdown-item {
-    color: var(--text-main-color);
-    padding: 9px 16px;
-    font-size: 14px;
+    color: var(--bs-gray-500);
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
     border-radius: 6px;
@@ -301,7 +324,7 @@ body.light-theme .horizontal-sidebar .nav-link.active {
 
 .horizontal-sidebar .dropdown-item:hover {
     background-color: rgba(255, 255, 255, 0.07);
-    color: var(--bs-blue);
+    color: var(--text-main-color);
 }
 
 .horizontal-sidebar .dropdown-divider {
@@ -363,11 +386,6 @@ body.light-theme .horizontal-sidebar .dropdown-menu {
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
-body.light-theme .horizontal-sidebar .dropdown-item:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: var(--bs-blue);
-}
-
 body.light-theme .sd-project-name { color: #212529; }
 body.light-theme .sd-signout:hover { background-color: rgba(220,53,69,0.07); }
 
@@ -400,6 +418,72 @@ body.light-theme .form-hint code { background: rgba(13,110,253,0.08); color: var
 .text-main {
     color: var(--text-main-color) !important;
 }
+
+/* ── Shared "new item" card styles (homepage + integrations) ── */
+.project-card--new {
+    border: 1.5px dashed var(--border-main-color);
+    background: transparent;
+}
+.project-card--new:hover {
+    border-color: var(--bs-blue);
+    box-shadow: none;
+    transform: none;
+}
+.new-project-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 10px 10px;
+    gap: 6px;
+}
+.new-project-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--bs-gray-500);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+    width: 100%;
+}
+.new-project-trigger .plus-ring {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--bs-gray-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, color 0.2s;
+}
+.new-project-trigger:hover { color: var(--bs-blue); }
+.new-project-trigger:hover .plus-ring { border-color: var(--bs-blue); }
+.new-project-divider {
+    width: 80%;
+    height: 1px;
+    background: var(--border-main-color);
+    margin: 2px auto;
+}
+body.light-theme .project-card--new {
+    background: transparent;
+    border-color: #adb5bd;
+}
+body.light-theme .project-card--new:hover { border-color: var(--bs-blue); }
+body.light-theme .new-project-trigger { color: #495057; }
+body.light-theme .new-project-trigger .plus-ring { border-color: #6c757d; color: #495057; }
+body.light-theme .new-project-trigger:hover { color: var(--bs-blue); }
+body.light-theme .new-project-trigger:hover .plus-ring { border-color: var(--bs-blue); }
+body.light-theme .new-project-divider { background: #dee2e6; }
 
 /* Tables: keep action buttons in one line */
 td.actions { white-space: nowrap; }
@@ -3353,18 +3437,18 @@ body.light-theme {
     /* --bs-secondary-app: #6c757d; */
 }
 
+/* Prevent dark html root from bleeding below light-theme page content */
+html:has(body.light-theme) {
+    background: #e9ecef !important;
+}
+
 body.light-theme .sidebar {
     background-color: var(--bs-background-dark);
 }
 
 body.light-theme .horizontal-sidebar {
     background-color: var(--bs-white);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-body.light-theme .horizontal-sidebar {
-    background-color: var(--bs-white);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #dee2e6;
 }
 
 body.light-theme .sidebar-header {
@@ -3376,9 +3460,25 @@ body.light-theme .horizontal-sidebar .sidebar-header {
     border-right: 1px solid #dee2e6;
 }
 
-body.light-theme .horizontal-sidebar .sidebar-header {
-    background-color: transparent;
-    border-right: 1px solid #dee2e6;
+body.light-theme .horizontal-sidebar .right-links {
+    border-left-color: #dee2e6;
+}
+
+body.light-theme .sidebar-brand-name {
+    color: #343a40;
+}
+
+body.light-theme .horizontal-sidebar .nav-link {
+    color: #6c757d;
+}
+
+body.light-theme .horizontal-sidebar .dropdown-item {
+    color: #495057;
+}
+
+body.light-theme .horizontal-sidebar .dropdown-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #212529;
 }
 
 body.light-theme .nav-link {

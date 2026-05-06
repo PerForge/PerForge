@@ -191,62 +191,6 @@
     max-width: 56px;
   }
 
-  /* new-project card */
-  .project-card--new {
-    border: 1.5px dashed var(--border-main-color);
-    background: transparent;
-  }
-  .project-card--new:hover {
-    border-color: var(--bs-blue);
-    box-shadow: none;
-    transform: none;
-  }
-  .new-project-inner {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 14px 10px 10px;
-    gap: 6px;
-  }
-  .new-project-trigger {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: none;
-    color: var(--bs-gray-500);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    transition: color 0.2s;
-    width: 100%;
-  }
-  .new-project-trigger .plus-ring {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: 1.5px dashed var(--bs-gray-600);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .new-project-trigger:hover { color: var(--bs-blue); }
-  .new-project-trigger:hover .plus-ring { border-color: var(--bs-blue); }
-
-  .new-project-divider {
-    width: 80%;
-    height: 1px;
-    background: var(--border-main-color);
-    margin: 2px auto;
-  }
-
   /* ── Docs grid ──────────────────────────────────────────────── */
   .docs-grid {
     display: grid;
@@ -301,23 +245,8 @@
   body.light-theme .project-card,
   body.light-theme .doc-tile,
   body.light-theme .version-badge { background: #fff; }
-  body.light-theme .project-card--new {
-    background: transparent;
-    border-color: #adb5bd;          /* more visible dashed border */
-  }
-  body.light-theme .project-card--new:hover { border-color: var(--bs-blue); }
   body.light-theme .project-actions-bar { background: rgba(0,0,0,0.04); }
   body.light-theme .doc-tile:hover { background: rgba(13,110,253,0.04); }
-  body.light-theme .new-project-trigger {
-    color: #495057;                 /* dark gray text instead of faint gray */
-  }
-  body.light-theme .new-project-trigger .plus-ring {
-    border-color: #6c757d;          /* visible ring border */
-    color: #495057;
-  }
-  body.light-theme .new-project-trigger:hover { color: var(--bs-blue); }
-  body.light-theme .new-project-trigger:hover .plus-ring { border-color: var(--bs-blue); }
-  body.light-theme .new-project-divider { background: #dee2e6; }
   body.light-theme .home-section-label { color: #6c757d; }
   body.light-theme .home-section-label::after { background: #dee2e6; }
 
