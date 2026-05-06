@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ class SettingsService:
 
         Args:
             project_id: ID of the project
-            category: Optional category filter ('ml_analysis', 'transaction_status', 'data_aggregation')
+            category: Optional category filter ('ml_analysis', 'transaction_status', 'data_query', 'reporting_table')
 
         Returns:
             Dictionary of settings {key: value} or {category: {key: value}} if no category specified

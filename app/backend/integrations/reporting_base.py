@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ class ReportingBase:
         self.current_test_obj: BaseTestData = None
         self.baseline_test_obj: BaseTestData = None
         self._needs_transaction_status_table = False  # Flag to track if status table is needed
+        self._current_highlight_config = None  # Highlight config passed to format_table
 
     def set_template(self, template, db_config: Dict[str, str]):
         template_obj = DBTemplates.get_config_by_id(project_id=self.project, id=template)
@@ -130,6 +131,17 @@ class ReportingBase:
 
                             has_baseline = self.baseline_test_obj is not None and table.has_baseline()
 
+                            # Build highlight config and store on self so format_table can use it
+                            if has_baseline and rt.get('aggregated_table_highlight_enabled', False):
+                                self._current_highlight_config = {
+                                    'enabled': True,
+                                    'improved_threshold': float(rt.get('aggregated_table_highlight_improved_threshold_pct', 5.0)),
+                                    'degraded_threshold': float(rt.get('aggregated_table_highlight_degraded_threshold_pct', 5.0)),
+                                    'higher_is_better': list(rt.get('aggregated_table_highlight_higher_is_better_metrics', ['rpm', 'count'])),
+                                }
+                            else:
+                                self._current_highlight_config = None
+
                             if split_baseline and has_baseline:
                                 metrics = table.format_split_columns_metrics(
                                     columns_config, current_label, baseline_label,
@@ -149,13 +161,32 @@ class ReportingBase:
                                 metrics = self._apply_columns_config(
                                     metrics, columns_config, table.scope_column_name
                                 )
+                        elif table_name == 'overview_data':
+                            # For the overview_data table, apply per-project row filtering settings.
+                            # Backend and frontend tests have different metric sets.
+                            rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                            is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+                            raw_metrics = rt.get(
+                                'overview_table_frontend_metrics' if is_frontend else 'overview_table_backend_metrics',
+                                []
+                            )
+                            overview_config = self._parse_overview_filter(raw_metrics)
+                            self._current_highlight_config = None
+
+                            if self.baseline_test_obj is not None and table.has_baseline():
+                                metrics = table.format_comparison_metrics()
+                            else:
+                                metrics = table.format_metrics()
+                            metrics = self._apply_overview_filter(metrics, overview_config, table.scope_column_name)
                         else:
                             # All other tables: original behaviour, no settings applied
+                            self._current_highlight_config = None
                             if self.baseline_test_obj is not None and table.has_baseline():
                                 metrics = table.format_comparison_metrics()
                             else:
                                 metrics = table.format_metrics()
                         value = self.format_table(metrics)
+                        self._current_highlight_config = None  # Clear after use
                         if value:
                             text = text.replace("${" + var + "}", value)
                         continue
@@ -170,6 +201,101 @@ class ReportingBase:
             if var == "transaction_status_table_detailed":
                 # Set flag indicating status table is needed
                 self._needs_transaction_status_table = True
+
+            # Check for top_slowest_requests variable.
+            # Supports both plain ${top_slowest_requests} and parameterized
+            # ${top_slowest_requests_N_metric} (e.g. ${top_slowest_requests_10_avg}).
+            # Works for both backend (aggregated_data) and frontend (configurable table).
+            top_slowest_match = re.match(
+                r"^top_slowest_requests(?:_(\d+))?(?:_([a-zA-Z0-9]+))?$", var
+            )
+            if top_slowest_match and hasattr(self.current_test_obj, "get_table"):
+                try:
+                    rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                    # Count: inline param overrides setting
+                    if top_slowest_match.group(1) is not None:
+                        count = int(top_slowest_match.group(1))
+                    else:
+                        count = int(rt.get('top_slowest_count', 5))
+                    exclude_all = bool(rt.get('top_slowest_exclude_all', True))
+
+                    is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+                    if is_frontend:
+                        table_name = rt.get('top_slowest_frontend_table', 'timings_fully_loaded')
+                        default_metric = rt.get('top_slowest_frontend_metric', 'fullyLoaded')
+                    else:
+                        table_name = 'aggregated_data'
+                        default_metric = rt.get('top_slowest_metric', 'pct90')
+
+                    # Metric: inline param overrides setting
+                    metric = top_slowest_match.group(2) if top_slowest_match.group(2) is not None else default_metric
+
+                    source_table: MetricsTable = self.current_test_obj.get_table(table_name)
+                    if source_table is not None:
+                        top_rows = source_table.get_top_n_slowest(
+                            metric_name=metric,
+                            n=count,
+                            exclude_all=exclude_all
+                        )
+                        value = self.format_table(top_rows)
+                        if value:
+                            text = text.replace("${" + var + "}", value)
+                except Exception as e:
+                    logging.warning(f"Error computing top_slowest_requests for variable '{var}': {e}")
+
+            # Check for top_degraded_requests variable.
+            # Supports both plain ${top_degraded_requests} and parameterized
+            # ${top_degraded_requests_N_metric} (e.g. ${top_degraded_requests_10_pct90}).
+            # Requires a baseline (comparison) test — silently skipped if none is set.
+            top_degraded_match = re.match(
+                r"^top_degraded_requests(?:_(\d+))?(?:_([a-zA-Z0-9]+))?$", var
+            )
+            if top_degraded_match and self.baseline_test_obj is not None and hasattr(self.current_test_obj, "get_table"):
+                try:
+                    rt = SettingsService.get_project_settings(self.project, 'reporting_table')
+                    # Count: inline param overrides setting
+                    if top_degraded_match.group(1) is not None:
+                        count = int(top_degraded_match.group(1))
+                    else:
+                        count = int(rt.get('top_degraded_count', 5))
+                    exclude_all = bool(rt.get('top_degraded_exclude_all', True))
+                    min_pct = float(rt.get('top_degraded_min_pct', 0.0))
+                    sort_by = rt.get('top_degraded_sort_by', 'diff_pct')
+
+                    is_frontend = isinstance(self.current_test_obj, FrontendTestData)
+                    if is_frontend:
+                        table_name = rt.get('top_degraded_frontend_table', 'timings_fully_loaded')
+                        default_metric = rt.get('top_degraded_frontend_metric', 'fullyLoaded')
+                    else:
+                        table_name = 'aggregated_data'
+                        default_metric = rt.get('top_degraded_metric', 'pct90')
+
+                    # Metric: inline param overrides setting
+                    metric = top_degraded_match.group(2) if top_degraded_match.group(2) is not None else default_metric
+
+                    source_table: MetricsTable = self.current_test_obj.get_table(table_name)
+                    if source_table is not None:
+                        # Ensure baseline is applied to the table
+                        if not source_table.has_baseline():
+                            try:
+                                baseline_table: MetricsTable = self.baseline_test_obj.get_table(table_name)
+                                if baseline_table is not None and baseline_table.metrics:
+                                    source_table.set_baseline_metrics(baseline_table.metrics)
+                            except Exception:
+                                pass
+
+                        degraded_rows = source_table.get_top_n_degraded(
+                            metric_name=metric,
+                            n=count,
+                            exclude_all=exclude_all,
+                            min_pct=min_pct,
+                            sort_by=sort_by
+                        )
+                        value = self.format_table(degraded_rows)
+                        if value:
+                            text = text.replace("${" + var + "}", value)
+                except Exception as e:
+                    logging.warning(f"Error computing top_degraded_requests for variable '{var}': {e}")
 
         return text
 
@@ -279,6 +405,47 @@ class ReportingBase:
                 if metric_key in row:
                     new_row[display_label] = row[metric_key]
             result.append(new_row)
+        return result
+
+    @staticmethod
+    def _parse_overview_filter(raw_metrics: list) -> list:
+        """Parse a list of 'Metric Name:Display Label' strings into (original_name, display_label) tuples.
+
+        Used for filtering and renaming rows in the overview_data table.
+        Items without a colon are used as both original name and display label.
+        Empty items are ignored.
+        """
+        result = []
+        for item in raw_metrics:
+            item = item.strip()
+            if not item:
+                continue
+            if ':' in item:
+                original, _, label = item.partition(':')
+                result.append((original.strip(), label.strip()))
+            else:
+                result.append((item, item))
+        return result
+
+    @staticmethod
+    def _apply_overview_filter(metrics: list, overview_config: list, scope_column_name: str) -> list:
+        """Filter and rename rows in a formatted overview_data metric list.
+
+        Keeps only rows whose scope value matches one of the configured original metric names,
+        and renames the scope value to the corresponding display label.
+        When overview_config is empty the original rows are returned unchanged.
+        """
+        if not overview_config:
+            return metrics
+        name_to_label = {original: label for original, label in overview_config}
+        result = []
+        for row in metrics:
+            scope_value = row.get(scope_column_name) if scope_column_name else None
+            if scope_value in name_to_label:
+                new_row = dict(row)
+                if scope_column_name:
+                    new_row[scope_column_name] = name_to_label[scope_value]
+                result.append(new_row)
         return result
 
     def format_table(self, metrics):
@@ -691,3 +858,4 @@ class ReportingBase:
 
         # Baseline application for tables is deferred to analyze_template() and only
         # executed when aggregated data analysis is enabled, to avoid unnecessary loading.
+

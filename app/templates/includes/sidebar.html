@@ -16,9 +16,13 @@
 
         if (projectName) {
             const projectBlock = `
-                <li class="project-specific-item"><h5 class="dropdown-header" style="text-align: center;">Current project</h5><span class="dropdown-item-text" style="text-align: center; color: grey; display: block; padding: 0.25rem 1rem;">${projectName}</span></li>
-                <li class="project-specific-item"><hr class="dropdown-divider"></li>
-                <li class="project-specific-item"><a class="dropdown-item" href="/choose-project"><i class="fas fa-exchange-alt me-2"></i>Change project</a></li>
+                <li class="project-specific-item sd-project-block">
+                    <span class="sd-project-label">Current project</span>
+                    <span class="sd-project-name">${projectName}</span>
+                    <a class="sd-change-project" href="/choose-project">
+                        <i class="fas fa-exchange-alt"></i> Change project
+                    </a>
+                </li>
                 <li class="project-specific-item"><hr class="dropdown-divider"></li>
             `;
             const settingsMenu = $('.settings-dropdown .dropdown-menu');
@@ -44,8 +48,8 @@
 <div class="horizontal-sidebar">
     <div class="sidebar-container">
         <div class="sidebar-header">
-            <img src="/static/assets/img/logo.png" height="25" alt="PerForge">
-            <a class="ms-2" type="button" href="https://perforge.app" target="_blank">PerForge</a>
+            <img src="/static/assets/img/logo.png" height="22" alt="PerForge">
+            <a class="sidebar-brand-name" type="button" href="https://perforge.app" target="_blank">PerForge</a>
         </div>
         <div class="nav-links-container">
             <a class="nav-link" type="button" href="/">
@@ -101,16 +105,14 @@
                             <i id="themeIcon" class="fas fa-sun me-2"></i>Theme
                         </button>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="/advanced-settings">
                         <i class="fas fa-sliders-h me-2"></i>Advanced settings
                     </a></li>
-                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="/register">
                         <i class="fas fa-user-plus me-2"></i>Add user
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="/logout">
+                    <li><a class="dropdown-item sd-signout" href="/logout">
                         <i class="fas fa-sign-out-alt me-2"></i>Sign out
                     </a></li>
                 </ul>

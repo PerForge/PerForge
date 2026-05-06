@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -431,6 +431,9 @@ class PdfReport(ReportingBase):
         if not metrics:
             return json.dumps([["No data available"]])
 
+        # Read highlight config (set by reporting_base for aggregated_data tables)
+        highlight_config = getattr(self, '_current_highlight_config', None)
+
         # Collect keys while preserving order from the first record (if it's an OrderedDict)
         # or from all records
         if metrics and hasattr(metrics[0], 'keys'):
@@ -438,22 +441,34 @@ class PdfReport(ReportingBase):
             from collections import OrderedDict
             if isinstance(metrics[0], OrderedDict):
                 # Use the order from the first OrderedDict
-                keys = list(metrics[0].keys())
+                all_keys = list(metrics[0].keys())
                 # Add any additional keys from other records (shouldn't happen, but be safe)
                 for record in metrics[1:]:
                     for key in record.keys():
-                        if key not in keys:
-                            keys.append(key)
+                        if key not in all_keys:
+                            all_keys.append(key)
             else:
                 # Regular dict - collect all keys
-                all_keys = set()
+                all_keys_set = set()
                 for record in metrics:
-                    all_keys.update(record.keys())
-                keys = sorted(all_keys)
+                    all_keys_set.update(record.keys())
+                all_keys = sorted(all_keys_set)
         else:
             return json.dumps([["No data available"]])
 
-        # Filter out metadata fields (_baseline, _diff, _diff_pct, _color)
+        # Separate display keys from hidden diff_pct metadata keys
+        hidden_prefix = '__'
+        hidden_suffix = '__diff_pct'
+        keys = [k for k in all_keys if not (k.startswith(hidden_prefix) and k.endswith(hidden_suffix))]
+
+        # Build a lookup: display_key -> metadata_key for diff_pct
+        diff_pct_meta = {
+            k[len(hidden_prefix):-len(hidden_suffix)]: k
+            for k in all_keys
+            if k.startswith(hidden_prefix) and k.endswith(hidden_suffix)
+        }
+
+        # Filter out legacy metadata fields (_baseline, _diff, _diff_pct, _color)
         keys = [k for k in keys if not (k.endswith('_baseline') or
                                 k.endswith('_diff') or
                                 k.endswith('_diff_pct') or
@@ -490,15 +505,69 @@ class PdfReport(ReportingBase):
 
         # Convert any numerical values to more readable format and apply colorization
         for i in range(1, len(table_data)):
-            for j in range(len(table_data[i])):
+            record = metrics[i - 1]
+            for j, key in enumerate(keys):
                 # Format floats
                 if isinstance(table_data[i][j], float):
                     table_data[i][j] = f"{table_data[i][j]:.2f}"
-                # Colorize status values
+                # Apply metric highlight if configured (font color via ReportLab XML tags)
+                if highlight_config and highlight_config.get('enabled'):
+                    meta_key = diff_pct_meta.get(key)
+                    diff_pct = record.get(meta_key) if meta_key else None
+                    if diff_pct is None and isinstance(table_data[i][j], str) and " -> " in table_data[i][j]:
+                        try:
+                            parts = table_data[i][j].split(" -> ")
+                            if len(parts) == 2:
+                                first_val = float(parts[0])
+                                second_val = float(parts[1])
+                                diff_pct = ((second_val - first_val) / first_val * 100) if first_val != 0 else (100.0 if second_val > 0 else 0.0)
+                        except (ValueError, ZeroDivisionError):
+                            diff_pct = None
+                    if diff_pct is not None:
+                        color = self._get_highlight_color_pdf(diff_pct, key, highlight_config)
+                        if color:
+                            table_data[i][j] = f'<font color="{color}">{table_data[i][j]}</font>'
+                            continue
+                # Colorize status values (fallback when no highlight applied)
                 table_data[i][j] = self.colorize_status(table_data[i][j])
 
         # Return the table data as a JSON string
         return json.dumps(table_data)
+
+    @staticmethod
+    def _get_highlight_color_pdf(diff_pct: float, metric_key: str, highlight_config: dict) -> str:
+        """Return a ReportLab-compatible color name for highlighted cells, or '' for no highlight.
+
+        Args:
+            diff_pct: Percentage difference (positive = current higher than baseline).
+            metric_key: The display column name; used to check higher-is-better metrics.
+            highlight_config: Dict with keys enabled, improved_threshold, degraded_threshold,
+                              higher_is_better (list of metric keys/substrings).
+
+        Returns:
+            Color name string (e.g. 'green', 'red') or '' for no highlight.
+        """
+        if not highlight_config or not highlight_config.get('enabled'):
+            return ''
+
+        improved_thr = highlight_config.get('improved_threshold', 5.0)
+        degraded_thr = highlight_config.get('degraded_threshold', 5.0)
+        higher_is_better = [m.lower() for m in highlight_config.get('higher_is_better', [])]
+
+        col_lower = metric_key.lower()
+        is_higher_better = any(m in col_lower for m in higher_is_better)
+
+        if is_higher_better:
+            if diff_pct >= improved_thr:
+                return '#28a745'   # green
+            elif diff_pct <= -degraded_thr:
+                return '#dc3545'   # red
+        else:
+            if diff_pct <= -improved_thr:
+                return '#28a745'   # green
+            elif diff_pct >= degraded_thr:
+                return '#dc3545'   # red
+        return ''
 
     def generate_report(self, tests, template_group=None, theme='dark'):
         page_title = None

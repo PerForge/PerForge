@@ -19,27 +19,22 @@ from app.schema_migrations.base import BaseMigration
 log = logging.getLogger("app.migrations")
 
 
-class AddBaseUrlToAISupport(BaseMigration):
-    """Add base_url column to ai_support table."""
-
-    name = "ai_support: add base_url column"
+class GrafanaAddDefaultDashboardId(BaseMigration):
+    name = "grafana: add default_dashboard_id"
 
     def apply(self, connection, inspector):
-        table_name = 'ai_support'
-
-        # Check if table exists
-        if table_name not in inspector.get_table_names():
+        table_name = 'grafana'
+        try:
+            columns = [c['name'] for c in inspector.get_columns(table_name)]
+        except Exception:
             return
 
-        cols = [c['name'] for c in inspector.get_columns(table_name)]
-
-        if 'base_url' not in cols:
-            log.info(f"Applying migration: Adding 'base_url' column to '{table_name}'")
-            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN base_url VARCHAR(120)"))
-        else:
-            log.info(f"Column 'base_url' already exists in '{table_name}', skipping")
+        if 'default_dashboard_id' not in columns:
+            log.info(f"Applying migration: Adding column 'default_dashboard_id' to table '{table_name}'")
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN default_dashboard_id INTEGER REFERENCES grafana_dashboards(id) ON DELETE SET NULL"))
+            log.info("Migration for 'default_dashboard_id' applied successfully.")
 
 
 MIGRATIONS = [
-    AddBaseUrlToAISupport(),
+    GrafanaAddDefaultDashboardId(),
 ]

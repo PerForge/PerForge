@@ -8,6 +8,229 @@
   .copy-icon { cursor: pointer; opacity: 0.8; }
   .copy-icon:hover { opacity: 1; }
   .var-name i { margin-right: 6px; }
+
+  /* ── Prompt modals ── */
+  #viewPromptModal .modal-dialog,
+  #promptModal .modal-dialog {
+    max-width: 96vw;
+    width: 96vw;
+    margin: 1rem auto;
+  }
+
+  /* ── View prompt display block ── */
+  #view_prompt_display {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    border-radius: 6px;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 300px;
+    max-height: 65vh;
+    overflow-y: auto;
+    resize: vertical;
+    /* dark theme defaults */
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.87);
+  }
+  body.light-theme #view_prompt_display {
+    background: rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.15);
+    color: #212529;
+  }
+
+  /* ── Meta row (Place / Type / Scope badges) ── */
+  .prompt-meta-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  body.light-theme .prompt-meta-row {
+    background: rgba(0,0,0,0.04);
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .prompt-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+  }
+
+  .prompt-meta-item .meta-label {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.45);
+  }
+  body.light-theme .prompt-meta-item .meta-label {
+    color: rgba(0,0,0,0.45);
+  }
+
+  .prompt-copy-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* ── Larger textarea for add/edit ── */
+  #prompt {
+    min-height: 260px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.82rem;
+    resize: vertical;
+  }
+
+  /* ── Close button ── */
+  #promptModal .btn-close,
+  #viewPromptModal .btn-close {
+    filter: none;
+    opacity: 1;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: background 0.15s, border-color 0.15s;
+    background-image: none !important;
+  }
+  body.light-theme #promptModal .btn-close,
+  body.light-theme #viewPromptModal .btn-close {
+    border: 1px solid rgba(0,0,0,0.25);
+  }
+
+  #promptModal .btn-close::before,
+  #viewPromptModal .btn-close::before {
+    content: '✕';
+    font-size: 0.85rem;
+    line-height: 1;
+    color: rgba(255,255,255,0.75);
+  }
+  body.light-theme #promptModal .btn-close::before,
+  body.light-theme #viewPromptModal .btn-close::before {
+    color: rgba(0,0,0,0.6);
+  }
+
+  #promptModal .btn-close:hover,
+  #viewPromptModal .btn-close:hover {
+    background: rgba(220, 53, 69, 0.15);
+    border-color: #dc3545;
+  }
+  #promptModal .btn-close:hover::before,
+  #viewPromptModal .btn-close:hover::before {
+    color: #dc3545;
+  }
+
+  /* ── Template variable chips ── */
+  .tpl-vars-panel {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  body.light-theme .tpl-vars-panel {
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .tpl-vars-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.85rem;
+    background: rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  body.light-theme .tpl-vars-header {
+    background: rgba(0,0,0,0.04);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .tpl-vars-hint {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-style: italic;
+    color: rgba(255,255,255,0.4);
+  }
+  body.light-theme .tpl-vars-hint {
+    color: rgba(0,0,0,0.4);
+  }
+
+  .tpl-vars-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .tpl-var-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 6px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.05);
+    transition: border-color 0.15s, background 0.15s;
+    max-width: 100%;
+  }
+  body.light-theme .tpl-var-chip {
+    border: 1px solid rgba(0,0,0,0.15);
+    background: rgba(0,0,0,0.03);
+  }
+
+  .tpl-var-chip:hover {
+    border-color: #6ea8fe;
+    background: rgba(110,168,254,0.08);
+  }
+
+  .tpl-var-chip.copied {
+    border-color: #198754;
+    background: rgba(25,135,84,0.12);
+  }
+
+  .tpl-var-chip code {
+    font-size: 0.8rem;
+    color: #e08c3a;
+    background: none;
+    padding: 0;
+    white-space: nowrap;
+  }
+  body.light-theme .tpl-var-chip code {
+    color: #c75f0a;
+  }
+
+  .tpl-var-chip.copied code {
+    color: #198754;
+  }
+
+  .tpl-var-chip-desc {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(255,255,255,0.45);
+  }
+  body.light-theme .tpl-var-chip-desc {
+    color: rgba(0,0,0,0.5);
+  }
 </style>
 {% endblock stylesheets %}
 {% block content %}
@@ -60,7 +283,7 @@
       </div>
     </div>
     <div class="modal fade" id="promptModal" aria-hidden="true" style="display: none;">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-scrollable">
           <div class="modal-content">
             <form id="promptForm">
               <input type="hidden" name="id" id="prompt_id">
@@ -76,6 +299,7 @@
                     </span>
                   </span>
                 </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <div class="mt-3">
@@ -111,41 +335,58 @@
                   </select>
                 </div>
                 <div class="mt-3" id="templateVariablesSection" style="display: none;">
-                  <div class="variables-section">
-                      <label><strong>Available Variables for Template Prompts</strong></label>
-                      <div class="variable-item">
-                          <label class="var-description">You can use ALL available report variables in template prompts.</label>
+                  <div class="tpl-vars-panel">
+                    <div class="tpl-vars-header">
+                      <i class="fas fa-code me-2"></i>
+                      <span>Available Variables</span>
+                      <span class="tpl-vars-hint">Click any variable to copy</span>
+                    </div>
+                    <div class="tpl-vars-list">
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${aggregated_data_analysis}')">
+                        <code>${aggregated_data_analysis}</code>
+                        <span class="tpl-var-chip-desc">Detailed analysis of aggregated performance metrics</span>
                       </div>
-                      <label class="mt-2"><strong>Common AI-Specific Variables:</strong></label>
-                      <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${aggregated_data_analysis}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${aggregated_data_analysis}');"></i> ${aggregated_data_analysis}</label>
-                          <label class="var-description">Detailed analysis of aggregated performance metrics.</label>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${graphs_analysis}')">
+                        <code>${graphs_analysis}</code>
+                        <span class="tpl-var-chip-desc">AI-generated analysis of performance graphs</span>
                       </div>
-                      <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${graphs_analysis}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${graphs_analysis}');"></i> ${graphs_analysis}</label>
-                          <label class="var-description">AI-generated analysis of performance graphs.</label>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${nfr_summary}')">
+                        <code>${nfr_summary}</code>
+                        <span class="tpl-var-chip-desc">Summary of Non-Functional Requirements validation</span>
                       </div>
-                      <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${nfr_summary}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${nfr_summary}');"></i> ${nfr_summary}</label>
-                          <label class="var-description">Summary of Non-Functional Requirements validation.</label>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${ml_summary}')">
+                        <code>${ml_summary}</code>
+                        <span class="tpl-var-chip-desc">Summary of ML-based anomaly detection</span>
                       </div>
-                      <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${ml_summary}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${ml_summary}');"></i> ${ml_summary}</label>
-                          <label class="var-description">Summary of ML-based anomaly detection.</label>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${ml_anomalies}')">
+                        <code>${ml_anomalies}</code>
+                        <span class="tpl-var-chip-desc">List of all anomalies detected by ML</span>
                       </div>
-                      <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${ml_anomalies}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${ml_anomalies}');"></i> ${ml_anomalies}</label>
-                          <label class="var-description">List of all anomalies detected by ML.</label>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${additional_context}')">
+                        <code>${additional_context}</code>
+                        <span class="tpl-var-chip-desc">Optional extra context you provide for the report</span>
                       </div>
-                      <div class="variable-item">
-                          <label class="var-name" onclick="copyToClipboard('${additional_context}')"><i class="fas fa-copy copy-icon" title="Copy" aria-label="Copy variable name" onclick="event.stopPropagation(); copyToClipboard('${additional_context}');"></i> ${additional_context}</label>
-                          <label class="var-description">Optional extra context you provide for the report.</label>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${top_slowest_requests}')">
+                        <code>${top_slowest_requests}</code>
+                        <span class="tpl-var-chip-desc">Top N slowest requests sorted by configured metric (pct90 default)</span>
+                      </div>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${top_slowest_requests_N_metric}')">
+                        <code>${top_slowest_requests_N_metric}</code>
+                        <span class="tpl-var-chip-desc">Parameterized form, e.g. ${top_slowest_requests_10_avg}</span>
+                      </div>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${top_degraded_requests}')">
+                        <code>${top_degraded_requests}</code>
+                        <span class="tpl-var-chip-desc">Top N most degraded transactions vs baseline (requires comparison). Shows: Transaction, Current, Baseline, Diff, Diff %</span>
+                      </div>
+                      <div class="tpl-var-chip" onclick="copyVarChip(this, '${top_degraded_requests_N_metric}')">
+                        <code>${top_degraded_requests_N_metric}</code>
+                        <span class="tpl-var-chip-desc">Parameterized form, e.g. ${top_degraded_requests_10_pct90}</span>
                       </div>
                     </div>
                   </div>
-              </div>
+                </div>
+              </div><!-- /modal-body -->
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="submit" class="btn btn-primary">Save</button>
               </div>
             </form>
@@ -154,32 +395,42 @@
     </div>
 
     <!-- View Prompt Modal -->
-    <div class="modal fade" id="viewPromptModal" aria-hidden="true" style="display: none;">
-      <div class="modal-dialog">
+    <div class="modal fade" id="viewPromptModal" tabindex="-1" aria-hidden="true" style="display: none;">
+      <div class="modal-dialog modal-dialog-scrollable">
           <div class="modal-content">
               <div class="modal-header">
-                <h2 class="modal-title">View Prompt</h2>
+                <h2 class="modal-title" id="view_name_title">View Prompt</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                <div class="mt-3">
-                  <label>Name</label>
-                  <input type="text" class="form-control" id="view_name" readonly>
+                <!-- Compact metadata row -->
+                <div class="prompt-meta-row mb-3">
+                  <div class="prompt-meta-item">
+                    <span class="meta-label">Place</span>
+                    <span class="badge badge-primary" id="view_place_badge">—</span>
+                  </div>
+                  <div class="prompt-meta-item">
+                    <span class="meta-label">Type</span>
+                    <span class="badge badge-success" id="view_type_badge">—</span>
+                  </div>
+                  <div class="prompt-meta-item">
+                    <span class="meta-label">Scope</span>
+                    <span class="badge badge-primary" id="view_scope_badge">—</span>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary prompt-copy-btn" id="copyPromptBtn" title="Copy prompt to clipboard">
+                    <i class="fas fa-copy"></i> Copy
+                  </button>
                 </div>
-                <div class="mt-3">
-                  <label>Place</label>
-                  <input type="text" class="form-control" id="view_place" readonly>
-                </div>
-                <div class="mt-3">
-                  <label>Prompt</label>
-                  <textarea class="form-control" id="view_prompt" rows="6" readonly></textarea>
-                </div>
-                <div class="mt-3">
-                  <label>Scope</label>
-                  <input type="text" class="form-control" id="view_scope" readonly>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+
+                <!-- Prompt content -->
+                <label class="form-label fw-semibold mb-1">Prompt</label>
+                <div id="view_prompt_display"></div>
+
+                <!-- Hidden fields kept for JS compatibility -->
+                <input type="hidden" id="view_name">
+                <input type="hidden" id="view_place">
+                <textarea style="display:none" id="view_prompt"></textarea>
+                <input type="hidden" id="view_scope">
               </div>
           </div>
       </div>
@@ -477,6 +728,21 @@
           });
       }
 
+      function copyVarChip(cardEl, text) {
+          navigator.clipboard.writeText(text).then(function() {
+              cardEl.classList.add('copied');
+              const codeEl = cardEl.querySelector('code');
+              const original = codeEl.textContent;
+              codeEl.textContent = '✓ copied';
+              setTimeout(() => {
+                  cardEl.classList.remove('copied');
+                  codeEl.textContent = original;
+              }, 1200);
+          }, function() {
+              showFlashMessage('Failed to copy!', 'error');
+          });
+      }
+
       // Reset the Add/Edit Prompt form to defaults
       function resetPromptForm() {
           const idEl = document.getElementById('prompt_id');
@@ -504,10 +770,29 @@
 
       // Function to show the view prompt modal
       function showViewPromptModal(prompt) {
+          const scope = prompt.project_id ? 'PROJECT' : 'ALL';
+
+          // Hidden fields (kept for any external references)
           document.getElementById('view_name').value = prompt.name;
           document.getElementById('view_place').value = prompt.place;
           document.getElementById('view_prompt').value = prompt.prompt;
-          document.getElementById('view_scope').value = prompt.project_id ? 'PROJECT' : 'ALL';
+          document.getElementById('view_scope').value = scope;
+
+          // Update modal title with prompt name
+          document.getElementById('view_name_title').textContent = prompt.name;
+
+          // Populate meta badges
+          document.getElementById('view_place_badge').textContent = (prompt.place || '').toUpperCase();
+          document.getElementById('view_type_badge').textContent = (prompt.type || '').toUpperCase();
+          document.getElementById('view_scope_badge').textContent = scope;
+
+          // Display prompt in styled block
+          document.getElementById('view_prompt_display').textContent = prompt.prompt;
+
+          // Copy button wiring
+          document.getElementById('copyPromptBtn').onclick = function() {
+              copyToClipboard(prompt.prompt);
+          };
       }
 
       function showClonePromptModal(prompt) {
@@ -614,3 +899,4 @@
     </script>
 </main>
 {% endblock content %}
+

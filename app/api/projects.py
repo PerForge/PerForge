@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -381,6 +381,38 @@ def _create_example_data(project_id: str) -> None:
                     "metric": "pct90",
                     "operation": "<",
                     "threshold": 1000
+                }
+            ]
+        })
+
+        # Default performance NFRs that serve as baseline comparison thresholds.
+        # These cover typical backend latency/error targets and can be assigned
+        # to any template to validate results against well-known baselines.
+        DBNFRs.save(project_id, {
+            "id": None,
+            "name": "[EXAMPLE] Default Performance Thresholds",
+            "metric_type": "backend",
+            "rows": [
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "avg",
+                    "operation": "<",
+                    "threshold": 1000
+                },
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "pct90",
+                    "operation": "<",
+                    "threshold": 2000
+                },
+                {
+                    "regex": False,
+                    "scope": "each",
+                    "metric": "errors",
+                    "operation": "<",
+                    "threshold": 1
                 }
             ]
         })

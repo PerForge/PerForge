@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,11 +43,17 @@ class Grafana(Integration):
             self.test_title = config["test_title"]
             self.baseline_test_title = config["baseline_test_title"]
             self.dashboards = config["dashboards"]
+            self.default_dashboard_id = config.get("default_dashboard_id")
         else:
             logging.warning("There's no Grafana integration configured, or you're attempting to send a request from an unsupported location.")
 
     def get_grafana_link(self, start, end, dash_id = None):
-        dashboard_content = next((dashboard['content'] for dashboard in self.dashboards if dashboard['id'] == dash_id), self.dashboards[0]['content'])
+        # Use explicit dash_id → configured default dashboard → first dashboard
+        effective_id = dash_id if dash_id is not None else self.default_dashboard_id
+        dashboard_content = next(
+            (d['content'] for d in self.dashboards if d['id'] == effective_id),
+            self.dashboards[0]['content']
+        )
         return self.server + dashboard_content + '?orgId=' + self.org_id + '&from='+str(start)+'&to='+str(end)
 
     def get_grafana_test_link(self, start, end, test_title, dash_id = None):

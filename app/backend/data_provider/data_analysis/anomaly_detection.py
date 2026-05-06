@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1235,24 +1235,10 @@ class AnomalyDetectionEngine:
                         if mean_overall and mean_overall > 0:
                             share = mean_rps / mean_overall
 
-                # Choose anomaly direction from the best_metrics (if any)
-                direction = None
-                if best_metrics:
-                    for m_name, meta in best_metrics.items():
-                        d = None
-                        if isinstance(meta, dict):
-                            d = meta.get('direction')
-                        if d is not None:
-                            direction = d
-                            break
-
-                # For throughput metrics (RPS), align per-transaction direction with overall direction
-                # to avoid logical contradictions (e.g., overall "decrease" with per-txn "increase")
-                overall_direction = oa.get('direction')
-                if m in ['overalThroughput', 'rps'] and overall_direction and direction:
-                    if overall_direction != direction:
-                        # Per-transaction direction contradicts overall - align it
-                        direction = overall_direction
+                # Use the overall anomaly's direction for contributing transactions.
+                # Per-transaction direction is not used in output — transactions are matched
+                # by time-window overlap and should reflect the overall anomaly direction.
+                direction = oa.get('direction')
 
                 duration_sec = best_overlap
                 impact = float(share)
@@ -1366,8 +1352,7 @@ class AnomalyDetectionEngine:
                 parts = []
                 for t in txns_sorted:
                     name = t.get('transaction') or 'unknown'
-                    direction_txn = t.get('direction') or 'unknown'
-                    parts.append(f"{name} ({direction_txn})")
+                    parts.append(name)
                 if parts:
                     desc = f"{base_desc} Likely contributing transactions: " + ", ".join(parts) + "."
 

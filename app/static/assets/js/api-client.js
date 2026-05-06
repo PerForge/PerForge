@@ -256,6 +256,71 @@ const apiClient = {
          */
         getOutputConfigs: function(id) {
             return apiClient.get(`/projects/${id}/output-configs`);
+        },
+
+        /**
+         * Export a project configuration as a JSON file download
+         *
+         * @param {string|number} id - Project ID
+         * @returns {Promise} - Resolves with {data: {blob, filename, ...}}
+         */
+        exportConfig: function(id) {
+            return fetch(apiClient.baseUrl + `/projects/${id}/export`, {
+                method: 'GET',
+                credentials: 'same-origin'
+            }).then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                const contentDisposition = response.headers.get('Content-Disposition') || '';
+                let filename = `project_${id}_export.json`;
+                const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (match && match[1]) {
+                    filename = match[1].replace(/['"]/g, '');
+                }
+                return response.blob().then(blob => ({
+                    status: 'success',
+                    data: { blob, filename }
+                }));
+            });
+        },
+
+        /**
+         * Check what conflicts would occur when importing an export file.
+         *
+         * @param {FormData} formData - Must contain 'file' (JSON) and 'project_id'
+         * @returns {Promise} - Resolves with {data: {conflicts: [...]}}
+         */
+        importCheck: function(formData) {
+            return fetch(apiClient.baseUrl + '/projects/import/check', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            }).then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            });
+        },
+
+        /**
+         * Execute an import (override existing items).
+         *
+         * @param {FormData} formData - Must contain 'file', 'project_id', and 'confirmed' ("true")
+         * @returns {Promise} - Resolves with {data: {summary: {...}}}
+         */
+        importExecute: function(formData) {
+            return fetch(apiClient.baseUrl + '/projects/import', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            }).then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            });
         }
     },
 

@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -260,6 +260,9 @@ class MetricsTable:
                     current_str = f"{float(metric.value):.2f}" if metric.value else "0.00"
                     # Use baseline->current format
                     row[metric_name] = f"{baseline_str} -> {current_str}"
+                    # Attach hidden diff_pct metadata for highlight processing in format_table
+                    diff_pct = metric.difference_pct if metric.difference_pct is not None else 0.0
+                    row[f"__{metric_name}__diff_pct"] = round(diff_pct, 2)
                 else:
                     # No baseline for this metric
                     if isinstance(metric.value, float):
@@ -339,7 +342,11 @@ class MetricsTable:
                     row[f"{display_label} ({diff_label})"] = diff_val
                 if show_diff_pct:
                     diff_pct_val = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else 0.00
-                    row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+                    row[f"{display_label} ({diff_pct_label})"] = f"{diff_pct_val:.2f}%"
+                # Attach hidden diff_pct metadata for highlight processing in format_table
+                diff_pct = round(metric.difference_pct, 2) if metric and metric.difference_pct is not None else None
+                if diff_pct is not None:
+                    row[f"__{display_label} ({current_label})__diff_pct"] = diff_pct
             result.append(row)
         return result
 
@@ -401,6 +408,9 @@ class MetricsTable:
                 if metric is not None:
                     if metric.baseline is not None:
                         row[display_label] = f"{float(metric.baseline):.2f} -> {float(metric.value):.2f}"
+                        # Attach hidden diff_pct metadata for highlight processing in format_table
+                        diff_pct = metric.difference_pct if metric.difference_pct is not None else 0.0
+                        row[f"__{display_label}__diff_pct"] = round(diff_pct, 2)
                     else:
                         row[display_label] = f"{float(metric.value):.2f}" if isinstance(metric.value, float) else metric.value
                     if show_diff:
@@ -408,7 +418,7 @@ class MetricsTable:
                         row[f"{display_label} ({diff_label})"] = diff_val
                     if show_diff_pct:
                         diff_pct_val = round(metric.difference_pct, 2) if metric.difference_pct is not None else 0.00
-                        row[f"{display_label} ({diff_pct_label})"] = diff_pct_val
+                        row[f"{display_label} ({diff_pct_label})"] = f"{diff_pct_val:.2f}%"
             result.append(row)
         return result
 
@@ -443,6 +453,132 @@ class MetricsTable:
                     row[metric_name] = round(metric.value, 2) if isinstance(metric.value, float) else metric.value
             result.append(row)
         return result
+
+    # Patterns that identify aggregate "all transactions" rows to be excluded
+    _ALL_TRANSACTIONS_PATTERNS = {'all', 'total', 'all transactions', 'all requests', 'overall'}
+
+    def get_top_n_slowest(
+        self,
+        metric_name: str = 'pct90',
+        n: int = 5,
+        exclude_all: bool = True
+    ) -> List[Dict[str, Any]]:
+        """Return the top-N transaction rows sorted descending by *metric_name*.
+
+        Args:
+            metric_name: The metric column to rank by (e.g. 'pct90', 'avg').
+            n: Number of rows to return.
+            exclude_all: When True, rows whose scope matches a known
+                aggregate-total pattern (e.g. "all", "Total") are skipped.
+
+        Returns:
+            List of row dicts in the same format as :meth:`format_metrics`,
+            ordered from slowest to fastest (descending by *metric_name*).
+            If the requested metric is not present in any row, the full
+            unordered result is returned as a fallback.
+        """
+        # Group all metrics by scope
+        scope_groups: Dict[str, Dict[str, Any]] = {}
+        for metric in self.metrics:
+            scope = metric.scope or 'unknown'
+            if scope not in scope_groups:
+                scope_groups[scope] = {}
+            scope_groups[scope][metric.name] = metric
+
+        rows: List[Dict[str, Any]] = []
+        for scope, metrics_dict in scope_groups.items():
+            if exclude_all and scope.strip().lower() in self._ALL_TRANSACTIONS_PATTERNS:
+                continue
+            row: Dict[str, Any] = {self.scope_column_name: scope}
+            for mname, metric in metrics_dict.items():
+                row[mname] = round(metric.value, 2) if isinstance(metric.value, float) else metric.value
+            rows.append(row)
+
+        # Sort descending by the chosen metric; rows missing the metric sort last
+        def _sort_key(row: Dict[str, Any]) -> float:
+            val = row.get(metric_name)
+            if val is None:
+                return float('-inf')
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return float('-inf')
+
+        rows.sort(key=_sort_key, reverse=True)
+        return rows[:n]
+
+    def get_top_n_degraded(
+        self,
+        metric_name: str = 'pct90',
+        n: int = 5,
+        exclude_all: bool = True,
+        min_pct: float = 0.0,
+        sort_by: str = 'diff_pct'
+    ) -> List[Dict[str, Any]]:
+        """Return the top-N most degraded transaction rows compared to baseline.
+
+        Only rows that have baseline data and a positive degradation (current > baseline)
+        are included. The configured metric is used both for ranking and for display —
+        the output table shows: scope, current value, baseline value, diff, diff %.
+
+        Args:
+            metric_name: Metric to compare (e.g. 'pct90', 'avg').
+            n: Number of rows to return.
+            exclude_all: When True, aggregate-total rows (e.g. "all", "Total") are skipped.
+            min_pct: Minimum degradation percentage to include a row (0.0 = any positive degradation).
+            sort_by: Column to sort by — 'diff_pct' (default) or 'diff'.
+
+        Returns:
+            List of row dicts with keys: scope_column_name, Current <metric>, Baseline <metric>,
+            Diff, Diff %. Ordered from most to least degraded (descending by sort_by).
+            Returns an empty list if no baseline data is present.
+        """
+        current_col = f"Current {metric_name}"
+        baseline_col = f"Baseline {metric_name}"
+
+        # Group metrics by scope
+        scope_groups: Dict[str, Dict[str, Any]] = {}
+        for metric in self.metrics:
+            scope = metric.scope or 'unknown'
+            if scope not in scope_groups:
+                scope_groups[scope] = {}
+            scope_groups[scope][metric.name] = metric
+
+        rows: List[Dict[str, Any]] = []
+        for scope, metrics_dict in scope_groups.items():
+            if exclude_all and scope.strip().lower() in self._ALL_TRANSACTIONS_PATTERNS:
+                continue
+
+            target_metric: Metric = metrics_dict.get(metric_name)
+            if target_metric is None or target_metric.baseline is None:
+                continue
+
+            diff = target_metric.difference if target_metric.difference is not None else 0.0
+            diff_pct = target_metric.difference_pct if target_metric.difference_pct is not None else 0.0
+
+            # Only include transactions that degraded beyond the threshold
+            if diff_pct < min_pct:
+                continue
+
+            rows.append({
+                self.scope_column_name: scope,
+                current_col: round(float(target_metric.value), 2),
+                baseline_col: round(float(target_metric.baseline), 2),
+                'Diff': round(diff, 2),
+                'Diff %': round(diff_pct, 2),
+            })
+
+        # Sort descending by chosen column
+        sort_col = 'Diff %' if sort_by == 'diff_pct' else 'Diff'
+
+        def _sort_key(row: Dict[str, Any]) -> float:
+            try:
+                return float(row.get(sort_col, float('-inf')))
+            except (TypeError, ValueError):
+                return float('-inf')
+
+        rows.sort(key=_sort_key, reverse=True)
+        return rows[:n]
 
     def set_baseline_metrics(self, baseline_metrics: List[Metric]) -> None:
         """Set baseline values from a list of Metric objects

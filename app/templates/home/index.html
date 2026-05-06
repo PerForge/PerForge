@@ -5,152 +5,515 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+  /* ── Home page layout ───────────────────────────────────────── */
+  .home-page {
+    padding: 28px 32px 48px;
+  }
+
+  .home-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--bs-gray-500);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .home-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-main-color);
+    max-width: 180px;
+  }
+
+  /* ── Stats grid ─────────────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 680px)  { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .stat-card {
+    background: var(--bs-background);
+    border: 1px solid var(--border-main-color);
+    border-radius: 10px;
+    padding: 24px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--sc-accent);
+    opacity: 0.65;
+    transition: opacity 0.2s;
+  }
+  .stat-card:hover {
+    border-color: var(--sc-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+  }
+  .stat-card:hover::before { opacity: 1; }
+
+  .stat-card--templates    { --sc-accent: #0d6efd; }
+  .stat-card--graphs       { --sc-accent: #20c997; }
+  .stat-card--nfrs         { --sc-accent: #fd7e14; }
+  .stat-card--integrations { --sc-accent: #6f42c1; }
+  .stat-card--secrets      { --sc-accent: #dc3545; }
+
+  .stat-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .stat-count {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--sc-accent);
+  }
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: color-mix(in srgb, var(--sc-accent) 12%, transparent);
+    color: var(--sc-accent);
+    flex-shrink: 0;
+  }
+  .stat-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bs-gray-500);
+    margin: 0;
+  }
+  .stat-add-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--sc-accent);
+    text-decoration: none;
+    opacity: 0.65;
+    transition: opacity 0.2s;
+    margin-top: 2px;
+  }
+  .stat-add-link:hover { opacity: 1; color: var(--sc-accent); }
+
+  /* ── Projects grid ──────────────────────────────────────────── */
+  .projects-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .project-card {
+    background: var(--bs-background);
+    border: 1.5px solid var(--border-main-color);
+    border-radius: 10px;
+    width: 200px;
+    min-height: 170px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  }
+  .project-card:hover {
+    border-color: var(--bs-blue);
+    box-shadow: 0 0 0 1px rgba(13,110,253,0.2), 0 6px 20px rgba(0,0,0,0.28);
+    transform: translateY(-2px);
+  }
+  .project-card.selected-project {
+    border-color: var(--bs-blue);
+    box-shadow: 0 0 0 2px rgba(13,110,253,0.35);
+  }
+  .project-card.selected-project::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--bs-blue);
+  }
+
+  .project-name-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 12px 10px;
+    text-align: center;
+  }
+  .project-name-link {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main-color);
+    text-decoration: none;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+  .project-name-link:hover { color: var(--bs-blue); }
+
+  .project-actions-bar {
+    display: flex;
+    border-top: 1px solid var(--border-main-color);
+    background: rgba(0,0,0,0.08);
+    padding: 7px 8px;
+    gap: 5px;
+    justify-content: center;
+  }
+  .project-actions-bar .btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    flex: 1;
+    max-width: 56px;
+  }
+
+  /* ── Docs grid ──────────────────────────────────────────────── */
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 240px));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 900px) { .docs-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .doc-tile {
+    background: var(--bs-background);
+    border: 1px solid var(--border-main-color);
+    border-radius: 8px;
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text-main-color);
+    font-size: 0.84rem;
+    font-weight: 600;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .doc-tile:hover {
+    border-color: var(--bs-blue);
+    color: var(--bs-blue);
+    background: rgba(13,110,253,0.04);
+  }
+  .doc-tile-icon { font-size: 1.05rem; flex-shrink: 0; }
+
+  /* version badge */
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.8rem;
+    color: var(--bs-gray-500);
+    padding: 5px 14px;
+    background: var(--bs-background);
+    border: 1px solid var(--border-main-color);
+    border-radius: 20px;
+  }
+  .version-badge .ver-num { color: var(--bs-blue); font-weight: 700; }
+
+  /* don't force full-viewport height when content is short */
+  .main-background { min-height: auto !important; }
+  /* keep body background dark so no white flash below content */
+  html, body { background: var(--bs-gradient) !important; }
+
+  /* light-theme tweaks */
+  body.light-theme .stat-card,
+  body.light-theme .project-card,
+  body.light-theme .doc-tile,
+  body.light-theme .version-badge { background: #fff; }
+  body.light-theme .project-actions-bar { background: rgba(0,0,0,0.04); }
+  body.light-theme .doc-tile:hover { background: rgba(13,110,253,0.04); }
+  body.light-theme .home-section-label { color: #6c757d; }
+  body.light-theme .home-section-label::after { background: #dee2e6; }
+
+  /* ── Import / Project modals ───────────────────────────────── */
+  #importModal .modal-content,
+  #projectModal .modal-content {
+    background: #1a1d23;
+    border: 1px solid var(--border-main-color);
+    border-radius: 14px;
+    color: var(--text-main-color);
+  }
+  #importModal .modal-header,
+  #projectModal .modal-header {
+    border-bottom: 1px solid var(--border-main-color);
+    padding: 20px 24px 16px;
+  }
+  #importModal .modal-title,
+  #projectModal .modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main-color);
+  }
+  #importModal .modal-body,
+  #projectModal .modal-body {
+    padding: 20px 24px;
+  }
+  #importModal .modal-footer,
+  #projectModal .modal-footer {
+    border-top: 1px solid var(--border-main-color);
+    padding: 14px 24px;
+    gap: 8px;
+  }
+  #importModal .form-label,
+  #projectModal .form-label,
+  #projectModal label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bs-gray-500);
+    margin-bottom: 6px;
+  }
+  /* Custom file input */
+  #import_file {
+    background: var(--bs-background-dark);
+    border: 1px solid var(--border-main-color);
+    border-radius: 8px;
+    color: var(--text-main-color);
+    padding: 8px 12px;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  #import_file:hover { border-color: var(--bs-blue); }
+  #import_file::file-selector-button {
+    background: var(--bs-blue);
+    color: #fff;
+    border: none;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: background 0.2s;
+  }
+  #import_file::file-selector-button:hover { background: #0b5ed7; }
+  /* Project name input */
+  #project_name {
+    background: var(--bs-background-dark);
+    border: 1px solid var(--border-main-color);
+    border-radius: 8px;
+    color: var(--text-main-color);
+    padding: 9px 14px;
+  }
+  #project_name:focus {
+    border-color: var(--bs-blue);
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.15);
+    outline: none;
+  }
+  /* Secondary (Close) button in these modals */
+  #importModal .btn-secondary,
+  #projectModal .btn-secondary {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border-main-color);
+    color: var(--text-main-color);
+  }
+  #importModal .btn-secondary:hover,
+  #projectModal .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: var(--bs-gray-600);
+  }
+  /* Conflict table */
+  #importModal .table {
+    color: var(--text-main-color);
+    border-color: var(--border-main-color);
+  }
+  #importModal .table thead th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bs-gray-500);
+    border-bottom-color: var(--border-main-color);
+  }
+  #importModal .table td { border-color: var(--border-main-color); }
+
+  /* light-theme modal adjustments */
+  body.light-theme #importModal .modal-content,
+  body.light-theme #projectModal .modal-content { background: #fff; color: #212529; }
+  body.light-theme #import_file,
+  body.light-theme #project_name { background: #fff; color: #212529; }
+  body.light-theme #importModal .btn-secondary,
+  body.light-theme #projectModal .btn-secondary {
+    background: #f8f9fa; color: #495057; border-color: #ced4da;
+  }
+</style>
 {% endblock stylesheets %}
 {% block content %}
    <main>
       <div class="main-background">
             {% include 'includes/sidebar.html' %}
             <div class="main-body">
-               <div class="start-section ms-4 mt-3">
-                  <h2 class="lh-sm">Project stats</h2>
-               </div>
-               <div class="start-section ms-4 mt-3">
-                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
-                      <div class="card">
-                        <div class="card-body">
-                            <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.templates }} <span class="fs-0 text-900 lh-lg">templates</span></p>
-                            <div class="flex-end">
-                              <a class="badge badge-success" href="{{ url_for('get_templates') }}">add new</a>
-                            </div>
+               <div class="home-page">
+
+                  <!-- ── Project Stats ───────────────────────────── -->
+                  <div class="home-section-label">Project stats</div>
+                  <div class="stats-grid">
+                     <div class="stat-card stat-card--templates">
+                        <div class="stat-top">
+                           <span class="stat-count">{{ project_stats.templates }}</span>
+                           <span class="stat-icon"><i class="fas fa-file-alt"></i></span>
                         </div>
-                      </div>
-                  </div>
-                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
-                     <div class="card">
-                        <div class="card-body">
-                           <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.graphs }} <span class="fs-0 text-900 lh-lg">graphs</span></p>
-                           <div class="flex-end">
-                              <a class="badge badge-success" href="{{ url_for('get_graphs') }}">add new</a>
-                           </div>
+                        <p class="stat-label">Templates</p>
+                        <a class="stat-add-link" href="{{ url_for('get_templates') }}"><i class="fas fa-plus-circle"></i> Add new</a>
+                     </div>
+                     <div class="stat-card stat-card--graphs">
+                        <div class="stat-top">
+                           <span class="stat-count">{{ project_stats.graphs }}</span>
+                           <span class="stat-icon"><i class="fas fa-chart-bar"></i></span>
                         </div>
+                        <p class="stat-label">Graphs</p>
+                        <a class="stat-add-link" href="{{ url_for('get_graphs') }}"><i class="fas fa-plus-circle"></i> Add new</a>
+                     </div>
+                     <div class="stat-card stat-card--nfrs">
+                        <div class="stat-top">
+                           <span class="stat-count">{{ project_stats.nfrs }}</span>
+                           <span class="stat-icon"><i class="fas fa-bullseye"></i></span>
+                        </div>
+                        <p class="stat-label">NFRs</p>
+                        <a class="stat-add-link" href="{{ url_for('get_nfrs') }}"><i class="fas fa-plus-circle"></i> Add new</a>
+                     </div>
+                     <div class="stat-card stat-card--integrations">
+                        <div class="stat-top">
+                           <span class="stat-count">{{ project_stats.integrations }}</span>
+                           <span class="stat-icon"><i class="fas fa-plug"></i></span>
+                        </div>
+                        <p class="stat-label">Integrations</p>
+                        <a class="stat-add-link" href="{{ url_for('integrations') }}"><i class="fas fa-plus-circle"></i> Add new</a>
+                     </div>
+                     <div class="stat-card stat-card--secrets">
+                        <div class="stat-top">
+                           <span class="stat-count">{{ project_stats.secrets }}</span>
+                           <span class="stat-icon"><i class="fas fa-key"></i></span>
+                        </div>
+                        <p class="stat-label">Secrets</p>
+                        <a class="stat-add-link" href="{{ url_for('get_secrets') }}"><i class="fas fa-plus-circle"></i> Add new</a>
                      </div>
                   </div>
-                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
-                     <div class="card">
-                        <div class="card-body">
-                           <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.nfrs }} <span class="fs-0 text-900 lh-lg">nfrs</span></p>
-                           <div class="flex-end">
-                              <a class="badge badge-success" href="{{ url_for('get_nfrs') }}">add new</a>
+
+                  <!-- ── Projects ───────────────────────────────── -->
+                  <div class="home-section-label">Projects</div>
+                  <div class="projects-grid">
+                     {% for project in projects %}
+                        <div class="project-card" data-project-id="{{ project.id }}">
+                           <div class="project-name-area">
+                              <a class="project-name-link" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
                            </div>
-                        </div>
-                     </div>
-                  </div>
-                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
-                      <div class="card">
-                        <div class="card-body">
-                            <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.integrations }} <span class="fs-0 text-900 lh-lg">integrations</span></p>
-                            <div class="flex-end">
-                              <a class="badge badge-success" href="{{ url_for('integrations') }}">add new</a>
-                            </div>
-                        </div>
-                      </div>
-                  </div>
-                  <div class="pr-10 col-xxl-2-5 col-lg-2-5">
-                      <div class="card">
-                        <div class="card-body">
-                            <p class="text-info fs-2-5 fw-bold mb-0">{{ project_stats.secrets }} <span class="fs-0 text-900 lh-lg">secrets</span></p>
-                            <div class="flex-end">
-                              <a class="badge badge-success" href="{{ url_for('get_secrets') }}">add new</a>
-                            </div>
-                        </div>
-                      </div>
-                  </div>
-               </div>
-               <div class="start-section ms-4 mt-3">
-                  <h2 class="mb-2 lh-sm">Projects</h2>
-               </div>
-               <div class="start-section ms-4">
-                  {% for project in projects %}
-                      <div class="card card-project center-section" data-project-id="{{ project.id }}">
-                          <a class="mt-3-5 d-block" href="#" onclick="setActiveProject('{{ project.id }}'); return false;">{{ project.name }}</a>
-                          <div class="project-actions mt-2 d-flex align-items-center">
+                           <div class="project-actions-bar">
                               <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#renameProjectModal-{{ project.id }}" onclick="prefillRename('{{ project.id }}')" aria-label="Rename project" title="Rename project"><i class="fas fa-pen"></i></button>
-                              <button class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}" aria-label="Delete project" title="Delete project"><i class="fas fa-trash"></i></button>
-                          </div>
-                      </div>
-                      <div class="modal fade" id="renameProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="renameProjectModalLabel-{{ project.id }}" aria-hidden="true">
-                          <div class="modal-dialog">
+                              <button class="btn btn-secondary export-btn" data-project-id="{{ project.id }}" aria-label="Export project" title="Export project configuration" onclick="exportProject({{ project.id }}, '{{ project.name }}'); return false;"><i class="fas fa-file-export"></i></button>
+                              <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteProjectModal-{{ project.id }}" aria-label="Delete project" title="Delete project"><i class="fas fa-trash"></i></button>
+                           </div>
+                        </div>
+                        <div class="modal fade" id="renameProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="renameProjectModalLabel-{{ project.id }}" aria-hidden="true">
+                           <div class="modal-dialog">
                               <div class="modal-content">
-                                  <div class="modal-header">
-                                      <h5 class="modal-title" id="renameProjectModalLabel-{{ project.id }}">Rename Project</h5>
-                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                  </div>
-                                  <div class="modal-body">
-                                      <label for="renameProjectName-{{ project.id }}" class="form-label">New name</label>
-                                      <input type="text" class="form-control" id="renameProjectName-{{ project.id }}" value="{{ project.name }}" />
-                                  </div>
-                                  <div class="modal-footer">
-                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                      <button type="button" class="btn btn-primary" onclick="renameProject('{{ project.id }}')">Save</button>
-                                  </div>
+                                 <div class="modal-header">
+                                    <h5 class="modal-title" id="renameProjectModalLabel-{{ project.id }}">Rename Project</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                 </div>
+                                 <div class="modal-body">
+                                    <label for="renameProjectName-{{ project.id }}" class="form-label">New name</label>
+                                    <input type="text" class="form-control" id="renameProjectName-{{ project.id }}" value="{{ project.name }}" />
+                                 </div>
+                                 <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" onclick="renameProject('{{ project.id }}')">Save</button>
+                                 </div>
                               </div>
-                          </div>
-                      </div>
-                      <div class="modal fade" id="deleteProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel-{{ project.id }}" aria-hidden="true">
-                          <div class="modal-dialog">
+                           </div>
+                        </div>
+                        <div class="modal fade" id="deleteProjectModal-{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel-{{ project.id }}" aria-hidden="true">
+                           <div class="modal-dialog">
                               <div class="modal-content">
-                                  <div class="modal-header">
-                                      <h5 class="modal-title" id="deleteProjectModalLabel-{{ project.id }}">Confirm Delete</h5>
-                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                  </div>
-                                  <div class="modal-body">
-                                      Are you sure you want to delete the project "{{ project.name }}"?
-                                  </div>
-                                  <div class="modal-footer">
-                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                      <button type="button" class="btn btn-danger" onclick="deleteProject('{{ project.id }}')">Confirm Delete</button>
-                                  </div>
+                                 <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteProjectModalLabel-{{ project.id }}">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                 </div>
+                                 <div class="modal-body">
+                                    Are you sure you want to delete the project "{{ project.name }}"?
+                                 </div>
+                                 <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-danger" onclick="deleteProject('{{ project.id }}')">Confirm Delete</button>
+                                 </div>
                               </div>
-                          </div>
-                      </div>
-                  {% endfor %}
-                  <div class="card card-project center-section">
-                     <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">new project</button>
-                  </div>
-               </div>
-               <div class="start-section ms-4 mt-3">
-                  <h2 class="mb-2 lh-sm">Docs</h2>
-               </div>
-               <div class="start-section ms-4 mb-9">
-                  <div class="card card-docs">
-                     <div class="border-bottom-sm mt-3 ms-4 me-4">
-                        <ul class="useful-links">
-                            <li class="mt-1">
-                                <a href="https://perforge.app/docs/category/configuration" target="_blank">📄 Documentation</a>
-                            </li>
-                            <li class="mt-1">
-                                <a href="https://www.youtube.com/@PerForge" target="_blank">🎥 Youtube channel</a>
-                            </li>
-                            <li class="mt-1">
-                                <a href="https://github.com/PerForge/PerForge/discussions" target="_blank">🌠 Feature requests</a>
-                            </li>
-                            <li class="mt-1">
-                                <a href="https://github.com/PerForge/PerForge/issues" target="_blank">🐛 Report a bug</a>
-                            </li>
-                        </ul>
-                     </div>
-                     <div class="center-section">
-                        <p id="version-info" class="fs-5">Current version: <span class="text-primary fw-bold">{{ current_version }}</span></p>
+                           </div>
+                        </div>
+                     {% endfor %}
+                     <!-- Add / Import card -->
+                     <div class="project-card project-card--new">
+                        <div class="new-project-inner">
+                           <button class="new-project-trigger" type="button" data-bs-toggle="modal" data-bs-target="#projectModal">
+                              <span class="plus-ring"><i class="fas fa-plus"></i></span>
+                              New project
+                           </button>
+                           <div class="new-project-divider"></div>
+                           <button class="new-project-trigger" type="button" data-bs-toggle="modal" data-bs-target="#importModal">
+                              <span class="plus-ring"><i class="fas fa-file-import"></i></span>
+                              Import
+                           </button>
+                        </div>
                      </div>
                   </div>
-               </div>
-               <div class="center-section">
-                  {% with msgs = get_flashed_messages() %}
-                  {% include 'includes/flashed-msg.html' %}
-                  {% endwith %}
-              </div>
-            </div>
-        </div>
+
+                  <!-- ── Docs & Resources ───────────────────────── -->
+                  <div class="home-section-label">Docs &amp; Resources</div>
+                  <div class="docs-grid">
+                     <a href="https://perforge.app/docs/category/configuration" target="_blank" class="doc-tile">
+                        <span class="doc-tile-icon">📄</span><span>Documentation</span>
+                     </a>
+                     <a href="https://www.youtube.com/@PerForge" target="_blank" class="doc-tile">
+                        <span class="doc-tile-icon">🎥</span><span>Youtube channel</span>
+                     </a>
+                     <a href="https://github.com/PerForge/PerForge/discussions" target="_blank" class="doc-tile">
+                        <span class="doc-tile-icon">🌠</span><span>Feature requests</span>
+                     </a>
+                     <a href="https://github.com/PerForge/PerForge/issues" target="_blank" class="doc-tile">
+                        <span class="doc-tile-icon">🐛</span><span>Report a bug</span>
+                     </a>
+                  </div>
+                  <span id="version-info" class="version-badge">
+                     <i class="fas fa-tag"></i> Current version: <span class="ver-num">{{ current_version }}</span>
+                  </span>
+
+                  <!-- Flash messages -->
+                  <div class="center-section mt-3">
+                     {% with msgs = get_flashed_messages() %}
+                     {% include 'includes/flashed-msg.html' %}
+                     {% endwith %}
+                  </div>
+
+               </div><!-- /.home-page -->
+            </div><!-- /.main-body -->
+        </div><!-- /.main-background -->
         <script>
             function setActiveProject(projectId) {
                 apiClient.projects.setActive(projectId)
@@ -163,9 +526,40 @@
                     });
             }
 
+            function exportProject(projectId, projectName) {
+                const btn = document.querySelector(`.export-btn[data-project-id="${projectId}"]`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                }
+                apiClient.projects.exportConfig(projectId)
+                    .then(result => {
+                        const blob = result.data.blob;
+                        const filename = result.data.filename || `${projectName}_export.json`;
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(error => {
+                        console.error('Export failed:', error);
+                        showFlashMessage('Export failed: ' + (error.message || 'Unknown error'), 'error');
+                    })
+                    .finally(() => {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-file-export"></i>';
+                        }
+                    });
+            }
+
             function prefillRename(projectId) {
-                const card = document.querySelector(`.card-project[data-project-id='${projectId}']`);
-                const nameLink = card ? card.querySelector('a.mt-3-5') : null;
+                const card = document.querySelector(`.project-card[data-project-id='${projectId}']`);
+                const nameLink = card ? card.querySelector('.project-name-link') : null;
                 const input = document.getElementById(`renameProjectName-${projectId}`);
                 if (nameLink && input) {
                     input.value = nameLink.textContent.trim();
@@ -186,9 +580,9 @@
                         $(`#renameProjectModal-${projectId}`).modal('hide');
 
                         // Update UI text
-                        const card = document.querySelector(`.card-project[data-project-id='${projectId}']`);
+                        const card = document.querySelector(`.project-card[data-project-id='${projectId}']`);
                         if (card) {
-                            const nameLink = card.querySelector('a.mt-3-5');
+                            const nameLink = card.querySelector('.project-name-link');
                             if (nameLink) nameLink.textContent = newName;
                         }
 
@@ -277,7 +671,7 @@
                 const activeProjectId = getCookie('project');
 
                 if (activeProjectId) {
-                    const projectCard = document.querySelector(`.card-project[data-project-id='${activeProjectId}']`);
+                    const projectCard = document.querySelector(`.project-card[data-project-id='${activeProjectId}']`);
                     if (projectCard) {
                         projectCard.classList.add('selected-project');
                     }

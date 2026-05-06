@@ -5,6 +5,50 @@
 <link type="text/css" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
 <link type="text/css" href="/static/assets/css/main.css" rel="stylesheet">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+  /* ── Graph modal ── */
+  #graphModal .modal-dialog {
+    max-width: 96vw;
+    width: 96vw;
+    margin: 1rem auto;
+  }
+
+  /* ── Close button ── */
+  #graphModal .btn-close {
+    filter: none;
+    opacity: 1;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: background 0.15s, border-color 0.15s;
+    background-image: none !important;
+  }
+  body.light-theme #graphModal .btn-close {
+    border: 1px solid rgba(0,0,0,0.25);
+  }
+  #graphModal .btn-close::before {
+    content: '✕';
+    font-size: 0.85rem;
+    line-height: 1;
+    color: rgba(255,255,255,0.75);
+  }
+  body.light-theme #graphModal .btn-close::before {
+    color: rgba(0,0,0,0.6);
+  }
+  #graphModal .btn-close:hover {
+    background: rgba(220, 53, 69, 0.15);
+    border-color: #dc3545;
+  }
+  #graphModal .btn-close:hover::before {
+    color: #dc3545;
+  }
+</style>
 {% endblock stylesheets %}
 {% block content %}
 <main>
@@ -111,10 +155,10 @@
       </div>
     </div>
     <div class="modal fade" id="graphModal" aria-hidden="true" style="display: none;">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
-                <h2 class="mb-0">Graphs
+                <h2 class="modal-title" id="graphModalLabel">Add Graph
                     <span class="tooltip-container">
                       <a href="https://perforge.app/docs/configuration/graphs" target="_blank">
                           <span class="fa-regular fa-circle-question me-2 mt-2"></span>
@@ -192,7 +236,6 @@
               </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="saveGraphBtn">Save</button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -216,7 +216,6 @@ def receive_test_upload():
                 ts_min = pd.to_datetime(df["timestamp"], utc=True).min()
                 if pd.notna(ts_min):
                     prefix = pd.Timestamp(ts_min).strftime('%Y-%m-%d_%H:%M@')
-                    # Strip any existing date prefix like 2025-08-13_12:29@
                     base_title = re.sub(r'^\d{4}-\d{2}-\d{2}_\d{2}:\d{2}@\s*', '', (test_title or ''))
                     test_title = f"{prefix}{base_title}"
         except Exception:

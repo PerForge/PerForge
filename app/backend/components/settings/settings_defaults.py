@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -376,6 +376,172 @@ REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
         'value': 'Diff %',
         'type': 'string',
         'description': 'Suffix label for percentage difference columns. Example result: "Avg RT (Diff %)".'
+    },
+    'aggregated_table_highlight_enabled': {
+        'value': False,
+        'type': 'bool',
+        'description': 'When enabled, cells in the aggregated data table are highlighted green for improved metrics and red for degraded metrics relative to the baseline. Requires a baseline test to be selected. Uses the improved/degraded threshold settings below.'
+    },
+    'aggregated_table_highlight_improved_threshold_pct': {
+        'value': 5.0,
+        'type': 'float',
+        'min': 0.0,
+        'max': 100.0,
+        'description': 'Percentage improvement relative to baseline required for a cell to be highlighted green. For example, 5.0 means the metric must have improved by at least 5% compared to baseline. Applies to "lower is better" metrics (e.g. response time) when the value decreases, and to "higher is better" metrics (e.g. RPM) when the value increases.'
+    },
+    'aggregated_table_highlight_degraded_threshold_pct': {
+        'value': 5.0,
+        'type': 'float',
+        'min': 0.0,
+        'max': 100.0,
+        'description': 'Percentage degradation relative to baseline required for a cell to be highlighted red. For example, 5.0 means the metric must have degraded by at least 5% compared to baseline. Applies to "lower is better" metrics (e.g. response time) when the value increases, and to "higher is better" metrics (e.g. RPM) when the value decreases.'
+    },
+    'aggregated_table_highlight_higher_is_better_metrics': {
+        'value': ['rpm', 'count'],
+        'type': 'list',
+        'description': 'List of metric keys where a higher value is considered an improvement (e.g. rpm, count). For these metrics the green/red highlighting direction is inverted: green when the value increases, red when it decreases. All other metrics are treated as "lower is better" (e.g. response time, errors).'
+    },
+    'top_slowest_count': {
+        'value': 5,
+        'type': 'int',
+        'min': 1,
+        'max': 50,
+        'description': 'Number of top slowest transactions to include in the ${top_slowest_requests} template variable. The variable inserts a pre-sorted table of the N transactions with the highest value for the chosen metric.'
+    },
+    'top_slowest_metric': {
+        'value': 'pct90',
+        'type': 'string',
+        'options': ['avg', 'pct50', 'pct75', 'pct90', 'pct95', 'pct99', 'max'],
+        'description': 'Metric used to rank transactions for the ${top_slowest_requests} variable. Transactions are sorted descending by this metric and the top N are returned.'
+    },
+    'top_slowest_exclude_all': {
+        'value': True,
+        'type': 'bool',
+        'description': 'When enabled, rows whose transaction name is an aggregate total (e.g. "all", "Total", "ALL") are excluded from the ${top_slowest_requests} variable so that only individual transactions are ranked.'
+    },
+    'top_slowest_frontend_table': {
+        'value': 'timings_fully_loaded',
+        'type': 'string',
+        'options': ['timings_fully_loaded', 'timings_page_timings', 'timings_main_document', 'google_web_vitals', 'cpu_long_tasks'],
+        'description': 'Table to source data from for the ${top_slowest_requests} variable when running a frontend (SiteSpeed) test.'
+    },
+    'top_slowest_frontend_metric': {
+        'value': 'fullyLoaded',
+        'type': 'string',
+        'options': [
+            'fullyLoaded',
+            'LCP', 'FCP', 'CLS', 'FID', 'TBT', 'TTFB',
+            'domInteractive', 'domContentLoadedTime', 'loadTime',
+            'dns', 'connect', 'serverResponseTime', 'pageDownloadTime',
+            'durations', 'lastLongTask', 'totalBlockingTime', 'totalDuration'
+        ],
+        'description': (
+            'Metric to sort by for ${top_slowest_requests} in frontend tests. '
+            'Must match a column in the chosen table. '
+            'timings_fully_loaded → fullyLoaded. '
+            'google_web_vitals → LCP, FCP, CLS, FID, TBT, TTFB. '
+            'timings_page_timings → domInteractive, domContentLoadedTime, loadTime. '
+            'timings_main_document → dns, connect, serverResponseTime, pageDownloadTime. '
+            'cpu_long_tasks → durations, lastLongTask, totalBlockingTime, totalDuration.'
+        )
+    },
+    'top_degraded_count': {
+        'value': 5,
+        'type': 'int',
+        'min': 1,
+        'max': 50,
+        'description': 'Number of top degraded transactions to include in the ${top_degraded_requests} template variable. Only available when a comparison (baseline) test is selected.'
+    },
+    'top_degraded_metric': {
+        'value': 'pct90',
+        'type': 'string',
+        'options': ['avg', 'pct50', 'pct75', 'pct90', 'pct95', 'pct99', 'max'],
+        'description': 'Metric used to rank and display degradation for the ${top_degraded_requests} variable. The output table shows Current <metric>, Baseline <metric>, Diff, and Diff % columns for this metric only.'
+    },
+    'top_degraded_exclude_all': {
+        'value': True,
+        'type': 'bool',
+        'description': 'When enabled, aggregate-total rows (e.g. "all", "Total") are excluded from the ${top_degraded_requests} variable so only individual transactions are ranked.'
+    },
+    'top_degraded_min_pct': {
+        'value': 0.0,
+        'type': 'float',
+        'min': 0.0,
+        'description': 'Minimum degradation percentage required for a transaction to appear in ${top_degraded_requests}. Set to 0 to include any positive degradation; set to e.g. 10 to show only transactions that regressed by at least 10%.'
+    },
+    'top_degraded_sort_by': {
+        'value': 'diff_pct',
+        'type': 'string',
+        'options': ['diff_pct', 'diff'],
+        'description': 'Column to sort degraded transactions by. "diff_pct" sorts by relative percentage change (recommended — normalises across transactions with different baseline values). "diff" sorts by absolute difference.'
+    },
+    'top_degraded_frontend_table': {
+        'value': 'timings_fully_loaded',
+        'type': 'string',
+        'options': ['timings_fully_loaded', 'timings_page_timings', 'timings_main_document', 'google_web_vitals', 'cpu_long_tasks'],
+        'description': 'Table to source data from for the ${top_degraded_requests} variable when running a frontend (SiteSpeed) test.'
+    },
+    'top_degraded_frontend_metric': {
+        'value': 'fullyLoaded',
+        'type': 'string',
+        'options': [
+            'fullyLoaded',
+            'LCP', 'FCP', 'CLS', 'FID', 'TBT', 'TTFB',
+            'domInteractive', 'domContentLoadedTime', 'loadTime',
+            'dns', 'connect', 'serverResponseTime', 'pageDownloadTime',
+            'durations', 'lastLongTask', 'totalBlockingTime', 'totalDuration'
+        ],
+        'description': (
+            'Metric to rank and display for ${top_degraded_requests} in frontend tests. '
+            'Must match a column in the chosen table. '
+            'timings_fully_loaded → fullyLoaded. '
+            'google_web_vitals → LCP, FCP, CLS, FID, TBT, TTFB. '
+            'timings_page_timings → domInteractive, domContentLoadedTime, loadTime. '
+            'timings_main_document → dns, connect, serverResponseTime, pageDownloadTime. '
+            'cpu_long_tasks → durations, lastLongTask, totalBlockingTime, totalDuration.'
+        )
+    },
+    'overview_table_backend_metrics': {
+        'value': [
+            'Average:Average RT',
+            'Median:Median RT',
+            '75%-tile:P75',
+            '90%-tile:P90',
+            'Total requests:Requests',
+            'RPS:RPS',
+            'Error %:Error %'
+        ],
+        'type': 'list',
+        'description': (
+            'Rows to include in the ${overview_data_table_} for backend tests. '
+            'Format: Metric Name:Display Label (e.g. "Average:Avg RT", "Error %:Errors"). '
+            'Controls which summary rows appear and their display labels. '
+            'Available metrics: Average, Median, 75%-tile, 90%-tile, Total requests, RPS, Error %. '
+            'Leave empty to show all rows with their original names.'
+        )
+    },
+    'overview_table_frontend_metrics': {
+        'value': [
+            'FCP:FCP',
+            'LCP:LCP',
+            'Fully Loaded:Fully Loaded',
+            'TTFB:TTFB',
+            'Total Transfer Size (KB):Transfer Size (KB)',
+            'Total Requests:Requests',
+            'Third-Party Requests:3rd Party Requests',
+            'Transfer Size for JavaScript (KB):JS Size (KB)',
+            'Transfer Size for CSS (KB):CSS Size (KB)',
+            'Transfer Size for Image (KB):Image Size (KB)'
+        ],
+        'type': 'list',
+        'description': (
+            'Rows to include in the ${overview_data_table_} for frontend (SiteSpeed) tests. '
+            'Format: Metric Name:Display Label (e.g. "FCP:FCP", "Fully Loaded:Fully Loaded"). '
+            'Controls which summary rows appear and their display labels. '
+            'Available metrics: FCP, LCP, Fully Loaded, TTFB, Total Transfer Size (KB), Total Requests, '
+            'Third-Party Requests, Transfer Size for JavaScript (KB), Transfer Size for CSS (KB), Transfer Size for Image (KB). '
+            'Leave empty to show all rows with their original names.'
+        )
     }
 }
 
@@ -421,3 +587,4 @@ def get_defaults_for_category(category: str) -> Dict[str, Dict[str, Any]]:
     """
     all_defaults = get_all_defaults()
     return all_defaults.get(category, {})
+

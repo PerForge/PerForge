@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 import logging
 
-from app.schema_migrations.tables import influxdb, graphs, nfr_rows, template_data, templates, project_settings, ai_support
+from app.schema_migrations.tables import influxdb, graphs, nfr_rows, template_data, templates, project_settings, ai_support, grafana
 
 log = logging.getLogger(__name__)
 
@@ -27,4 +27,5 @@ MIGRATIONS = [
     *templates.MIGRATIONS,
     *project_settings.MIGRATIONS,
     *ai_support.MIGRATIONS,
+    *grafana.MIGRATIONS,
 ]

@@ -1,4 +1,4 @@
-# Copyright 2025 Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
+# Copyright Uladzislau Shklianik <ushklianik@gmail.com> & Siamion Viatoshkin <sema.cod@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,8 +93,13 @@ def add_grafana():
             if clone:
                 output['name'] = f"{output.get('name', '')} COPY"
                 grafana_config = None
+                grafana_config_data = None
+            else:
+                grafana_config_data = output
             form   = GrafanaForm(data=output)
-        return render_template('integrations/grafana.html', form=form, grafana_config=grafana_config, secret_configs=secret_configs)
+        else:
+            grafana_config_data = None
+        return render_template('integrations/grafana.html', form=form, grafana_config=grafana_config, grafana_config_data=grafana_config_data, secret_configs=secret_configs)
     except Exception:
         logging.warning(str(traceback.format_exc()))
         flash(ErrorMessages.ER00033.value, "error")
