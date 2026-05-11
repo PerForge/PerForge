@@ -527,7 +527,7 @@ class InfluxdbV18(DataExtractionBase):
                 {
                     "transaction": txn,
                     "rpm": p.get("rpm", 0),
-                    "errors": p.get("errors", 0),
+                    "errors": p.get("errors") or 0,
                     "count": p.get("count", 0),
                     "avg": p.get("avg", 0),
                     # Use None (not 0) for absent percentile fields so callers can
