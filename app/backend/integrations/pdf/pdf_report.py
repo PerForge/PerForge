@@ -322,33 +322,60 @@ class PdfReport(ReportingBase):
         self.add_text(text)
 
     def add_text(self, text):
-        """Add a block of text to the PDF.
-
-        If *text* is just a single title (wrapped in `<title>`, `<h1>`, or
-        `<h2>` tags) it is rendered via :pymeth:`Pdf.add_title`. Otherwise the
-        block is considered either a table payload or a normal paragraph.
-        """
-        # Replace template variables early.
         text = self.replace_variables(text)
 
-        # Use helper to detect a stand-alone title.
+        # 1. Stand-alone title block
         title = self.extract_title(text)
         if title:
             self.pdf_creator.add_title(title)
-            return  # Title consumes the whole block
+            return
 
-        # Not a title – render as table or paragraph.
+        # 2. Legacy pure JSON table (entire block is a list-of-lists)
         is_table, table_data = self.check_if_table(text)
         if is_table:
             self.pdf_creator.add_table(table_data)
-        else:
-            self.pdf_creator.add_text(text)
+            return
+
+        # 3. Mixed content: prose interleaved with <table>...</table> tags
+        segments = self.split_mixed_content(text)
+        if len(segments) > 1 or (len(segments) == 1 and segments[0][0] == 'table'):
+            for kind, content in segments:
+                if kind == 'table':
+                    is_tbl, tbl_data = self.check_if_table(content)
+                    if is_tbl:
+                        self.pdf_creator.add_table(tbl_data)
+                    else:
+                        self.pdf_creator.add_text(content.strip())
+                else:
+                    self.pdf_creator.add_text(content.strip())
+            return
+
+        # 4. Plain prose
+        self.pdf_creator.add_text(text)
 
     def add_graph_to_pdf(self, image, ai_support_response):
         self.pdf_creator.add_image(image)
         # Rely on caller to apply per-graph gating; add text only if provided
         if ai_support_response:
             self.add_text(ai_support_response)
+
+    @staticmethod
+    def split_mixed_content(text: str):
+        _TABLE_RE = re.compile(r'<table>(.*?)</table>', re.IGNORECASE | re.DOTALL)
+        segments = []
+        last_end = 0
+        for match in _TABLE_RE.finditer(text):
+            prose = text[last_end:match.start()]
+            if prose.strip():
+                segments.append(('text', prose))
+            inner = match.group(1).strip()
+            if inner:
+                segments.append(('table', inner))
+            last_end = match.end()
+        trailing = text[last_end:]
+        if trailing.strip():
+            segments.append(('text', trailing))
+        return segments
 
     def check_if_table(self, text):
         try:

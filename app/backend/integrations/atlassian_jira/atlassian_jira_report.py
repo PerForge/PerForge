@@ -38,6 +38,7 @@ class AtlassianJiraReport(ReportingBase):
 
     def add_text(self, text):
         text = self.replace_variables(text)
+        text = self.strip_table_tags(text)
         text += f'\n\n'
         return text
 

@@ -35,6 +35,7 @@ class SmtpMailReport(ReportingBase):
         self.output_obj = SmtpMail(project=self.project, id=action_id)
 
     def add_group_text(self, text):
+        text = self.strip_table_tags(text)
         text = text.replace("\r\n", "")
         text = text.replace("\r", "")
         text = text.replace("\n", "")
@@ -42,6 +43,7 @@ class SmtpMailReport(ReportingBase):
 
     def add_text(self, text):
         text = self.replace_variables(text)
+        text = self.strip_table_tags(text)
         text = text.replace("\r\n", "")
         text = text.replace("\r", "")
         text = text.replace("\n", "")

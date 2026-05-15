@@ -34,19 +34,17 @@ class AtlassianConfluenceReport(ReportingBase):
         self.output_obj = AtlassianConfluence(project=self.project, id=action_id)
 
     def add_group_text(self, text):
-        # Preserve newlines for markdown list processing
         text = self.replace_variables(text)
+        text = self.strip_table_tags(text)
         text = text.replace('&', '&amp;')
-        # Add trailing newline to ensure proper separation between sections
         if not text.endswith('\n'):
             text += '\n'
         return text
 
     def add_text(self, text):
-        # Preserve newlines for markdown list processing
         text = self.replace_variables(text)
+        text = self.strip_table_tags(text)
         text = text.replace('&', '&amp;')
-        # Add trailing newline to ensure proper separation between sections
         if not text.endswith('\n'):
             text += '\n'
         return text

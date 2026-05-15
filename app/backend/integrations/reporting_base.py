@@ -448,6 +448,12 @@ class ReportingBase:
                 result.append(new_row)
         return result
 
+    @staticmethod
+    def strip_table_tags(text: str) -> str:
+        if not text:
+            return text
+        return re.sub(r'<table>.*?</table>', '', text, flags=re.IGNORECASE | re.DOTALL)
+
     def format_table(self, metrics):
         """
         Format a metrics table for report consumption. This base implementation returns a JSON string
