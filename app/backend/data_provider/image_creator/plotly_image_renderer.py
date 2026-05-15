@@ -677,6 +677,23 @@ class PlotlyImageRenderer:
         data = series.get("data", []) if isinstance(series, dict) else []
         return [p.get("value") for p in data]
 
+    def has_data_for_graph(self, name: str, chart_data: Dict[str, Any]) -> bool:
+        """Return False if all relevant series for this graph are empty, None, or zero."""
+        key = self._normalize_key(name)
+        name_to_keys = {
+            "errors": ["overalErrors"],
+            "response_time": ["overalAvgResponseTime", "overalMedianResponseTime", "overal90PctResponseTime"],
+            "throughput_and_users": ["overalThroughput", "overalUsers"],
+        }
+        check_keys = name_to_keys.get(key)
+        if not check_keys:
+            return True  # Unknown graph type — never skip
+        for data_key in check_keys:
+            values = self._extract_values(chart_data, data_key)
+            if any(v is not None and v != 0 for v in values):
+                return True
+        return False
+
     def _extract_anomalies(self, chart_data: Dict[str, Any], key: str) -> tuple[List[bool], List[str]]:
         series = chart_data.get(key, {})
         data = series.get("data", []) if isinstance(series, dict) else []

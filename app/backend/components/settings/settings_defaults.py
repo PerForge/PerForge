@@ -542,7 +542,12 @@ REPORTING_TABLE_DEFAULTS: Dict[str, Dict[str, Any]] = {
             'Third-Party Requests, Transfer Size for JavaScript (KB), Transfer Size for CSS (KB), Transfer Size for Image (KB). '
             'Leave empty to show all rows with their original names.'
         )
-    }
+    },
+    'skip_empty_internal_graphs': {
+        'value': False,
+        'type': 'bool',
+        'description': 'When enabled, internal graph panels (Errors, Response Time, Throughput) are replaced with a short informational message instead of an empty chart image when the test data contains no values for that panel.',
+    },
 }
 
 

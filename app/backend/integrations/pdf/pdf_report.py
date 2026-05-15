@@ -17,7 +17,7 @@ import ast
 import json
 import re
 
-from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.reporting_base import ReportingBase, _SkipMessage
 from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.components.graphs.graphs_db import DBGraphs
 from io import BytesIO
@@ -681,7 +681,9 @@ class PdfReport(ReportingBase):
                 self.add_text(obj["content"])
             elif obj["type"] == "graph":
                 image, ai_response = processed_graphs[obj["graph_id"]]
-                if image:
+                if isinstance(image, _SkipMessage):
+                    self.add_text(str(image))
+                elif image:
                     self.pdf_creator.add_image(image)
                 else:
                     self.add_text(f'Image failed to load, id: {obj["graph_id"]}')

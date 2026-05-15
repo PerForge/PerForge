@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from datetime import datetime
-from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.reporting_base import ReportingBase, _SkipMessage
 from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.integrations.atlassian_confluence.atlassian_confluence import AtlassianConfluence
 from app.backend.components.graphs.graphs_db import DBGraphs
@@ -52,6 +52,8 @@ class AtlassianConfluenceReport(ReportingBase):
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Delegate rendering to centralized base (supports internal Plotly and external Grafana)
         image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
+        if isinstance(image, _SkipMessage):
+            return str(image) + '\n\n', ""
         if not image:
             graph = f'Image failed to load, id: {graph_data["id"]}'
             return graph, (ai_support_response or "")

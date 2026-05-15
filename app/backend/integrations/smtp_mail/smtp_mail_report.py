@@ -15,7 +15,7 @@
 import time
 
 
-from app.backend.integrations.reporting_base import ReportingBase
+from app.backend.integrations.reporting_base import ReportingBase, _SkipMessage
 from app.backend.integrations.report_registry import ReportRegistry
 from app.backend.integrations.smtp_mail.smtp_mail import SmtpMail
 from app.backend.components.graphs.graphs_db import DBGraphs
@@ -52,6 +52,8 @@ class SmtpMailReport(ReportingBase):
     def add_graph(self, graph_data, current_test_title, baseline_test_title):
         # Use centralized renderer (supports internal Plotly and external Grafana)
         image, ai_support_response = super().add_graph(graph_data, current_test_title, baseline_test_title)
+        if isinstance(image, _SkipMessage):
+            return str(image) + '<br>', ""
         if image:
             timestamp = str(round(time.time() * 1000))
             content_id = f'{graph_data["id"]}_{timestamp}'.replace(" ", "_")

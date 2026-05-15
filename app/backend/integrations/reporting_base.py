@@ -15,6 +15,17 @@
 import re
 import logging
 
+
+class _SkipMessage(str):
+    """Returned by _render_internal_graph() when a graph is intentionally skipped due to no data."""
+
+
+_GRAPH_SKIP_MESSAGES = {
+    "errors": "No errors detected during this test run.",
+    "response_time": "No response time data available.",
+    "throughput_and_users": "No throughput data available.",
+}
+
 from app.backend.components.settings.settings_service import SettingsService
 from app.backend.integrations.ai_support.ai_support import AISupport
 from app.backend.integrations.grafana.grafana import Grafana
@@ -598,23 +609,33 @@ class ReportingBase:
 
         return metrics
 
-    def _render_internal_graph(self, graph_data: dict) -> bytes:
-        """Render an internal Plotly graph fully in-memory and return PNG bytes."""
-        # Ensure metric series exist
-        metrics = self._ensure_ml_metrics()
+    def _render_internal_graph(self, graph_data: dict):
+        """Render an internal Plotly graph fully in-memory and return PNG bytes.
 
-        # Render via Plotly
+        Returns a _SkipMessage instance (instead of bytes) when the project setting
+        skip_empty_internal_graphs is enabled and the graph has no meaningful data.
+        """
+        metrics = self._ensure_ml_metrics()
         renderer = PlotlyImageRenderer()
         width = int(graph_data.get("width") or 1024)
         height = int(graph_data.get("height") or 400)
-        image = renderer.render_bytes_by_name(
-            name=graph_data.get("name", ""),
+        name = graph_data.get("name", "")
+
+        skip_empty = SettingsService.get_setting(
+            self.project, 'reporting_table', 'skip_empty_internal_graphs', False
+        )
+        if skip_empty and not renderer.has_data_for_graph(name, metrics):
+            key = renderer._normalize_key(name)
+            msg = _GRAPH_SKIP_MESSAGES.get(key, "No data available for this panel.")
+            return _SkipMessage(msg)
+
+        return renderer.render_bytes_by_name(
+            name=name,
             chart_data=metrics,
             width=width,
             height=height,
             image_format="png",
         )
-        return image
 
     def add_graph(self, graph_data: dict, current_test_title: str, baseline_test_title: str | None):
         """
@@ -628,9 +649,9 @@ class ReportingBase:
             # Render internal Plotly graph
             image = self._render_internal_graph(graph_data)
 
-            # Optional AI analysis
+            # Optional AI analysis — skip if the graph was intentionally omitted (no data)
             ai_graph_enabled = bool(graph_data.get("ai_graph_switch"))
-            if self.ai_switch and ai_graph_enabled and graph_data.get("prompt_id"):
+            if self.ai_switch and ai_graph_enabled and graph_data.get("prompt_id") and not isinstance(image, _SkipMessage):
                 ai_support_response = self.ai_support_obj.analyze_graph(graph_data.get("name"), image, graph_data.get("prompt_id"))
             return image, ai_support_response
 
